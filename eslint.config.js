@@ -6,7 +6,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-	{ ignores: ['**/dist/**', '**/coverage/**', 'eslint.config.js'] },
+	{ ignores: ['**/dist/**', '**/coverage/**', 'eslint.config.js', 'vitest.config.ts'] },
 	eslint.configs.recommended,
 	...tseslint.configs.recommended,
 	prettier,
@@ -35,6 +35,15 @@ export default tseslint.config(
 		languageOptions: {
 			ecmaVersion: 2022,
 			globals: globals.node,
+		},
+	},
+	{
+		files: ['**/*.test.ts'],
+		languageOptions: {
+			globals: {
+				...globals.node,
+				...globals.vitest,
+			},
 		},
 	},
 );
