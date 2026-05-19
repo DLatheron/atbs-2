@@ -5,5 +5,6 @@
 		"outDir": "dist"
 	},
 	"references": [{ "path": "../maths" }, { "path": "../shared-data" }],
-	"include": ["src"]
+	"include": ["src"],
+	"exclude": ["src/**/*.test.ts"]
 }
