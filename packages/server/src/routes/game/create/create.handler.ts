@@ -14,6 +14,12 @@ export const createGame: RequestHandler = (req, res) => {
 	const game = new Game();
 	gameManager.addGame(game);
 
+	const clientId = parsed.data['client-id'];
+	if (!game.addClient(clientId)) {
+		res.status(500).json({ error: 'Failed to add client to created game ' });
+		return;
+	}
+
 	const payload = createGameResponseSchema.parse({
 		gameId: game.gameId,
 	});
