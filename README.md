@@ -56,4 +56,5 @@ Open http://localhost:5173 — the page shows the message from `GET /api/status`
 Routes live under `packages/server/src/routes/`. Each feature has its own folder with a `*.router.ts` (wiring) and `*.handler.ts` (logic). Register routers in `routes/index.ts` under the `/api` prefix.
 
 Example: `GET /api/status` → `routes/status/status.handler.ts`.
+
 # atbs-2
