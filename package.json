@@ -1,0 +1,43 @@
+{
+	"name": "atbs",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "pnpm -r run build",
+		"dev": "concurrently -k -n shared,server,client -c yellow,blue,green \"pnpm dev:shared\" \"pnpm dev:server\" \"pnpm dev:client\"",
+		"dev:shared": "pnpm --filter @atbs/maths --filter @atbs/misc --filter @atbs/shared-data run dev",
+		"dev:server": "pnpm --filter @atbs/server dev",
+		"dev:client": "pnpm --filter @atbs/client dev",
+		"test": "jest",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format": "prettier --write .",
+		"format:check": "prettier --check ."
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"esbuild"
+		],
+		"overrides": {
+			"babel-plugin-istanbul": "^8.0.0",
+			"test-exclude": "^8.0.0",
+			"glob": "^13.0.6"
+		}
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.28.0",
+		"@types/jest": "^30.0.0",
+		"@types/node": "^22.15.29",
+		"concurrently": "^9.1.2",
+		"eslint": "^9.28.0",
+		"eslint-config-prettier": "^10.1.5",
+		"eslint-plugin-react-hooks": "^5.2.0",
+		"eslint-plugin-react-refresh": "^0.4.20",
+		"globals": "^16.2.0",
+		"jest": "^30.4.2",
+		"prettier": "^3.5.3",
+		"ts-jest": "^29.4.9",
+		"typescript": "^5.8.3",
+		"typescript-eslint": "^8.33.1"
+	}
+}
