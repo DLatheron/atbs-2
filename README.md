@@ -14,7 +14,7 @@ TypeScript monorepo with a React client, Express API, and shared workspace packa
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io/)
 
 ## Setup
@@ -47,7 +47,7 @@ Open http://localhost:5173 — the page shows the message from `GET /api/status`
 | Script        | Description        |
 | ------------- | ------------------ |
 | `pnpm build`  | Build all packages |
-| `pnpm test`   | Run Jest tests     |
+| `pnpm test`   | Run Vitest tests   |
 | `pnpm lint`   | ESLint             |
 | `pnpm format` | Prettier write     |
 
