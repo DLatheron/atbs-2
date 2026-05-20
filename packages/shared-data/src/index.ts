@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 export * from './Phase.js';
 
+export const CLIENT_ID_QUERY_PARAM = 'client-id';
+export const CREATE_OR_JOIN_QUERY_PARAM = 'mode';
+
 export const statusResponseSchema = z.object({
 	status: z.literal('ok'),
 	message: z.string(),
@@ -11,26 +14,24 @@ export type StatusResponse = z.infer<typeof statusResponseSchema>;
 
 export const ClientIdValidation = z.string().uuid();
 
-export const createGameQuerySchema = z.object({
-	'client-id': ClientIdValidation,
+export const CreateGameQuery = z.object({
+	[CLIENT_ID_QUERY_PARAM]: ClientIdValidation,
 });
 
-export type CreateGameQuery = z.infer<typeof createGameQuerySchema>;
+export type CreateGameQuery = z.infer<typeof CreateGameQuery>;
 
-export const gameIdSchema = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+export const GameId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+export type GameId = z.infer<GameId>;
 
-export const createGameResponseSchema = z.object({
-	gameId: gameIdSchema,
+export const CreateGameResponse = z.object({
+	gameId: GameId
 });
-export type CreateGameResponse = z.infer<typeof createGameResponseSchema>;
-
-export const CLIENT_ID_QUERY_PARAM = 'client-id';
-export const CREATE_OR_JOIN_QUERY_PARAM = 'mode';
+export type CreateGameResponse = z.infer<typeof CreateGameResponse>;
 
 export function parseURLSearchParams<T extends z.ZodTypeAny>(
 	schema: T,
 	params: URLSearchParams,
-): z.inter<T> {
+): z.infer<T> {
 	const data: Record<string, string[] | string | undefined> = {};
 
 	for (const key of params.keys()) {
@@ -52,7 +53,7 @@ export function parseURLSearchParams<T extends z.ZodTypeAny>(
 }
 
 export const ClientQueryParams = z.object({
-	'client-id': ClientIdValidation,
-	mode: z.union([z.literal('create'), z.literal('join')]).optional(),
+	[CLIENT_ID_QUERY_PARAM]: ClientIdValidation,
+	[CREATE_OR_JOIN_QUERY_PARAM]: z.union([z.literal('create'), z.literal('join')]).optional(),
 });
-export type ClientQueryParams = z.infer<typeof clientQueryParamsSchema>;
+export type ClientQueryParams = z.infer<typeof ClientQueryParams>;
