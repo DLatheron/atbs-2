@@ -1,10 +1,10 @@
-import { createGameQuerySchema, createGameResponseSchema } from '@atbs/shared-data';
+import { createGameQCreateGameQueryuerySchema, CreateGameQuery, CreateGameResponse } from '@atbs/shared-data';
 import type { RequestHandler } from 'express';
 import { Game } from '../../../game/Game.js';
 import { gameManager } from '../../../game/GameManager.js';
 
 export const createGame: RequestHandler = (req, res) => {
-	const parsed = createGameQuerySchema.safeParse(req.query);
+	const parsed = CreateGameQuery.safeParse(req.query);
 
 	if (!parsed.success) {
 		res.status(400).json({ error: 'client-id query parameter is required' });
@@ -20,7 +20,7 @@ export const createGame: RequestHandler = (req, res) => {
 		return;
 	}
 
-	const payload = createGameResponseSchema.parse({
+	const payload = CreateGameResponse.parse({
 		gameId: game.gameId,
 	});
 

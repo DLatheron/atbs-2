@@ -4,6 +4,8 @@ import { ClientManager } from './ClientManager.js';
 import type { PhaseHandler } from './phase-handlers/PhaseHandler.js';
 import { LobbyPhaseHandler } from './phase-handlers/LobbyPhaseHandler.js';
 
+const FIXED_GAME_ID = true; // Temporary Hack.
+
 const GAME_ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 function randomSegment(length: number): string {
@@ -15,7 +17,11 @@ function randomSegment(length: number): string {
 }
 
 function generateGameId(): string {
-	return `${randomSegment(4)}-${randomSegment(4)}`;
+	if (FIXED_GAME_ID) {
+		return "AAAA-AAAA";
+	} else {
+		return `${randomSegment(4)}-${randomSegment(4)}`;
+	}
 }
 
 export class Game {
@@ -30,17 +36,25 @@ export class Game {
 		this._phaseHandler = new LobbyPhaseHandler();
 	}
 
+	get gameId() {
+		return this._gameId;
+	}
+
 	reportError(error: string) {
 		console.error(error);
 	}
 
+	/**
+	 * Add a client to the game (if possible).
+	 * Returns the `Client` is successful, otherwise `null`.
+	 */
 	addClient(clientId: string): Client | null {
 		if (!this._phaseHandler.acceptingClients) {
 			this.reportError(``);
 			return null;
 		}
 
-		if (!this._clientManager.findClient(clientId)) {
+		if (this._clientManager.findClient(clientId)) {
 			return null;
 		}
 
@@ -50,6 +64,10 @@ export class Game {
 		return client;
 	}
 
+	/**
+	 * Remove a client from the game (if it exists).
+	 * Returns `true` if the client was removed, otherwise `false`.
+	 */
 	removeClient(clientId: string): boolean {
 		return this._clientManager.removeClient(clientId);
 	}
