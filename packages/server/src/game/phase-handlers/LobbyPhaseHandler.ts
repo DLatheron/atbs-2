@@ -3,7 +3,7 @@ import { PhaseHandler } from './PhaseHandler.js';
 
 export class LobbyPhaseHandler extends PhaseHandler {
 	get phase(): Phase {
-		return Phase.LOBBY;
+		return Phase.Values.lobby;
 	}
 
 	get acceptingClients(): boolean {

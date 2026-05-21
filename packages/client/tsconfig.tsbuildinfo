@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/gamesocket.ts","./src/main.tsx","./src/hooks/index.ts","./src/hooks/usegamesocket.ts"],"version":"5.9.3"}

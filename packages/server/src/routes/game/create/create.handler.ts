@@ -1,12 +1,12 @@
-import { createGameQCreateGameQueryuerySchema, CreateGameQuery, CreateGameResponse } from '@atbs/shared-data';
+import { CreateGameRequestBody, CreateGameResponseBody } from '@atbs/shared-data';
 import type { RequestHandler } from 'express';
 import { Game } from '../../../game/Game.js';
 import { gameManager } from '../../../game/GameManager.js';
 
 export const createGame: RequestHandler = (req, res) => {
-	const parsed = CreateGameQuery.safeParse(req.query);
+	const parsedBody = CreateGameRequestBody.safeParse(req.body);
 
-	if (!parsed.success) {
+	if (!parsedBody.success) {
 		res.status(400).json({ error: 'client-id query parameter is required' });
 		return;
 	}
@@ -14,15 +14,16 @@ export const createGame: RequestHandler = (req, res) => {
 	const game = new Game();
 	gameManager.addGame(game);
 
-	const clientId = parsed.data['client-id'];
-	if (!game.addClient(clientId)) {
+	const { clientId, name } = parsedBody.data;
+	if (!game.addClient(clientId, name)) {
 		res.status(500).json({ error: 'Failed to add client to created game ' });
 		return;
 	}
 
-	const payload = CreateGameResponse.parse({
+	const body = CreateGameResponseBody.parse({
 		gameId: game.gameId,
 	});
 
-	res.json(payload);
+	// TODO: Add type to res so that it doesn't need zod above...
+	res.json(body);
 };

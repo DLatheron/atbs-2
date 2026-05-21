@@ -1,4 +1,4 @@
-import { CreateGameResponse } from '@atbs/shared-data';
+import { CreateGameResponseBody } from '@atbs/shared-data';
 import { gameManager } from '../../../game/GameManager.js';
 import { createGame } from './create.handler.js';
 
@@ -24,7 +24,7 @@ describe('createGame', () => {
 
 		createGame({ query: { 'client-id': 'player-1' } } as never, res as never, () => undefined);
 
-		const payload = CreateGameResponse.parse(res.body);
+		const payload = CreateGameResponseBody.parse(res.body);
 		expect(payload.gameId).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
 		expect(gameManager.getGame(payload.gameId).gameId).toBe(payload.gameId);
 	});
@@ -38,7 +38,7 @@ describe('createGame', () => {
 			() => undefined,
 		);
 
-		expect(CreateGameResponse.parse(res.body).gameId).toBeTruthy();
+		expect(CreateGameResponseBody.parse(res.body).gameId).toBeTruthy();
 	});
 
 	it('returns 400 when client-id is missing', () => {

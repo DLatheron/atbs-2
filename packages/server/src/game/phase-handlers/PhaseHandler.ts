@@ -1,6 +1,6 @@
 import { Phase } from '@atbs/shared-data';
 
-export class PhaseHandler {
+export abstract class PhaseHandler {
 	abstract get phase(): Phase;
 
 	get acceptingClients(): boolean {

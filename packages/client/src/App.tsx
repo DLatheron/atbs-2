@@ -1,49 +1,57 @@
-import { CLIENT_ID_QUERY_PARAM, ClientQueryParams, parseURLSearchParams, CreateGameQuery, CreateGameResponse } from '@atbs/shared-data';
+import {
+	CLIENT_ID_QUERY_PARAM,
+	ClientQueryParams,
+	parseURLSearchParams,
+	CreateGameQuery,
+	CreateGameResponseBody,
+} from '@atbs/shared-data';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
+
+import { useGameSocket } from './hooks';
 
 // Generate this outside the React component so that its survives strict-mode re-renders, but still generates
 // one a browser visit (if the query parameter is deleted).
 const oneTimeClientId = uuidv4();
 
-export type CreateGameOptions = {
-    name: string;
+type CreateGameOptions = {
+	name: string;
 
-    signal?: AbortSignal;
+	signal?: AbortSignal;
 };
 
-export async function createGame(
-    clientId: string,
-    options: CreateGameOptions
-): Promise<CreateGameResponse> {
-    const { name, signal } = options;
+async function createGame(
+	clientId: string,
+	options: CreateGameOptions,
+): Promise<CreateGameResponseBody> {
+	const { name, signal } = options;
 
-	const queryParams: CreateGameQuery = { "client-id": clientId };
+	const queryParams: CreateGameQuery = { 'client-id': clientId };
 	const url = `/api/game/create?${new URLSearchParams(queryParams).toString()}`;
 	const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, name }),
-        signal,
-    });
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ clientId, name }),
+		signal,
+	});
 
-    const data: unknown = await res.json().catch(() => ({}));
+	const data: unknown = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-        const message =
-            typeof data === "object" &&
-            data !== null &&
-            "error" in data &&
-            typeof (data as { error: unknown }).error === "string"
-                ? (data as { error: string }).error
-                : `Request failed (${res.status})`;
-        throw new Error(message);
-    }
+	if (!res.ok) {
+		const message =
+			typeof data === 'object' &&
+			data !== null &&
+			'error' in data &&
+			typeof (data as { error: unknown }).error === 'string'
+				? (data as { error: string }).error
+				: `Request failed (${res.status})`;
+		throw new Error(message);
+	}
 
-	const response = CreateGameResponse.parse(data);
+	const response = CreateGameResponseBody.parse(data);
 
-    return response;
+	return response;
 }
 
 export function App() {
@@ -53,6 +61,8 @@ export function App() {
 	const [clientId, setClientId] = useState<string>(validatedSearchParams['client-id']);
 	const [gameId, setGameId] = useState<string | undefined>();
 	const { mode } = validatedSearchParams;
+
+	const { connected } = useGameSocket(clientId, gameId);
 
 	useEffect(() => {
 		if (!clientId) {
@@ -67,14 +77,14 @@ export function App() {
 	}, [clientId, setClientId, setSearchParams]);
 
 	async function handleCreateGame(clientId: string) {
-		console.info("Attempt to create game");
+		console.info('Attempt to create game');
 
 		if (!clientId) {
-			throw new Error("Cannot call handleCreateGame with a falsy clientId");
+			throw new Error('Cannot call handleCreateGame with a falsy clientId');
 		}
-		const name = "Default Name";
-		const { gameId } = await createGame(clientId, { name: "Default Name" });
-		setGameId(gameId)
+		const name = 'Default Name';
+		const { gameId } = await createGame(clientId, { name });
+		setGameId(gameId);
 
 		console.info(`Created game with id: ${gameId}`);
 	}
@@ -93,8 +103,11 @@ export function App() {
 		}
 	}, [clientId, mode]);
 
-	return <>
-		<p>Client ID: {clientId}</p>
-		<p>Game ID: {gameId}</p>
-	</>;
+	return (
+		<>
+			<p>Client ID: {clientId}</p>
+			<p>Game ID: {gameId}</p>
+			<p>{connected ? 'Connected to Server' : 'Disconnected'}</p>
+		</>
+	);
 }
