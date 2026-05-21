@@ -1,4 +1,5 @@
 import { randomInt } from 'node:crypto';
+import { ClientId } from '@atbs/shared-data';
 import { Client } from './Client.js';
 import { ClientManager } from './ClientManager.js';
 import type { PhaseHandler } from './phase-handlers/PhaseHandler.js';
@@ -18,7 +19,7 @@ function randomSegment(length: number): string {
 
 function generateGameId(): string {
 	if (FIXED_GAME_ID) {
-		return "AAAA-AAAA";
+		return 'AAAA-AAAA';
 	} else {
 		return `${randomSegment(4)}-${randomSegment(4)}`;
 	}
@@ -48,7 +49,7 @@ export class Game {
 	 * Add a client to the game (if possible).
 	 * Returns the `Client` is successful, otherwise `null`.
 	 */
-	addClient(clientId: string): Client | null {
+	addClient(clientId: ClientId, name: string): Client | null {
 		if (!this._phaseHandler.acceptingClients) {
 			this.reportError(``);
 			return null;
@@ -58,7 +59,7 @@ export class Game {
 			return null;
 		}
 
-		const client = new Client(clientId);
+		const client = new Client(clientId, name);
 		this._clientManager.addClient(client);
 
 		return client;
@@ -68,7 +69,15 @@ export class Game {
 	 * Remove a client from the game (if it exists).
 	 * Returns `true` if the client was removed, otherwise `false`.
 	 */
-	removeClient(clientId: string): boolean {
+	removeClient(clientId: ClientId): boolean {
 		return this._clientManager.removeClient(clientId);
+	}
+
+	getClient(clientId: ClientId) {
+		return this._clientManager.getClient(clientId);
+	}
+
+	findClient(clientId: ClientId): Client | undefined {
+		return this._clientManager.findClient(clientId);
 	}
 }

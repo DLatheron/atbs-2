@@ -36,7 +36,7 @@ Or run them separately:
 
 ```bash
 pnpm dev:shared   # watch-build shared packages
-pnpm dev:server   # API on http://localhost:3001 (nodemon + tsx)
+pnpm dev:server   # API on http://localhost:3000 (nodemon + tsx)
 pnpm dev:client   # UI on http://localhost:5173 (Vite, proxies /api to the server)
 ```
 
