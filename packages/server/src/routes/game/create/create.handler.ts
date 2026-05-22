@@ -1,29 +1,29 @@
-import { CreateGameRequestBody, CreateGameResponseBody } from '@atbs/shared-data';
-import type { RequestHandler } from 'express';
-import { Game } from '../../../game/Game.js';
-import { gameManager } from '../../../game/GameManager.js';
+import {
+    CreateGameRequestBody,
+    CreateGameResponseBody,
+    ErrorResponseBody
+} from "@atbs/shared-data";
+import type { Request, RequestHandler, Response } from "express";
+import { Game } from "../../../game/Game.js";
+import { gameManager } from "../../../game/GameManager.js";
 
-export const createGame: RequestHandler = (req, res) => {
-	const parsedBody = CreateGameRequestBody.safeParse(req.body);
+export type CreateGameRequest = Request<unknown, CreateGameRequestBody>;
+export type CreateGameResponse = Response<CreateGameResponseBody | ErrorResponseBody>;
 
-	if (!parsedBody.success) {
-		res.status(400).json({ error: 'client-id query parameter is required' });
-		return;
-	}
+export const createGame: RequestHandler = (req: CreateGameRequest, res: CreateGameResponse) => {
+    const parsedBody = CreateGameRequestBody.safeParse(req.body);
+    if (!parsedBody.success) {
+        res.status(400).json({ error: `invalid payload: ${parsedBody.error.toString()}` });
+        return;
+    }
+    const { clientId, name } = parsedBody.data;
 
-	const game = new Game();
-	gameManager.addGame(game);
+    const game = new Game();
+    gameManager.addGame(game);
+    if (!game.addClient(clientId, name)) {
+        res.status(500).json({ error: "Failed to add client to created game " });
+        return;
+    }
 
-	const { clientId, name } = parsedBody.data;
-	if (!game.addClient(clientId, name)) {
-		res.status(500).json({ error: 'Failed to add client to created game ' });
-		return;
-	}
-
-	const body = CreateGameResponseBody.parse({
-		gameId: game.gameId,
-	});
-
-	// TODO: Add type to res so that it doesn't need zod above...
-	res.json(body);
+    res.json({ gameId: game.gameId });
 };

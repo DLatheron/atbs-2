@@ -1,9 +1,9 @@
-import { Phase } from '@atbs/shared-data';
+import { Phase } from "@atbs/shared-data";
 
 export abstract class PhaseHandler {
-	abstract get phase(): Phase;
+    abstract get phase(): Phase;
 
-	get acceptingClients(): boolean {
-		return false;
-	}
+    get acceptingClients(): boolean {
+        return false;
+    }
 }
