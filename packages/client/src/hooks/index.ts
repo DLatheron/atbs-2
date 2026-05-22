@@ -1,1 +1,1 @@
-export * from './useGameSocket.js';
+export * from "./useGameSocket.js";

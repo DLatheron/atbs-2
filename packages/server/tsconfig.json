@@ -1,10 +1,10 @@
 {
-	"extends": "../../tsconfig.base.json",
-	"compilerOptions": {
-		"rootDir": "src",
-		"outDir": "dist"
-	},
-	"references": [{ "path": "../maths" }, { "path": "../shared-data" }],
-	"include": ["src"],
-	"exclude": ["src/**/*.test.ts"]
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "rootDir": "src",
+        "outDir": "dist"
+    },
+    "references": [{ "path": "../maths" }, { "path": "../shared-data" }],
+    "include": ["src"],
+    "exclude": ["src/**/*.test.ts"]
 }
