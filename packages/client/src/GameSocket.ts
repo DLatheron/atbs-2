@@ -10,14 +10,14 @@ export type GameSocketConnectOptions = {
 };
 
 export class GameSocket {
-	private readonly _clientId: ClientId;
 	private readonly _gameId: GameId;
+	private readonly _clientId: ClientId;
 
 	private _ws: WebSocket | null;
 
-	constructor(clientId: ClientId, gameId: GameId) {
-		this._clientId = clientId;
+	constructor(gameId: GameId, clientId: ClientId) {
 		this._gameId = gameId;
+		this._clientId = clientId;
 
 		this._ws = null;
 	}
@@ -28,17 +28,17 @@ export class GameSocket {
 
 		const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const params = new URLSearchParams({
-			clientId: this._clientId,
 			gameId: this._gameId,
+			clientId: this._clientId
 		});
 		const url = `${proto}//${window.location.host}/ws/game?${new URLSearchParams(params).toString()}`;
 		console.info(
-			'Attempting connection from:',
-			this._clientId,
-			'to:',
+			'Attempting connection to:',
 			this._gameId,
+			'from:',
+			this._clientId,
 			'at:',
-			url,
+			url
 		);
 		const ws = new WebSocket(url);
 		this._ws = ws;
@@ -69,10 +69,12 @@ export class GameSocket {
 		};
 
 		ws.onclose = () => {
+			console.info("Socket closing...");
 			options?.onClose?.();
 		};
 
 		ws.onerror = (error) => {
+			console.error("Socket error", error);
 			console.error(error);
 		};
 

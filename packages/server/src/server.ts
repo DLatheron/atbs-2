@@ -27,13 +27,15 @@ server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) =>
 		const url = new URL(request.url ?? '', `http://${host}`);
 		console.info(url);
 		if (url.pathname !== '/ws/game') {
+			console.info("Incorrect path - destroying socket");
 			socket.destroy();
 			return;
 		}
 		wss.handleUpgrade(request, socket, head, (ws: WebSocket) => {
 			wss.emit('connection', ws, request);
 		});
-	} catch {
+	} catch (error) {
+		console.error("Upgrade error - destroying socket", error);
 		socket.destroy();
 	}
 });

@@ -1,9 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
+import { URLSearchParams } from "url";
 
 import { ClientId, GameId } from './PrimitiveTypes.js';
-
-export const CLIENT_ID_QUERY_PARAM = 'client-id';
-export const CREATE_OR_JOIN_QUERY_PARAM = 'mode';
 
 export function parseURLSearchParams<T extends z.ZodTypeAny>(
 	schema: T,
@@ -32,26 +30,39 @@ export function parseURLSearchParams<T extends z.ZodTypeAny>(
 export const CreateOrJoin = z.union([z.literal('create'), z.literal('join')]).optional();
 export type CreateOrJoin = z.infer<typeof CreateOrJoin>;
 
+/**
+ * Error Response
+ */
+export const ErrorResponseBody = z.object({
+	error: z.string().min(1)
+});
+export type ErrorResponseBody = z.infer<typeof ErrorResponseBody>;
+
+/**
+ * Status Response
+ */
 export const StatusResponseBody = z.object({
 	status: z.literal('ok'),
-	message: z.string(),
+	message: z.string()
 });
 export type StatusResponseBody = z.infer<typeof StatusResponseBody>;
 
-export const CreateGameQuery = z.object({
-	[CLIENT_ID_QUERY_PARAM]: ClientId,
-});
-export type CreateGameQuery = z.infer<typeof CreateGameQuery>;
-
+/**
+ * Client URL Query Params
+ */
 export const ClientQueryParams = z.object({
-	[CLIENT_ID_QUERY_PARAM]: ClientId,
-	[CREATE_OR_JOIN_QUERY_PARAM]: CreateOrJoin,
+	"client-id": ClientId.optional(),
+	"game-id": GameId.optional(),
+	mode: CreateOrJoin
 });
 export type ClientQueryParams = z.infer<typeof ClientQueryParams>;
 
+/**
+ * Create Game Request/Response
+ */
 export const CreateGameRequestBody = z.object({
 	clientId: ClientId,
-	name: z.string().min(1).max(64).default('Default Client Name'),
+	name: z.string().min(1).max(64).default('Default Client Name')
 });
 export type CreateGameRequestBody = z.infer<typeof CreateGameRequestBody>;
 
@@ -60,8 +71,26 @@ export const CreateGameResponseBody = z.object({
 });
 export type CreateGameResponseBody = z.infer<typeof CreateGameResponseBody>;
 
+/**
+ * Join Game Request/Response
+ */
+export const JoinGameRequestBody = z.object({
+	gameId: GameId,
+	clientId: ClientId,
+	name: z.string().min(1).max(64).default('Default Client Name')
+});
+export type JoinGameRequestBody = z.infer<typeof CreateGameRequestBody>;
+
+export const JoinGameResponseBody = z.object({
+	gameId: GameId
+});
+export type JoinGameResponseBody = z.infer<typeof CreateGameResponseBody>;
+
+/**
+ * Socket Query Params
+ */
 export const ConnectSocketQueryParams = z.object({
 	clientId: ClientId,
-	gameId: GameId,
+	gameId: GameId
 });
 export type ConnectSocketQueryParams = z.infer<typeof ConnectSocketQueryParams>;

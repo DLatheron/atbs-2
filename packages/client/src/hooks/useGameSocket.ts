@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react';
-import { ClientId, GameId } from '@atbs/shared-data';
-import { GameSocket } from '../GameSocket.js';
+import { useEffect, useState } from "react";
+import { ClientId, GameId } from "@atbs/shared-data";
+import { GameSocket } from "../GameSocket.js";
 
 export function useGameSocket(
-	clientId: ClientId,
 	gameId: GameId | undefined,
+	clientId: ClientId | undefined
 ): { connected: boolean } {
 	const [connected, setConnected] = useState(false);
 
 	useEffect(() => {
-		if (!clientId || !gameId) {
+		if (!gameId || !clientId) {
 			return;
 		}
 
 		let cancelled = false;
-		const gameSocket = new GameSocket(clientId, gameId);
-		console.info('Socket created for', clientId, gameId);
+		const gameSocket = new GameSocket(gameId, clientId);
+		console.info("Socket created for", gameId, "from", clientId);
 
 		/** Defer past React Strict Mode's mount/unmount so the first real connection is not aborted mid-handshake. */
 		const connectTimer = setTimeout(() => {
@@ -27,12 +27,12 @@ export function useGameSocket(
 				// displayName: displayNameRef.current,
 				onOpen: () => {
 					if (!cancelled) {
-						console.info('Socket connected');
+						console.info("Socket connected");
 						setConnected(true);
 					}
 				},
 				onClose: () => {
-					console.info('Socket closed');
+					console.info("Socket closed");
 					setConnected(false);
 					// if (!cancelled) {
 					//     onUnexpectedCloseRef.current?.();
@@ -42,6 +42,7 @@ export function useGameSocket(
 		}, 0);
 
 		return () => {
+			console.info("Hook unmounting");
 			cancelled = true;
 			clearTimeout(connectTimer);
 			// sendRef.current = () => {};
