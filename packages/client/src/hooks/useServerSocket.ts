@@ -13,6 +13,10 @@ type JoinGameOptions = {
 
 export interface ServerSocketOptions {
     clientId?: ClientId;
+
+    onConnected?: (gameSocket: GameSocket) => void;
+    onDisconnected?: (unexpected: boolean) => void;
+
     createGameRetryIntervalInMs?: number;
     joinGameRetryIntervalInMs?: number;
 }
@@ -100,6 +104,8 @@ async function joinGame({
 export function useServerSocket(options: ServerSocketOptions) {
     const {
         clientId,
+        onConnected,
+        onDisconnected,
         createGameRetryIntervalInMs = 2500,
         joinGameRetryIntervalInMs = 2500
     } = options;
@@ -125,7 +131,7 @@ export function useServerSocket(options: ServerSocketOptions) {
     }: {
         gameId: GameId, 
         clientId: ClientId, 
-        onOpen: () => void, 
+        onOpen: (gameSocket: GameSocket) => void, 
         onClose: (unexpected: boolean) => void
         signal?: AbortSignal
     }): Promise<GameSocket | null> => {
@@ -139,7 +145,7 @@ export function useServerSocket(options: ServerSocketOptions) {
         gameSocket.connect({
             onOpen: () => {
                 if (!signal?.aborted) {
-                    onOpen?.();
+                    onOpen?.(gameSocket);
                 }
             },
             onClose: () => {
@@ -181,13 +187,15 @@ export function useServerSocket(options: ServerSocketOptions) {
             const gameSocket = await createSocket({
                 gameId: createdGameId, 
                 clientId,
-                onOpen: () => {
+                onOpen: (gameSocket: GameSocket) => {
                     console.info("Socket connected");
                     setConnected(true);
+                    onConnected?.(gameSocket);
                 },
                 onClose: (unexpected) => {
                     console.info("Socket closed", unexpected && "unexpectedly");
                     setConnected(false);
+                    onDisconnected?.(unexpected);
                 }
             });
             gameSocketRef.current = gameSocket;
@@ -195,7 +203,7 @@ export function useServerSocket(options: ServerSocketOptions) {
             console.error("Failed to create game because:", error);
             throw error;
         }
-    }, [createSocket, setSearchParams]);
+    }, [createSocket, setSearchParams, onConnected, onDisconnected]);
     
     /**
      * Retry logic for creating a new game.
@@ -247,13 +255,15 @@ export function useServerSocket(options: ServerSocketOptions) {
             const gameSocket = await createSocket({
                 gameId: joinedGameId, 
                 clientId,
-                onOpen: () => {
+                onOpen: (gameSocket: GameSocket) => {
                     console.info("Socket connected");
                     setConnected(true);
+                    onConnected?.(gameSocket);
                 },
                 onClose: (unexpected) => {
                     console.info("Socket closed", unexpected && "unexpectedly");
                     setConnected(false);
+                    onDisconnected?.(unexpected);
                 },
                 signal: abortController.signal
             });
@@ -262,7 +272,7 @@ export function useServerSocket(options: ServerSocketOptions) {
             console.error(`Failed to join game ${gameId} because:`, error);
             throw error;
         }
-    }, [createSocket, setSearchParams]);
+    }, [createSocket, setSearchParams, onConnected, onDisconnected]);
 
     /**
      * Retry logic for joining an existing game.

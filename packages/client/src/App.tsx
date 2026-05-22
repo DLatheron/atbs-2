@@ -3,7 +3,15 @@ import { useClientId } from "./hooks/useClientId";
 
 export function App() {
     const { clientId } = useClientId();
-    const { connected, gameId } = useServerSocket({ clientId });
+    const { connected, gameId } = useServerSocket({
+        clientId,
+        onConnected: (gameSocket) => {
+            gameSocket.send({
+                type: "client:ping",
+                payload: { nonce: 1234 }
+            });
+        }
+    });
 
     return (
         <>
