@@ -1,4 +1,5 @@
 import { ClientId, GameId } from "@atbs/shared-data";
+import { ClientToServerMessage } from "../../shared-data/src/types/ClientToServerMessage";
 
 // function parseServerMessage(data: unknown) {
 //     console.info(data);
@@ -7,7 +8,14 @@ import { ClientId, GameId } from "@atbs/shared-data";
 export type GameSocketConnectOptions = {
     onOpen?: () => void;
     onClose?: () => void;
+    signal?: AbortSignal;
 };
+
+function sendJson(ws: WebSocket, message: ClientToServerMessage) {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+    }
+}
 
 export class GameSocket {
     private readonly _gameId: GameId;
@@ -69,13 +77,14 @@ export class GameSocket {
         };
 
         ws.onclose = () => {
-            console.info("Socket closing...");
             options?.onClose?.();
         };
 
         ws.onerror = (error) => {
             console.error("Socket error", error);
             console.error(error);
+
+            this.disconnect();
         };
 
         return this;
@@ -91,9 +100,9 @@ export class GameSocket {
         }
     }
 
-    // send(message: ClientToServerMessage) {
-    //     if (this._ws?.readyState === WebSocket.OPEN) {
-    //         this._ws.send(JSON.stringify(message));
-    //     }
-    // }
+    send(message: ClientToServerMessage) {
+        if (this._ws?.readyState === WebSocket.OPEN) {
+            sendJson(this._ws, message);
+        }
+    }
 }
