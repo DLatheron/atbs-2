@@ -67,7 +67,8 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
     });
 
     ws.on("close", function close() {
-        console.log("Client disconnected");
+        console.log("Client disconnected", clientId);
+        game.removeClient(clientId);
     });
 
     ws.on("error", function error(error: unknown) {

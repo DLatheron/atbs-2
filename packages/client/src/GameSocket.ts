@@ -7,6 +7,7 @@ import { ClientId, GameId } from "@atbs/shared-data";
 export type GameSocketConnectOptions = {
     onOpen?: () => void;
     onClose?: () => void;
+    signal?: AbortSignal;
 };
 
 export class GameSocket {
@@ -69,13 +70,14 @@ export class GameSocket {
         };
 
         ws.onclose = () => {
-            console.info("Socket closing...");
             options?.onClose?.();
         };
 
         ws.onerror = (error) => {
             console.error("Socket error", error);
             console.error(error);
+
+            this.disconnect();
         };
 
         return this;
