@@ -3,11 +3,14 @@ import type { Duplex } from "stream";
 import express from "express";
 import type { IncomingMessage } from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import { parseURLSearchParams, ConnectSocketQueryParams, ServerToClientMessage } from "@atbs/shared-data";
+import {
+    parseURLSearchParams,
+    ConnectSocketQueryParams,
+    ServerToClientMessage
+} from "@atbs/shared-data";
 
 import { createApp } from "./app.js";
 import { gameManager } from "./game/GameManager.js";
-import { ServerSocketContext } from "./game/ServerSocketContext.js";
 
 const port = Number(process.env.PORT ?? 3000);
 
@@ -75,7 +78,7 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
         }
     };
 
-    client.send({ type: "server:hello", payload: { gameId }});
+    client.send({ type: "server:hello", payload: { gameId } });
 
     ws.on("message", function message(data: MessageEvent) {
         const messageText = data.toString();

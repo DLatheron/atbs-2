@@ -104,5 +104,5 @@ export class GameSocket {
         if (this._ws?.readyState === WebSocket.OPEN) {
             sendJson(this._ws, message);
         }
-    }    
+    }
 }

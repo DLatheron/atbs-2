@@ -18,7 +18,7 @@ export function useClientId() {
      */
     useEffect(() => {
         if (!clientId) {
-            setSearchParams(searchParams => {
+            setSearchParams((searchParams) => {
                 searchParams.set("client-id", oneTimeClientId);
                 return searchParams;
             });
@@ -29,6 +29,6 @@ export function useClientId() {
             console.info(`Existing client-id is ${clientId}`);
         }
     }, [clientId, setSearchParams]);
-    
+
     return { clientId };
 }
