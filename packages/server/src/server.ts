@@ -29,15 +29,11 @@ function sendJson(ws: WebSocket, message: ServerToClientMessage) {
 }
 
 server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-    console.info("Upgrading");
-
     try {
         const host = request.headers.host ?? "localhost";
-        console.info(host);
         const url = new URL(request.url ?? "", `http://${host}`);
-        console.info(url);
         if (url.pathname !== "/ws/game") {
-            console.info("Incorrect path - destroying socket");
+            console.error("Incorrect path - destroying socket");
             socket.destroy();
             return;
         }
@@ -51,9 +47,6 @@ server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) =>
 });
 
 wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
-    console.log("New client connected");
-    console.dir(req.url);
-
     const host = req.headers.host ?? "localhost";
     const url = new URL(req.url ?? "", `http://${host}`);
     const validatedQueryParams = parseURLSearchParams(ConnectSocketQueryParams, url.searchParams);
@@ -64,10 +57,8 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
         console.error(`Connection from client: ${clientId}, failed to find game: ${gameId}`);
         return;
     }
-    console.info("game", game);
 
     const client = game.findClient(clientId);
-    console.info("client", client);
     if (!client) {
         console.error(`Client: ${clientId}, not found in game: ${gameId}`);
         return;
@@ -81,14 +72,12 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
     client.send({ type: "server:hello", payload: { gameId } });
 
     ws.on("message", function message(data: MessageEvent) {
-        const messageText = data.toString();
-        console.log("Received from:", client.name, "message:", messageText);
-        ws.send(`Echo: ${messageText}`);
+        game.receiveMessage(data, client);
     });
 
     ws.on("close", function close() {
-        console.log("Client disconnected", clientId);
-        game.removeClient(clientId);
+        game.clientDisconnected(client);
+        game.removeClient(client.clientId);
     });
 
     ws.on("error", function error(error: unknown) {
@@ -97,6 +86,7 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
 });
 
 server.listen(port, () => {
-    console.log(`Server listening on http://localhost:${port}`);
-    console.log("WebSocket server ready");
+    console.clear();
+    console.info(`Server listening on http://localhost:${port}`);
+    console.info("WebSocket server ready");
 });

@@ -24,6 +24,8 @@ export interface ServerSocketOptions {
     onConnected?: (gameSocket: GameSocket) => void;
     onDisconnected?: (unexpected: boolean) => void;
 
+    onMessage?: (data: unknown) => void;
+
     createGameRetryIntervalInMs?: number;
     joinGameRetryIntervalInMs?: number;
 }
@@ -113,6 +115,7 @@ export function useServerSocket(options: ServerSocketOptions) {
         clientId,
         onConnected,
         onDisconnected,
+        onMessage,
         createGameRetryIntervalInMs = 2500,
         joinGameRetryIntervalInMs = 2500
     } = options;
@@ -135,12 +138,14 @@ export function useServerSocket(options: ServerSocketOptions) {
             clientId,
             onOpen,
             onClose,
+            onMessage,
             signal
         }: {
             gameId: GameId;
             clientId: ClientId;
             onOpen: (gameSocket: GameSocket) => void;
             onClose: (unexpected: boolean) => void;
+            onMessage: (data: unknown) => void;
             signal?: AbortSignal;
         }): Promise<GameSocket | null> => {
             if (!gameId || !clientId) {
@@ -163,6 +168,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                         onClose?.(true);
                     }
                 },
+                onMessage,
                 signal
             });
 
@@ -207,7 +213,9 @@ export function useServerSocket(options: ServerSocketOptions) {
                         console.info("Socket closed", unexpected && "unexpectedly");
                         setConnected(false);
                         onDisconnected?.(unexpected);
-                    }
+                    },
+                    onMessage: (data: unknown) => onMessage?.(data),
+                    signal: abortController.signal
                 });
                 gameSocketRef.current = gameSocket;
             } catch (error) {
@@ -215,7 +223,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                 throw error;
             }
         },
-        [createSocket, setSearchParams, onConnected, onDisconnected]
+        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage]
     );
 
     /**
@@ -280,6 +288,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                         setConnected(false);
                         onDisconnected?.(unexpected);
                     },
+                    onMessage: (data: unknown) => onMessage?.(data),
                     signal: abortController.signal
                 });
                 gameSocketRef.current = gameSocket;
@@ -288,7 +297,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                 throw error;
             }
         },
-        [createSocket, setSearchParams, onConnected, onDisconnected]
+        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage]
     );
 
     /**

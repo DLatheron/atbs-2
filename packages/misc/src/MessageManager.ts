@@ -63,7 +63,6 @@ export class MessageManager<
     private async processNextMessage() {
         let entry: { message: MESSAGE; from: FROM } | undefined;
 
-        // eslint-disable-next-line no-cond-assign
         while ((entry = this._received.pop())) {
             const { message, from } = entry;
 

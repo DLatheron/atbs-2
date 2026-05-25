@@ -18,10 +18,13 @@ export const joinGame: RequestHandler = (req: JoinGameRequest, res: JoinGameResp
         res.status(404).json({ error: `game ${gameId} not found` });
         return;
     }
-    if (!game.addClient(clientId, name)) {
+
+    const client = game.addClient(clientId, name);
+    if (!client) {
         res.status(500).json({ error: "Failed to add client to created game " });
         return;
     }
+    game.clientConnected(client);
 
     res.json({ gameId: game.gameId });
 };
