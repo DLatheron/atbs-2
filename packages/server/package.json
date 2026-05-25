@@ -12,6 +12,7 @@
     "dependencies": {
         "@atbs/maths": "workspace:*",
         "@atbs/shared-data": "workspace:*",
+        "@atbs/misc": "workspace:*",
         "express": "^5.1.0",
         "ws": "^8.20.1",
         "zod": "^3.25.42"

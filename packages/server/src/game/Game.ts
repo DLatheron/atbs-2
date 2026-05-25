@@ -1,9 +1,10 @@
 import { randomInt } from "node:crypto";
-import { ClientId } from "@atbs/shared-data";
+import { ClientId, ClientToServerMessage } from "@atbs/shared-data";
 import { Client } from "./Client.js";
 import { ClientManager } from "./ClientManager.js";
 import type { PhaseHandler } from "./phase-handlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phase-handlers/LobbyPhaseHandler.js";
+import { MessageManager } from "@atbs/misc";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -25,16 +26,32 @@ function generateGameId(): string {
     }
 }
 
+
+interface ClientMessageContext {
+    game: Game;
+}
 export class Game {
     private readonly _gameId: string;
     private readonly _clientManager: ClientManager;
+    private readonly _context: ClientMessageContext;
+    private readonly _messageManager: MessageManager<ClientToServerMessage, ClientMessageContext>;
 
     private _phaseHandler: PhaseHandler;
 
     constructor() {
         this._gameId = generateGameId();
         this._clientManager = new ClientManager();
+        
         this._phaseHandler = new LobbyPhaseHandler();
+        
+        this._context = { game: this };
+        this._messageManager = new MessageManager<ClientToServerMessage, ClientMessageContext>(this._context);
+        this._messageManager.registerHandler("client:ping", (payload, context) => {
+            console.dir({ payload, context });
+        });
+        this._messageManager.registerHandler("client:rename", (payload, context) => {
+            console.dir({ payload, context });
+        });
     }
 
     get gameId() {
