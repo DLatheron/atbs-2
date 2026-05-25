@@ -3,10 +3,14 @@ import type { ClientMessageManager, Game } from "../Game.js";
 import type { Client } from "../Client.js";
 
 export abstract class PhaseHandler {
-    protected readonly _game: Game;
+    private readonly _game: Game;
 
     constructor(game: Game) {
         this._game = game;
+    }
+
+    protected get game(): Game {
+        return this._game;
     }
 
     abstract get phase(): Phase;

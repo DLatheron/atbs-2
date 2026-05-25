@@ -18,7 +18,7 @@ export const createGame: RequestHandler = (req: CreateGameRequest, res: CreateGa
     }
     const { clientId, name } = parsedBody.data;
 
-    const game = new Game();
+    const game = new Game(clientId);
     gameManager.addGame(game);
 
     const client = game.addClient(clientId, name);
@@ -26,7 +26,6 @@ export const createGame: RequestHandler = (req: CreateGameRequest, res: CreateGa
         res.status(500).json({ error: "Failed to add client to created game " });
         return;
     }
-    game.clientConnected(client);
 
     res.json({ gameId: game.gameId });
 };

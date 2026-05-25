@@ -69,7 +69,7 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
         }
     };
 
-    client.send({ type: "server:hello", payload: { gameId } });
+    game.clientConnected(client);
 
     ws.on("message", function message(data: MessageEvent) {
         game.receiveMessage(data, client);
