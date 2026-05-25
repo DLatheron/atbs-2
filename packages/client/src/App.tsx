@@ -6,16 +6,23 @@ import { useState } from "react";
 
 interface ServerMessageContext {
     name: string;
-};
+}
 
 export function App() {
     const { clientId } = useClientId();
-    const [/*messageManager*/, setMessageManager] = useState<MessageManager<ServerToClientMessage, ServerMessageContext> | null>(null);
+    const [, /*messageManager*/ setMessageManager] = useState<MessageManager<
+        ServerMessageContext,
+        ServerToClientMessage
+    > | null>(null);
     const { connected, gameId } = useServerSocket({
         clientId,
         onConnected: (gameSocket) => {
-            const context: ServerMessageContext = { name: "Default Client Name - probably not used" };
-            const messageManager = new MessageManager<ServerToClientMessage, ServerMessageContext>(context);
+            const context: ServerMessageContext = {
+                name: "Default Client Name - probably not used"
+            };
+            const messageManager = new MessageManager<ServerMessageContext, ServerToClientMessage>(
+                context
+            );
             setMessageManager(messageManager);
 
             gameSocket.send({
@@ -23,16 +30,16 @@ export function App() {
                 payload: { nonce: 1234 }
             });
 
-            messageManager.registerHandler("server:hello", (payload, context) => {
-                console.info({ payload, context });
+            messageManager.registerHandler("server:hello", (context, payload) => {
+                console.dir({ context, payload });
             });
-            messageManager.registerHandler("server:pong", (payload, context) => {
-                console.info({ payload, context });
+            messageManager.registerHandler("server:pong", (context, payload) => {
+                console.dir({ context, payload });
 
                 gameSocket.send({
                     type: "client:ping",
                     payload: { nonce: payload.nonce++ }
-                })
+                });
             });
         },
         onDisconnected: () => {

@@ -3,12 +3,12 @@ import { describe, beforeEach, expect, it, vi, MockInstance } from "vitest";
 import { MessageManager } from "./MessageManager.js";
 
 function sleep(timeInMs: number) {
-    return new Promise(resolve => setTimeout(resolve, timeInMs));
+    return new Promise((resolve) => setTimeout(resolve, timeInMs));
 }
 
 function makeResolver() {
     let resolve: ((value?: unknown) => void) | undefined;
-    
+
     const promise = new Promise((localResolver) => {
         resolve = localResolver;
     });
@@ -30,15 +30,21 @@ describe("MessageManager", () => {
         system: string;
     }
 
+    interface From {
+        sender: string;
+    }
+
     const minimalSleepInMs = 100;
 
     let context: Context;
-    let messageManager: MessageManager<TestMessage, Context>;
+    let from: From;
+    let messageManager: MessageManager<Context, TestMessage, From>;
     let processNextMessage: MockInstance<() => Promise<void>>;
 
     beforeEach(() => {
         context = { system: "my-system" };
-        messageManager = new MessageManager<TestMessage, Context>(context);
+        from = { sender: "Server" };
+        messageManager = new MessageManager<Context, TestMessage, From>(context);
 
         processNextMessage = vi.spyOn(messageManager as never, "processNextMessage");
     });
@@ -54,15 +60,15 @@ describe("MessageManager", () => {
         messageManager.registerHandler("message", handler);
 
         const message = { type: "message", payload: 1234 };
-        messageManager.enqueueMessage(message);
+        messageManager.enqueueMessage(message, from);
 
         await promise;
 
         expect(handler).toHaveBeenCalledTimes(1);
-        expect(handler).toHaveBeenCalledWith(message.payload, context);
+        expect(handler).toHaveBeenCalledWith(context, message.payload, from);
 
         expect(processNextMessage).toHaveBeenCalledTimes(1);
-        expect(processNextMessage).toHaveBeenCalledWith()
+        expect(processNextMessage).toHaveBeenCalledWith();
 
         return promise;
     });
@@ -71,7 +77,9 @@ describe("MessageManager", () => {
         const { resolve: resolve0, promise: promise0 } = makeResolver();
         const { resolve: resolve1, promise: promise1 } = makeResolver();
 
-        const handler0 = vi.fn(async () => { await promise0 });
+        const handler0 = vi.fn(async () => {
+            await promise0;
+        });
         const handler1 = vi.fn(async () => resolve1());
 
         messageManager.registerHandler("message0", handler0);
@@ -81,14 +89,14 @@ describe("MessageManager", () => {
         const message1 = { type: "message1", payload: 5678 };
 
         /* Message 0 is enqueued and executed executed immediately - but blocks on the promise */
-        messageManager.enqueueMessage(message0);
+        messageManager.enqueueMessage(message0, from);
         expect(handler0).toHaveBeenCalledTimes(1);
-        expect(handler0).toHaveBeenCalledWith(message0.payload, context);
+        expect(handler0).toHaveBeenCalledWith(context, message0.payload, from);
         expect(processNextMessage).toHaveBeenCalledTimes(1);
-        expect(processNextMessage).toHaveBeenCalledWith()
+        expect(processNextMessage).toHaveBeenCalledWith();
 
         /* Message 1 is not executed because message 0 is still blocking */
-        messageManager.enqueueMessage(message1);
+        messageManager.enqueueMessage(message1, from);
         expect(handler1).not.toHaveBeenCalled();
         expect(processNextMessage).toHaveBeenCalledTimes(1);
 
@@ -100,7 +108,7 @@ describe("MessageManager", () => {
 
         /* Message 1 has not been executed */
         expect(handler1).toHaveBeenCalledTimes(1);
-        expect(handler1).toHaveBeenCalledWith(message1.payload, context);
+        expect(handler1).toHaveBeenCalledWith(context, message1.payload, from);
         expect(processNextMessage).toHaveBeenCalledTimes(1);
     });
 
@@ -118,11 +126,11 @@ describe("MessageManager", () => {
         const message1 = { type: "message1", payload: 5678 };
 
         /* Message 0 is enqueued and executed immediately - then the promise is resolved and completes */
-        messageManager.enqueueMessage(message0);
+        messageManager.enqueueMessage(message0, from);
         expect(handler0).toHaveBeenCalledTimes(1);
-        expect(handler0).toHaveBeenCalledWith(message0.payload, context);
+        expect(handler0).toHaveBeenCalledWith(context, message0.payload, from);
         expect(processNextMessage).toHaveBeenCalledTimes(1);
-        expect(processNextMessage).toHaveBeenCalledWith()
+        expect(processNextMessage).toHaveBeenCalledWith();
         expect(messageManager).toHaveLength(1);
         await promise0;
 
@@ -132,11 +140,11 @@ describe("MessageManager", () => {
         expect(messageManager).toHaveLength(0);
 
         /* Message 1 is enqueued and executed immediately - then the promise is resolved and completes */
-        messageManager.enqueueMessage(message1);
+        messageManager.enqueueMessage(message1, from);
         expect(handler1).toHaveBeenCalledTimes(1);
-        expect(handler1).toHaveBeenCalledWith(message1.payload, context);
+        expect(handler1).toHaveBeenCalledWith(context, message1.payload, from);
         expect(processNextMessage).toHaveBeenCalledTimes(2);
-        expect(processNextMessage).toHaveBeenCalledWith()
+        expect(processNextMessage).toHaveBeenCalledWith();
         expect(messageManager).toHaveLength(1);
         await promise1;
     });
