@@ -1,10 +1,11 @@
 import { randomInt } from "node:crypto";
-import { ClientId, ClientToServerMessage } from "@atbs/shared-data";
+import { ClientId, ClientToServerMessage, GameId, ServerToClientMessage } from "@atbs/shared-data";
+
 import { Client } from "./Client.js";
 import { ClientManager } from "./ClientManager.js";
 import type { PhaseHandler } from "./phase-handlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phase-handlers/LobbyPhaseHandler.js";
-import { MessageManager } from "@atbs/misc";
+import { CastToArray, MessageManager } from "@atbs/misc";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -37,14 +38,16 @@ export type ClientMessageManager = MessageManager<
 >;
 
 export class Game {
-    private readonly _gameId: string;
+    private _ownerId: ClientId;
+    private readonly _gameId: GameId;
     private readonly _clientManager: ClientManager;
     private readonly _context: ClientMessageContext;
     private readonly _messageManager: ClientMessageManager;
 
     private _phaseHandler: PhaseHandler;
 
-    constructor() {
+    constructor(ownerId: ClientId) {
+        this._ownerId = ownerId;
         this._gameId = generateGameId();
         this._clientManager = new ClientManager();
 
@@ -71,8 +74,20 @@ export class Game {
     //     this._messageManager.unregisterHandler("client:ping");
     // }
 
-    get gameId() {
+    get ownerId(): ClientId {
+        return this._ownerId;
+    }
+
+    get owner(): Client {
+        return this._clientManager.getClient(this.ownerId);
+    }
+
+    get gameId(): GameId {
         return this._gameId;
+    }
+
+    get clients(): Client[] {
+        return this._clientManager.clients;
     }
 
     reportError(error: string) {
@@ -121,6 +136,22 @@ export class Game {
 
     clientDisconnected(client: Client): void {
         this._phaseHandler.clientDisconnected(client);
+    }
+
+    sendMessage(message: ServerToClientMessage, to: ClientId | ClientId[]) {
+        const clients = CastToArray(to).map((clientId) => this.getClient(clientId));
+
+        clients.forEach((client) => client.send(message));
+    }
+
+    broadcastMessage(message: ServerToClientMessage, exclude?: ClientId | ClientId[]) {
+        const excludes = exclude ? CastToArray(exclude) : [];
+
+        for (const client of this._clientManager.clients) {
+            if (!excludes.includes(client.clientId)) {
+                client.send(message);
+            }
+        }
     }
 
     receiveMessage(data: MessageEvent, from: Client) {

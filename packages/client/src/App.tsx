@@ -50,6 +50,12 @@ export function App() {
                 payload: { nonce: payload.nonce++ }
             });
         });
+        messageManager.registerHandler("lobby:state", (_context, payload) => {
+            console.info({ payload });
+        });
+        messageManager.registerHandler("lobby:client:connected", (_context, payload) => {
+            console.info(`*** Client '${payload.name}' (${payload.clientId}) connected ***`);
+        });
     }, []);
     const onDisconnected = useCallback(() => {
         messageManagerRef.current = null;

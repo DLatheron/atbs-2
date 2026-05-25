@@ -43,6 +43,7 @@ async function throwErrorResponse(res: Response): Promise<never> {
         typeof (data as { error: unknown }).error === "string"
             ? (data as { error: string }).error
             : `Request failed (${res.status})`;
+    console.error(message);
     throw new Error(message);
 }
 

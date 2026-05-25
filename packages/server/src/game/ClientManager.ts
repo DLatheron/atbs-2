@@ -2,14 +2,18 @@ import { ClientId } from "@atbs/shared-data";
 import { Client } from "./Client.js";
 
 export class ClientManager {
-    private readonly clients = new Map<ClientId, Client>();
+    private readonly _clients = new Map<ClientId, Client>();
+
+    get clients(): Client[] {
+        return Array.from(this._clients.values());
+    }
 
     addClient(client: Client): void {
-        this.clients.set(client.clientId, client);
+        this._clients.set(client.clientId, client);
     }
 
     removeClient(clientId: ClientId): boolean {
-        return this.clients.delete(clientId);
+        return this._clients.delete(clientId);
     }
 
     getClient(clientId: ClientId): Client {
@@ -21,6 +25,6 @@ export class ClientManager {
     }
 
     findClient(clientId: ClientId): Client | undefined {
-        return this.clients.get(clientId);
+        return this._clients.get(clientId);
     }
 }

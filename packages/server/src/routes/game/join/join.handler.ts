@@ -24,7 +24,6 @@ export const joinGame: RequestHandler = (req: JoinGameRequest, res: JoinGameResp
         res.status(500).json({ error: "Failed to add client to created game " });
         return;
     }
-    game.clientConnected(client);
 
     res.json({ gameId: game.gameId });
 };
