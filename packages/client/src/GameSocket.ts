@@ -1,13 +1,10 @@
 import { ClientId, GameId } from "@atbs/shared-data";
 import { ClientToServerMessage } from "../../shared-data/src/types/ClientToServerMessage";
 
-// function parseServerMessage(data: unknown) {
-//     console.info(data);
-// }
-
 export type GameSocketConnectOptions = {
     onOpen?: () => void;
     onClose?: () => void;
+    onMessage?: (data: unknown) => void;
     signal?: AbortSignal;
 };
 
@@ -58,22 +55,7 @@ export class GameSocket {
         };
 
         ws.onmessage = (ev) => {
-            let data: unknown;
-            try {
-                data = JSON.parse(String(ev.data));
-            } catch {
-                return;
-            }
-
-            console.info(JSON.stringify(data, null, 4));
-            // const parsed = parseServerMessage(data);
-            // if (!parsed.success) {
-            //     return;
-            // }
-            // const handler = this.handlers.get(parsed.data.type);
-            // if (handler) {
-            //     handler(ctx, parsed.data.payload);
-            // }
+            options?.onMessage?.(ev.data);
         };
 
         ws.onclose = () => {

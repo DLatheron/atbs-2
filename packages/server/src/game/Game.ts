@@ -26,33 +26,50 @@ function generateGameId(): string {
     }
 }
 
-
 interface ClientMessageContext {
     game: Game;
 }
+
+export type ClientMessageManager = MessageManager<
+    ClientMessageContext,
+    ClientToServerMessage,
+    Client
+>;
+
 export class Game {
     private readonly _gameId: string;
     private readonly _clientManager: ClientManager;
     private readonly _context: ClientMessageContext;
-    private readonly _messageManager: MessageManager<ClientToServerMessage, ClientMessageContext>;
+    private readonly _messageManager: ClientMessageManager;
 
     private _phaseHandler: PhaseHandler;
 
     constructor() {
         this._gameId = generateGameId();
         this._clientManager = new ClientManager();
-        
-        this._phaseHandler = new LobbyPhaseHandler();
-        
+
         this._context = { game: this };
-        this._messageManager = new MessageManager<ClientToServerMessage, ClientMessageContext>(this._context);
-        this._messageManager.registerHandler("client:ping", (payload, context) => {
-            console.dir({ payload, context });
-        });
-        this._messageManager.registerHandler("client:rename", (payload, context) => {
-            console.dir({ payload, context });
+        this._messageManager = new MessageManager<
+            ClientMessageContext,
+            ClientToServerMessage,
+            Client
+        >(this._context);
+
+        this._registerMessageHandlers();
+
+        this._phaseHandler = new LobbyPhaseHandler(this);
+        this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
+    private _registerMessageHandlers() {
+        this._messageManager.registerHandler("client:ping", () => {
+            // console.dir({ handler: "client:ping", context, payload, from });
         });
     }
+
+    // private _unregisterMessageHandlers() {
+    //     this._messageManager.unregisterHandler("client:ping");
+    // }
 
     get gameId() {
         return this._gameId;
@@ -96,5 +113,20 @@ export class Game {
 
     findClient(clientId: ClientId): Client | undefined {
         return this._clientManager.findClient(clientId);
+    }
+
+    clientConnected(client: Client): void {
+        this._phaseHandler.clientConnected(client);
+    }
+
+    clientDisconnected(client: Client): void {
+        this._phaseHandler.clientDisconnected(client);
+    }
+
+    receiveMessage(data: MessageEvent, from: Client) {
+        const messageString = data.toString();
+        const message = ClientToServerMessage.parse(JSON.parse(messageString));
+
+        this._messageManager.enqueueMessage(message, from);
     }
 }
