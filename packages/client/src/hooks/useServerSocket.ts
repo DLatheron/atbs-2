@@ -230,7 +230,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                     clearInterval(createGameTimer);
                 });
 
-            createGameTimer = setInterval(() => {
+            createGameTimer = window.setInterval(() => {
                 createGame();
             }, createGameRetryIntervalInMs);
 
@@ -308,7 +308,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                     });
             };
 
-            joinGameTimer = setInterval(() => {
+            joinGameTimer = window.setInterval(() => {
                 joinGame();
             }, joinGameRetryIntervalInMs);
 

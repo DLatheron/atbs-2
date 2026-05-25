@@ -47,6 +47,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@atbs/misc':
+        specifier: workspace:*
+        version: link:../misc
       '@atbs/shared-data':
         specifier: workspace:*
         version: link:../shared-data
@@ -85,6 +88,9 @@ importers:
       '@atbs/maths':
         specifier: workspace:*
         version: link:../maths
+      '@atbs/misc':
+        specifier: workspace:*
+        version: link:../misc
       '@atbs/shared-data':
         specifier: workspace:*
         version: link:../shared-data

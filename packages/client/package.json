@@ -10,6 +10,7 @@
         "clean": "rm -rf dist tsconfig.tsbuildinfo"
     },
     "dependencies": {
+        "@atbs/misc": "workspace:*",
         "@atbs/shared-data": "workspace:*",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
