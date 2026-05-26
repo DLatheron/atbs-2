@@ -1,8 +1,9 @@
-import { ServerToClientMessage } from "@atbs/shared-data";
+import { useCallback, useRef, useState } from "react";
+import { LobbyState, ServerToClientMessage } from "@atbs/shared-data";
+import { MessageManager } from "@atbs/misc";
+
 import { useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
-import { MessageManager } from "@atbs/misc";
-import { useCallback, useRef, useState } from "react";
 import { GameSocket } from "./GameSocket";
 import { LobbyPage } from "./pages/lobby/Lobby";
 
@@ -24,10 +25,14 @@ export function App() {
     const { clientId } = useClientId();
     const messageManagerRef = useRef<ServerMessageManager>(null);
     const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+    const [clientName, setClientName] = useState<string>("Default Client Name");
+    const gameSocketRef = useRef<GameSocket>(null);
 
     const onConnected = useCallback((gameSocket: GameSocket) => {
+        gameSocketRef.current = gameSocket;
+
         const context: ServerMessageContext = {
-            name: "Default Client Name - probably not used"
+            name: "Not used at the moment"
         };
         const messageManager = new MessageManager<
             ServerMessageContext,
@@ -61,11 +66,17 @@ export function App() {
         messageManager.registerHandler("lobby:client:disconnected", (_context, payload) => {
             console.info(`*** Client '${payload.name}' (${payload.clientId}) disconnected ***`);
         });
+        messageManager.registerHandler("server:client:renamed", (_context, payload) => {
+            console.info(`*** Client '${payload.oldName}' renamed to '${payload.newName}'`);
+        });
     }, []);
+
     const onDisconnected = useCallback(() => {
+        gameSocketRef.current = null;
         messageManagerRef.current = null;
         setLobbyState(null);
     }, []);
+
     const onMessage = useCallback((data: unknown) => {
         let message: ServerToClientMessage;
 
@@ -78,8 +89,9 @@ export function App() {
         messageManagerRef.current?.enqueueMessage(message, { name: "Server" });
     }, []);
 
-    const { connected, gameId, clientName } = useServerSocket({
+    const { connected, gameId } = useServerSocket({
         clientId,
+        clientName,
         onConnected,
         onDisconnected,
         onMessage
@@ -90,7 +102,21 @@ export function App() {
             <p>Client ID: {clientId}</p>
             <p>Game ID: {gameId}</p>
             <p>{connected ? "Connected to Server" : "Disconnected"}</p>
-            <LobbyPage initialClientName={clientName} lobbyState={lobbyState} />
+            <LobbyPage
+                initialClientName={clientName}
+                onClientNameChanged={(name) => {
+                    async function updateClientName(name: string) {
+                        gameSocketRef.current?.send({
+                            type: "client:rename",
+                            payload: { name }
+                        });
+                        setClientName(name);
+                    }
+
+                    updateClientName(name);
+                }}
+                lobbyState={lobbyState}
+            />
         </>
     );
 }

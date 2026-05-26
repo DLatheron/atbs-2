@@ -20,6 +20,7 @@ type JoinGameOptions = {
 
 export interface ServerSocketOptions {
     clientId?: ClientId;
+    clientName: string;
 
     onConnected?: (gameSocket: GameSocket) => void;
     onDisconnected?: (unexpected: boolean) => void;
@@ -114,6 +115,7 @@ async function joinGame({
 export function useServerSocket(options: ServerSocketOptions) {
     const {
         clientId,
+        clientName,
         onConnected,
         onDisconnected,
         onMessage,
@@ -124,9 +126,6 @@ export function useServerSocket(options: ServerSocketOptions) {
     const [searchParams, setSearchParams] = useSearchParams();
     const validatedSearchParams = parseURLSearchParams(ClientQueryParams, searchParams);
     const { "game-id": gameId, mode } = validatedSearchParams;
-    const [clientName] = useState<string>(
-        mode === "join" ? "Joining client" : mode === "create" ? "Creating client" : "Default name"
-    );
 
     const [connected, setConnected] = useState(false);
 
@@ -341,5 +340,5 @@ export function useServerSocket(options: ServerSocketOptions) {
         };
     }, []);
 
-    return { connected, gameId, clientName };
+    return { connected, gameId };
 }

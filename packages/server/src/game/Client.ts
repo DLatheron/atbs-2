@@ -20,6 +20,10 @@ export class Client {
         return this._name;
     }
 
+    set name(value: string) {
+        this._name = value;
+    }
+
     set socketContext(value: ServerSocketContext) {
         this._socketContext = value;
     }
