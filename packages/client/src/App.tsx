@@ -2,8 +2,9 @@ import { ServerToClientMessage } from "@atbs/shared-data";
 import { useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { MessageManager } from "@atbs/misc";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { GameSocket } from "./GameSocket";
+import { LobbyPage } from "./pages/lobby/Lobby";
 
 interface ServerMessageContext {
     name: string;
@@ -22,6 +23,7 @@ export type ServerMessageManager = MessageManager<
 export function App() {
     const { clientId } = useClientId();
     const messageManagerRef = useRef<ServerMessageManager>(null);
+    const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
 
     const onConnected = useCallback((gameSocket: GameSocket) => {
         const context: ServerMessageContext = {
@@ -51,14 +53,18 @@ export function App() {
             });
         });
         messageManager.registerHandler("lobby:state", (_context, payload) => {
-            console.info({ payload });
+            setLobbyState(payload);
         });
         messageManager.registerHandler("lobby:client:connected", (_context, payload) => {
             console.info(`*** Client '${payload.name}' (${payload.clientId}) connected ***`);
         });
+        messageManager.registerHandler("lobby:client:disconnected", (_context, payload) => {
+            console.info(`*** Client '${payload.name}' (${payload.clientId}) disconnected ***`);
+        });
     }, []);
     const onDisconnected = useCallback(() => {
         messageManagerRef.current = null;
+        setLobbyState(null);
     }, []);
     const onMessage = useCallback((data: unknown) => {
         let message: ServerToClientMessage;
@@ -72,7 +78,7 @@ export function App() {
         messageManagerRef.current?.enqueueMessage(message, { name: "Server" });
     }, []);
 
-    const { connected, gameId } = useServerSocket({
+    const { connected, gameId, clientName } = useServerSocket({
         clientId,
         onConnected,
         onDisconnected,
@@ -84,6 +90,7 @@ export function App() {
             <p>Client ID: {clientId}</p>
             <p>Game ID: {gameId}</p>
             <p>{connected ? "Connected to Server" : "Disconnected"}</p>
+            <LobbyPage initialClientName={clientName} lobbyState={lobbyState} />
         </>
     );
 }

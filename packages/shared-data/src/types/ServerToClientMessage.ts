@@ -21,6 +21,13 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             clientId: ClientId,
             name: z.string().min(1)
         })
+    }),
+    z.object({
+        type: z.literal("lobby:client:disconnected"),
+        payload: z.object({
+            clientId: ClientId,
+            name: z.string().min(1)
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

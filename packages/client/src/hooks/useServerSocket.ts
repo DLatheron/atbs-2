@@ -124,6 +124,9 @@ export function useServerSocket(options: ServerSocketOptions) {
     const [searchParams, setSearchParams] = useSearchParams();
     const validatedSearchParams = parseURLSearchParams(ClientQueryParams, searchParams);
     const { "game-id": gameId, mode } = validatedSearchParams;
+    const [clientName] = useState<string>(
+        mode === "join" ? "Joining client" : mode === "create" ? "Creating client" : "Default name"
+    );
 
     const [connected, setConnected] = useState(false);
 
@@ -188,12 +191,10 @@ export function useServerSocket(options: ServerSocketOptions) {
             const abortController = new AbortController();
             abortControllerRef.current = abortController;
 
-            const name = "Default Name";
-
             try {
                 const { gameId: createdGameId } = await createGame({
                     clientId,
-                    name,
+                    name: clientName,
                     options: { signal: abortController.signal }
                 });
                 setSearchParams((searchParams) => {
@@ -224,7 +225,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                 throw error;
             }
         },
-        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage]
+        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage, clientName]
     );
 
     /**
@@ -261,13 +262,11 @@ export function useServerSocket(options: ServerSocketOptions) {
             const abortController = new AbortController();
             abortControllerRef.current = abortController;
 
-            const name = "Default Join Name";
-
             try {
                 const { gameId: joinedGameId } = await joinGame({
                     gameId,
                     clientId,
-                    name,
+                    name: clientName,
                     options: { signal: abortController.signal }
                 });
                 setSearchParams((searchParams) => {
@@ -298,7 +297,7 @@ export function useServerSocket(options: ServerSocketOptions) {
                 throw error;
             }
         },
-        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage]
+        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage, clientName]
     );
 
     /**
@@ -342,5 +341,5 @@ export function useServerSocket(options: ServerSocketOptions) {
         };
     }, []);
 
-    return { connected, gameId };
+    return { connected, gameId, clientName };
 }

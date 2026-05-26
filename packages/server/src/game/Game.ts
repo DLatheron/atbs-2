@@ -141,7 +141,7 @@ export class Game {
     sendMessage(message: ServerToClientMessage, to: ClientId | ClientId[]) {
         const clients = CastToArray(to).map((clientId) => this.getClient(clientId));
 
-        clients.forEach((client) => client.send(message));
+        clients.forEach((client) => client.sendMessage(message));
     }
 
     broadcastMessage(message: ServerToClientMessage, exclude?: ClientId | ClientId[]) {
@@ -149,7 +149,7 @@ export class Game {
 
         for (const client of this._clientManager.clients) {
             if (!excludes.includes(client.clientId)) {
-                client.send(message);
+                client.sendMessage(message);
             }
         }
     }
