@@ -1,8 +1,13 @@
-import { JSX, useEffect, useState } from "react";
+import { JSX, useEffect, useLayoutEffect, useState } from "react";
 
 import {
     Button,
     Container,
+    List,
+    ListItem,
+    ListItemIcon,
+    ListItemText,
+    ListSubheader,
     Paper,
     Stack,
     Table,
@@ -14,8 +19,17 @@ import {
     TextField
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import LinkIcon from "@mui/icons-material/Link";
+import LinkOffIcon from "@mui/icons-material/LinkOff";
+import EditIcon from "@mui/icons-material/Edit";
 
 import { ClientId, GameId, LobbyState } from "@atbs/shared-data";
+
+export interface LogEntry {
+    type: "connected" | "disconnected" | "renamed" | null;
+    text: string;
+    extra?: string;
+}
 
 export interface LobbyPageProps {
     clientId: ClientId | undefined;
@@ -28,6 +42,7 @@ export interface LobbyPageProps {
     onJoinGame: (gameId: GameId) => void;
     onLeaveGame: () => void;
 
+    logEntries: LogEntry[];
     lobbyState: LobbyState | null;
 }
 
@@ -42,6 +57,7 @@ export function LobbyPage({
     onJoinGame,
     onLeaveGame,
 
+    logEntries,
     lobbyState
 }: LobbyPageProps): JSX.Element {
     const [localGameId, setLocalGameId] = useState<GameId | undefined>(gameId);
@@ -55,8 +71,14 @@ export function LobbyPage({
         setLocalGameId(gameId);
     }, [gameId]);
 
+    useLayoutEffect(() => {
+        document
+            .getElementById("last-log-entry")
+            ?.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+    });
+
     return (
-        <Container component={Paper} maxWidth="xl" sx={{ padding: 4 }}>
+        <Container component={Paper} maxWidth="xl" sx={{ padding: 3 }}>
             <Stack spacing={4}>
                 <TextField
                     id="client-id"
@@ -188,6 +210,50 @@ export function LobbyPage({
                 ) : (
                     <h2>No Game</h2>
                 )}
+
+                <Container
+                    component={Paper}
+                    disableGutters
+                    maxWidth="xl"
+                    elevation={1}
+                    sx={{ height: 400, maxHeight: 400, overflow: "auto" }}
+                >
+                    <List
+                        dense
+                        id="log"
+                        subheader={<ListSubheader component="div">Logs</ListSubheader>}
+                    >
+                        {logEntries.map(({ type, text, extra }, index) => {
+                            let icon: JSX.Element | null = null;
+
+                            switch (type) {
+                                case "connected":
+                                    icon = <LinkIcon />;
+                                    break;
+
+                                case "disconnected":
+                                    icon = <LinkOffIcon />;
+                                    break;
+
+                                case "renamed":
+                                    icon = <EditIcon />;
+                                    break;
+
+                                default:
+                                    return null;
+                            }
+
+                            return (
+                                <ListItem
+                                    id={index === logEntries.length - 1 ? "last-log-entry" : ""}
+                                >
+                                    <ListItemIcon>{icon}</ListItemIcon>
+                                    <ListItemText primary={text} secondary={extra} />
+                                </ListItem>
+                            );
+                        })}
+                    </List>
+                </Container>
             </Stack>
         </Container>
     );

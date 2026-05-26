@@ -27,7 +27,7 @@ export function parseURLSearchParams<T extends z.ZodTypeAny>(
     }
 }
 
-export const CreateOrJoin = z.union([z.literal("create"), z.literal("join")]).optional();
+export const CreateOrJoin = z.union([z.literal("create"), z.literal("join")]);
 export type CreateOrJoin = z.infer<typeof CreateOrJoin>;
 
 /**
@@ -53,7 +53,8 @@ export type StatusResponseBody = z.infer<typeof StatusResponseBody>;
 export const ClientQueryParams = z.object({
     "client-id": ClientId.optional(),
     "game-id": GameId.optional(),
-    mode: CreateOrJoin
+    mode: CreateOrJoin.optional(),
+    name: z.string().optional()
 });
 export type ClientQueryParams = z.infer<typeof ClientQueryParams>;
 
