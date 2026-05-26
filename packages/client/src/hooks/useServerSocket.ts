@@ -340,5 +340,29 @@ export function useServerSocket(options: ServerSocketOptions) {
         };
     }, []);
 
-    return { connected, gameId };
+    return {
+        connected,
+        gameId,
+        createGame: useCallback(() => {
+            if (!clientId) {
+                throw new Error("clientId must be set");
+            }
+            handleCreateGame(clientId);
+        }, [clientId, handleCreateGame]),
+        joinGame: useCallback(
+            (gameId: GameId) => {
+                if (!clientId) {
+                    throw new Error("clientId must be set");
+                }
+                handleJoinGame(gameId, clientId);
+            },
+            [clientId, handleJoinGame]
+        ),
+        leaveGame: () => {
+            abortControllerRef.current?.abort();
+            gameSocketRef.current?.disconnect();
+            setConnected(false);
+            onDisconnected?.(false);
+        }
+    };
 }

@@ -1,11 +1,12 @@
 import { useCallback, useRef, useState } from "react";
-import { LobbyState, ServerToClientMessage } from "@atbs/shared-data";
+import { GameId, LobbyState, ServerToClientMessage } from "@atbs/shared-data";
 import { MessageManager } from "@atbs/misc";
 
 import { useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { LobbyPage } from "./pages/lobby/Lobby";
+import { LobbyPage } from "./pages";
+import { useSearchParams } from "react-router-dom";
 
 interface ServerMessageContext {
     name: string;
@@ -27,6 +28,7 @@ export function App() {
     const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
     const [clientName, setClientName] = useState<string>("Default Client Name");
     const gameSocketRef = useRef<GameSocket>(null);
+    const [, setSearchParams] = useSearchParams();
 
     const onConnected = useCallback((gameSocket: GameSocket) => {
         gameSocketRef.current = gameSocket;
@@ -89,7 +91,7 @@ export function App() {
         messageManagerRef.current?.enqueueMessage(message, { name: "Server" });
     }, []);
 
-    const { connected, gameId } = useServerSocket({
+    const { connected, gameId, createGame, joinGame, leaveGame } = useServerSocket({
         clientId,
         clientName,
         onConnected,
@@ -98,25 +100,35 @@ export function App() {
     });
 
     return (
-        <>
-            <p>Client ID: {clientId}</p>
-            <p>Game ID: {gameId}</p>
-            <p>{connected ? "Connected to Server" : "Disconnected"}</p>
-            <LobbyPage
-                initialClientName={clientName}
-                onClientNameChanged={(name) => {
-                    async function updateClientName(name: string) {
-                        gameSocketRef.current?.send({
-                            type: "client:rename",
-                            payload: { name }
-                        });
-                        setClientName(name);
-                    }
+        <LobbyPage
+            clientId={clientId}
+            initialClientName={clientName}
+            gameId={gameId}
+            onClientNameChanged={(name) => {
+                async function updateClientName(name: string) {
+                    gameSocketRef.current?.send({
+                        type: "client:rename",
+                        payload: { name }
+                    });
+                    setClientName(name);
+                }
 
-                    updateClientName(name);
-                }}
-                lobbyState={lobbyState}
-            />
-        </>
+                updateClientName(name);
+            }}
+            onGameIdChanged={
+                connected
+                    ? undefined
+                    : (gameId: GameId) => {
+                          setSearchParams((searchParams) => {
+                              searchParams.set("game-id", gameId);
+                              return searchParams;
+                          });
+                      }
+            }
+            onCreateGame={createGame}
+            onJoinGame={joinGame}
+            onLeaveGame={leaveGame}
+            lobbyState={lobbyState}
+        />
     );
 }
