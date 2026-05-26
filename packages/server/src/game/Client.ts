@@ -31,7 +31,7 @@ export class Client {
         return this._socketContext;
     }
 
-    send(message: ServerToClientMessage): void {
+    sendMessage(message: ServerToClientMessage): void {
         this.socketContext.send(message);
     }
 }

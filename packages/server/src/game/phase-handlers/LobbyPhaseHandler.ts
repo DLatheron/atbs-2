@@ -1,4 +1,4 @@
-import { LobbyState, Phase } from "@atbs/shared-data";
+import { ClientId, LobbyState, Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager } from "../Game.js";
 import { Client } from "../Client.js";
@@ -25,17 +25,6 @@ export class LobbyPhaseHandler extends PhaseHandler {
     clientConnected(client: Client): void {
         console.info(`LOBBY: *** Client '${client.name}' (${client.clientId}) connected ***`);
 
-        const lobbyState = this._buildLobbyState();
-
-        // Give the current state to the recently connected client.
-        this.game.sendMessage(
-            {
-                type: "lobby:state",
-                payload: lobbyState
-            },
-            client.clientId
-        );
-
         // Tell everyone else we have a new client.
         this.game.broadcastMessage(
             {
@@ -47,22 +36,42 @@ export class LobbyPhaseHandler extends PhaseHandler {
             },
             client.clientId
         );
+
+        // Tell everyone about the updated lobby state.
+        this.game.broadcastMessage({
+            type: "lobby:state",
+            payload: this._buildLobbyState()
+        });
     }
 
     clientDisconnected(client: Client): void {
         console.info(`LOBBY: *** Client '${client.name}' (${client.clientId}) disconnected ***`);
+
+        this.game.broadcastMessage({
+            type: "lobby:client:disconnected",
+            payload: {
+                clientId: client.clientId,
+                name: client.name
+            }
+        });
+        this.game.broadcastMessage({
+            type: "lobby:state",
+            payload: this._buildLobbyState(client.clientId)
+        });
     }
 
-    private _buildLobbyState(): LobbyState {
+    private _buildLobbyState(excludeId?: ClientId): LobbyState {
         const { clients } = this.game;
 
         return {
             ownerId: this.game.ownerId,
-            clients: clients.map((client) => ({
-                id: client.clientId,
-                name: client.name,
-                ready: false
-            }))
+            clients: clients
+                .filter(({ clientId }) => clientId != excludeId)
+                .map((client) => ({
+                    id: client.clientId,
+                    name: client.name,
+                    ready: false
+                }))
         };
     }
 }
