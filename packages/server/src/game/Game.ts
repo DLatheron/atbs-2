@@ -7,7 +7,7 @@ import type { PhaseHandler } from "./phase-handlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phase-handlers/LobbyPhaseHandler.js";
 import { CastToArray, MessageManager } from "@atbs/misc";
 
-const FIXED_GAME_ID = true; // Temporary Hack.
+const FIXED_GAME_ID = false; // Temporary Hack.
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
