@@ -13,8 +13,24 @@ export class LobbyPhaseHandler extends PhaseHandler {
     }
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {
-        messageManager.registerHandler("client:rename", () => {
-            // console.dir({ handler: "client:rename", context, payload, from });
+        messageManager.registerHandler("client:rename", ({ game }, payload, from) => {
+            const { clientId } = from;
+            const { name } = payload;
+            const client = game.getClient(clientId);
+            const { name: oldName } = client;
+            client.name = name;
+
+            game.broadcastMessage({
+                type: "server:client:renamed",
+                payload: {
+                    oldName,
+                    newName: name
+                }
+            });
+            game.broadcastMessage({
+                type: "lobby:state",
+                payload: this._buildLobbyState()
+            });
         });
     }
 
