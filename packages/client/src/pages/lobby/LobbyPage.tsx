@@ -7,7 +7,6 @@ import {
     Grid,
     List,
     ListItem,
-    ListItemIcon,
     ListItemText,
     ListSubheader,
     MenuItem,
@@ -23,10 +22,6 @@ import {
     TextField
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import LinkIcon from "@mui/icons-material/Link";
-import LinkOffIcon from "@mui/icons-material/LinkOff";
-import EditIcon from "@mui/icons-material/Edit";
-import GroupIcon from "@mui/icons-material/Group";
 
 import { ClientId, GameId, LobbyState, SideId } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
@@ -78,20 +73,21 @@ export function LobbyPage({
     const isServer = lobbyState?.ownerId === clientId;
     const { scenario } = lobbyState ?? {};
 
-    const availableSideIds = (
-        !scenario
-            ? []
-            : scenario.sides
-                .map(({ id }) => id)
-                .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id))
-    );
+    const availableSideIds = !scenario
+        ? []
+        : scenario.sides
+              .map(({ id }) => id)
+              .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
     console.info({ availableSideIds });
 
-    const onSideIdHandler = useCallback((clientId: ClientId, selectedSideId: string) => {
-        const sideId = selectedSideId === "None" ? null : selectedSideId;
+    const onSideIdHandler = useCallback(
+        (clientId: ClientId, selectedSideId: string) => {
+            const sideId = selectedSideId === "None" ? null : selectedSideId;
 
-        onSideIdChange(clientId, sideId);
-    }, [onSideIdChange]);
+            onSideIdChange(clientId, sideId);
+        },
+        [onSideIdChange]
+    );
 
     useEffect(() => {
         setLocalGameId(gameId);
@@ -244,30 +240,40 @@ export function LobbyPage({
                                                                     ? "None"
                                                                     : client.sideId
                                                             }
-                                                            disabled={client.id !== clientId && !isServer}
+                                                            disabled={
+                                                                client.id !== clientId && !isServer
+                                                            }
                                                             onChange={(e) =>
-                                                                onSideIdHandler(client.id, e.target.value)
+                                                                onSideIdHandler(
+                                                                    client.id,
+                                                                    e.target.value
+                                                                )
                                                             }
                                                         >
                                                             <MenuItem value="None">None</MenuItem>
-                                                                {
-                                                                    scenario?.sides.map((side) => (
-                                                                        <MenuItem
-                                                                            value={side.id}
-                                                                            disabled={!availableSideIds.includes(side.id)}
-                                                                        >
-                                                                            {side.name}
-                                                                        </MenuItem>
-                                                                    ))
-                                                                }
+                                                            {scenario?.sides.map((side) => (
+                                                                <MenuItem
+                                                                    value={side.id}
+                                                                    disabled={
+                                                                        !availableSideIds.includes(
+                                                                            side.id
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {side.name}
+                                                                </MenuItem>
+                                                            ))}
                                                         </Select>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Checkbox
                                                             checked={client.ready}
-                                                            disabled={client.id !== clientId || !client.sideId}
-                                                            onChange={e => {
-                                                                onReadyChange(e.target.checked)
+                                                            disabled={
+                                                                client.id !== clientId ||
+                                                                !client.sideId
+                                                            }
+                                                            onChange={(e) => {
+                                                                onReadyChange(e.target.checked);
                                                             }}
                                                         />
                                                     </TableCell>
@@ -293,19 +299,13 @@ export function LobbyPage({
                                 id="log"
                                 subheader={<ListSubheader component="div">Logs</ListSubheader>}
                             >
-                                {
-                                    logEntries.map(({ text }, index) => (
-                                        <ListItem
-                                            id={
-                                                index === logEntries.length - 1
-                                                    ? "last-log-entry"
-                                                    : ""
-                                            }
-                                        >
-                                            <ListItemText primary={text} />
-                                        </ListItem>
-                                    ))
-                                }
+                                {logEntries.map(({ text }, index) => (
+                                    <ListItem
+                                        id={index === logEntries.length - 1 ? "last-log-entry" : ""}
+                                    >
+                                        <ListItemText primary={text} />
+                                    </ListItem>
+                                ))}
                             </List>
                         </Container>
                     </Stack>

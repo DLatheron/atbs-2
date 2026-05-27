@@ -119,7 +119,7 @@ export function App() {
                         type: "side",
                         text: `⬅️ Client left '${payload.old?.sideName}'`
                     }
-                ]); 
+                ]);
             } else if (payload.old && payload.new) {
                 setLogEntries((logEntries) => [
                     ...logEntries,
@@ -127,12 +127,12 @@ export function App() {
                         type: "side",
                         text: `🔀 Client left '${payload.old?.sideName}' and joined '${payload.new?.sideName}'`
                     }
-                ]);                 
+                ]);
             }
         });
         messageManager.registerHandler("server:client:ready", (_context, payload) => {
             if (payload.ready) {
-                console.info(`*** Client ${payload.client.name} is ready!`)
+                console.info(`*** Client ${payload.client.name} is ready!`);
                 setLogEntries((logEntries) => [
                     ...logEntries,
                     {
@@ -140,15 +140,15 @@ export function App() {
                     }
                 ]);
             } else {
-                console.info(`*** Client ${payload.client.name} is not ready`)
+                console.info(`*** Client ${payload.client.name} is not ready`);
                 setLogEntries((logEntries) => [
                     ...logEntries,
                     {
                         text: `❌ Client '${payload.client.name} is not ready`
                     }
                 ]);
-            }          
-        })
+            }
+        });
     }, []);
 
     const onDisconnected = useCallback(() => {

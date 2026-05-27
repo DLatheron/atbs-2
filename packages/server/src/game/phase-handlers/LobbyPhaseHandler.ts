@@ -32,50 +32,57 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 payload: this._buildLobbyState()
             });
         });
-        messageManager.registerHandler("client:side:change", ({ game }, payload, { clientId: fromClientId }) => {
-            const { ownerId } = game;
-            const { clientId, sideId: newSideId } = payload;
+        messageManager.registerHandler(
+            "client:side:change",
+            ({ game }, payload, { clientId: fromClientId }) => {
+                const { ownerId } = game;
+                const { clientId, sideId: newSideId } = payload;
 
-            if (fromClientId !== ownerId && fromClientId !== clientId) {
-                console.error(`Attempt by client ${fromClientId} to set ${clientId} to side ${newSideId}`);
-                return;
-            }
-
-            const client = game.getClient(clientId);
-            const { sideId: oldSideId } = client;
-            const { scenario } = game;
-            if (!scenario) {
-                throw new Error(`No scenario selected`);
-            }
-
-            client.sideId = newSideId;
-
-            game.broadcastMessage({
-                type: "server:client:side:changed",
-                payload: {
-                    old: !oldSideId
-                        ? undefined
-                        : {
-                              sideId: oldSideId,
-                              sideName: scenario.getSide(oldSideId).name
-                          },
-                    new: !newSideId
-                        ? undefined
-                        : {
-                              sideId: newSideId,
-                              sideName: scenario.getSide(newSideId).name
-                          }
+                if (fromClientId !== ownerId && fromClientId !== clientId) {
+                    console.error(
+                        `Attempt by client ${fromClientId} to set ${clientId} to side ${newSideId}`
+                    );
+                    return;
                 }
-            });
-            game.broadcastMessage({
-                type: "lobby:state",
-                payload: this._buildLobbyState()
-            });
-        });
+
+                const client = game.getClient(clientId);
+                const { sideId: oldSideId } = client;
+                const { scenario } = game;
+                if (!scenario) {
+                    throw new Error(`No scenario selected`);
+                }
+
+                client.sideId = newSideId;
+
+                game.broadcastMessage({
+                    type: "server:client:side:changed",
+                    payload: {
+                        old: !oldSideId
+                            ? undefined
+                            : {
+                                  sideId: oldSideId,
+                                  sideName: scenario.getSide(oldSideId).name
+                              },
+                        new: !newSideId
+                            ? undefined
+                            : {
+                                  sideId: newSideId,
+                                  sideName: scenario.getSide(newSideId).name
+                              }
+                    }
+                });
+                game.broadcastMessage({
+                    type: "lobby:state",
+                    payload: this._buildLobbyState()
+                });
+            }
+        );
         messageManager.registerHandler("client:ready", ({ game }, { ready }, { clientId }) => {
             const client = this.game.getClient(clientId);
             if (!client.sideId) {
-                console.error(`Client ${clientId} cannot be ready as it doesn't have a side assigned`);
+                console.error(
+                    `Client ${clientId} cannot be ready as it doesn't have a side assigned`
+                );
                 return;
             }
             client.ready = ready;
@@ -93,7 +100,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             game.broadcastMessage({
                 type: "lobby:state",
                 payload: this._buildLobbyState()
-            });            
+            });
         });
     }
 
