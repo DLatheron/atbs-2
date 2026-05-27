@@ -36,21 +36,27 @@ export const DescriptionImage = z.object({
 export type DescriptionImage = z.infer<typeof DescriptionImage>;
 
 export const Description = z.array(
-    z.union([DescriptionH1, DescriptionH2, DescriptionH3, DescriptionText, DescriptionLine, DescriptionImage])
+    z.union([
+        DescriptionH1,
+        DescriptionH2,
+        DescriptionH3,
+        DescriptionText,
+        DescriptionLine,
+        DescriptionImage
+    ])
 );
 export type Description = z.infer<typeof Description>;
 
-export const ScenarioSummary = z
-    .object({
-        id: z.string().min(1),
-        name: z.string().min(1),
-        description: Description,
-        sides: z.array(
-            z.object({
-                id: SideId,
-                name: z.string().min(1),
-                description: Description
-            })
-        )
-    });
+export const ScenarioSummary = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    description: Description,
+    sides: z.array(
+        z.object({
+            id: SideId,
+            name: z.string().min(1),
+            description: Description
+        })
+    )
+});
 export type ScenarioSummary = z.infer<typeof ScenarioSummary>;

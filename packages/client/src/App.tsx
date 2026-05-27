@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from "react";
 import {
+    ClientId,
     ClientQueryParams,
     GameId,
     LobbyState,
     parseURLSearchParams,
-    ServerToClientMessage
+    ServerToClientMessage,
+    SideId
 } from "@atbs/shared-data";
 import { MessageManager } from "@atbs/misc";
 
@@ -74,34 +76,78 @@ export function App() {
             setLobbyState(payload);
         });
         messageManager.registerHandler("lobby:client:connected", (_context, payload) => {
-            console.info(`*** Client '${payload.name}' (${payload.clientId}) connected ***`);
             setLogEntries((logEntries) => [
                 ...logEntries,
                 {
                     type: "connected",
-                    text: `Client '${payload.name}' connected`
+                    text: `😀 Client '${payload.name}' connected`
                 }
             ]);
         });
         messageManager.registerHandler("lobby:client:disconnected", (_context, payload) => {
-            console.info(`*** Client '${payload.name}' (${payload.clientId}) disconnected ***`);
             setLogEntries((logEntries) => [
                 ...logEntries,
                 {
                     type: "disconnected",
-                    text: `Client '${payload.name}' disconnected`
+                    text: `😢 Client '${payload.name}' disconnected`
                 }
             ]);
         });
         messageManager.registerHandler("server:client:renamed", (_context, payload) => {
-            console.info(`*** Client '${payload.oldName}' renamed to '${payload.newName}'`);
             setLogEntries((logEntries) => [
                 ...logEntries,
                 {
                     type: "renamed",
-                    text: `Client '${payload.oldName}' renamed to '${payload.newName}'`
+                    text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
                 }
             ]);
+        });
+        messageManager.registerHandler("server:client:side:changed", (_context, payload) => {
+            console.info(`*** Client joined '${payload.new?.sideName ?? "null"}'`);
+            if (payload.new && !payload.old) {
+                setLogEntries((logEntries) => [
+                    ...logEntries,
+                    {
+                        type: "side",
+                        text: `➡️ Client joined '${payload.new?.sideName}'`
+                    }
+                ]);
+            } else if (payload.old && !payload.new) {
+                setLogEntries((logEntries) => [
+                    ...logEntries,
+                    {
+                        type: "side",
+                        text: `⬅️ Client left '${payload.old?.sideName}'`
+                    }
+                ]);
+            } else if (payload.old && payload.new) {
+                setLogEntries((logEntries) => [
+                    ...logEntries,
+                    {
+                        type: "side",
+                        text: `🔀 Client left '${payload.old?.sideName}' and joined '${payload.new?.sideName}'`
+                    }
+                ]);
+            }
+        });
+        messageManager.registerHandler("server:client:ready", (_context, payload) => {
+            if (payload.ready) {
+                console.info(`*** Client ${payload.client.name} is ready!`);
+                setLogEntries((logEntries) => [
+                    ...logEntries,
+                    {
+                        text: `✅ Client '${payload.client.name} is ready!`
+                    }
+                ]);
+            } else {
+                console.info(`*** Client ${payload.client.name} is not ready`);
+                setLogEntries((logEntries) => [
+                    ...logEntries,
+                    {
+                        text: `❌ Client '${payload.client.name} is not ready`
+                    }
+                ]);
+            }
         });
     }, []);
 
@@ -121,6 +167,20 @@ export function App() {
         }
 
         messageManagerRef.current?.enqueueMessage(message, { name: "Server" });
+    }, []);
+
+    const changeSideId = useCallback((clientId: ClientId, sideId: SideId | null) => {
+        gameSocketRef.current?.send({
+            type: "client:side:change",
+            payload: { clientId, sideId }
+        });
+    }, []);
+
+    const changeReady = useCallback((ready: boolean) => {
+        gameSocketRef.current?.send({
+            type: "client:ready",
+            payload: { ready }
+        });
     }, []);
 
     const { connected, gameId, createGame, joinGame, leaveGame } = useServerSocket({
@@ -160,6 +220,8 @@ export function App() {
             onCreateGame={createGame}
             onJoinGame={joinGame}
             onLeaveGame={leaveGame}
+            onSideIdChange={changeSideId}
+            onReadyChange={changeReady}
             logEntries={logEntries}
             lobbyState={lobbyState}
         />

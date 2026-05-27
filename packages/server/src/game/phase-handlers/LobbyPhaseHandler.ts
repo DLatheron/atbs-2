@@ -3,8 +3,6 @@ import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager } from "../Game.js";
 import { Client } from "../Client.js";
 
-const AUTO_POPULATE_SCENARIO = true; // Temporary Hack.
-
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
         return Phase.Values.lobby;
@@ -34,10 +32,82 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 payload: this._buildLobbyState()
             });
         });
+        messageManager.registerHandler(
+            "client:side:change",
+            ({ game }, payload, { clientId: fromClientId }) => {
+                const { ownerId } = game;
+                const { clientId, sideId: newSideId } = payload;
+
+                if (fromClientId !== ownerId && fromClientId !== clientId) {
+                    console.error(
+                        `Attempt by client ${fromClientId} to set ${clientId} to side ${newSideId}`
+                    );
+                    return;
+                }
+
+                const client = game.getClient(clientId);
+                const { sideId: oldSideId } = client;
+                const { scenario } = game;
+                if (!scenario) {
+                    throw new Error(`No scenario selected`);
+                }
+
+                client.sideId = newSideId;
+
+                game.broadcastMessage({
+                    type: "server:client:side:changed",
+                    payload: {
+                        old: !oldSideId
+                            ? undefined
+                            : {
+                                  sideId: oldSideId,
+                                  sideName: scenario.getSide(oldSideId).name
+                              },
+                        new: !newSideId
+                            ? undefined
+                            : {
+                                  sideId: newSideId,
+                                  sideName: scenario.getSide(newSideId).name
+                              }
+                    }
+                });
+                game.broadcastMessage({
+                    type: "lobby:state",
+                    payload: this._buildLobbyState()
+                });
+            }
+        );
+        messageManager.registerHandler("client:ready", ({ game }, { ready }, { clientId }) => {
+            const client = this.game.getClient(clientId);
+            if (!client.sideId) {
+                console.error(
+                    `Client ${clientId} cannot be ready as it doesn't have a side assigned`
+                );
+                return;
+            }
+            client.ready = ready;
+
+            game.broadcastMessage({
+                type: "server:client:ready",
+                payload: {
+                    client: {
+                        id: clientId,
+                        name: game.getClient(clientId).name
+                    },
+                    ready
+                }
+            });
+            game.broadcastMessage({
+                type: "lobby:state",
+                payload: this._buildLobbyState()
+            });
+        });
     }
 
     unregisterMessageHandlers(messageManager: ClientMessageManager): void {
         messageManager.unregisterHandler("client:rename");
+        messageManager.unregisterHandler("client:side:change");
+        messageManager.unregisterHandler("client:ready");
     }
 
     clientConnected(client: Client): void {
@@ -88,37 +158,10 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 .map((client) => ({
                     id: client.clientId,
                     name: client.name,
-                    ready: false
+                    sideId: client.sideId,
+                    ready: client.ready
                 })),
-            ...(
-                AUTO_POPULATE_SCENARIO ? {
-                    scenario: {
-                        id: "test-scenario",
-                        name: "Test Scenario",
-                        description: [
-                            { text: "This is a test scenario designed specifically to test the ATBS framework, its not real and can't be played.", pb: 2 },
-                            { text: "It has multiple paragraphs of description." },
-                            { line: true }
-                        ],
-                        sides: [
-                            {
-                                id: "side-1",
-                                name: "Side 1",
-                                description: [
-                                    { text: "The first side", pb: 2 }
-                                ]
-                            },
-                            {
-                                id: "side-2",
-                                name: "Side 2",
-                                description: [
-                                    { text: "The second side", pb: 2 }
-                                ]
-                            }
-                        ]
-                    }
-                } : {}
-            )
+            ...(this.game.scenario && { scenario: this.game.scenario?.toScenarioSummary() })
         };
     }
 }

@@ -1,14 +1,19 @@
-import type { ClientId, ServerToClientMessage } from "@atbs/shared-data";
+import type { ClientId, ServerToClientMessage, SideId } from "@atbs/shared-data";
 import { ServerSocketContext } from "./ServerSocketContext.js";
 
 export class Client {
     private readonly _clientId: ClientId;
     private _name: string;
+    private _sideId: SideId | null;
+    private _ready: boolean;
     private _socketContext: ServerSocketContext | null;
 
     constructor(clientId: string, name: string) {
         this._clientId = clientId;
         this._name = name;
+        this._sideId = null;
+        this._ready = false;
+
         this._socketContext = null;
     }
 
@@ -22,6 +27,26 @@ export class Client {
 
     set name(value: string) {
         this._name = value;
+    }
+
+    get sideId(): SideId | null {
+        return this._sideId;
+    }
+
+    set sideId(value: SideId | null) {
+        this._sideId = value;
+
+        if (!this._sideId) {
+            this._ready = false;
+        }
+    }
+
+    get ready(): boolean {
+        return this._ready;
+    }
+
+    set ready(value: boolean) {
+        this._ready = value;
     }
 
     set socketContext(value: ServerSocketContext) {

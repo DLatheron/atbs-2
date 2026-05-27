@@ -9,7 +9,7 @@ export const LobbyState = z.object({
             id: ClientId,
             name: z.string().min(1),
 
-            sideId: SideId.optional(),
+            sideId: SideId.nullable(),
             ready: z.boolean().default(false)
         })
     ),

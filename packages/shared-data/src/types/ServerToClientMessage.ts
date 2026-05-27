@@ -1,6 +1,6 @@
 import z from "zod";
 import { LobbyState } from "./LobbyState.js";
-import { ClientId } from "./PrimitiveTypes.js";
+import { ClientId, SideId } from "./PrimitiveTypes.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -34,6 +34,33 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.object({
             oldName: z.string(),
             newName: z.string()
+        })
+    }),
+    z.object({
+        type: z.literal("server:client:side:changed"),
+        payload: z.object({
+            old: z
+                .object({
+                    sideId: SideId,
+                    sideName: z.string()
+                })
+                .optional(),
+            new: z
+                .object({
+                    sideId: SideId,
+                    sideName: z.string()
+                })
+                .optional()
+        })
+    }),
+    z.object({
+        type: z.literal("server:client:ready"),
+        payload: z.object({
+            client: z.object({
+                id: ClientId,
+                name: z.string()
+            }),
+            ready: z.boolean()
         })
     })
 ]);
