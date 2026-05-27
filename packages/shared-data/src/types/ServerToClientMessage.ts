@@ -52,6 +52,16 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
                 })
                 .optional()
         })
+    }),
+        z.object({
+        type: z.literal("server:client:ready"),
+        payload: z.object({
+            client: z.object({
+                id: ClientId,
+                name: z.string(),
+            }),
+            ready: z.boolean()
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

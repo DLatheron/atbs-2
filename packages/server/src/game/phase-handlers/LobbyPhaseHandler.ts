@@ -32,9 +32,15 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 payload: this._buildLobbyState()
             });
         });
-        messageManager.registerHandler("client:side:change", ({ game }, payload, from) => {
-            const { clientId } = from;
-            const { sideId: newSideId } = payload;
+        messageManager.registerHandler("client:side:change", ({ game }, payload, { clientId: fromClientId }) => {
+            const { ownerId } = game;
+            const { clientId, sideId: newSideId } = payload;
+
+            if (fromClientId !== ownerId && fromClientId !== clientId) {
+                console.error(`Attempt by client ${fromClientId} to set ${clientId} to side ${newSideId}`);
+                return;
+            }
+
             const client = game.getClient(clientId);
             const { sideId: oldSideId } = client;
             const { scenario } = game;
@@ -66,11 +72,35 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 payload: this._buildLobbyState()
             });
         });
+        messageManager.registerHandler("client:ready", ({ game }, { ready }, { clientId }) => {
+            const client = this.game.getClient(clientId);
+            if (!client.sideId) {
+                console.error(`Client ${clientId} cannot be ready as it doesn't have a side assigned`);
+                return;
+            }
+            client.ready = ready;
+
+            game.broadcastMessage({
+                type: "server:client:ready",
+                payload: {
+                    client: {
+                        id: clientId,
+                        name: game.getClient(clientId).name
+                    },
+                    ready
+                }
+            });
+            game.broadcastMessage({
+                type: "lobby:state",
+                payload: this._buildLobbyState()
+            });            
+        });
     }
 
     unregisterMessageHandlers(messageManager: ClientMessageManager): void {
         messageManager.unregisterHandler("client:rename");
         messageManager.unregisterHandler("client:side:change");
+        messageManager.unregisterHandler("client:ready");
     }
 
     clientConnected(client: Client): void {
@@ -122,7 +152,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     id: client.clientId,
                     name: client.name,
                     sideId: client.sideId,
-                    ready: false
+                    ready: client.ready
                 })),
             ...(this.game.scenario && { scenario: this.game.scenario?.toScenarioSummary() })
         };

@@ -2,6 +2,7 @@ import { JSX, useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import {
     Button,
+    Checkbox,
     Container,
     Grid,
     List,
@@ -32,9 +33,7 @@ import { ScenarioComponent } from "../../components";
 
 const SHOW_ID = true; // Temporary Hack.
 export interface LogEntry {
-    type: "connected" | "disconnected" | "renamed" | "side" | null;
     text: string;
-    extra?: string;
 }
 
 export interface LobbyPageProps {
@@ -47,7 +46,8 @@ export interface LobbyPageProps {
     onCreateGame: () => void;
     onJoinGame: (gameId: GameId) => void;
     onLeaveGame: () => void;
-    onSideIdChange: (sideId: SideId | null) => void;
+    onSideIdChange: (clientId: ClientId, sideId: SideId | null) => void;
+    onReadyChange: (ready: boolean) => void;
 
     logEntries: LogEntry[];
     lobbyState: LobbyState | null;
@@ -64,6 +64,7 @@ export function LobbyPage({
     onJoinGame,
     onLeaveGame,
     onSideIdChange,
+    onReadyChange,
 
     logEntries,
     lobbyState
@@ -74,23 +75,23 @@ export function LobbyPage({
     const canCreateGame = !connected;
     const canJoinGame = !connected && GameId.safeParse(localGameId).success;
     const canLeaveGame = connected;
-    const inCharge = lobbyState?.ownerId === clientId;
+    const isServer = lobbyState?.ownerId === clientId;
     const { scenario } = lobbyState ?? {};
 
-    const availableSideIds = scenario?.sides
-        .map(({ id }) => id)
-        .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
+    const availableSideIds = (
+        !scenario
+            ? []
+            : scenario.sides
+                .map(({ id }) => id)
+                .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id))
+    );
     console.info({ availableSideIds });
 
-    const onSideIdHandler = useCallback(
-        (selectedSideId: string) => {
-            const sideId = selectedSideId === "None" ? null : selectedSideId;
-            console.info("Setting side to be:", sideId);
+    const onSideIdHandler = useCallback((clientId: ClientId, selectedSideId: string) => {
+        const sideId = selectedSideId === "None" ? null : selectedSideId;
 
-            onSideIdChange(sideId);
-        },
-        [onSideIdChange]
-    );
+        onSideIdChange(clientId, sideId);
+    }, [onSideIdChange]);
 
     useEffect(() => {
         setLocalGameId(gameId);
@@ -243,19 +244,33 @@ export function LobbyPage({
                                                                     ? "None"
                                                                     : client.sideId
                                                             }
+                                                            disabled={client.id !== clientId && !isServer}
                                                             onChange={(e) =>
-                                                                onSideIdHandler(e.target.value)
+                                                                onSideIdHandler(client.id, e.target.value)
                                                             }
                                                         >
                                                             <MenuItem value="None">None</MenuItem>
-                                                            {scenario?.sides.map((side) => (
-                                                                <MenuItem value={side.id}>
-                                                                    {side.name}
-                                                                </MenuItem>
-                                                            ))}
+                                                                {
+                                                                    scenario?.sides.map((side) => (
+                                                                        <MenuItem
+                                                                            value={side.id}
+                                                                            disabled={!availableSideIds.includes(side.id)}
+                                                                        >
+                                                                            {side.name}
+                                                                        </MenuItem>
+                                                                    ))
+                                                                }
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell>{client.ready}</TableCell>
+                                                    <TableCell>
+                                                        <Checkbox
+                                                            checked={client.ready}
+                                                            disabled={client.id !== clientId || !client.sideId}
+                                                            onChange={e => {
+                                                                onReadyChange(e.target.checked)
+                                                            }}
+                                                        />
+                                                    </TableCell>
                                                 </TableRow>
                                             );
                                         })}
@@ -278,31 +293,8 @@ export function LobbyPage({
                                 id="log"
                                 subheader={<ListSubheader component="div">Logs</ListSubheader>}
                             >
-                                {logEntries.map(({ type, text, extra }, index) => {
-                                    let icon: JSX.Element | null = null;
-
-                                    switch (type) {
-                                        case "connected":
-                                            icon = <LinkIcon />;
-                                            break;
-
-                                        case "disconnected":
-                                            icon = <LinkOffIcon />;
-                                            break;
-
-                                        case "renamed":
-                                            icon = <EditIcon />;
-                                            break;
-
-                                        case "side":
-                                            icon = <GroupIcon />;
-                                            break;
-
-                                        default:
-                                            return null;
-                                    }
-
-                                    return (
+                                {
+                                    logEntries.map(({ text }, index) => (
                                         <ListItem
                                             id={
                                                 index === logEntries.length - 1
@@ -310,17 +302,16 @@ export function LobbyPage({
                                                     : ""
                                             }
                                         >
-                                            <ListItemIcon>{icon}</ListItemIcon>
-                                            <ListItemText primary={text} secondary={extra} />
+                                            <ListItemText primary={text} />
                                         </ListItem>
-                                    );
-                                })}
+                                    ))
+                                }
                             </List>
                         </Container>
                     </Stack>
                 </Grid>
                 <Grid size={6}>
-                    {inCharge ? (
+                    {isServer ? (
                         <h1>Server</h1>
                     ) : scenario ? (
                         <ScenarioComponent scenario={scenario} />
