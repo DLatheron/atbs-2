@@ -27,6 +27,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { ClientId, GameId, LobbyState } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
 
+const SHOW_ID = true; // Temporary Hack.
 export interface LogEntry {
     type: "connected" | "disconnected" | "renamed" | null;
     text: string;
@@ -71,6 +72,11 @@ export function LobbyPage({
     const inCharge = lobbyState?.ownerId === clientId;
     const { scenario } = lobbyState ?? {};
 
+    const availableSideIds = scenario?.sides
+        .map(({ id }) => id)
+        .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
+    console.info({ availableSideIds });
+
     useEffect(() => {
         setLocalGameId(gameId);
     }, [gameId]);
@@ -86,13 +92,15 @@ export function LobbyPage({
             <Grid container spacing={3} component={Paper}>
                 <Grid size={6}>
                     <Stack spacing={4}>
-                        <TextField
-                            id="client-id"
-                            label="Client ID"
-                            variant="outlined"
-                            value={clientId}
-                            disabled
-                        />
+                        {SHOW_ID && (
+                            <TextField
+                                id="client-id"
+                                label="Client ID"
+                                variant="outlined"
+                                value={clientId}
+                                disabled
+                            />
+                        )}
 
                         <TextField
                             id="client-name"
@@ -102,7 +110,9 @@ export function LobbyPage({
                             placeholder="Name of this client"
                             onKeyUp={(e: React.KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === "Enter") {
-                                    onClientNameChanged((e.target as unknown as { value: string }).value);
+                                    onClientNameChanged(
+                                        (e.target as unknown as { value: string }).value
+                                    );
                                     e.preventDefault();
                                 }
                             }}
@@ -178,7 +188,9 @@ export function LobbyPage({
                                         navigator.clipboard
                                             .writeText(parsedGameId.data)
                                             .then(() =>
-                                                console.info(`Copyied ${parsedGameId.data} to cliplboard`)
+                                                console.info(
+                                                    `Copyied ${parsedGameId.data} to cliplboard`
+                                                )
                                             )
                                             .catch((error) => console.error(error));
                                     }
@@ -194,7 +206,9 @@ export function LobbyPage({
                                     <TableHead>
                                         <TableRow>
                                             <TableCell sx={tableHeadCellStyles}>Name</TableCell>
-                                            <TableCell sx={tableHeadCellStyles}>ID</TableCell>
+                                            {SHOW_ID && (
+                                                <TableCell sx={tableHeadCellStyles}>ID</TableCell>
+                                            )}
                                             <TableCell sx={tableHeadCellStyles}>Side</TableCell>
                                             <TableCell sx={tableHeadCellStyles}>Ready</TableCell>
                                         </TableRow>
@@ -204,7 +218,7 @@ export function LobbyPage({
                                             return (
                                                 <TableRow key={client.id}>
                                                     <TableCell>{client.name}</TableCell>
-                                                    <TableCell>{client.id}</TableCell>
+                                                    {SHOW_ID && <TableCell>{client.id}</TableCell>}
                                                     <TableCell>{client.sideId}</TableCell>
                                                     <TableCell>{client.ready}</TableCell>
                                                 </TableRow>
@@ -251,7 +265,11 @@ export function LobbyPage({
 
                                     return (
                                         <ListItem
-                                            id={index === logEntries.length - 1 ? "last-log-entry" : ""}
+                                            id={
+                                                index === logEntries.length - 1
+                                                    ? "last-log-entry"
+                                                    : ""
+                                            }
                                         >
                                             <ListItemIcon>{icon}</ListItemIcon>
                                             <ListItemText primary={text} secondary={extra} />
@@ -263,19 +281,13 @@ export function LobbyPage({
                     </Stack>
                 </Grid>
                 <Grid size={6}>
-                    {
-                        inCharge
-                            ? <h1>Server</h1> 
-                            : (
-                                scenario 
-                                    ? (
-                                        <ScenarioComponent scenario={scenario} />
-                                    )
-                                    : (
-                                        <p>No scenario selected</p>
-                                    )
-                            )
-                    }
+                    {inCharge ? (
+                        <h1>Server</h1>
+                    ) : scenario ? (
+                        <ScenarioComponent scenario={scenario} />
+                    ) : (
+                        <p>No scenario selected</p>
+                    )}
                 </Grid>
             </Grid>
         </Container>

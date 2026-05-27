@@ -1,0 +1,25 @@
+{
+    "id": "test-scenario",
+    "name": "Test Scenario",
+    "description": [
+        {
+            "text": "This is a test scenario designed specifically to test the ATBS framework, its not real and can't be played.",
+            "pb": 2
+        },
+        { "text": "It has multiple paragraphs of description.", "pb": 2 },
+        { "text": "This is a scenario loaded from a file." },
+        { "line": true }
+    ],
+    "sides": [
+        {
+            "id": "side-1",
+            "name": "Side 1",
+            "description": [{ "text": "The first side", "pb": 2 }]
+        },
+        {
+            "id": "side-2",
+            "name": "Side 2",
+            "description": [{ "text": "The second side", "pb": 2 }]
+        }
+    ]
+}

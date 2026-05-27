@@ -10,7 +10,10 @@ import { gameManager } from "../../../game/GameManager.js";
 export type CreateGameRequest = Request<unknown, CreateGameRequestBody>;
 export type CreateGameResponse = Response<CreateGameResponseBody | ErrorResponseBody>;
 
-export const createGame: RequestHandler = (req: CreateGameRequest, res: CreateGameResponse) => {
+export const createGame: RequestHandler = async (
+    req: CreateGameRequest,
+    res: CreateGameResponse
+) => {
     const parsedBody = CreateGameRequestBody.safeParse(req.body);
     if (!parsedBody.success) {
         res.status(400).json({ error: `invalid payload: ${parsedBody.error.toString()}` });
@@ -20,6 +23,9 @@ export const createGame: RequestHandler = (req: CreateGameRequest, res: CreateGa
 
     const game = new Game(clientId);
     gameManager.addGame(game);
+
+    // Temporary Hack: Scenario loading is non-fatal.
+    await game.loadScenario("./data/scenarios/test.scenario.json");
 
     const client = game.addClient(clientId, name);
     if (!client) {

@@ -1,11 +1,19 @@
 import { randomInt } from "node:crypto";
-import { ClientId, ClientToServerMessage, GameId, ServerToClientMessage } from "@atbs/shared-data";
+import {
+    ClientId,
+    ClientToServerMessage,
+    GameId,
+    ServerToClientMessage,
+    SideId
+} from "@atbs/shared-data";
 
 import { Client } from "./Client.js";
 import { ClientManager } from "./ClientManager.js";
 import type { PhaseHandler } from "./phase-handlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phase-handlers/LobbyPhaseHandler.js";
 import { CastToArray, MessageManager } from "@atbs/misc";
+import { Scenario, ScenarioRecipe } from "./Scenario.js";
+import { readFile } from "node:fs/promises";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -45,6 +53,7 @@ export class Game {
     private readonly _messageManager: ClientMessageManager;
 
     private _phaseHandler: PhaseHandler;
+    private _scenario: Scenario | null;
 
     constructor(ownerId: ClientId) {
         this._ownerId = ownerId;
@@ -62,6 +71,8 @@ export class Game {
 
         this._phaseHandler = new LobbyPhaseHandler(this);
         this._phaseHandler.registerMessageHandlers(this._messageManager);
+
+        this._scenario = null;
     }
 
     private _registerMessageHandlers() {
@@ -73,6 +84,23 @@ export class Game {
     // private _unregisterMessageHandlers() {
     //     this._messageManager.unregisterHandler("client:ping");
     // }
+
+    async loadScenario(fullPath: string): Promise<Scenario | null> {
+        try {
+            const fileContents = await readFile(fullPath, "utf-8");
+            const rawRecipe = JSON.parse(fileContents);
+            const recipe = ScenarioRecipe.parse(rawRecipe);
+
+            const scenario = new Scenario(recipe);
+
+            this._scenario = scenario;
+
+            return this._scenario;
+        } catch (error) {
+            console.error(`ERROR Loading Recipe: ${fullPath}`, error);
+            return null;
+        }
+    }
 
     get ownerId(): ClientId {
         return this._ownerId;
@@ -88,6 +116,14 @@ export class Game {
 
     get clients(): Client[] {
         return this._clientManager.clients;
+    }
+
+    get scenario(): Scenario | null {
+        return this._scenario;
+    }
+
+    get availableSides(): SideId[] {
+        return [];
     }
 
     reportError(error: string) {

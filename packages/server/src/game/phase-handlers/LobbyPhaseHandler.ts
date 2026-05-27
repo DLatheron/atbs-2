@@ -3,8 +3,6 @@ import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager } from "../Game.js";
 import { Client } from "../Client.js";
 
-const AUTO_POPULATE_SCENARIO = true; // Temporary Hack.
-
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
         return Phase.Values.lobby;
@@ -90,35 +88,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     name: client.name,
                     ready: false
                 })),
-            ...(
-                AUTO_POPULATE_SCENARIO ? {
-                    scenario: {
-                        id: "test-scenario",
-                        name: "Test Scenario",
-                        description: [
-                            { text: "This is a test scenario designed specifically to test the ATBS framework, its not real and can't be played.", pb: 2 },
-                            { text: "It has multiple paragraphs of description." },
-                            { line: true }
-                        ],
-                        sides: [
-                            {
-                                id: "side-1",
-                                name: "Side 1",
-                                description: [
-                                    { text: "The first side", pb: 2 }
-                                ]
-                            },
-                            {
-                                id: "side-2",
-                                name: "Side 2",
-                                description: [
-                                    { text: "The second side", pb: 2 }
-                                ]
-                            }
-                        ]
-                    }
-                } : {}
-            )
+            ...(this.game.scenario && { scenario: this.game.scenario?.toScenarioSummary() })
         };
     }
 }
