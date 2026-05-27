@@ -1,5 +1,5 @@
 import z from "zod";
-import { ClientId, Description, SideId } from "./PrimitiveTypes.js";
+import { ClientId, ScenarioSummary, SideId } from "./PrimitiveTypes.js";
 
 export const LobbyState = z.object({
     ownerId: ClientId,
@@ -14,19 +14,6 @@ export const LobbyState = z.object({
         })
     ),
 
-    scenario: z
-        .object({
-            id: z.string().min(1),
-            name: z.string().min(1),
-            description: Description,
-            sides: z.array(
-                z.object({
-                    id: SideId,
-                    name: z.string().min(1),
-                    description: Description
-                })
-            )
-        })
-        .optional()
+    scenario: ScenarioSummary.optional()
 });
 export type LobbyState = z.infer<typeof LobbyState>;
