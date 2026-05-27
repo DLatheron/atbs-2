@@ -4,7 +4,8 @@ import {
     GameId,
     LobbyState,
     parseURLSearchParams,
-    ServerToClientMessage
+    ServerToClientMessage,
+    SideId
 } from "@atbs/shared-data";
 import { MessageManager } from "@atbs/misc";
 
@@ -71,6 +72,7 @@ export function App() {
             });
         });
         messageManager.registerHandler("lobby:state", (_context, payload) => {
+            console.info("New lobby state", payload);
             setLobbyState(payload);
         });
         messageManager.registerHandler("lobby:client:connected", (_context, payload) => {
@@ -103,6 +105,19 @@ export function App() {
                 }
             ]);
         });
+        messageManager.registerHandler("server:client:side:changed", (_context, payload) => {
+            console.info(`*** Client joined '${payload.new?.sideName ?? "null"}'`);
+            // TODO: Joined/left/switched sides.
+            setLogEntries((logEntries) => [
+                ...logEntries,
+                {
+                    type: "side",
+                    text: payload.new
+                        ? `Client joined '${payload.new?.sideName}'`
+                        : `Client left '${payload.old?.sideName}'`
+                }
+            ]);
+        });
     }, []);
 
     const onDisconnected = useCallback(() => {
@@ -121,6 +136,13 @@ export function App() {
         }
 
         messageManagerRef.current?.enqueueMessage(message, { name: "Server" });
+    }, []);
+
+    const changeSideId = useCallback((sideId: SideId | null) => {
+        gameSocketRef.current?.send({
+            type: "client:side:change",
+            payload: { sideId }
+        });
     }, []);
 
     const { connected, gameId, createGame, joinGame, leaveGame } = useServerSocket({
@@ -160,6 +182,7 @@ export function App() {
             onCreateGame={createGame}
             onJoinGame={joinGame}
             onLeaveGame={leaveGame}
+            onSideIdChange={changeSideId}
             logEntries={logEntries}
             lobbyState={lobbyState}
         />

@@ -1,4 +1,4 @@
-import { JSX, useEffect, useLayoutEffect, useState } from "react";
+import { JSX, useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import {
     Button,
@@ -9,7 +9,9 @@ import {
     ListItemIcon,
     ListItemText,
     ListSubheader,
+    MenuItem,
     Paper,
+    Select,
     Stack,
     Table,
     TableBody,
@@ -23,13 +25,14 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import LinkIcon from "@mui/icons-material/Link";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import EditIcon from "@mui/icons-material/Edit";
+import GroupIcon from "@mui/icons-material/Group";
 
-import { ClientId, GameId, LobbyState } from "@atbs/shared-data";
+import { ClientId, GameId, LobbyState, SideId } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
 
 const SHOW_ID = true; // Temporary Hack.
 export interface LogEntry {
-    type: "connected" | "disconnected" | "renamed" | null;
+    type: "connected" | "disconnected" | "renamed" | "side" | null;
     text: string;
     extra?: string;
 }
@@ -44,6 +47,7 @@ export interface LobbyPageProps {
     onCreateGame: () => void;
     onJoinGame: (gameId: GameId) => void;
     onLeaveGame: () => void;
+    onSideIdChange: (sideId: SideId | null) => void;
 
     logEntries: LogEntry[];
     lobbyState: LobbyState | null;
@@ -59,6 +63,7 @@ export function LobbyPage({
     onCreateGame,
     onJoinGame,
     onLeaveGame,
+    onSideIdChange,
 
     logEntries,
     lobbyState
@@ -76,6 +81,16 @@ export function LobbyPage({
         .map(({ id }) => id)
         .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
     console.info({ availableSideIds });
+
+    const onSideIdHandler = useCallback(
+        (selectedSideId: string) => {
+            const sideId = selectedSideId === "None" ? null : selectedSideId;
+            console.info("Setting side to be:", sideId);
+
+            onSideIdChange(sideId);
+        },
+        [onSideIdChange]
+    );
 
     useEffect(() => {
         setLocalGameId(gameId);
@@ -219,7 +234,27 @@ export function LobbyPage({
                                                 <TableRow key={client.id}>
                                                     <TableCell>{client.name}</TableCell>
                                                     {SHOW_ID && <TableCell>{client.id}</TableCell>}
-                                                    <TableCell>{client.sideId}</TableCell>
+                                                    <TableCell>
+                                                        <Select
+                                                            labelId="demo-simple-select-label"
+                                                            id="demo-simple-select"
+                                                            value={
+                                                                !client.sideId
+                                                                    ? "None"
+                                                                    : client.sideId
+                                                            }
+                                                            onChange={(e) =>
+                                                                onSideIdHandler(e.target.value)
+                                                            }
+                                                        >
+                                                            <MenuItem value="None">None</MenuItem>
+                                                            {scenario?.sides.map((side) => (
+                                                                <MenuItem value={side.id}>
+                                                                    {side.name}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </TableCell>
                                                     <TableCell>{client.ready}</TableCell>
                                                 </TableRow>
                                             );
@@ -257,6 +292,10 @@ export function LobbyPage({
 
                                         case "renamed":
                                             icon = <EditIcon />;
+                                            break;
+
+                                        case "side":
+                                            icon = <GroupIcon />;
                                             break;
 
                                         default:

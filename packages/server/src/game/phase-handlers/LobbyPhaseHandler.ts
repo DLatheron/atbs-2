@@ -32,10 +32,45 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 payload: this._buildLobbyState()
             });
         });
+        messageManager.registerHandler("client:side:change", ({ game }, payload, from) => {
+            const { clientId } = from;
+            const { sideId: newSideId } = payload;
+            const client = game.getClient(clientId);
+            const { sideId: oldSideId } = client;
+            const { scenario } = game;
+            if (!scenario) {
+                throw new Error(`No scenario selected`);
+            }
+
+            client.sideId = newSideId;
+
+            game.broadcastMessage({
+                type: "server:client:side:changed",
+                payload: {
+                    old: !oldSideId
+                        ? undefined
+                        : {
+                              sideId: oldSideId,
+                              sideName: scenario.getSide(oldSideId).name
+                          },
+                    new: !newSideId
+                        ? undefined
+                        : {
+                              sideId: newSideId,
+                              sideName: scenario.getSide(newSideId).name
+                          }
+                }
+            });
+            game.broadcastMessage({
+                type: "lobby:state",
+                payload: this._buildLobbyState()
+            });
+        });
     }
 
     unregisterMessageHandlers(messageManager: ClientMessageManager): void {
         messageManager.unregisterHandler("client:rename");
+        messageManager.unregisterHandler("client:side:change");
     }
 
     clientConnected(client: Client): void {
@@ -86,6 +121,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 .map((client) => ({
                     id: client.clientId,
                     name: client.name,
+                    sideId: client.sideId,
                     ready: false
                 })),
             ...(this.game.scenario && { scenario: this.game.scenario?.toScenarioSummary() })

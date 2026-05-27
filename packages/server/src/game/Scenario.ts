@@ -42,7 +42,7 @@ export class Scenario {
         return this._sidesMap.get(sideId);
     }
 
-    getSide(sideId: SideId) {
+    getSide(sideId: SideId): Side {
         const side = this.findSide(sideId);
         if (!side) {
             throw new Error(`Side ${sideId} not found`);

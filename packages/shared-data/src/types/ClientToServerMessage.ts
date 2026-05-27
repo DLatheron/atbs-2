@@ -1,4 +1,5 @@
 import z from "zod";
+import { SideId } from "./PrimitiveTypes.js";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
@@ -14,6 +15,12 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:rename"),
         payload: ClientRenamePayload
+    }),
+    z.object({
+        type: z.literal("client:side:change"),
+        payload: z.object({
+            sideId: SideId.nullable()
+        })
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;
