@@ -1,11 +1,17 @@
 import { useCallback, useRef, useState } from "react";
-import { GameId, LobbyState, ServerToClientMessage } from "@atbs/shared-data";
+import {
+    ClientQueryParams,
+    GameId,
+    LobbyState,
+    parseURLSearchParams,
+    ServerToClientMessage
+} from "@atbs/shared-data";
 import { MessageManager } from "@atbs/misc";
 
 import { useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { LobbyPage } from "./pages";
+import { LobbyPage, LogEntry } from "./pages";
 import { useSearchParams } from "react-router-dom";
 
 interface ServerMessageContext {
@@ -24,11 +30,16 @@ export type ServerMessageManager = MessageManager<
 
 export function App() {
     const { clientId } = useClientId();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const validatedSearchParams = parseURLSearchParams(ClientQueryParams, searchParams);
+    const { name } = validatedSearchParams;
+
     const messageManagerRef = useRef<ServerMessageManager>(null);
     const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
-    const [clientName, setClientName] = useState<string>("Default Client Name");
+    const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
     const gameSocketRef = useRef<GameSocket>(null);
-    const [, setSearchParams] = useSearchParams();
+
+    const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
 
     const onConnected = useCallback((gameSocket: GameSocket) => {
         gameSocketRef.current = gameSocket;
@@ -64,12 +75,33 @@ export function App() {
         });
         messageManager.registerHandler("lobby:client:connected", (_context, payload) => {
             console.info(`*** Client '${payload.name}' (${payload.clientId}) connected ***`);
+            setLogEntries((logEntries) => [
+                ...logEntries,
+                {
+                    type: "connected",
+                    text: `Client '${payload.name}' connected`
+                }
+            ]);
         });
         messageManager.registerHandler("lobby:client:disconnected", (_context, payload) => {
             console.info(`*** Client '${payload.name}' (${payload.clientId}) disconnected ***`);
+            setLogEntries((logEntries) => [
+                ...logEntries,
+                {
+                    type: "disconnected",
+                    text: `Client '${payload.name}' disconnected`
+                }
+            ]);
         });
         messageManager.registerHandler("server:client:renamed", (_context, payload) => {
             console.info(`*** Client '${payload.oldName}' renamed to '${payload.newName}'`);
+            setLogEntries((logEntries) => [
+                ...logEntries,
+                {
+                    type: "renamed",
+                    text: `Client '${payload.oldName}' renamed to '${payload.newName}'`
+                }
+            ]);
         });
     }, []);
 
@@ -128,6 +160,7 @@ export function App() {
             onCreateGame={createGame}
             onJoinGame={joinGame}
             onLeaveGame={leaveGame}
+            logEntries={logEntries}
             lobbyState={lobbyState}
         />
     );
