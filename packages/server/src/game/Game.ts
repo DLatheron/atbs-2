@@ -3,6 +3,7 @@ import {
     ClientId,
     ClientToServerMessage,
     GameId,
+    Phase,
     ServerToClientMessage,
     SideId
 } from "@atbs/shared-data";
@@ -75,6 +76,23 @@ export class Game {
         this._scenario = null;
     }
 
+    set phase(phase: Phase) {
+        if (this._phaseHandler) {
+            this._phaseHandler.unregisterMessageHandlers(this._messageManager);
+        }
+
+        switch (phase) {
+            case Phase.Enum.lobby:
+                this._phaseHandler = new LobbyPhaseHandler(this);
+                break;
+
+            default:
+                throw new Error(`Unexpected phase ${phase}`);
+        }
+
+        this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
     private _registerMessageHandlers() {
         this._messageManager.registerHandler("client:ping", () => {
             // console.dir({ handler: "client:ping", context, payload, from });
@@ -116,6 +134,10 @@ export class Game {
 
     get clients(): Client[] {
         return this._clientManager.clients;
+    }
+
+    get numClients(): number {
+        return this.clients.length;
     }
 
     get scenario(): Scenario | null {
@@ -167,6 +189,15 @@ export class Game {
     }
 
     clientConnected(client: Client): void {
+        // Tell the client what mode they should be in...
+        this.sendMessage(
+            {
+                type: "server:phase",
+                payload: { phase: this.phase }
+            },
+            client.id
+        );
+
         this._phaseHandler.clientConnected(client);
     }
 

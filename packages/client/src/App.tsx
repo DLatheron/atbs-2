@@ -5,6 +5,7 @@ import {
     GameId,
     LobbyState,
     parseURLSearchParams,
+    Phase,
     ServerToClientMessage,
     SideId
 } from "@atbs/shared-data";
@@ -36,6 +37,7 @@ export function App() {
     const validatedSearchParams = parseURLSearchParams(ClientQueryParams, searchParams);
     const { name } = validatedSearchParams;
 
+    const [phase, setPhase] = useState<Phase>(Phase.Enum.lobby);
     const messageManagerRef = useRef<ServerMessageManager>(null);
     const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
@@ -71,6 +73,9 @@ export function App() {
                 type: "client:ping",
                 payload: { nonce: payload.nonce++ }
             });
+        });
+        messageManager.registerHandler("server:phase", (_context, payload) => {
+            setPhase(payload.phase);
         });
         messageManager.registerHandler("lobby:state", (_context, payload) => {
             setLobbyState(payload);
@@ -191,39 +196,49 @@ export function App() {
         onMessage
     });
 
-    return (
-        <LobbyPage
-            clientId={clientId}
-            initialClientName={clientName}
-            gameId={gameId}
-            onClientNameChanged={(name) => {
-                async function updateClientName(name: string) {
-                    gameSocketRef.current?.send({
-                        type: "client:rename",
-                        payload: { name }
-                    });
-                    setClientName(name);
-                }
+    switch (phase) {
+        case Phase.Enum.main_menu: 
+            // TODO: Display the main menu...
+            return <p>Hello World</p>;
 
-                updateClientName(name);
-            }}
-            onGameIdChanged={
-                connected
-                    ? undefined
-                    : (gameId: GameId) => {
-                          setSearchParams((searchParams) => {
-                              searchParams.set("game-id", gameId);
-                              return searchParams;
-                          });
-                      }
-            }
-            onCreateGame={createGame}
-            onJoinGame={joinGame}
-            onLeaveGame={leaveGame}
-            onSideIdChange={changeSideId}
-            onReadyChange={changeReady}
-            logEntries={logEntries}
-            lobbyState={lobbyState}
-        />
-    );
+        case Phase.Enum.lobby:
+            return (
+                <LobbyPage
+                    clientId={clientId}
+                    initialClientName={clientName}
+                    gameId={gameId}
+                    onClientNameChanged={(name) => {
+                        async function updateClientName(name: string) {
+                            gameSocketRef.current?.send({
+                                type: "client:rename",
+                                payload: { name }
+                            });
+                            setClientName(name);
+                        }
+
+                        updateClientName(name);
+                    }}
+                    onGameIdChanged={
+                        connected
+                            ? undefined
+                            : (gameId: GameId) => {
+                                setSearchParams((searchParams) => {
+                                    searchParams.set("game-id", gameId);
+                                    return searchParams;
+                                });
+                            }
+                    }
+                    onCreateGame={createGame}
+                    onJoinGame={joinGame}
+                    onLeaveGame={leaveGame}
+                    onSideIdChange={changeSideId}
+                    onReadyChange={changeReady}
+                    logEntries={logEntries}
+                    lobbyState={lobbyState}
+                />
+            );
+
+        default:
+            return null;
+    }
 }

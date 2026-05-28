@@ -1,6 +1,7 @@
 import z from "zod";
 import { LobbyState } from "./LobbyState.js";
 import { ClientId, SideId } from "./PrimitiveTypes.js";
+import { Phase } from "./Phase.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -62,6 +63,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             }),
             ready: z.boolean()
         })
+    }),
+    z.object({
+        type: z.literal("server:phase"),
+        payload: z.object({ phase: Phase })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

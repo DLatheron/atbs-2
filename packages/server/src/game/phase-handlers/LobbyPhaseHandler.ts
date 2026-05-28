@@ -5,7 +5,7 @@ import { Client } from "../Client.js";
 
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
-        return Phase.Values.lobby;
+        return Phase.Enum.lobby;
     }
 
     get acceptingClients(): boolean {
