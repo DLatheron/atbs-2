@@ -13,8 +13,8 @@ import { ClientManager } from "./ClientManager.js";
 import type { PhaseHandler } from "./phase-handlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phase-handlers/LobbyPhaseHandler.js";
 import { CastToArray, MessageManager } from "@atbs/misc";
-import { Scenario, ScenarioRecipe } from "./Scenario.js";
-import { readFile } from "node:fs/promises";
+import { Scenario } from "./Scenario.js";
+import { ScenarioManager } from "./ScenarioManager.js";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -47,6 +47,8 @@ export type ClientMessageManager = MessageManager<
 >;
 
 export class Game {
+    private readonly _scenarioManager: ScenarioManager;
+
     private _ownerId: ClientId;
     private readonly _gameId: GameId;
     private readonly _clientManager: ClientManager;
@@ -56,7 +58,8 @@ export class Game {
     private _phaseHandler: PhaseHandler;
     private _scenario: Scenario | null;
 
-    constructor(ownerId: ClientId) {
+    constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
+        this._scenarioManager = scenarioManager;
         this._ownerId = ownerId;
         this._gameId = generateGameId();
         this._clientManager = new ClientManager();
@@ -107,23 +110,6 @@ export class Game {
     //     this._messageManager.unregisterHandler("client:ping");
     // }
 
-    async loadScenario(fullPath: string): Promise<Scenario | null> {
-        try {
-            const fileContents = await readFile(fullPath, "utf-8");
-            const rawRecipe = JSON.parse(fileContents);
-            const recipe = ScenarioRecipe.parse(rawRecipe);
-
-            const scenario = new Scenario(recipe);
-
-            this._scenario = scenario;
-
-            return this._scenario;
-        } catch (error) {
-            console.error(`ERROR Loading Recipe: ${fullPath}`, error);
-            return null;
-        }
-    }
-
     get ownerId(): ClientId {
         return this._ownerId;
     }
@@ -146,6 +132,14 @@ export class Game {
 
     get scenario(): Scenario | null {
         return this._scenario;
+    }
+
+    get scenarioManager(): ScenarioManager {
+        return this._scenarioManager;
+    }
+
+    set scenario(value: Scenario | null) {
+        this._scenario = value;
     }
 
     get availableSides(): SideId[] {

@@ -99,14 +99,14 @@ export function LobbyPage({
             });
         });
         messageManager.registerHandler("lobby:client:side:changed", (_context, payload) => {
-            console.info(`*** Client joined '${payload.new?.sideName ?? "null"}'`);
-            if (payload.new && !payload.old) {
-                addLogEntry({ text: `➡️ Client joined '${payload.new?.sideName}'` });
-            } else if (payload.old && !payload.new) {
-                addLogEntry({ text: `⬅️ Client left '${payload.old?.sideName}'` });
-            } else if (payload.old && payload.new) {
+            console.info(`*** Client joined '${payload.newSide?.name ?? "null"}'`);
+            if (payload.newSide && !payload.oldSide) {
+                addLogEntry({ text: `➡️ Client joined '${payload.newSide?.name}'` });
+            } else if (payload.oldSide && !payload.newSide) {
+                addLogEntry({ text: `⬅️ Client left '${payload.oldSide?.name}'` });
+            } else if (payload.oldSide && payload.newSide) {
                 addLogEntry({
-                    text: `🔀 Client left '${payload.old?.sideName}' and joined '${payload.new?.sideName}'`
+                    text: `🔀 Client left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
                 });
             }
         });
@@ -119,6 +119,10 @@ export function LobbyPage({
                 addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
             }
         });
+        messageManager.registerHandler("lobby:scenario:list", (_context, payload) => {
+            console.info("Scenarios", payload.scenarios);
+            // TODO: Populate...
+        });
 
         return () => {
             console.info("Unmounting LobbyPage Message Handlers");
@@ -126,6 +130,7 @@ export function LobbyPage({
             messageManager.unregisterHandler("lobby:client:renamed");
             messageManager.unregisterHandler("lobby:client:side:changed");
             messageManager.unregisterHandler("lobby:client:ready");
+            messageManager.unregisterHandler("lobby:scenario:list");
         };
     }, [messageManager, setLobbyState, addLogEntry]);
 
@@ -238,7 +243,9 @@ export function LobbyPage({
                                                                     : client.sideId
                                                             }
                                                             disabled={
-                                                                client.id !== clientId && !isServer
+                                                                (client.id !== clientId &&
+                                                                    !isServer) ||
+                                                                availableSideIds.length === 0
                                                             }
                                                             onChange={(e) =>
                                                                 onChangeSideId(

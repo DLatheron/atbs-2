@@ -51,10 +51,10 @@ export function App() {
             setPhase(payload.phase);
         });
         messageManager.registerHandler("client:connected", (_context, payload) => {
-            addLogEntry({ text: `😀 Client '${payload.name}' connected` });
+            addLogEntry({ text: `😀 Client '${payload.client.name}' connected` });
         });
         messageManager.registerHandler("client:disconnected", (_context, payload) => {
-            addLogEntry({ text: `😢 Client '${payload.name}' disconnected` });
+            addLogEntry({ text: `😢 Client '${payload.client.name}' disconnected` });
         });
 
         return () => {

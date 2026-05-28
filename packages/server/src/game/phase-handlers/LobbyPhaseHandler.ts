@@ -18,6 +18,11 @@ export class LobbyPhaseHandler extends PhaseHandler {
             const { name } = payload;
             const client = game.getClient(clientId);
             const { name: oldName } = client;
+
+            if (oldName === name) {
+                return;
+            }
+
             client.name = name;
 
             game.broadcastMessage({
@@ -57,17 +62,17 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 game.broadcastMessage({
                     type: "lobby:client:side:changed",
                     payload: {
-                        old: !oldSideId
+                        oldSide: !oldSideId
                             ? undefined
                             : {
-                                  sideId: oldSideId,
-                                  sideName: scenario.getSide(oldSideId).name
+                                  id: oldSideId,
+                                  name: scenario.getSide(oldSideId).name
                               },
-                        new: !newSideId
+                        newSide: !newSideId
                             ? undefined
                             : {
-                                  sideId: newSideId,
-                                  sideName: scenario.getSide(newSideId).name
+                                  id: newSideId,
+                                  name: scenario.getSide(newSideId).name
                               }
                     }
                 });
@@ -113,13 +118,17 @@ export class LobbyPhaseHandler extends PhaseHandler {
     clientConnected(client: Client): void {
         console.info(`LOBBY: *** Client '${client.name}' (${client.id}) connected ***`);
 
+        const clientIsOwner = client.id === this.game.ownerId;
+
         // Tell everyone else we have a new client.
         this.game.broadcastMessage(
             {
                 type: "client:connected",
                 payload: {
-                    clientId: client.id,
-                    name: client.name
+                    client: {
+                        id: client.id,
+                        name: client.name
+                    }
                 }
             },
             client.id
@@ -130,6 +139,18 @@ export class LobbyPhaseHandler extends PhaseHandler {
             type: "lobby:state",
             payload: this._buildLobbyState()
         });
+
+        if (clientIsOwner) {
+            this.game.sendMessage(
+                {
+                    type: "lobby:scenario:list",
+                    payload: {
+                        scenarios: this.game.scenarioManager.toScenarioSummaries()
+                    }
+                },
+                client.id
+            );
+        }
     }
 
     clientDisconnected(client: Client): void {
@@ -138,8 +159,10 @@ export class LobbyPhaseHandler extends PhaseHandler {
         this.game.broadcastMessage({
             type: "client:disconnected",
             payload: {
-                clientId: client.id,
-                name: client.name
+                client: {
+                    id: client.id,
+                    name: client.name
+                }
             }
         });
         this.game.broadcastMessage({

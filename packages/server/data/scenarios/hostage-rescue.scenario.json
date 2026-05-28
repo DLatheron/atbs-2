@@ -1,0 +1,30 @@
+{
+    "id": "hostage-rescue",
+    "name": "Hostage Rescue",
+    "description": [
+        {
+            "text": "Something something something dark-side.",
+            "pb": 2
+        },
+        { "line": true }
+    ],
+    "sides": [
+        {
+            "id": "rescue-team",
+            "name": "Rescue Team",
+            "description": [
+                {
+                    "text": "A highly-professional team of elite specialists led by the dependable Captain Smith",
+                    "pb": 2
+                }
+            ]
+        },
+        {
+            "id": "terrorists",
+            "name": "Terrorists",
+            "description": [
+                { "text": "A rag, tag group of terrorists led by the evil Häns Gruber", "pb": 2 }
+            ]
+        }
+    ]
+}
