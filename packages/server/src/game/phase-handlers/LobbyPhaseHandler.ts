@@ -21,7 +21,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             client.name = name;
 
             game.broadcastMessage({
-                type: "server:client:renamed",
+                type: "lobby:client:renamed",
                 payload: {
                     oldName,
                     newName: name
@@ -55,7 +55,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 client.sideId = newSideId;
 
                 game.broadcastMessage({
-                    type: "server:client:side:changed",
+                    type: "lobby:client:side:changed",
                     payload: {
                         old: !oldSideId
                             ? undefined
@@ -88,7 +88,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             client.ready = ready;
 
             game.broadcastMessage({
-                type: "server:client:ready",
+                type: "lobby:client:ready",
                 payload: {
                     client: {
                         id: clientId,
@@ -116,7 +116,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         // Tell everyone else we have a new client.
         this.game.broadcastMessage(
             {
-                type: "lobby:client:connected",
+                type: "client:connected",
                 payload: {
                     clientId: client.id,
                     name: client.name
@@ -136,7 +136,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         console.info(`LOBBY: *** Client '${client.name}' (${client.id}) disconnected ***`);
 
         this.game.broadcastMessage({
-            type: "lobby:client:disconnected",
+            type: "client:disconnected",
             payload: {
                 clientId: client.id,
                 name: client.name

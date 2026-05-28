@@ -76,6 +76,10 @@ export class Game {
         this._scenario = null;
     }
 
+    get phase(): Phase {
+        return this._phaseHandler.phase;
+    }
+
     set phase(phase: Phase) {
         if (this._phaseHandler) {
             this._phaseHandler.unregisterMessageHandlers(this._messageManager);
@@ -190,13 +194,10 @@ export class Game {
 
     clientConnected(client: Client): void {
         // Tell the client what mode they should be in...
-        this.sendMessage(
-            {
-                type: "server:phase",
-                payload: { phase: this.phase }
-            },
-            client.id
-        );
+        client.sendMessage({
+            type: "server:phase",
+            payload: { phase: this.phase }
+        });
 
         this._phaseHandler.clientConnected(client);
     }

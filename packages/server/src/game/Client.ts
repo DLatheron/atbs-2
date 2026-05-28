@@ -67,8 +67,6 @@ export class Client {
 
         this._socket = value;
 
-        game.clientConnected(this);
-
         value.on("message", function message(data: MessageEvent) {
             game.receiveMessage(data, client);
         });
@@ -81,9 +79,13 @@ export class Client {
         value.on("error", function error(error: unknown) {
             console.error(error);
         });
+
+        game.clientConnected(this);
     }
 
     sendMessage(message: ServerToClientMessage): void {
+        console.info(message);
+
         if (!this._socket) {
             throw new Error(`Socket not assigned to client ${this.id}`);
         }
