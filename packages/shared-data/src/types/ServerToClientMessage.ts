@@ -1,6 +1,6 @@
 import z from "zod";
 import { LobbyState } from "./LobbyState.js";
-import { ClientId, SideId } from "./PrimitiveTypes.js";
+import { ClientId, ScenarioSummary, SideId } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
@@ -19,15 +19,19 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:connected"),
         payload: z.object({
-            clientId: ClientId,
-            name: z.string()
+            client: z.object({
+                id: ClientId,
+                name: z.string()
+            })
         })
     }),
     z.object({
         type: z.literal("client:disconnected"),
         payload: z.object({
-            clientId: ClientId,
-            name: z.string()
+            client: z.object({
+                id: ClientId,
+                name: z.string()
+            })
         })
     }),
     z.object({
@@ -40,16 +44,16 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("lobby:client:side:changed"),
         payload: z.object({
-            old: z
+            oldSide: z
                 .object({
-                    sideId: SideId,
-                    sideName: z.string()
+                    id: SideId,
+                    name: z.string()
                 })
                 .optional(),
-            new: z
+            newSide: z
                 .object({
-                    sideId: SideId,
-                    sideName: z.string()
+                    id: SideId,
+                    name: z.string()
                 })
                 .optional()
         })
@@ -67,6 +71,12 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:phase"),
         payload: z.object({ phase: Phase })
+    }),
+    z.object({
+        type: z.literal("lobby:scenario:list"),
+        payload: z.object({
+            scenarios: z.array(ScenarioSummary).min(1)
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

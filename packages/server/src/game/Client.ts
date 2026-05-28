@@ -84,8 +84,6 @@ export class Client {
     }
 
     sendMessage(message: ServerToClientMessage): void {
-        console.info(message);
-
         if (!this._socket) {
             throw new Error(`Socket not assigned to client ${this.id}`);
         }

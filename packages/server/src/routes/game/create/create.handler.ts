@@ -21,11 +21,12 @@ export const createGame: RequestHandler = async (
     }
     const { clientId, name } = parsedBody.data;
 
-    const game = new Game(clientId);
+    const game = new Game(clientId, req.app.locals.scenarioManager);
     gameManager.addGame(game);
 
     // Temporary Hack: Scenario loading is non-fatal.
-    await game.loadScenario("./data/scenarios/test.scenario.json");
+    // const scenario = req.app.locals.scenarioManager.find("test-scenario");
+    // game.scenario = scenario;
 
     const client = game.addClient(clientId, name);
     if (!client) {

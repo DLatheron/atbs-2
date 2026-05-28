@@ -1,6 +1,7 @@
 import { Description, ScenarioSummary, SideId } from "@atbs/shared-data";
 import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
+import { readFile } from "fs/promises";
 
 export const ScenarioRecipe = z.object({
     id: z.string().min(1),
@@ -61,5 +62,20 @@ export class Scenario {
                 description: side.description
             }))
         };
+    }
+
+    static async LoadScenario(fullPath: string): Promise<Scenario | null> {
+        try {
+            const fileContents = await readFile(fullPath, "utf-8");
+            const rawRecipe = JSON.parse(fileContents);
+            const recipe = ScenarioRecipe.parse(rawRecipe);
+
+            const scenario = new Scenario(recipe);
+
+            return scenario;
+        } catch (error) {
+            console.error(`ERROR Loading Recipe: ${fullPath}`, error);
+            return null;
+        }
     }
 }
