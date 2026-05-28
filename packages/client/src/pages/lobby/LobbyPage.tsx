@@ -1,4 +1,4 @@
-import { JSX, useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 
 import {
     Button,
@@ -23,53 +23,47 @@ import {
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-import { ClientId, GameId, LobbyState, SideId } from "@atbs/shared-data";
+import { ClientId, GameId, LobbyState } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
+import { useServerMessageManager } from "../../hooks";
 
-const SHOW_ID = true; // Temporary Hack.
 export interface LogEntry {
     text: string;
 }
 
 export interface LobbyPageProps {
+    visible: boolean;
     clientId: ClientId | undefined;
     initialClientName: string;
     gameId: GameId | undefined;
 
     onClientNameChanged: (clientName: string) => void;
-    onGameIdChanged?: (gameId: GameId) => void;
     onCreateGame: () => void;
     onJoinGame: (gameId: GameId) => void;
     onLeaveGame: () => void;
-    onSideIdChange: (clientId: ClientId, sideId: SideId | null) => void;
-    onReadyChange: (ready: boolean) => void;
 
     logEntries: LogEntry[];
-    lobbyState: LobbyState | null;
+    addLogEntry: (logEntry: LogEntry) => void;
 }
 
 export function LobbyPage({
+    visible,
     clientId,
     initialClientName,
     gameId,
 
     onClientNameChanged,
-    onGameIdChanged,
-    onCreateGame,
-    onJoinGame,
     onLeaveGame,
-    onSideIdChange,
-    onReadyChange,
 
     logEntries,
-    lobbyState
-}: LobbyPageProps): JSX.Element {
-    const [localGameId, setLocalGameId] = useState<GameId | undefined>(gameId);
+    addLogEntry
+}: LobbyPageProps) {
+    const { messageManager, sendMessage } = useServerMessageManager();
+    const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+
     const tableHeadCellStyles = { fontWeight: "bold" };
     const connected = !!lobbyState;
-    const canCreateGame = !connected;
-    const canJoinGame = !connected && GameId.safeParse(localGameId).success;
-    const canLeaveGame = connected;
+    const canLeaveGame = true;
     const isServer = lobbyState?.ownerId === clientId;
     const { scenario } = lobbyState ?? {};
 
@@ -80,18 +74,60 @@ export function LobbyPage({
               .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
     console.info({ availableSideIds });
 
-    const onSideIdHandler = useCallback(
+    const onChangeSideId = useCallback(
         (clientId: ClientId, selectedSideId: string) => {
             const sideId = selectedSideId === "None" ? null : selectedSideId;
 
-            onSideIdChange(clientId, sideId);
+            console.info("Change Side", clientId, sideId);
+
+            sendMessage({
+                type: "client:side:change",
+                payload: { clientId, sideId }
+            });
         },
-        [onSideIdChange]
+        [sendMessage]
     );
 
     useEffect(() => {
-        setLocalGameId(gameId);
-    }, [gameId]);
+        console.info("Mounting LobbyPage Message Handlers");
+        messageManager.registerHandler("lobby:state", (_context, payload) => {
+            setLobbyState(payload);
+        });
+        messageManager.registerHandler("lobby:client:renamed", (_context, payload) => {
+            addLogEntry({
+                text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
+            });
+        });
+        messageManager.registerHandler("lobby:client:side:changed", (_context, payload) => {
+            console.info(`*** Client joined '${payload.new?.sideName ?? "null"}'`);
+            if (payload.new && !payload.old) {
+                addLogEntry({ text: `➡️ Client joined '${payload.new?.sideName}'` });
+            } else if (payload.old && !payload.new) {
+                addLogEntry({ text: `⬅️ Client left '${payload.old?.sideName}'` });
+            } else if (payload.old && payload.new) {
+                addLogEntry({
+                    text: `🔀 Client left '${payload.old?.sideName}' and joined '${payload.new?.sideName}'`
+                });
+            }
+        });
+        messageManager.registerHandler("lobby:client:ready", (_context, payload) => {
+            if (payload.ready) {
+                console.info(`*** Client ${payload.client.name} is ready!`);
+                addLogEntry({ text: `✅ Client '${payload.client.name} is ready!` });
+            } else {
+                console.info(`*** Client ${payload.client.name} is not ready`);
+                addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
+            }
+        });
+
+        return () => {
+            console.info("Unmounting LobbyPage Message Handlers");
+            messageManager.unregisterHandler("lobby:state");
+            messageManager.unregisterHandler("lobby:client:renamed");
+            messageManager.unregisterHandler("lobby:client:side:changed");
+            messageManager.unregisterHandler("lobby:client:ready");
+        };
+    }, [messageManager, setLobbyState, addLogEntry]);
 
     useLayoutEffect(() => {
         document
@@ -99,21 +135,25 @@ export function LobbyPage({
             ?.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
     });
 
+    const onChangeReady = useCallback(
+        (ready: boolean) => {
+            sendMessage({
+                type: "client:ready",
+                payload: { ready }
+            });
+        },
+        [sendMessage]
+    );
+
+    if (!visible) {
+        return null;
+    }
+
     return (
         <Container component={Paper} maxWidth="xl" sx={{ padding: 3 }}>
             <Grid container spacing={3} component={Paper}>
                 <Grid size={6}>
                     <Stack spacing={4}>
-                        {SHOW_ID && (
-                            <TextField
-                                id="client-id"
-                                label="Client ID"
-                                variant="outlined"
-                                value={clientId}
-                                disabled
-                            />
-                        )}
-
                         <TextField
                             id="client-name"
                             label="Client Name"
@@ -135,24 +175,6 @@ export function LobbyPage({
 
                         <Stack spacing={4} direction="row">
                             <Button
-                                id="create-game"
-                                title="Create a new game"
-                                variant="contained"
-                                disabled={!canCreateGame}
-                                onClick={onCreateGame}
-                            >
-                                Create New Game
-                            </Button>
-                            <Button
-                                id="join-game"
-                                title="Join an existing game"
-                                variant="contained"
-                                disabled={!canJoinGame}
-                                onClick={() => onJoinGame(GameId.parse(localGameId))}
-                            >
-                                Join Existing Game
-                            </Button>
-                            <Button
                                 id="leave-game"
                                 title="Leave the current game"
                                 variant="outlined"
@@ -168,34 +190,15 @@ export function LobbyPage({
                                 id="game-id"
                                 label="Game ID"
                                 variant="outlined"
-                                value={localGameId}
-                                placeholder="ID of the game to join"
-                                disabled={!onGameIdChanged}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    setLocalGameId(e.target.value);
-                                }}
-                                onKeyUp={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                                    if (e.key === "Enter") {
-                                        const parsedGameId = GameId.safeParse(localGameId);
-                                        if (parsedGameId.success) {
-                                            onGameIdChanged?.(parsedGameId.data);
-                                        }
-                                        e.preventDefault();
-                                    }
-                                }}
-                                onBlur={() => {
-                                    const parsedGameId = GameId.safeParse(localGameId);
-                                    if (parsedGameId.success) {
-                                        onGameIdChanged?.(parsedGameId.data);
-                                    }
-                                }}
+                                value={gameId}
+                                disabled={true}
                             />
                             <Button
                                 id="copy-game-id"
                                 title="Copy Game Id to Clipboard"
-                                disabled={!GameId.safeParse(localGameId).success}
+                                disabled={!GameId.safeParse(gameId).success}
                                 onClick={() => {
-                                    const parsedGameId = GameId.safeParse(localGameId);
+                                    const parsedGameId = GameId.safeParse(gameId);
                                     if (parsedGameId.success) {
                                         navigator.clipboard
                                             .writeText(parsedGameId.data)
@@ -218,9 +221,6 @@ export function LobbyPage({
                                     <TableHead>
                                         <TableRow>
                                             <TableCell sx={tableHeadCellStyles}>Name</TableCell>
-                                            {SHOW_ID && (
-                                                <TableCell sx={tableHeadCellStyles}>ID</TableCell>
-                                            )}
                                             <TableCell sx={tableHeadCellStyles}>Side</TableCell>
                                             <TableCell sx={tableHeadCellStyles}>Ready</TableCell>
                                         </TableRow>
@@ -230,11 +230,8 @@ export function LobbyPage({
                                             return (
                                                 <TableRow key={client.id}>
                                                     <TableCell>{client.name}</TableCell>
-                                                    {SHOW_ID && <TableCell>{client.id}</TableCell>}
                                                     <TableCell>
                                                         <Select
-                                                            labelId="demo-simple-select-label"
-                                                            id="demo-simple-select"
                                                             value={
                                                                 !client.sideId
                                                                     ? "None"
@@ -244,7 +241,7 @@ export function LobbyPage({
                                                                 client.id !== clientId && !isServer
                                                             }
                                                             onChange={(e) =>
-                                                                onSideIdHandler(
+                                                                onChangeSideId(
                                                                     client.id,
                                                                     e.target.value
                                                                 )
@@ -253,6 +250,7 @@ export function LobbyPage({
                                                             <MenuItem value="None">None</MenuItem>
                                                             {scenario?.sides.map((side) => (
                                                                 <MenuItem
+                                                                    key={side.id}
                                                                     value={side.id}
                                                                     disabled={
                                                                         !availableSideIds.includes(
@@ -272,9 +270,9 @@ export function LobbyPage({
                                                                 client.id !== clientId ||
                                                                 !client.sideId
                                                             }
-                                                            onChange={(e) => {
-                                                                onReadyChange(e.target.checked);
-                                                            }}
+                                                            onChange={(e) =>
+                                                                onChangeReady(e.target.checked)
+                                                            }
                                                         />
                                                     </TableCell>
                                                 </TableRow>
@@ -301,6 +299,7 @@ export function LobbyPage({
                             >
                                 {logEntries.map(({ text }, index) => (
                                     <ListItem
+                                        key={`${index}`}
                                         id={index === logEntries.length - 1 ? "last-log-entry" : ""}
                                     >
                                         <ListItemText primary={text} />

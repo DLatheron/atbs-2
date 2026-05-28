@@ -3,6 +3,7 @@ import {
     ClientId,
     ClientToServerMessage,
     GameId,
+    Phase,
     ServerToClientMessage,
     SideId
 } from "@atbs/shared-data";
@@ -75,6 +76,27 @@ export class Game {
         this._scenario = null;
     }
 
+    get phase(): Phase {
+        return this._phaseHandler.phase;
+    }
+
+    set phase(phase: Phase) {
+        if (this._phaseHandler) {
+            this._phaseHandler.unregisterMessageHandlers(this._messageManager);
+        }
+
+        switch (phase) {
+            case Phase.Enum.lobby:
+                this._phaseHandler = new LobbyPhaseHandler(this);
+                break;
+
+            default:
+                throw new Error(`Unexpected phase ${phase}`);
+        }
+
+        this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
     private _registerMessageHandlers() {
         this._messageManager.registerHandler("client:ping", () => {
             // console.dir({ handler: "client:ping", context, payload, from });
@@ -118,6 +140,10 @@ export class Game {
         return this._clientManager.clients;
     }
 
+    get numClients(): number {
+        return this.clients.length;
+    }
+
     get scenario(): Scenario | null {
         return this._scenario;
     }
@@ -144,7 +170,7 @@ export class Game {
             return null;
         }
 
-        const client = new Client(clientId, name);
+        const client = new Client({ id: clientId, name }, this);
         this._clientManager.addClient(client);
 
         return client;
@@ -167,6 +193,12 @@ export class Game {
     }
 
     clientConnected(client: Client): void {
+        // Tell the client what mode they should be in...
+        client.sendMessage({
+            type: "server:phase",
+            payload: { phase: this.phase }
+        });
+
         this._phaseHandler.clientConnected(client);
     }
 
@@ -184,7 +216,7 @@ export class Game {
         const excludes = exclude ? CastToArray(exclude) : [];
 
         for (const client of this._clientManager.clients) {
-            if (!excludes.includes(client.clientId)) {
+            if (!excludes.includes(client.id)) {
                 client.sendMessage(message);
             }
         }

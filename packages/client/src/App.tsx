@@ -1,189 +1,100 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-    ClientId,
     ClientQueryParams,
-    GameId,
-    LobbyState,
     parseURLSearchParams,
-    ServerToClientMessage,
-    SideId
+    Phase,
+    ServerToClientMessage
 } from "@atbs/shared-data";
-import { MessageManager } from "@atbs/misc";
 
-import { useServerSocket } from "./hooks";
+import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { LobbyPage, LogEntry } from "./pages";
+import { LobbyPage, LogEntry, MainMenuPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
-
-interface ServerMessageContext {
-    name: string;
-}
-
-interface Server {
-    name: string;
-}
-
-export type ServerMessageManager = MessageManager<
-    ServerMessageContext,
-    ServerToClientMessage,
-    Server
->;
+import { Container } from "@mui/material";
 
 export function App() {
     const { clientId } = useClientId();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const validatedSearchParams = parseURLSearchParams(ClientQueryParams, searchParams);
     const { name } = validatedSearchParams;
 
-    const messageManagerRef = useRef<ServerMessageManager>(null);
-    const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+    const [phase, setPhase] = useState<Phase>(Phase.Enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
-    const gameSocketRef = useRef<GameSocket>(null);
 
     const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
 
-    const onConnected = useCallback((gameSocket: GameSocket) => {
-        gameSocketRef.current = gameSocket;
+    const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
 
-        const context: ServerMessageContext = {
-            name: "Not used at the moment"
-        };
-        const messageManager = new MessageManager<
-            ServerMessageContext,
-            ServerToClientMessage,
-            Server
-        >(context);
-        messageManagerRef.current = messageManager;
+    const addLogEntry = useCallback(
+        (logEntry: LogEntry) => {
+            setLogEntries((logEntries) => [...logEntries, logEntry]);
+        },
+        [setLogEntries]
+    );
 
-        gameSocket.send({
-            type: "client:ping",
-            payload: { nonce: 1234 }
-        });
-
+    useEffect(() => {
+        console.info("Mounting App Message Handlers");
         messageManager.registerHandler("server:hello", (context, payload) => {
             console.info({ context, payload });
         });
         messageManager.registerHandler("server:pong", (context, payload) => {
             console.info({ context, payload });
 
-            gameSocket.send({
-                type: "client:ping",
-                payload: { nonce: payload.nonce++ }
-            });
+            // gameSocketRef.current?.send({
+            //     type: "client:ping",
+            //     payload: { nonce: payload.nonce++ }
+            // });
         });
-        messageManager.registerHandler("lobby:state", (_context, payload) => {
-            setLobbyState(payload);
+        messageManager.registerHandler("server:phase", (_context, payload) => {
+            console.info("Setting Phase", payload.phase);
+            setPhase(payload.phase);
         });
-        messageManager.registerHandler("lobby:client:connected", (_context, payload) => {
-            setLogEntries((logEntries) => [
-                ...logEntries,
-                {
-                    type: "connected",
-                    text: `😀 Client '${payload.name}' connected`
-                }
-            ]);
+        messageManager.registerHandler("client:connected", (_context, payload) => {
+            addLogEntry({ text: `😀 Client '${payload.name}' connected` });
         });
-        messageManager.registerHandler("lobby:client:disconnected", (_context, payload) => {
-            setLogEntries((logEntries) => [
-                ...logEntries,
-                {
-                    type: "disconnected",
-                    text: `😢 Client '${payload.name}' disconnected`
-                }
-            ]);
+        messageManager.registerHandler("client:disconnected", (_context, payload) => {
+            addLogEntry({ text: `😢 Client '${payload.name}' disconnected` });
         });
-        messageManager.registerHandler("server:client:renamed", (_context, payload) => {
-            setLogEntries((logEntries) => [
-                ...logEntries,
-                {
-                    type: "renamed",
-                    text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
-                }
-            ]);
-        });
-        messageManager.registerHandler("server:client:side:changed", (_context, payload) => {
-            console.info(`*** Client joined '${payload.new?.sideName ?? "null"}'`);
-            if (payload.new && !payload.old) {
-                setLogEntries((logEntries) => [
-                    ...logEntries,
-                    {
-                        type: "side",
-                        text: `➡️ Client joined '${payload.new?.sideName}'`
-                    }
-                ]);
-            } else if (payload.old && !payload.new) {
-                setLogEntries((logEntries) => [
-                    ...logEntries,
-                    {
-                        type: "side",
-                        text: `⬅️ Client left '${payload.old?.sideName}'`
-                    }
-                ]);
-            } else if (payload.old && payload.new) {
-                setLogEntries((logEntries) => [
-                    ...logEntries,
-                    {
-                        type: "side",
-                        text: `🔀 Client left '${payload.old?.sideName}' and joined '${payload.new?.sideName}'`
-                    }
-                ]);
-            }
-        });
-        messageManager.registerHandler("server:client:ready", (_context, payload) => {
-            if (payload.ready) {
-                console.info(`*** Client ${payload.client.name} is ready!`);
-                setLogEntries((logEntries) => [
-                    ...logEntries,
-                    {
-                        text: `✅ Client '${payload.client.name} is ready!`
-                    }
-                ]);
-            } else {
-                console.info(`*** Client ${payload.client.name} is not ready`);
-                setLogEntries((logEntries) => [
-                    ...logEntries,
-                    {
-                        text: `❌ Client '${payload.client.name} is not ready`
-                    }
-                ]);
-            }
-        });
-    }, []);
+
+        return () => {
+            console.info("Unmounting App Message Handlers");
+            messageManager.unregisterHandler("server:hello");
+            messageManager.unregisterHandler("server:pong");
+            messageManager.unregisterHandler("server:phase");
+            messageManager.unregisterHandler("client:connected");
+            messageManager.unregisterHandler("client:disconnected");
+        };
+    }, [messageManager, addLogEntry]);
+
+    const onConnected = useCallback(
+        (gameSocket: GameSocket) => {
+            setGameSocket(gameSocket);
+        },
+        [setGameSocket]
+    );
 
     const onDisconnected = useCallback(() => {
-        gameSocketRef.current = null;
-        messageManagerRef.current = null;
-        setLobbyState(null);
-    }, []);
+        setGameSocket(null);
+        setPhase(Phase.Enum.main_menu);
+    }, [setGameSocket]);
 
-    const onMessage = useCallback((data: unknown) => {
-        let message: ServerToClientMessage;
+    const onMessage = useCallback(
+        (data: unknown) => {
+            let message: ServerToClientMessage;
 
-        try {
-            message = ServerToClientMessage.parse(JSON.parse(String(data)));
-        } catch {
-            return;
-        }
+            try {
+                message = ServerToClientMessage.parse(JSON.parse(String(data)));
+            } catch {
+                return;
+            }
 
-        messageManagerRef.current?.enqueueMessage(message, { name: "Server" });
-    }, []);
+            messageManager.enqueueMessage(message, Server);
+        },
+        [messageManager]
+    );
 
-    const changeSideId = useCallback((clientId: ClientId, sideId: SideId | null) => {
-        gameSocketRef.current?.send({
-            type: "client:side:change",
-            payload: { clientId, sideId }
-        });
-    }, []);
-
-    const changeReady = useCallback((ready: boolean) => {
-        gameSocketRef.current?.send({
-            type: "client:ready",
-            payload: { ready }
-        });
-    }, []);
-
-    const { connected, gameId, createGame, joinGame, leaveGame } = useServerSocket({
+    const { gameId, createGame, joinGame, leaveGame } = useServerSocket({
         clientId,
         clientName,
         onConnected,
@@ -191,39 +102,43 @@ export function App() {
         onMessage
     });
 
-    return (
-        <LobbyPage
-            clientId={clientId}
-            initialClientName={clientName}
-            gameId={gameId}
-            onClientNameChanged={(name) => {
-                async function updateClientName(name: string) {
-                    gameSocketRef.current?.send({
-                        type: "client:rename",
-                        payload: { name }
-                    });
-                    setClientName(name);
-                }
+    if (!clientId) {
+        return null;
+    }
 
-                updateClientName(name);
-            }}
-            onGameIdChanged={
-                connected
-                    ? undefined
-                    : (gameId: GameId) => {
-                          setSearchParams((searchParams) => {
-                              searchParams.set("game-id", gameId);
-                              return searchParams;
-                          });
-                      }
-            }
-            onCreateGame={createGame}
-            onJoinGame={joinGame}
-            onLeaveGame={leaveGame}
-            onSideIdChange={changeSideId}
-            onReadyChange={changeReady}
-            logEntries={logEntries}
-            lobbyState={lobbyState}
-        />
+    return (
+        <Container sx={{ maxWidth: "100vw", maxHeight: "100vh" }}>
+            <MainMenuPage
+                visible={phase === Phase.Enum.main_menu}
+                defaultGameId={gameId}
+                onCreateGame={createGame}
+                onJoinGame={joinGame}
+            />
+            <LobbyPage
+                visible={phase === Phase.Enum.lobby}
+                clientId={clientId}
+                initialClientName={clientName}
+                gameId={gameId}
+                onClientNameChanged={(name) => {
+                    async function updateClientName(name: string) {
+                        sendMessage({
+                            type: "client:rename",
+                            payload: { name }
+                        });
+                        setClientName(name);
+                    }
+
+                    updateClientName(name);
+                }}
+                onCreateGame={createGame}
+                onJoinGame={joinGame}
+                onLeaveGame={() => {
+                    leaveGame();
+                    setPhase(Phase.Enum.main_menu);
+                }}
+                logEntries={logEntries}
+                addLogEntry={addLogEntry}
+            />
+        </Container>
     );
 }

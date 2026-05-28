@@ -5,7 +5,7 @@ import { Client } from "../Client.js";
 
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
-        return Phase.Values.lobby;
+        return Phase.Enum.lobby;
     }
 
     get acceptingClients(): boolean {
@@ -14,14 +14,14 @@ export class LobbyPhaseHandler extends PhaseHandler {
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {
         messageManager.registerHandler("client:rename", ({ game }, payload, from) => {
-            const { clientId } = from;
+            const { id: clientId } = from;
             const { name } = payload;
             const client = game.getClient(clientId);
             const { name: oldName } = client;
             client.name = name;
 
             game.broadcastMessage({
-                type: "server:client:renamed",
+                type: "lobby:client:renamed",
                 payload: {
                     oldName,
                     newName: name
@@ -34,7 +34,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         });
         messageManager.registerHandler(
             "client:side:change",
-            ({ game }, payload, { clientId: fromClientId }) => {
+            ({ game }, payload, { id: fromClientId }) => {
                 const { ownerId } = game;
                 const { clientId, sideId: newSideId } = payload;
 
@@ -55,7 +55,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 client.sideId = newSideId;
 
                 game.broadcastMessage({
-                    type: "server:client:side:changed",
+                    type: "lobby:client:side:changed",
                     payload: {
                         old: !oldSideId
                             ? undefined
@@ -77,7 +77,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 });
             }
         );
-        messageManager.registerHandler("client:ready", ({ game }, { ready }, { clientId }) => {
+        messageManager.registerHandler("client:ready", ({ game }, { ready }, { id: clientId }) => {
             const client = this.game.getClient(clientId);
             if (!client.sideId) {
                 console.error(
@@ -88,7 +88,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             client.ready = ready;
 
             game.broadcastMessage({
-                type: "server:client:ready",
+                type: "lobby:client:ready",
                 payload: {
                     client: {
                         id: clientId,
@@ -111,18 +111,18 @@ export class LobbyPhaseHandler extends PhaseHandler {
     }
 
     clientConnected(client: Client): void {
-        console.info(`LOBBY: *** Client '${client.name}' (${client.clientId}) connected ***`);
+        console.info(`LOBBY: *** Client '${client.name}' (${client.id}) connected ***`);
 
         // Tell everyone else we have a new client.
         this.game.broadcastMessage(
             {
-                type: "lobby:client:connected",
+                type: "client:connected",
                 payload: {
-                    clientId: client.clientId,
+                    clientId: client.id,
                     name: client.name
                 }
             },
-            client.clientId
+            client.id
         );
 
         // Tell everyone about the updated lobby state.
@@ -133,18 +133,18 @@ export class LobbyPhaseHandler extends PhaseHandler {
     }
 
     clientDisconnected(client: Client): void {
-        console.info(`LOBBY: *** Client '${client.name}' (${client.clientId}) disconnected ***`);
+        console.info(`LOBBY: *** Client '${client.name}' (${client.id}) disconnected ***`);
 
         this.game.broadcastMessage({
-            type: "lobby:client:disconnected",
+            type: "client:disconnected",
             payload: {
-                clientId: client.clientId,
+                clientId: client.id,
                 name: client.name
             }
         });
         this.game.broadcastMessage({
             type: "lobby:state",
-            payload: this._buildLobbyState(client.clientId)
+            payload: this._buildLobbyState(client.id)
         });
     }
 
@@ -154,9 +154,9 @@ export class LobbyPhaseHandler extends PhaseHandler {
         return {
             ownerId: this.game.ownerId,
             clients: clients
-                .filter(({ clientId }) => clientId != excludeId)
+                .filter(({ id: clientId }) => clientId != excludeId)
                 .map((client) => ({
-                    id: client.clientId,
+                    id: client.id,
                     name: client.name,
                     sideId: client.sideId,
                     ready: client.ready
