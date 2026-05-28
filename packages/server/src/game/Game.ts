@@ -144,7 +144,7 @@ export class Game {
             return null;
         }
 
-        const client = new Client(clientId, name);
+        const client = new Client({ id: clientId, name }, this);
         this._clientManager.addClient(client);
 
         return client;
@@ -184,7 +184,7 @@ export class Game {
         const excludes = exclude ? CastToArray(exclude) : [];
 
         for (const client of this._clientManager.clients) {
-            if (!excludes.includes(client.clientId)) {
+            if (!excludes.includes(client.id)) {
                 client.sendMessage(message);
             }
         }

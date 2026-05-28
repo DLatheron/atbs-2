@@ -3,11 +3,7 @@ import type { Duplex } from "stream";
 import express from "express";
 import type { IncomingMessage } from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import {
-    parseURLSearchParams,
-    ConnectSocketQueryParams,
-    ServerToClientMessage
-} from "@atbs/shared-data";
+import { parseURLSearchParams, ConnectSocketQueryParams } from "@atbs/shared-data";
 
 import { createApp } from "./app.js";
 import { gameManager } from "./game/GameManager.js";
@@ -21,12 +17,6 @@ app.use(express.json());
 const server = createServer(app);
 
 const wss = new WebSocketServer({ noServer: true });
-
-function sendJson(ws: WebSocket, message: ServerToClientMessage) {
-    if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(message));
-    }
-}
 
 server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     try {
@@ -46,7 +36,7 @@ server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) =>
     }
 });
 
-wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
+wss.on("connection", function connection(socket: WebSocket, req: IncomingMessage) {
     const host = req.headers.host ?? "localhost";
     const url = new URL(req.url ?? "", `http://${host}`);
     const validatedQueryParams = parseURLSearchParams(ConnectSocketQueryParams, url.searchParams);
@@ -63,26 +53,7 @@ wss.on("connection", function connection(ws: WebSocket, req: IncomingMessage) {
         console.error(`Client: ${clientId}, not found in game: ${gameId}`);
         return;
     }
-    client.socketContext = {
-        send: (message: ServerToClientMessage) => {
-            sendJson(ws, message);
-        }
-    };
-
-    game.clientConnected(client);
-
-    ws.on("message", function message(data: MessageEvent) {
-        game.receiveMessage(data, client);
-    });
-
-    ws.on("close", function close() {
-        game.clientDisconnected(client);
-        game.removeClient(client.clientId);
-    });
-
-    ws.on("error", function error(error: unknown) {
-        console.error(error);
-    });
+    client.assignSocket(socket);
 });
 
 server.listen(port, () => {

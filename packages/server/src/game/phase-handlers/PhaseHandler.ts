@@ -23,10 +23,10 @@ export abstract class PhaseHandler {
     abstract unregisterMessageHandlers(messageManager: ClientMessageManager): void;
 
     clientConnected(client: Client): void {
-        console.info(`GENERIC: *** Client '${client.name}' (${client.clientId}) connected ***`);
+        console.info(`GENERIC: *** Client '${client.name}' (${client.id}) connected ***`);
     }
 
     clientDisconnected(client: Client): void {
-        console.info(`GENERIC: *** Client '${client.name}' (${client.clientId}) disconnected ***`);
+        console.info(`GENERIC: *** Client '${client.name}' (${client.id}) disconnected ***`);
     }
 }

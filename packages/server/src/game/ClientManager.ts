@@ -9,7 +9,7 @@ export class ClientManager {
     }
 
     addClient(client: Client): void {
-        this._clients.set(client.clientId, client);
+        this._clients.set(client.id, client);
     }
 
     removeClient(clientId: ClientId): boolean {
