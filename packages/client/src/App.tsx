@@ -104,6 +104,7 @@ export function App() {
                 onJoinGame={joinGame}
             />
             <LobbyPage
+                key={gameId}
                 visible={phase === Phase.Enum.lobby}
                 clientId={clientId}
                 initialClientName={clientName}

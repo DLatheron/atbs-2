@@ -74,17 +74,19 @@ export class MessageManager<
     private async processNextMessage() {
         let entry: { message: MESSAGE; from: FROM } | undefined;
 
-        while ((entry = this._received.pop())) {
+        while ((entry = this._received.shift())) {
             const { message, from } = entry;
 
             const { type } = message;
             const messageHandlerEntries = this.getMessageHandlerEntries(type);
 
+            this._processingMessages = true;
+            console.info("+++ Processing message", message.type, message.payload);
             for (const { handler } of messageHandlerEntries) {
-                this._processingMessages = true;
                 await handler(this._context, message.payload, from);
-                this._processingMessages = false;
             }
+            console.info("--- Processed message", message.type, message.payload);
+            this._processingMessages = false;
         }
     }
 
@@ -144,6 +146,7 @@ export class MessageManager<
      * Queue a new message for processing.
      */
     enqueueMessage(message: MESSAGE, from: FROM) {
+        console.info(">>> Enqueuing message", message.type, message.payload);
         this._received.push({ message, from });
 
         if (this.isProcessing === false) {

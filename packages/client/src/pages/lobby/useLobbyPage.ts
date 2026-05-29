@@ -24,17 +24,17 @@ export function useLobbyPage() {
 
         const handlerHandles = [
             messageManager.registerHandler("server:client:connected", (_context, payload) => {
-                addLogEntry({ text: `😀 Client '${payload.client.name}' connected` });
+                addLogEntry({ text: `😀 '${payload.client.name}' connected` });
             }),
             messageManager.registerHandler("server:client:disconnected", (_context, payload) => {
-                addLogEntry({ text: `😢 Client '${payload.client.name}' disconnected` });
+                addLogEntry({ text: `😢 '${payload.client.name}' disconnected` });
             }),
             messageManager.registerHandler("server:lobby:state", (_context, payload) => {
                 setLobbyState(payload);
             }),
             messageManager.registerHandler("server:lobby:client:renamed", (_context, payload) => {
                 addLogEntry({
-                    text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
+                    text: `🪪 '${payload.oldName}' became '${payload.newName}'`
                 });
             }),
             messageManager.registerHandler(
@@ -42,12 +42,16 @@ export function useLobbyPage() {
                 (_context, payload) => {
                     console.info(`*** Client joined '${payload.newSide?.name ?? "null"}'`);
                     if (payload.newSide && !payload.oldSide) {
-                        addLogEntry({ text: `➡️ Client joined '${payload.newSide?.name}'` });
+                        addLogEntry({
+                            text: `➡️ '${payload.client.name}' joined '${payload.newSide?.name}'`
+                        });
                     } else if (payload.oldSide && !payload.newSide) {
-                        addLogEntry({ text: `⬅️ Client left '${payload.oldSide?.name}'` });
+                        addLogEntry({
+                            text: `⬅️ '${payload.client.name}' left '${payload.oldSide?.name}'`
+                        });
                     } else if (payload.oldSide && payload.newSide) {
                         addLogEntry({
-                            text: `🔀 Client left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
+                            text: `🔀 '${payload.client.name}' left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
                         });
                     }
                 }
@@ -55,15 +59,30 @@ export function useLobbyPage() {
             messageManager.registerHandler("server:lobby:client:ready", (_context, payload) => {
                 if (payload.ready) {
                     console.info(`*** Client ${payload.client.name} is ready!`);
-                    addLogEntry({ text: `✅ Client '${payload.client.name} is ready!` });
+                    addLogEntry({ text: `🟢 '${payload.client.name} is ready!` });
                 } else {
                     console.info(`*** Client ${payload.client.name} is not ready`);
-                    addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
+                    addLogEntry({ text: `🛑 '${payload.client.name} is not ready` });
                 }
             }),
             messageManager.registerHandler("server:lobby:scenario:list", (_context, payload) => {
                 console.info("Scenarios", payload.scenarios);
                 setScenarios(payload.scenarios);
+            }),
+            messageManager.registerHandler("server:lobby:scenario:changed", (_context, payload) => {
+                if (payload.newScenario && !payload.oldScenario) {
+                    addLogEntry({
+                        text: `🗺️ '${payload.client.name}' chose '${payload.newScenario?.name}' scenario`
+                    });
+                } else if (payload.oldScenario && !payload.newScenario) {
+                    addLogEntry({
+                        text: `🗺️ '${payload.client.name}' cleared '${payload.oldScenario?.name}' scenario`
+                    });
+                } else if (payload.oldScenario && payload.newScenario) {
+                    addLogEntry({
+                        text: `🗺️ '${payload.client.name}' changed scenario from '${payload.oldScenario?.name}' to '${payload.newScenario?.name}'`
+                    });
+                }
             })
         ];
 

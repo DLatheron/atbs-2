@@ -75,9 +75,9 @@ export function LobbyPage({
     }
 
     return (
-        <Container component={Paper} maxWidth="xl" sx={{ padding: 3 }}>
-            <Grid container spacing={3} component={Paper}>
-                <Grid size={6}>
+        <Container component={Paper} elevation={4} maxWidth="xl" sx={{ p: 2 }}>
+            <Grid container spacing={3}>
+                <Grid size={6} component={Paper} elevation={2} sx={{ p: 2 }}>
                     <Stack spacing={4}>
                         <TextField
                             id="client-name"
@@ -141,7 +141,7 @@ export function LobbyPage({
                         </Stack>
 
                         {connected ? (
-                            <TableContainer component={Paper}>
+                            <TableContainer component={Paper} elevation={3}>
                                 <Table>
                                     <TableHead>
                                         <TableRow>
@@ -236,12 +236,12 @@ export function LobbyPage({
                         </Container>
                     </Stack>
                 </Grid>
-                <Grid size={6}>
+                <Grid size={6} component={Paper} elevation={2} sx={{ p: 2 }}>
                     {isServer ? (
                         scenarios && (
                             <ScenarioListComponent
                                 scenarios={scenarios}
-                                selectedScenario={null}
+                                selectedScenario={lobbyState?.scenario?.id ?? null}
                                 onScenarioChanged={onChangeScenario}
                             />
                         )

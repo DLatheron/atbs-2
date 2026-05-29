@@ -1,6 +1,6 @@
 import z from "zod";
 import { LobbyState } from "./LobbyState.js";
-import { ClientId, ScenarioSummary, SideId } from "./PrimitiveTypes.js";
+import { ClientId, ScenarioId, ScenarioSummary, SideId } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
@@ -44,6 +44,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:lobby:client:side:changed"),
         payload: z.object({
+            client: z.object({
+                id: ClientId,
+                name: z.string()
+            }),
             oldSide: z
                 .object({
                     id: SideId,
@@ -76,6 +80,27 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         type: z.literal("server:lobby:scenario:list"),
         payload: z.object({
             scenarios: z.array(ScenarioSummary).min(1)
+        })
+    }),
+    z.object({
+        type: z.literal("server:lobby:scenario:changed"),
+        payload: z.object({
+            client: z.object({
+                id: ClientId,
+                name: z.string()
+            }),
+            oldScenario: z
+                .object({
+                    id: ScenarioId,
+                    name: z.string()
+                })
+                .optional(),
+            newScenario: z
+                .object({
+                    id: ScenarioId,
+                    name: z.string()
+                })
+                .optional()
         })
     })
 ]);

@@ -3,6 +3,8 @@ import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager } from "../Game.js";
 import { Client } from "../Client.js";
 
+const autoSetupGame = true; // Temporary Hack.
+
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
         return Phase.Enum.lobby;
@@ -63,6 +65,10 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     game.broadcastMessage({
                         type: "server:lobby:client:side:changed",
                         payload: {
+                            client: {
+                                id: client.id,
+                                name: client.name
+                            },
                             oldSide: !oldSideId
                                 ? undefined
                                 : {
@@ -121,19 +127,27 @@ export class LobbyPhaseHandler extends PhaseHandler {
                         return;
                     }
 
-                    if (!scenarioId) {
-                        game.scenario = null;
-                    } else {
-                        game.scenario = game.scenarioManager.get(scenarioId);
-                    }
+                    const client = this.game.getClient(clientId);
+                    const oldScenario = game.scenario;
+                    const scenario = scenarioId ? game.scenarioManager.get(scenarioId) : null;
+                    game.scenario = scenario;
 
-                    // TODO: Message about scenario selection?
+                    game.broadcastMessage({
+                        type: "server:lobby:scenario:changed",
+                        payload: {
+                            client: { id: client.id, name: client.name },
+                            oldScenario: oldScenario
+                                ? { id: oldScenario.id, name: oldScenario.name }
+                                : undefined,
+                            newScenario: scenario
+                                ? { id: scenario.id, name: scenario.name }
+                                : undefined
+                        }
+                    });
                     game.broadcastMessage({
                         type: "server:lobby:state",
                         payload: this._buildLobbyState()
                     });
-
-                    // TODO: Clear the assigned sides etc.
                 }
             )
         ];
@@ -173,6 +187,40 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     }
                 },
                 client.id
+            );
+        }
+
+        //
+        // Temporary Hack: Scenario loading is non-fatal.
+        //
+        if (autoSetupGame) {
+            const scenarioId = "test-scenario";
+            const scenario = this.game.scenarioManager.get(scenarioId);
+            const { sides } = scenario;
+
+            if (clientIsOwner) {
+                this.game.queueMessage(
+                    {
+                        type: "client:scenario:change",
+                        payload: { scenarioId }
+                    },
+                    client
+                );
+            }
+
+            this.game.queueMessage(
+                {
+                    type: "client:side:change",
+                    payload: { clientId: client.id, sideId: sides[clientIsOwner ? 0 : 1].id }
+                },
+                client
+            );
+            this.game.queueMessage(
+                {
+                    type: "client:ready",
+                    payload: { ready: true }
+                },
+                client
             );
         }
     }
