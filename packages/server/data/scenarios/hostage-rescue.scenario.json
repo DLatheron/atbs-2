@@ -3,8 +3,8 @@
     "name": "Hostage Rescue",
     "description": [
         {
-            "image": "public//previews/hostage-rescue.scenario.png", 
-            "alt": "hostage rescue scenario preview", 
+            "image": "public//previews/hostage-rescue.scenario.png",
+            "alt": "hostage rescue scenario preview",
             "width": 400,
             "height": 400
         },

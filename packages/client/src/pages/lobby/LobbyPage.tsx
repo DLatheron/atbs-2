@@ -323,8 +323,11 @@ export function LobbyPage({
                             <ScenarioListComponent
                                 scenarios={scenarios}
                                 selectedScenario={null}
-                                onScenarioChanged={(selectedScenario) => {
-                                    console.info(selectedScenario);
+                                onScenarioChanged={(scenarioId) => {
+                                    sendMessage({
+                                        type: "client:scenario:change",
+                                        payload: { scenarioId }
+                                    });
                                 }}
                             />
                         )

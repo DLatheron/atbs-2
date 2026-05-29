@@ -13,106 +13,130 @@ export class LobbyPhaseHandler extends PhaseHandler {
     }
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {
-        messageManager.registerHandler("client:rename", ({ game }, payload, from) => {
-            const { id: clientId } = from;
-            const { name } = payload;
-            const client = game.getClient(clientId);
-            const { name: oldName } = client;
+        this._handlerHandles = [
+            messageManager.registerHandler("client:rename", ({ game }, payload, from) => {
+                const { id: clientId } = from;
+                const { name } = payload;
+                const client = game.getClient(clientId);
+                const { name: oldName } = client;
 
-            if (oldName === name) {
-                return;
-            }
-
-            client.name = name;
-
-            game.broadcastMessage({
-                type: "lobby:client:renamed",
-                payload: {
-                    oldName,
-                    newName: name
-                }
-            });
-            game.broadcastMessage({
-                type: "lobby:state",
-                payload: this._buildLobbyState()
-            });
-        });
-        messageManager.registerHandler(
-            "client:side:change",
-            ({ game }, payload, { id: fromClientId }) => {
-                const { ownerId } = game;
-                const { clientId, sideId: newSideId } = payload;
-
-                if (fromClientId !== ownerId && fromClientId !== clientId) {
-                    console.error(
-                        `Attempt by client ${fromClientId} to set ${clientId} to side ${newSideId}`
-                    );
+                if (oldName === name) {
                     return;
                 }
 
-                const client = game.getClient(clientId);
-                const { sideId: oldSideId } = client;
-                const { scenario } = game;
-                if (!scenario) {
-                    throw new Error(`No scenario selected`);
-                }
-
-                client.sideId = newSideId;
+                client.name = name;
 
                 game.broadcastMessage({
-                    type: "lobby:client:side:changed",
+                    type: "lobby:client:renamed",
                     payload: {
-                        oldSide: !oldSideId
-                            ? undefined
-                            : {
-                                  id: oldSideId,
-                                  name: scenario.getSide(oldSideId).name
-                              },
-                        newSide: !newSideId
-                            ? undefined
-                            : {
-                                  id: newSideId,
-                                  name: scenario.getSide(newSideId).name
-                              }
+                        oldName,
+                        newName: name
                     }
                 });
                 game.broadcastMessage({
                     type: "lobby:state",
                     payload: this._buildLobbyState()
                 });
-            }
-        );
-        messageManager.registerHandler("client:ready", ({ game }, { ready }, { id: clientId }) => {
-            const client = this.game.getClient(clientId);
-            if (!client.sideId) {
-                console.error(
-                    `Client ${clientId} cannot be ready as it doesn't have a side assigned`
-                );
-                return;
-            }
-            client.ready = ready;
+            }),
+            messageManager.registerHandler(
+                "client:side:change",
+                ({ game }, payload, { id: fromClientId }) => {
+                    const { ownerId } = game;
+                    const { clientId, sideId: newSideId } = payload;
 
-            game.broadcastMessage({
-                type: "lobby:client:ready",
-                payload: {
-                    client: {
-                        id: clientId,
-                        name: game.getClient(clientId).name
-                    },
-                    ready
+                    if (fromClientId !== ownerId && fromClientId !== clientId) {
+                        console.error(
+                            `Attempt by client ${fromClientId} to set ${clientId} to side ${newSideId}`
+                        );
+                        return;
+                    }
+
+                    const client = game.getClient(clientId);
+                    const { sideId: oldSideId } = client;
+                    const { scenario } = game;
+                    if (!scenario) {
+                        throw new Error(`No scenario selected`);
+                    }
+
+                    client.sideId = newSideId;
+
+                    game.broadcastMessage({
+                        type: "lobby:client:side:changed",
+                        payload: {
+                            oldSide: !oldSideId
+                                ? undefined
+                                : {
+                                      id: oldSideId,
+                                      name: scenario.getSide(oldSideId).name
+                                  },
+                            newSide: !newSideId
+                                ? undefined
+                                : {
+                                      id: newSideId,
+                                      name: scenario.getSide(newSideId).name
+                                  }
+                        }
+                    });
+                    game.broadcastMessage({
+                        type: "lobby:state",
+                        payload: this._buildLobbyState()
+                    });
                 }
-            });
-            game.broadcastMessage({
-                type: "lobby:state",
-                payload: this._buildLobbyState()
-            });
-        });
-    }
+            ),
+            messageManager.registerHandler(
+                "client:ready",
+                ({ game }, { ready }, { id: clientId }) => {
+                    const client = this.game.getClient(clientId);
+                    if (!client.sideId) {
+                        console.error(
+                            `Client ${clientId} cannot be ready as it doesn't have a side assigned`
+                        );
+                        return;
+                    }
+                    client.ready = ready;
 
-    unregisterMessageHandlers(messageManager: ClientMessageManager): void {
-        messageManager.unregisterHandler("client:rename");
-        messageManager.unregisterHandler("client:side:change");
-        messageManager.unregisterHandler("client:ready");
+                    game.broadcastMessage({
+                        type: "lobby:client:ready",
+                        payload: {
+                            client: {
+                                id: clientId,
+                                name: game.getClient(clientId).name
+                            },
+                            ready
+                        }
+                    });
+                    game.broadcastMessage({
+                        type: "lobby:state",
+                        payload: this._buildLobbyState()
+                    });
+                }
+            ),
+            messageManager.registerHandler(
+                "client:scenario:change",
+                ({ game }, { scenarioId }, { id: clientId }) => {
+                    if (clientId !== game.ownerId) {
+                        console.error(
+                            `Client ${clientId} attempted to set the scenario when they weren't the owner ${game.ownerId}`
+                        );
+                        return;
+                    }
+
+                    if (!scenarioId) {
+                        game.scenario = null;
+                    } else {
+                        game.scenario = game.scenarioManager.get(scenarioId);
+                    }
+
+                    // TODO: Message about scenario selection?
+                    game.broadcastMessage({
+                        type: "lobby:state",
+                        payload: this._buildLobbyState()
+                    });
+                    
+                    // TODO: Clear the assigned sides etc.
+                }
+            )
+        ];
     }
 
     clientConnected(client: Client): void {

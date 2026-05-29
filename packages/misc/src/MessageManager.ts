@@ -12,7 +12,7 @@ interface HandlerEntry<CONTEXT extends object, MESSAGE extends Message, FROM> {
 
 type HandlerId = string;
 
-type HandlerHandle<MESSAGE extends Message, K extends MESSAGE["type"]> = [K, HandlerId];
+export type HandlerHandle<MESSAGE extends Message, K extends MESSAGE["type"]> = [K, HandlerId];
 
 /**
  * NOTE: K parameter is special because it allows registerHandle to tightly specific the type of the handler function

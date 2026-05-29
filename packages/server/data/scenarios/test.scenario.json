@@ -3,8 +3,8 @@
     "name": "Test Scenario",
     "description": [
         {
-            "image": "public/previews/test.scenario.png", 
-            "alt": "test scenario preview", 
+            "image": "public/previews/test.scenario.png",
+            "alt": "test scenario preview",
             "width": 400,
             "height": 400
         },

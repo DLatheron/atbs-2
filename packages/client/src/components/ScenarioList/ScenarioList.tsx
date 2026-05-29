@@ -1,4 +1,4 @@
-import { JSX, useState } from "react";
+import { JSX, useCallback, useEffect, useState } from "react";
 import { ScenarioId, ScenarioSummary } from "@atbs/shared-data";
 import { List, ListItemButton, ListItemText, Stack } from "@mui/material";
 import { ScenarioComponent } from "../Scenario/Scenario";
@@ -18,14 +18,33 @@ export function ScenarioListComponent({
 }: ScenarioListProps): JSX.Element {
     const [selectedIndex, setSelectedIndex] = useState(0);
 
+    useEffect(() => {
+        const index = scenarios.findIndex(({ id }) => selectedScenario === id);
+
+        setSelectedIndex(index >= 0 ? index : 0);
+    }, [selectedScenario, scenarios]);
+
+    const handleScenarioChange = useCallback(
+        (index: number) => {
+            setSelectedIndex(index);
+
+            onScenarioChanged(scenarios[index].id);
+        },
+        [onScenarioChanged, scenarios]
+    );
+
     return (
         <Stack spacing={3}>
             <List>
-                {scenarios.map((scenario, index) =>
-                    <ListItemButton key={scenario.id} selected={selectedIndex === index} onClick={() => setSelectedIndex(index)}>
+                {scenarios.map((scenario, index) => (
+                    <ListItemButton
+                        key={scenario.id}
+                        selected={selectedIndex === index}
+                        onClick={() => handleScenarioChange(index)}
+                    >
                         <ListItemText primary={scenario.name} />
                     </ListItemButton>
-                )}
+                ))}
             </List>
             <ScenarioComponent scenario={scenarios[selectedIndex]} />
         </Stack>
