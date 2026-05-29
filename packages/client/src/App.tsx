@@ -9,7 +9,7 @@ import {
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { LobbyPage, LogEntry, MainMenuPage } from "./pages";
+import { LobbyPage, MainMenuPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
 import { Container } from "@mui/material";
 
@@ -22,16 +22,7 @@ export function App() {
     const [phase, setPhase] = useState<Phase>(Phase.Enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
 
-    const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
-
     const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
-
-    const addLogEntry = useCallback(
-        (logEntry: LogEntry) => {
-            setLogEntries((logEntries) => [...logEntries, logEntry]);
-        },
-        [setLogEntries]
-    );
 
     useEffect(() => {
         console.info("Mounting App Message Handlers");
@@ -51,11 +42,11 @@ export function App() {
                 console.info("Setting Phase", payload.phase);
                 setPhase(payload.phase);
             }),
-            messageManager.registerHandler("client:connected", (_context, payload) => {
-                addLogEntry({ text: `😀 Client '${payload.client.name}' connected` });
+            messageManager.registerHandler("server:client:connected", (_context, { client }) => {
+                console.info(`Client '${client.name} (${client.id}) connected`);
             }),
-            messageManager.registerHandler("client:disconnected", (_context, payload) => {
-                addLogEntry({ text: `😢 Client '${payload.client.name}' disconnected` });
+            messageManager.registerHandler("server:client:disconnected", (_context, { client }) => {
+                console.info(`Client '${client.name} (${client.id}) disconnected`);
             })
         ];
 
@@ -63,7 +54,7 @@ export function App() {
             console.info("Unmounting App Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
         };
-    }, [messageManager, addLogEntry]);
+    }, [messageManager]);
 
     const onConnected = useCallback(
         (gameSocket: GameSocket) => {
@@ -134,8 +125,6 @@ export function App() {
                     leaveGame();
                     setPhase(Phase.Enum.main_menu);
                 }}
-                logEntries={logEntries}
-                addLogEntry={addLogEntry}
             />
         </Container>
     );

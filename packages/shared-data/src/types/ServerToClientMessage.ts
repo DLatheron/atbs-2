@@ -13,11 +13,11 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.object({ nonce: z.number() })
     }),
     z.object({
-        type: z.literal("lobby:state"),
+        type: z.literal("server:lobby:state"),
         payload: LobbyState
     }),
     z.object({
-        type: z.literal("client:connected"),
+        type: z.literal("server:client:connected"),
         payload: z.object({
             client: z.object({
                 id: ClientId,
@@ -26,7 +26,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
-        type: z.literal("client:disconnected"),
+        type: z.literal("server:client:disconnected"),
         payload: z.object({
             client: z.object({
                 id: ClientId,
@@ -35,14 +35,14 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
-        type: z.literal("lobby:client:renamed"),
+        type: z.literal("server:lobby:client:renamed"),
         payload: z.object({
             oldName: z.string(),
             newName: z.string()
         })
     }),
     z.object({
-        type: z.literal("lobby:client:side:changed"),
+        type: z.literal("server:lobby:client:side:changed"),
         payload: z.object({
             oldSide: z
                 .object({
@@ -59,7 +59,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
-        type: z.literal("lobby:client:ready"),
+        type: z.literal("server:lobby:client:ready"),
         payload: z.object({
             client: z.object({
                 id: ClientId,
@@ -73,7 +73,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.object({ phase: Phase })
     }),
     z.object({
-        type: z.literal("lobby:scenario:list"),
+        type: z.literal("server:lobby:scenario:list"),
         payload: z.object({
             scenarios: z.array(ScenarioSummary).min(1)
         })

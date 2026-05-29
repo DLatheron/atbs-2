@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect } from "react";
 
 import {
     Button,
@@ -23,14 +23,10 @@ import {
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-import { ClientId, GameId, LobbyState, ScenarioSummary } from "@atbs/shared-data";
+import { ClientId, GameId } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
-import { useServerMessageManager } from "../../hooks";
 import { ScenarioListComponent } from "../../components/ScenarioList";
-
-export interface LogEntry {
-    text: string;
-}
+import { useLobbyPage } from "./useLobbyPage";
 
 export interface LobbyPageProps {
     visible: boolean;
@@ -42,9 +38,6 @@ export interface LobbyPageProps {
     onCreateGame: () => void;
     onJoinGame: (gameId: GameId) => void;
     onLeaveGame: () => void;
-
-    logEntries: LogEntry[];
-    addLogEntry: (logEntry: LogEntry) => void;
 }
 
 export function LobbyPage({
@@ -54,14 +47,10 @@ export function LobbyPage({
     gameId,
 
     onClientNameChanged,
-    onLeaveGame,
-
-    logEntries,
-    addLogEntry
+    onLeaveGame
 }: LobbyPageProps) {
-    const { messageManager, sendMessage } = useServerMessageManager();
-    const [scenarios, setScenarios] = useState<ScenarioSummary[]>();
-    const [lobbyState, setLobbyState] = useState<LobbyState>();
+    const { lobbyState, logEntries, scenarios, onChangeSideId, onChangeReady, onChangeScenario } =
+        useLobbyPage();
 
     const tableHeadCellStyles = { fontWeight: "bold" };
     const connected = !!lobbyState;
@@ -74,82 +63,12 @@ export function LobbyPage({
         : scenario.sides
               .map(({ id }) => id)
               .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
-    console.info({ availableSideIds });
-
-    const onChangeSideId = useCallback(
-        (clientId: ClientId, selectedSideId: string) => {
-            const sideId = selectedSideId === "None" ? null : selectedSideId;
-
-            console.info("Change Side", clientId, sideId);
-
-            sendMessage({
-                type: "client:side:change",
-                payload: { clientId, sideId }
-            });
-        },
-        [sendMessage]
-    );
-
-    useEffect(() => {
-        console.info("Mounting LobbyPage Message Handlers");
-
-        const handlerHandles = [
-            messageManager.registerHandler("lobby:state", (_context, payload) => {
-                setLobbyState(payload);
-            }),
-            messageManager.registerHandler("lobby:client:renamed", (_context, payload) => {
-                addLogEntry({
-                    text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
-                });
-            }),
-            messageManager.registerHandler("lobby:client:side:changed", (_context, payload) => {
-                console.info(`*** Client joined '${payload.newSide?.name ?? "null"}'`);
-                if (payload.newSide && !payload.oldSide) {
-                    addLogEntry({ text: `➡️ Client joined '${payload.newSide?.name}'` });
-                } else if (payload.oldSide && !payload.newSide) {
-                    addLogEntry({ text: `⬅️ Client left '${payload.oldSide?.name}'` });
-                } else if (payload.oldSide && payload.newSide) {
-                    addLogEntry({
-                        text: `🔀 Client left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
-                    });
-                }
-            }),
-            messageManager.registerHandler("lobby:client:ready", (_context, payload) => {
-                if (payload.ready) {
-                    console.info(`*** Client ${payload.client.name} is ready!`);
-                    addLogEntry({ text: `✅ Client '${payload.client.name} is ready!` });
-                } else {
-                    console.info(`*** Client ${payload.client.name} is not ready`);
-                    addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
-                }
-            }),
-            messageManager.registerHandler("lobby:scenario:list", (_context, payload) => {
-                console.info("Scenarios", payload.scenarios);
-                setScenarios(payload.scenarios);
-            })
-        ];
-
-        return () => {
-            console.info("Unmounting LobbyPage Message Handlers");
-            messageManager.unregisterHandlers(handlerHandles);
-        };
-    }, [messageManager, setLobbyState, addLogEntry]);
 
     useLayoutEffect(() => {
         document
             .getElementById("last-log-entry")
             ?.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
     });
-
-    const onChangeReady = useCallback(
-        (ready: boolean) => {
-            sendMessage({
-                type: "client:ready",
-                payload: { ready }
-            });
-        },
-        [sendMessage]
-    );
 
     if (!visible) {
         return null;
@@ -323,12 +242,7 @@ export function LobbyPage({
                             <ScenarioListComponent
                                 scenarios={scenarios}
                                 selectedScenario={null}
-                                onScenarioChanged={(scenarioId) => {
-                                    sendMessage({
-                                        type: "client:scenario:change",
-                                        payload: { scenarioId }
-                                    });
-                                }}
+                                onScenarioChanged={onChangeScenario}
                             />
                         )
                     ) : scenario ? (

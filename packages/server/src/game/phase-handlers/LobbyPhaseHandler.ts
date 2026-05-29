@@ -27,14 +27,14 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 client.name = name;
 
                 game.broadcastMessage({
-                    type: "lobby:client:renamed",
+                    type: "server:lobby:client:renamed",
                     payload: {
                         oldName,
                         newName: name
                     }
                 });
                 game.broadcastMessage({
-                    type: "lobby:state",
+                    type: "server:lobby:state",
                     payload: this._buildLobbyState()
                 });
             }),
@@ -61,7 +61,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     client.sideId = newSideId;
 
                     game.broadcastMessage({
-                        type: "lobby:client:side:changed",
+                        type: "server:lobby:client:side:changed",
                         payload: {
                             oldSide: !oldSideId
                                 ? undefined
@@ -78,7 +78,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                         }
                     });
                     game.broadcastMessage({
-                        type: "lobby:state",
+                        type: "server:lobby:state",
                         payload: this._buildLobbyState()
                     });
                 }
@@ -96,7 +96,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     client.ready = ready;
 
                     game.broadcastMessage({
-                        type: "lobby:client:ready",
+                        type: "server:lobby:client:ready",
                         payload: {
                             client: {
                                 id: clientId,
@@ -106,7 +106,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                         }
                     });
                     game.broadcastMessage({
-                        type: "lobby:state",
+                        type: "server:lobby:state",
                         payload: this._buildLobbyState()
                     });
                 }
@@ -129,10 +129,10 @@ export class LobbyPhaseHandler extends PhaseHandler {
 
                     // TODO: Message about scenario selection?
                     game.broadcastMessage({
-                        type: "lobby:state",
+                        type: "server:lobby:state",
                         payload: this._buildLobbyState()
                     });
-                    
+
                     // TODO: Clear the assigned sides etc.
                 }
             )
@@ -147,7 +147,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         // Tell everyone else we have a new client.
         this.game.broadcastMessage(
             {
-                type: "client:connected",
+                type: "server:client:connected",
                 payload: {
                     client: {
                         id: client.id,
@@ -160,14 +160,14 @@ export class LobbyPhaseHandler extends PhaseHandler {
 
         // Tell everyone about the updated lobby state.
         this.game.broadcastMessage({
-            type: "lobby:state",
+            type: "server:lobby:state",
             payload: this._buildLobbyState()
         });
 
         if (clientIsOwner) {
             this.game.sendMessage(
                 {
-                    type: "lobby:scenario:list",
+                    type: "server:lobby:scenario:list",
                     payload: {
                         scenarios: this.game.scenarioManager.toScenarioSummaries()
                     }
@@ -181,7 +181,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         console.info(`LOBBY: *** Client '${client.name}' (${client.id}) disconnected ***`);
 
         this.game.broadcastMessage({
-            type: "client:disconnected",
+            type: "server:client:disconnected",
             payload: {
                 client: {
                     id: client.id,
@@ -190,7 +190,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             }
         });
         this.game.broadcastMessage({
-            type: "lobby:state",
+            type: "server:lobby:state",
             payload: this._buildLobbyState(client.id)
         });
     }
