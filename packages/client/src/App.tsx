@@ -35,35 +35,38 @@ export function App() {
 
     useEffect(() => {
         console.info("Mounting App Message Handlers");
-        messageManager.registerHandler("server:hello", (context, payload) => {
-            console.info({ context, payload });
-        });
-        messageManager.registerHandler("server:pong", (context, payload) => {
-            console.info({ context, payload });
+        const handlerHandles = [
+            messageManager.registerHandler("server:hello", (context, payload) => {
+                console.info({ context, payload });
+            }),
+            messageManager.registerHandler("server:pong", (context, payload) => {
+                console.info({ context, payload });
 
-            // gameSocketRef.current?.send({
-            //     type: "client:ping",
-            //     payload: { nonce: payload.nonce++ }
-            // });
-        });
-        messageManager.registerHandler("server:phase", (_context, payload) => {
-            console.info("Setting Phase", payload.phase);
-            setPhase(payload.phase);
-        });
-        messageManager.registerHandler("client:connected", (_context, payload) => {
-            addLogEntry({ text: `😀 Client '${payload.client.name}' connected` });
-        });
-        messageManager.registerHandler("client:disconnected", (_context, payload) => {
-            addLogEntry({ text: `😢 Client '${payload.client.name}' disconnected` });
-        });
+                // gameSocketRef.current?.send({
+                //     type: "client:ping",
+                //     payload: { nonce: payload.nonce++ }
+                // });
+            }),
+            messageManager.registerHandler("server:phase", (_context, payload) => {
+                console.info("Setting Phase", payload.phase);
+                setPhase(payload.phase);
+            }),
+            messageManager.registerHandler("client:connected", (_context, payload) => {
+                addLogEntry({ text: `😀 Client '${payload.client.name}' connected` });
+            }),
+            messageManager.registerHandler("client:disconnected", (_context, payload) => {
+                addLogEntry({ text: `😢 Client '${payload.client.name}' disconnected` });
+            })
+        ];
 
         return () => {
             console.info("Unmounting App Message Handlers");
-            messageManager.unregisterHandler("server:hello");
-            messageManager.unregisterHandler("server:pong");
-            messageManager.unregisterHandler("server:phase");
-            messageManager.unregisterHandler("client:connected");
-            messageManager.unregisterHandler("client:disconnected");
+            messageManager.unregisterHandlers(handlerHandles);
+            // messageManager.unregisterHandler("server:hello");
+            // messageManager.unregisterHandler("server:pong");
+            // messageManager.unregisterHandler("server:phase");
+            // messageManager.unregisterHandler("client:connected");
+            // messageManager.unregisterHandler("client:disconnected");
         };
     }, [messageManager, addLogEntry]);
 

@@ -90,47 +90,51 @@ export function LobbyPage({
 
     useEffect(() => {
         console.info("Mounting LobbyPage Message Handlers");
-        messageManager.registerHandler("lobby:state", (_context, payload) => {
-            setLobbyState(payload);
-        });
-        messageManager.registerHandler("lobby:client:renamed", (_context, payload) => {
-            addLogEntry({
-                text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
-            });
-        });
-        messageManager.registerHandler("lobby:client:side:changed", (_context, payload) => {
-            console.info(`*** Client joined '${payload.newSide?.name ?? "null"}'`);
-            if (payload.newSide && !payload.oldSide) {
-                addLogEntry({ text: `➡️ Client joined '${payload.newSide?.name}'` });
-            } else if (payload.oldSide && !payload.newSide) {
-                addLogEntry({ text: `⬅️ Client left '${payload.oldSide?.name}'` });
-            } else if (payload.oldSide && payload.newSide) {
+
+        const handlerHandles = [
+            messageManager.registerHandler("lobby:state", (_context, payload) => {
+                setLobbyState(payload);
+            }),
+            messageManager.registerHandler("lobby:client:renamed", (_context, payload) => {
                 addLogEntry({
-                    text: `🔀 Client left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
+                    text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
                 });
-            }
-        });
-        messageManager.registerHandler("lobby:client:ready", (_context, payload) => {
-            if (payload.ready) {
-                console.info(`*** Client ${payload.client.name} is ready!`);
-                addLogEntry({ text: `✅ Client '${payload.client.name} is ready!` });
-            } else {
-                console.info(`*** Client ${payload.client.name} is not ready`);
-                addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
-            }
-        });
-        messageManager.registerHandler("lobby:scenario:list", (_context, payload) => {
-            console.info("Scenarios", payload.scenarios);
-            // TODO: Populate...
-        });
+            }),
+            messageManager.registerHandler("lobby:client:side:changed", (_context, payload) => {
+                console.info(`*** Client joined '${payload.newSide?.name ?? "null"}'`);
+                if (payload.newSide && !payload.oldSide) {
+                    addLogEntry({ text: `➡️ Client joined '${payload.newSide?.name}'` });
+                } else if (payload.oldSide && !payload.newSide) {
+                    addLogEntry({ text: `⬅️ Client left '${payload.oldSide?.name}'` });
+                } else if (payload.oldSide && payload.newSide) {
+                    addLogEntry({
+                        text: `🔀 Client left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
+                    });
+                }
+            }),
+            messageManager.registerHandler("lobby:client:ready", (_context, payload) => {
+                if (payload.ready) {
+                    console.info(`*** Client ${payload.client.name} is ready!`);
+                    addLogEntry({ text: `✅ Client '${payload.client.name} is ready!` });
+                } else {
+                    console.info(`*** Client ${payload.client.name} is not ready`);
+                    addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
+                }
+            }),
+            messageManager.registerHandler("lobby:scenario:list", (_context, payload) => {
+                console.info("Scenarios", payload.scenarios);
+                // TODO: Populate...
+            })
+        ];
 
         return () => {
             console.info("Unmounting LobbyPage Message Handlers");
-            messageManager.unregisterHandler("lobby:state");
-            messageManager.unregisterHandler("lobby:client:renamed");
-            messageManager.unregisterHandler("lobby:client:side:changed");
-            messageManager.unregisterHandler("lobby:client:ready");
-            messageManager.unregisterHandler("lobby:scenario:list");
+            messageManager.unregisterHandlers(handlerHandles);
+            // messageManager.unregisterHandler("lobby:state");
+            // messageManager.unregisterHandler("lobby:client:renamed");
+            // messageManager.unregisterHandler("lobby:client:side:changed");
+            // messageManager.unregisterHandler("lobby:client:ready");
+            // messageManager.unregisterHandler("lobby:scenario:list");
         };
     }, [messageManager, setLobbyState, addLogEntry]);
 

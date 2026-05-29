@@ -25,8 +25,8 @@ export const createGame: RequestHandler = async (
     gameManager.addGame(game);
 
     // Temporary Hack: Scenario loading is non-fatal.
-    // const scenario = req.app.locals.scenarioManager.find("test-scenario");
-    // game.scenario = scenario;
+    const scenario = req.app.locals.scenarioManager.find("test-scenario");
+    game.scenario = scenario;
 
     const client = game.addClient(clientId, name);
     if (!client) {
