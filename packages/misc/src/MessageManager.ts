@@ -1,7 +1,18 @@
+import { v4 as uuidv4 } from "uuid";
+
 interface Message {
     type: string;
     payload: unknown;
 }
+
+interface HandlerEntry<CONTEXT extends object, MESSAGE extends Message, FROM> {
+    id: HandlerId;
+    handler: MessageHandler<CONTEXT, MESSAGE, FROM>;
+}
+
+type HandlerId = string;
+
+export type HandlerHandle<MESSAGE extends Message, K extends MESSAGE["type"]> = [K, HandlerId];
 
 /**
  * NOTE: K parameter is special because it allows registerHandle to tightly specific the type of the handler function
@@ -25,14 +36,14 @@ export class MessageManager<
 > {
     private readonly _received: { message: MESSAGE; from: FROM }[];
     private readonly _context: CONTEXT;
-    private readonly _messageHandlers: Map<MESSAGE["type"], MessageHandler<CONTEXT, MESSAGE, FROM>>;
+    private readonly _messageHandlers: Map<MESSAGE["type"], HandlerEntry<CONTEXT, MESSAGE, FROM>[]>;
 
     private _processingMessages: boolean;
 
     constructor(context: CONTEXT) {
         this._received = [];
         this._context = context;
-        this._messageHandlers = new Map<MESSAGE["type"], MessageHandler<CONTEXT, MESSAGE, FROM>>();
+        this._messageHandlers = new Map<MESSAGE["type"], HandlerEntry<CONTEXT, MESSAGE, FROM>[]>();
         this._processingMessages = false;
     }
 
@@ -44,18 +55,18 @@ export class MessageManager<
         return this._received.length + (this.isProcessing ? 1 : 0);
     }
 
-    private findMessageHandler(
+    private findMessageHandlerEntries(
         type: MESSAGE["type"]
-    ): MessageHandler<CONTEXT, MESSAGE, FROM> | undefined {
+    ): HandlerEntry<CONTEXT, MESSAGE, FROM>[] | undefined {
         return this._messageHandlers.get(type);
     }
 
-    private getMessageHandler(
+    private getMessageHandlerEntries(
         type: MESSAGE["type"]
-    ): MessageHandler<CONTEXT, MESSAGE, FROM> | never {
-        const messageHandler = this.findMessageHandler(type);
+    ): HandlerEntry<CONTEXT, MESSAGE, FROM>[] | never {
+        const messageHandler = this.findMessageHandlerEntries(type);
         if (!messageHandler) {
-            throw new Error(`No message handler registered for ${type}`);
+            throw new Error(`No message handler(s) registered for ${type}`);
         }
         return messageHandler;
     }
@@ -63,40 +74,79 @@ export class MessageManager<
     private async processNextMessage() {
         let entry: { message: MESSAGE; from: FROM } | undefined;
 
-        while ((entry = this._received.pop())) {
+        while ((entry = this._received.shift())) {
             const { message, from } = entry;
 
             const { type } = message;
-            const messageHandler = this.getMessageHandler(type);
+            const messageHandlerEntries = this.getMessageHandlerEntries(type);
 
             this._processingMessages = true;
-            await messageHandler(this._context, message.payload, from);
+            console.info("+++ Processing message", message.type, message.payload);
+            for (const { handler } of messageHandlerEntries) {
+                await handler(this._context, message.payload, from);
+            }
+            console.info("--- Processed message", message.type, message.payload);
             this._processingMessages = false;
         }
     }
 
     /**
-     * Register a new message handler with the manager.
+     * Register a new message handler and returns a typle of its type and id for easy
+     * unregistering.
      */
-    registerHandler<K extends MESSAGE["type"]>(
-        type: K,
-        handler: MessageHandler<CONTEXT, MESSAGE, FROM, K>
-    ) {
-        this._messageHandlers.set(type, handler);
+    registerHandler<TYPE extends MESSAGE["type"]>(
+        type: TYPE,
+        handler: MessageHandler<CONTEXT, MESSAGE, FROM, TYPE>
+    ): HandlerHandle<MESSAGE, TYPE> {
+        const handlerId = uuidv4();
+
+        const existingHandlers = this.findMessageHandlerEntries(type) ?? [];
+        existingHandlers.push({ id: handlerId, handler });
+        this._messageHandlers.set(type, existingHandlers);
+
+        return [type, handlerId];
     }
 
     /**
-     * Unregister an existing handler with the manager (returns `true` is handler was found and removed, otherwise
+     * Unregister an existing handler from the manager (returns `true` is handler was found and removed, otherwise
      * `false`).
      */
-    unregisterHandler(type: MESSAGE["type"]): boolean {
-        return this._messageHandlers.delete(type);
+    unregisterHandler<TYPE extends MESSAGE["type"]>([type, id]: HandlerHandle<
+        MESSAGE,
+        TYPE
+    >): boolean {
+        const existingHandlers = this.findMessageHandlerEntries(type);
+        if (!existingHandlers) {
+            return false;
+        }
+
+        const filteredHandlers = existingHandlers.filter((handler) => handler.id !== id);
+        if (filteredHandlers.length === existingHandlers.length) {
+            return false;
+        }
+
+        this._messageHandlers.set(type, filteredHandlers);
+
+        return true;
+    }
+
+    /**
+     * Unregisters an array of registered handlers, returning an array of booleans where `true` indicates that
+     * the handler was removed, otherwise `false`.
+     */
+    unregisterHandlers<TYPE extends MESSAGE["type"]>(
+        registeredHandlers: HandlerHandle<MESSAGE, TYPE>[]
+    ): boolean[] {
+        return registeredHandlers.map((registeredHandler) =>
+            this.unregisterHandler(registeredHandler)
+        );
     }
 
     /**
      * Queue a new message for processing.
      */
     enqueueMessage(message: MESSAGE, from: FROM) {
+        console.info(">>> Enqueuing message", message.type, message.payload);
         this._received.push({ message, from });
 
         if (this.isProcessing === false) {

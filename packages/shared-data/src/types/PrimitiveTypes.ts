@@ -28,7 +28,7 @@ export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
 
 export const DescriptionImage = z.object({
-    image: z.string().url(),
+    image: z.string(),
     alt: z.string().optional(),
     width: z.number().positive(),
     height: z.number().positive()

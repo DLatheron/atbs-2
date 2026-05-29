@@ -139,7 +139,19 @@ export class Game {
     }
 
     set scenario(value: Scenario | null) {
-        this._scenario = value;
+        if (this.phase !== Phase.enum.lobby) {
+            throw new Error(`Scenario cannot be changed whilst in ${this.phase} phase`);
+        }
+
+        if (this._scenario !== value) {
+            this._scenario = value;
+
+            // Clear any assigned sides.
+            for (const client of this.clients) {
+                client.sideId = null;
+                client.ready = false;
+            }
+        }
     }
 
     get availableSides(): SideId[] {
@@ -216,10 +228,14 @@ export class Game {
         }
     }
 
+    queueMessage(message: ClientToServerMessage, from: Client) {
+        this._messageManager.enqueueMessage(message, from);
+    }
+
     receiveMessage(data: MessageEvent, from: Client) {
         const messageString = data.toString();
         const message = ClientToServerMessage.parse(JSON.parse(messageString));
 
-        this._messageManager.enqueueMessage(message, from);
+        this.queueMessage(message, from);
     }
 }

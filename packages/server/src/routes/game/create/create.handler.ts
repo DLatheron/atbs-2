@@ -24,10 +24,6 @@ export const createGame: RequestHandler = async (
     const game = new Game(clientId, req.app.locals.scenarioManager);
     gameManager.addGame(game);
 
-    // Temporary Hack: Scenario loading is non-fatal.
-    // const scenario = req.app.locals.scenarioManager.find("test-scenario");
-    // game.scenario = scenario;
-
     const client = game.addClient(clientId, name);
     if (!client) {
         res.status(500).json({ error: "Failed to add client to created game " });

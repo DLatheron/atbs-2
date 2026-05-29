@@ -38,6 +38,11 @@ export function DescriptionComponent({ description }: DescriptionComponentProps)
         if ("line" in entry) {
             return <hr />;
         }
+        if ("image" in entry) {
+            return (
+                <img src={entry.image} width={entry.width} height={entry.height} alt={entry.alt} />
+            );
+        }
         throw new Error(`Unexpected description element: ${JSON.stringify(entry)}`);
     });
 }

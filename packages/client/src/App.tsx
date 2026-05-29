@@ -9,7 +9,7 @@ import {
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { LobbyPage, LogEntry, MainMenuPage } from "./pages";
+import { LobbyPage, MainMenuPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
 import { Container } from "@mui/material";
 
@@ -22,50 +22,39 @@ export function App() {
     const [phase, setPhase] = useState<Phase>(Phase.Enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
 
-    const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
-
     const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
-
-    const addLogEntry = useCallback(
-        (logEntry: LogEntry) => {
-            setLogEntries((logEntries) => [...logEntries, logEntry]);
-        },
-        [setLogEntries]
-    );
 
     useEffect(() => {
         console.info("Mounting App Message Handlers");
-        messageManager.registerHandler("server:hello", (context, payload) => {
-            console.info({ context, payload });
-        });
-        messageManager.registerHandler("server:pong", (context, payload) => {
-            console.info({ context, payload });
+        const handlerHandles = [
+            messageManager.registerHandler("server:hello", (context, payload) => {
+                console.info({ context, payload });
+            }),
+            messageManager.registerHandler("server:pong", (context, payload) => {
+                console.info({ context, payload });
 
-            // gameSocketRef.current?.send({
-            //     type: "client:ping",
-            //     payload: { nonce: payload.nonce++ }
-            // });
-        });
-        messageManager.registerHandler("server:phase", (_context, payload) => {
-            console.info("Setting Phase", payload.phase);
-            setPhase(payload.phase);
-        });
-        messageManager.registerHandler("client:connected", (_context, payload) => {
-            addLogEntry({ text: `😀 Client '${payload.client.name}' connected` });
-        });
-        messageManager.registerHandler("client:disconnected", (_context, payload) => {
-            addLogEntry({ text: `😢 Client '${payload.client.name}' disconnected` });
-        });
+                // gameSocketRef.current?.send({
+                //     type: "client:ping",
+                //     payload: { nonce: payload.nonce++ }
+                // });
+            }),
+            messageManager.registerHandler("server:phase", (_context, payload) => {
+                console.info("Setting Phase", payload.phase);
+                setPhase(payload.phase);
+            }),
+            messageManager.registerHandler("server:client:connected", (_context, { client }) => {
+                console.info(`Client '${client.name} (${client.id}) connected`);
+            }),
+            messageManager.registerHandler("server:client:disconnected", (_context, { client }) => {
+                console.info(`Client '${client.name} (${client.id}) disconnected`);
+            })
+        ];
 
         return () => {
             console.info("Unmounting App Message Handlers");
-            messageManager.unregisterHandler("server:hello");
-            messageManager.unregisterHandler("server:pong");
-            messageManager.unregisterHandler("server:phase");
-            messageManager.unregisterHandler("client:connected");
-            messageManager.unregisterHandler("client:disconnected");
+            messageManager.unregisterHandlers(handlerHandles);
         };
-    }, [messageManager, addLogEntry]);
+    }, [messageManager]);
 
     const onConnected = useCallback(
         (gameSocket: GameSocket) => {
@@ -115,6 +104,7 @@ export function App() {
                 onJoinGame={joinGame}
             />
             <LobbyPage
+                key={gameId}
                 visible={phase === Phase.Enum.lobby}
                 clientId={clientId}
                 initialClientName={clientName}
@@ -136,8 +126,6 @@ export function App() {
                     leaveGame();
                     setPhase(Phase.Enum.main_menu);
                 }}
-                logEntries={logEntries}
-                addLogEntry={addLogEntry}
             />
         </Container>
     );

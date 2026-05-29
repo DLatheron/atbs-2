@@ -96,7 +96,11 @@ importers:
 
   packages/maths: {}
 
-  packages/misc: {}
+  packages/misc:
+    dependencies:
+      uuid:
+        specifier: ^14.0.0
+        version: 14.0.0
 
   packages/server:
     dependencies:

@@ -35,6 +35,10 @@ export class Scenario {
         return this._recipe.description;
     }
 
+    get sides(): Side[] {
+        return this._sides;
+    }
+
     hasSide(sideId: SideId) {
         return !!this.findSide(sideId);
     }

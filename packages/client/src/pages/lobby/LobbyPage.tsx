@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect } from "react";
 
 import {
     Button,
@@ -23,13 +23,10 @@ import {
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-import { ClientId, GameId, LobbyState } from "@atbs/shared-data";
+import { ClientId, GameId } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
-import { useServerMessageManager } from "../../hooks";
-
-export interface LogEntry {
-    text: string;
-}
+import { ScenarioListComponent } from "../../components/ScenarioList";
+import { useLobbyPage } from "./useLobbyPage";
 
 export interface LobbyPageProps {
     visible: boolean;
@@ -41,9 +38,6 @@ export interface LobbyPageProps {
     onCreateGame: () => void;
     onJoinGame: (gameId: GameId) => void;
     onLeaveGame: () => void;
-
-    logEntries: LogEntry[];
-    addLogEntry: (logEntry: LogEntry) => void;
 }
 
 export function LobbyPage({
@@ -53,13 +47,10 @@ export function LobbyPage({
     gameId,
 
     onClientNameChanged,
-    onLeaveGame,
-
-    logEntries,
-    addLogEntry
+    onLeaveGame
 }: LobbyPageProps) {
-    const { messageManager, sendMessage } = useServerMessageManager();
-    const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+    const { lobbyState, logEntries, scenarios, onChangeSideId, onChangeReady, onChangeScenario } =
+        useLobbyPage();
 
     const tableHeadCellStyles = { fontWeight: "bold" };
     const connected = !!lobbyState;
@@ -72,67 +63,6 @@ export function LobbyPage({
         : scenario.sides
               .map(({ id }) => id)
               .filter((id) => !lobbyState?.clients.find(({ sideId }) => sideId === id));
-    console.info({ availableSideIds });
-
-    const onChangeSideId = useCallback(
-        (clientId: ClientId, selectedSideId: string) => {
-            const sideId = selectedSideId === "None" ? null : selectedSideId;
-
-            console.info("Change Side", clientId, sideId);
-
-            sendMessage({
-                type: "client:side:change",
-                payload: { clientId, sideId }
-            });
-        },
-        [sendMessage]
-    );
-
-    useEffect(() => {
-        console.info("Mounting LobbyPage Message Handlers");
-        messageManager.registerHandler("lobby:state", (_context, payload) => {
-            setLobbyState(payload);
-        });
-        messageManager.registerHandler("lobby:client:renamed", (_context, payload) => {
-            addLogEntry({
-                text: `🪪 Client '${payload.oldName}' renamed to '${payload.newName}'`
-            });
-        });
-        messageManager.registerHandler("lobby:client:side:changed", (_context, payload) => {
-            console.info(`*** Client joined '${payload.newSide?.name ?? "null"}'`);
-            if (payload.newSide && !payload.oldSide) {
-                addLogEntry({ text: `➡️ Client joined '${payload.newSide?.name}'` });
-            } else if (payload.oldSide && !payload.newSide) {
-                addLogEntry({ text: `⬅️ Client left '${payload.oldSide?.name}'` });
-            } else if (payload.oldSide && payload.newSide) {
-                addLogEntry({
-                    text: `🔀 Client left '${payload.oldSide?.name}' and joined '${payload.newSide?.name}'`
-                });
-            }
-        });
-        messageManager.registerHandler("lobby:client:ready", (_context, payload) => {
-            if (payload.ready) {
-                console.info(`*** Client ${payload.client.name} is ready!`);
-                addLogEntry({ text: `✅ Client '${payload.client.name} is ready!` });
-            } else {
-                console.info(`*** Client ${payload.client.name} is not ready`);
-                addLogEntry({ text: `❌ Client '${payload.client.name} is not ready` });
-            }
-        });
-        messageManager.registerHandler("lobby:scenario:list", (_context, payload) => {
-            console.info("Scenarios", payload.scenarios);
-            // TODO: Populate...
-        });
-
-        return () => {
-            console.info("Unmounting LobbyPage Message Handlers");
-            messageManager.unregisterHandler("lobby:state");
-            messageManager.unregisterHandler("lobby:client:renamed");
-            messageManager.unregisterHandler("lobby:client:side:changed");
-            messageManager.unregisterHandler("lobby:client:ready");
-            messageManager.unregisterHandler("lobby:scenario:list");
-        };
-    }, [messageManager, setLobbyState, addLogEntry]);
 
     useLayoutEffect(() => {
         document
@@ -140,24 +70,14 @@ export function LobbyPage({
             ?.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
     });
 
-    const onChangeReady = useCallback(
-        (ready: boolean) => {
-            sendMessage({
-                type: "client:ready",
-                payload: { ready }
-            });
-        },
-        [sendMessage]
-    );
-
     if (!visible) {
         return null;
     }
 
     return (
-        <Container component={Paper} maxWidth="xl" sx={{ padding: 3 }}>
-            <Grid container spacing={3} component={Paper}>
-                <Grid size={6}>
+        <Container component={Paper} elevation={4} maxWidth="xl" sx={{ p: 2 }}>
+            <Grid container spacing={3}>
+                <Grid size={6} component={Paper} elevation={2} sx={{ p: 2 }}>
                     <Stack spacing={4}>
                         <TextField
                             id="client-name"
@@ -221,7 +141,7 @@ export function LobbyPage({
                         </Stack>
 
                         {connected ? (
-                            <TableContainer component={Paper}>
+                            <TableContainer component={Paper} elevation={3}>
                                 <Table>
                                     <TableHead>
                                         <TableRow>
@@ -316,9 +236,15 @@ export function LobbyPage({
                         </Container>
                     </Stack>
                 </Grid>
-                <Grid size={6}>
+                <Grid size={6} component={Paper} elevation={2} sx={{ p: 2 }}>
                     {isServer ? (
-                        <h1>Server</h1>
+                        scenarios && (
+                            <ScenarioListComponent
+                                scenarios={scenarios}
+                                selectedScenario={lobbyState?.scenario?.id ?? null}
+                                onScenarioChanged={onChangeScenario}
+                            />
+                        )
                     ) : scenario ? (
                         <ScenarioComponent scenario={scenario} />
                     ) : (
