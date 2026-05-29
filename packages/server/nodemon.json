@@ -1,5 +1,5 @@
 {
-    "watch": ["src", "../maths/dist", "../misc/dist", "../shared-data/dist"],
+    "watch": ["src", "data", "../maths/dist", "../misc/dist", "../shared-data/dist"],
     "ext": "ts,js,json",
     "exec": "tsx src/server.ts",
     "delay": 300

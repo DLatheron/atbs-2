@@ -1,6 +1,6 @@
-import { JSX } from "react";
+import { JSX, useState } from "react";
 import { ScenarioId, ScenarioSummary } from "@atbs/shared-data";
-import { Select } from "@mui/material";
+import { List, ListItemButton, ListItemText, Stack } from "@mui/material";
 import { ScenarioComponent } from "../Scenario/Scenario";
 
 export interface ScenarioListProps {
@@ -16,11 +16,18 @@ export function ScenarioListComponent({
 
     onScenarioChanged
 }: ScenarioListProps): JSX.Element {
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
     return (
-        <Select value={selectedScenario} onChange={(e) => onScenarioChanged(e.target.value)}>
-            {scenarios.map((scenario) => (
-                <ScenarioComponent key={scenario.id} scenario={scenario} />
-            ))}
-        </Select>
+        <Stack spacing={3}>
+            <List>
+                {scenarios.map((scenario, index) =>
+                    <ListItemButton key={scenario.id} selected={selectedIndex === index} onClick={() => setSelectedIndex(index)}>
+                        <ListItemText primary={scenario.name} />
+                    </ListItemButton>
+                )}
+            </List>
+            <ScenarioComponent scenario={scenarios[selectedIndex]} />
+        </Stack>
     );
 }

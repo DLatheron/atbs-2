@@ -23,9 +23,10 @@ import {
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-import { ClientId, GameId, LobbyState } from "@atbs/shared-data";
+import { ClientId, GameId, LobbyState, ScenarioSummary } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
 import { useServerMessageManager } from "../../hooks";
+import { ScenarioListComponent } from "../../components/ScenarioList";
 
 export interface LogEntry {
     text: string;
@@ -59,7 +60,8 @@ export function LobbyPage({
     addLogEntry
 }: LobbyPageProps) {
     const { messageManager, sendMessage } = useServerMessageManager();
-    const [lobbyState, setLobbyState] = useState<LobbyState | null>(null);
+    const [scenarios, setScenarios] = useState<ScenarioSummary[]>();
+    const [lobbyState, setLobbyState] = useState<LobbyState>();
 
     const tableHeadCellStyles = { fontWeight: "bold" };
     const connected = !!lobbyState;
@@ -123,18 +125,13 @@ export function LobbyPage({
             }),
             messageManager.registerHandler("lobby:scenario:list", (_context, payload) => {
                 console.info("Scenarios", payload.scenarios);
-                // TODO: Populate...
+                setScenarios(payload.scenarios);
             })
         ];
 
         return () => {
             console.info("Unmounting LobbyPage Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
-            // messageManager.unregisterHandler("lobby:state");
-            // messageManager.unregisterHandler("lobby:client:renamed");
-            // messageManager.unregisterHandler("lobby:client:side:changed");
-            // messageManager.unregisterHandler("lobby:client:ready");
-            // messageManager.unregisterHandler("lobby:scenario:list");
         };
     }, [messageManager, setLobbyState, addLogEntry]);
 
@@ -322,7 +319,15 @@ export function LobbyPage({
                 </Grid>
                 <Grid size={6}>
                     {isServer ? (
-                        <h1>Server</h1>
+                        scenarios && (
+                            <ScenarioListComponent
+                                scenarios={scenarios}
+                                selectedScenario={null}
+                                onScenarioChanged={(selectedScenario) => {
+                                    console.info(selectedScenario);
+                                }}
+                            />
+                        )
                     ) : scenario ? (
                         <ScenarioComponent scenario={scenario} />
                     ) : (

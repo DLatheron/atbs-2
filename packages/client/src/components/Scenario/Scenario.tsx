@@ -9,7 +9,7 @@ export interface ScenarioProps {
 
 export function ScenarioComponent({ scenario }: ScenarioProps) {
     return (
-        <Container data-testid={scenario.id}>
+        <Container data-testid={scenario.id} sx={{ m: 0, p: 0 }}>
             <Typography variant="h4" sx={{ pb: 2 }}>
                 {scenario.name}
             </Typography>

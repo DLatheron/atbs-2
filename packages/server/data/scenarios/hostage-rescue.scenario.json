@@ -3,6 +3,12 @@
     "name": "Hostage Rescue",
     "description": [
         {
+            "image": "public//previews/hostage-rescue.scenario.png", 
+            "alt": "hostage rescue scenario preview", 
+            "width": 400,
+            "height": 400
+        },
+        {
             "text": "Something something something dark-side.",
             "pb": 2
         },

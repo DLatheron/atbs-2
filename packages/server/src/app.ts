@@ -6,6 +6,7 @@ export async function createApp(): Promise<Application> {
     const app = express();
 
     app.use(express.json());
+    app.use(express.static("public"));
     app.use("/api", apiRouter);
 
     const scenarioManager = new ScenarioManager();

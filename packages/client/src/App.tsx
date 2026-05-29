@@ -62,11 +62,6 @@ export function App() {
         return () => {
             console.info("Unmounting App Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
-            // messageManager.unregisterHandler("server:hello");
-            // messageManager.unregisterHandler("server:pong");
-            // messageManager.unregisterHandler("server:phase");
-            // messageManager.unregisterHandler("client:connected");
-            // messageManager.unregisterHandler("client:disconnected");
         };
     }, [messageManager, addLogEntry]);
 
