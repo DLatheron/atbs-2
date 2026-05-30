@@ -9,7 +9,7 @@ import {
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { LobbyPage, MainMenuPage } from "./pages";
+import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
 import { Container } from "@mui/material";
 
@@ -120,13 +120,13 @@ export function App() {
 
                     updateClientName(name);
                 }}
-                onCreateGame={createGame}
-                onJoinGame={joinGame}
                 onLeaveGame={() => {
                     leaveGame();
                     setPhase(Phase.Enum.main_menu);
                 }}
             />
+            <ArmamentPage key={gameId} visible={phase === Phase.Enum.armament} />
+            <DeploymentPage key={gameId} visible={phase === Phase.Enum.deployment} />
         </Container>
     );
 }

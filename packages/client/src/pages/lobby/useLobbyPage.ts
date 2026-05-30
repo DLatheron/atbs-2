@@ -126,12 +126,17 @@ export function useLobbyPage() {
         [sendMessage]
     );
 
+    const onStartGame = useCallback(() => {
+        sendMessage({ type: "client:lobby:game:start", payload: undefined });
+    }, [sendMessage]);
+
     return {
         lobbyState,
         logEntries,
         scenarios,
         onChangeSideId,
         onChangeReady,
-        onChangeScenario
+        onChangeScenario,
+        onStartGame
     };
 }
