@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 
 interface Message {
     type: string;
-    payload: unknown;
+    payload?: unknown;
 }
 
 interface HandlerEntry<CONTEXT extends object, MESSAGE extends Message, FROM> {

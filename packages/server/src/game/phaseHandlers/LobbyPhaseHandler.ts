@@ -149,7 +149,15 @@ export class LobbyPhaseHandler extends PhaseHandler {
                         payload: this._buildLobbyState()
                     });
                 }
-            )
+            ),
+            messageManager.registerHandler("client:lobby:game:start", ({ game }) => {
+                game.phase = Phase.enum.armament;
+
+                game.broadcastMessage({
+                    type: "server:phase",
+                    payload: { phase: Phase.Enum.armament }
+                });
+            })
         ];
     }
 
@@ -256,7 +264,11 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     sideId: client.sideId,
                     ready: client.ready
                 })),
-            ...(this.game.scenario && { scenario: this.game.scenario?.toScenarioSummary() })
+            ...(this.game.scenario && { scenario: this.game.scenario?.toScenarioSummary() }),
+            options: {
+                canStartGame: this.game.canStartGame,
+                availableSideIds: this.game.availableSideIds
+            }
         };
     }
 }

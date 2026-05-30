@@ -14,6 +14,11 @@ export const LobbyState = z.object({
         })
     ),
 
-    scenario: ScenarioSummary.optional()
+    scenario: ScenarioSummary.optional(),
+
+    options: z.object({
+        canStartGame: z.boolean(),
+        availableSideIds: z.array(SideId)
+    })
 });
 export type LobbyState = z.infer<typeof LobbyState>;

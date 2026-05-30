@@ -10,8 +10,10 @@ import {
 
 import { Client } from "./Client.js";
 import { ClientManager } from "./ClientManager.js";
-import type { PhaseHandler } from "./phase-handlers/PhaseHandler.js";
-import { LobbyPhaseHandler } from "./phase-handlers/LobbyPhaseHandler.js";
+import type { PhaseHandler } from "./phaseHandlers/PhaseHandler.js";
+import { LobbyPhaseHandler } from "./phaseHandlers/LobbyPhaseHandler.js";
+import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
+import { DeploymentPhaseHandler } from "./phaseHandlers/DeploymentPhaseHandler.js";
 import { CastToArray, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
 import { ScenarioManager } from "./ScenarioManager.js";
@@ -93,6 +95,14 @@ export class Game {
                 this._phaseHandler = new LobbyPhaseHandler(this);
                 break;
 
+            case Phase.Enum.armament:
+                this._phaseHandler = new ArmamentPhaseHandler(this);
+                break;
+
+            case Phase.Enum.deployment:
+                this._phaseHandler = new DeploymentPhaseHandler(this);
+                break;
+
             default:
                 throw new Error(`Unexpected phase ${phase}`);
         }
@@ -154,8 +164,20 @@ export class Game {
         }
     }
 
-    get availableSides(): SideId[] {
-        return [];
+    get availableSideIds(): SideId[] {
+        return this.scenario
+            ? this.scenario.sides
+                  .map(({ id }) => id)
+                  .filter((id) => !this.clients.find(({ sideId }) => sideId === id))
+            : [];
+    }
+
+    get canStartGame(): boolean {
+        return (
+            !!this.scenario &&
+            this.availableSideIds.length === 0 &&
+            this.clients.every((client) => client.sideId === null || client.ready)
+        );
     }
 
     reportError(error: string) {
