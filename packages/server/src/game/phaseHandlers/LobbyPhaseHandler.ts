@@ -151,6 +151,11 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 }
             ),
             messageManager.registerHandler("client:lobby:game:start", ({ game }) => {
+                if (!game.canStartGame) {
+                    console.error("Game cannot be started at this time");
+                    return;
+                }
+                
                 game.phase = Phase.enum.armament;
 
                 game.broadcastMessage({
@@ -230,6 +235,13 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 },
                 client
             );
+            this.game.queueMessage(
+                {
+                    type: "client:lobby:game:start",
+                    payload: undefined
+                },
+                client
+            )
         }
     }
 
