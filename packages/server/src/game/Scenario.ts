@@ -39,6 +39,14 @@ export class Scenario {
         return this._sides;
     }
 
+    get needsArmamentPhase() {
+        return this.sides.some((side) => side.needsArmamentPhase);
+    }
+
+    get needsDeploymentPhase() {
+        return this.sides.some((side) => side.needsDeploymentPhase);
+    }
+
     hasSide(sideId: SideId) {
         return !!this.findSide(sideId);
     }

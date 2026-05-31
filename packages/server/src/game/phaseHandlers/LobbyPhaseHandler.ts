@@ -150,13 +150,13 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     });
                 }
             ),
-            messageManager.registerHandler("client:lobby:game:start", ({ game }) => {
-                game.phase = Phase.enum.armament;
+            messageManager.registerHandler("client:lobby:game:start", async ({ game }) => {
+                if (!game.canStartGame) {
+                    console.error("Game cannot be started at this time");
+                    return;
+                }
 
-                game.broadcastMessage({
-                    type: "server:phase",
-                    payload: { phase: Phase.Enum.armament }
-                });
+                await game.nextPhase();
             })
         ];
     }
@@ -227,6 +227,13 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 {
                     type: "client:ready",
                     payload: { ready: true }
+                },
+                client
+            );
+            this.game.queueMessage(
+                {
+                    type: "client:lobby:game:start",
+                    payload: undefined
                 },
                 client
             );

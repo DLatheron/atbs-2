@@ -17,6 +17,8 @@ import { DeploymentPhaseHandler } from "./phaseHandlers/DeploymentPhaseHandler.j
 import { CastToArray, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
 import { ScenarioManager } from "./ScenarioManager.js";
+import { Side } from "./Side.js";
+import { TurnPhaseHandler } from "./phaseHandlers/TurnPhaseHandler.js";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -52,7 +54,7 @@ export class Game {
     private readonly _scenarioManager: ScenarioManager;
 
     private _ownerId: ClientId;
-    private readonly _gameId: GameId;
+    private readonly _id: GameId;
     private readonly _clientManager: ClientManager;
     private readonly _context: ClientMessageContext;
     private readonly _messageManager: ClientMessageManager;
@@ -63,7 +65,7 @@ export class Game {
     constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
         this._scenarioManager = scenarioManager;
         this._ownerId = ownerId;
-        this._gameId = generateGameId();
+        this._id = generateGameId();
         this._clientManager = new ClientManager();
 
         this._context = { game: this };
@@ -81,12 +83,18 @@ export class Game {
         this._scenario = null;
     }
 
+    get id(): GameId {
+        return this._id;
+    }
+
     get phase(): Phase {
         return this._phaseHandler.phase;
     }
 
-    set phase(phase: Phase) {
+    private async setPhase(phase: Phase) {
         if (this._phaseHandler) {
+            await this._phaseHandler.uninitialise();
+
             this._phaseHandler.unregisterMessageHandlers(this._messageManager);
         }
 
@@ -103,11 +111,89 @@ export class Game {
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
+            case Phase.Enum.turns:
+                this._phaseHandler = new TurnPhaseHandler(this);
+                break;
+
             default:
                 throw new Error(`Unexpected phase ${phase}`);
         }
 
+        this._phaseHandler.initialise();
+
         this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
+    get sides(): Side[] {
+        if (!this._scenario) {
+            throw new Error("No scenario set");
+        }
+
+        return this._scenario.sides;
+    }
+
+    get needsArmamentPhase() {
+        if (!this._scenario) {
+            throw new Error("No scenario set");
+        }
+
+        return this._scenario.needsArmamentPhase;
+    }
+
+    get needsDeploymentPhase() {
+        if (!this._scenario) {
+            throw new Error("No scenario set");
+        }
+
+        return this._scenario.needsDeploymentPhase;
+    }
+
+    async nextPhase(): Promise<Phase> {
+        const { phase: currentPhase } = this._phaseHandler;
+        let newPhase: Phase;
+
+        switch (currentPhase) {
+            case Phase.Enum.main_menu:
+                newPhase = Phase.Enum.lobby;
+                break;
+
+            case Phase.Enum.lobby:
+                if (this.needsArmamentPhase) {
+                    newPhase = Phase.Enum.armament;
+                } else if (this.needsDeploymentPhase) {
+                    newPhase = Phase.Enum.deployment;
+                } else {
+                    newPhase = Phase.Enum.turns;
+                }
+                break;
+
+            case Phase.Enum.armament:
+                if (this.needsDeploymentPhase) {
+                    newPhase = Phase.Enum.deployment;
+                } else {
+                    newPhase = Phase.Enum.turns;
+                }
+                break;
+
+            case Phase.Enum.deployment:
+                newPhase = Phase.Enum.turns;
+                break;
+
+            case Phase.Enum.turns:
+                newPhase = Phase.Enum.game_over;
+                break;
+
+            case Phase.Enum.game_over:
+                newPhase = Phase.Enum.main_menu;
+                break;
+
+            default:
+                throw new Error(`Unsupported phase ${currentPhase} in nextPhase call`);
+        }
+
+        await this.setPhase(newPhase);
+
+        return newPhase;
     }
 
     private _registerMessageHandlers() {
@@ -129,7 +215,7 @@ export class Game {
     }
 
     get gameId(): GameId {
-        return this._gameId;
+        return this._id;
     }
 
     get clients(): Client[] {
@@ -232,6 +318,14 @@ export class Game {
 
     clientDisconnected(client: Client): void {
         this._phaseHandler.clientDisconnected(client);
+    }
+
+    getSide(sideId: SideId): Side {
+        if (!this._scenario) {
+            throw new Error(`Game ${this.gameId} does not have a scenario`);
+        }
+
+        return this._scenario.getSide(sideId);
     }
 
     sendMessage(message: ServerToClientMessage, to: ClientId | ClientId[]) {
