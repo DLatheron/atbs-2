@@ -1,6 +1,12 @@
 import z from "zod";
 import { LobbyState } from "./LobbyState.js";
-import { ClientId, ScenarioId, ScenarioSummary, SideId } from "./PrimitiveTypes.js";
+import {
+    ClientSummary,
+    ScenarioId,
+    ScenarioSummary,
+    SideSummary,
+    WaitingFor
+} from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
@@ -19,19 +25,13 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:client:connected"),
         payload: z.object({
-            client: z.object({
-                id: ClientId,
-                name: z.string()
-            })
+            client: ClientSummary
         })
     }),
     z.object({
         type: z.literal("server:client:disconnected"),
         payload: z.object({
-            client: z.object({
-                id: ClientId,
-                name: z.string()
-            })
+            client: ClientSummary
         })
     }),
     z.object({
@@ -44,31 +44,15 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:lobby:client:side:changed"),
         payload: z.object({
-            client: z.object({
-                id: ClientId,
-                name: z.string()
-            }),
-            oldSide: z
-                .object({
-                    id: SideId,
-                    name: z.string()
-                })
-                .optional(),
-            newSide: z
-                .object({
-                    id: SideId,
-                    name: z.string()
-                })
-                .optional()
+            client: ClientSummary,
+            oldSide: SideSummary.optional(),
+            newSide: SideSummary.optional()
         })
     }),
     z.object({
         type: z.literal("server:lobby:client:ready"),
         payload: z.object({
-            client: z.object({
-                id: ClientId,
-                name: z.string()
-            }),
+            client: ClientSummary,
             ready: z.boolean()
         })
     }),
@@ -85,10 +69,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:lobby:scenario:changed"),
         payload: z.object({
-            client: z.object({
-                id: ClientId,
-                name: z.string()
-            }),
+            client: ClientSummary,
             oldScenario: z
                 .object({
                     id: ScenarioId,
@@ -102,6 +83,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
                 })
                 .optional()
         })
+    }),
+    z.object({
+        type: z.literal("server:wait"),
+        payload: WaitingFor.nullable()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

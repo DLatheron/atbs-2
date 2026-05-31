@@ -18,14 +18,34 @@
     ],
     "sides": [
         {
-            "id": "side-1",
-            "name": "Side 1",
-            "description": [{ "text": "The first side", "pb": 2 }]
+            "id": "goodies",
+            "name": "Goodies",
+            "description": [{ "text": "The goodies.", "pb": 2 }],
+            "opposition": ["baddies"],
+            "units": [],
+            "phases": {
+                "armament": {
+                    "type": "fixed"
+                },
+                "deployment": {
+                    "type": "manual"
+                }
+            }
         },
         {
-            "id": "side-2",
-            "name": "Side 2",
-            "description": [{ "text": "The second side", "pb": 2 }]
+            "id": "baddies",
+            "name": "Baddies",
+            "description": [{ "text": "The baddies.", "pb": 2 }],
+            "opposition": ["goodies"],
+            "units": [],
+            "phases": {
+                "armament": {
+                    "type": "manual"
+                },
+                "deployment": {
+                    "type": "fixed"
+                }
+            }
         }
     ]
 }

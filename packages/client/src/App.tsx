@@ -3,21 +3,25 @@ import {
     ClientQueryParams,
     parseURLSearchParams,
     Phase,
-    ServerToClientMessage
+    ServerToClientMessage,
+    WaitingFor
 } from "@atbs/shared-data";
 
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage } from "./pages";
+import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, TurnsPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
 import { Container } from "@mui/material";
+import { WaitModal } from "./modals";
 
 export function App() {
     const { clientId } = useClientId();
     const [searchParams] = useSearchParams();
     const validatedSearchParams = parseURLSearchParams(ClientQueryParams, searchParams);
     const { name } = validatedSearchParams;
+
+    const [waitingFor, setWaitingFor] = useState<WaitingFor | null>(null);
 
     const [phase, setPhase] = useState<Phase>(Phase.Enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
@@ -47,6 +51,9 @@ export function App() {
             }),
             messageManager.registerHandler("server:client:disconnected", (_context, { client }) => {
                 console.info(`Client '${client.name} (${client.id}) disconnected`);
+            }),
+            messageManager.registerHandler("server:wait", (_context, payload) => {
+                setWaitingFor(payload);
             })
         ];
 
@@ -127,6 +134,8 @@ export function App() {
             />
             <ArmamentPage key={gameId} visible={phase === Phase.Enum.armament} />
             <DeploymentPage key={gameId} visible={phase === Phase.Enum.deployment} />
+            <TurnsPage key={gameId} visible={phase === Phase.Enum.turns} />
+            <WaitModal waitingFor={waitingFor} />
         </Container>
     );
 }

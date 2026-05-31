@@ -25,6 +25,10 @@ export abstract class PhaseHandler {
         return false;
     }
 
+    async initialise() {}
+
+    async uninitialise() {}
+
     abstract registerMessageHandlers(messageManager: ClientMessageManager): void;
 
     unregisterMessageHandlers(messageManager: ClientMessageManager) {

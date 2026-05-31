@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Phase } from "./Phase.js";
 
 export const ClientId = z.string().uuid();
 export type ClientId = z.infer<typeof ClientId>;
@@ -47,6 +48,18 @@ export const Description = z.array(
 );
 export type Description = z.infer<typeof Description>;
 
+export const SideSummary = z.object({
+    id: SideId,
+    name: z.string()
+});
+export type SideSummary = z.infer<typeof SideSummary>;
+
+export const ClientSummary = z.object({
+    id: ClientId,
+    name: z.string()
+});
+export type ClientSummary = z.infer<typeof ClientSummary>;
+
 export const ScenarioSummary = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
@@ -60,3 +73,9 @@ export const ScenarioSummary = z.object({
     )
 });
 export type ScenarioSummary = z.infer<typeof ScenarioSummary>;
+
+export const WaitingFor = z.object({
+    phase: Phase,
+    sides: z.array(SideSummary)
+});
+export type WaitingFor = z.infer<typeof WaitingFor>;
