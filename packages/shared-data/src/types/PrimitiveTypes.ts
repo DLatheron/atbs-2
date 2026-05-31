@@ -13,6 +13,18 @@ export type ScenarioId = z.infer<typeof ScenarioId>;
 export const SideId = z.string().min(1);
 export type SideId = z.infer<typeof SideId>;
 
+export const WorldId = z.string().min(1);
+export type WorldId = z.infer<typeof WorldId>;
+
+export const TerrainId = z.string().min(1);
+export type TerrainId = z.infer<typeof TerrainId>;
+
+export const ObjectId = z.string().min(1);
+export type ObjectId = z.infer<typeof ObjectId>;
+
+export const UnitId = z.string().min(1);
+export type UnitId = z.infer<typeof UnitId>;
+
 export const DescriptionH1 = z.object({ h1: z.string() });
 export type DescriptionH1 = z.infer<typeof DescriptionH1>;
 

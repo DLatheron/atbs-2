@@ -16,6 +16,7 @@
         { "text": "This is a scenario loaded from a file." },
         { "line": true }
     ],
+    "world": "mansion.world",
     "sides": [
         {
             "id": "goodies",

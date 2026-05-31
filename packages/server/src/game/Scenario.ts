@@ -7,6 +7,7 @@ export const ScenarioRecipe = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: Description,
+    world: z.string().min(1),
     sides: z.array(SideRecipe)
 });
 export type ScenarioRecipe = z.infer<typeof ScenarioRecipe>;

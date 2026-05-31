@@ -14,9 +14,11 @@ export function ActionPage({ visible }: ActionPageProps) {
 
     const { world } = useWorld();
 
-    const renderMap = useCallback((props: CanvasLoopComponentProps) => world.renderWorld(props), [world]);
+    const renderMap = useCallback(
+        (props: CanvasLoopComponentProps) => world.renderWorld(props),
+        [world]
+    );
     // const renderMap = useCallback((props: CanvasLoopComponentProps) => gameWorld?.renderWorld(props), [gameWorld]);
-
 
     if (!visible) {
         return null;

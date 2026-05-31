@@ -14,8 +14,8 @@ function resolvePhaseName(phase: Phase | undefined): string {
         case Phase.Enum.deployment:
             return "Deployment Phase";
 
-        case Phase.Enum.turns:
-            return "Turn";
+        case Phase.Enum.action:
+            return "Action Phase";
     }
 
     return "Unknown";
