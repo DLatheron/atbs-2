@@ -18,7 +18,7 @@ import { CastToArray, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
 import { ScenarioManager } from "./ScenarioManager.js";
 import { Side } from "./Side.js";
-import { TurnPhaseHandler } from "./phaseHandlers/TurnPhaseHandler.js";
+import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -111,8 +111,8 @@ export class Game {
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
-            case Phase.Enum.turns:
-                this._phaseHandler = new TurnPhaseHandler(this);
+            case Phase.Enum.action:
+                this._phaseHandler = new ActionPhaseHandler(this);
                 break;
 
             default:
@@ -163,7 +163,7 @@ export class Game {
                 } else if (this.needsDeploymentPhase) {
                     newPhase = Phase.Enum.deployment;
                 } else {
-                    newPhase = Phase.Enum.turns;
+                    newPhase = Phase.Enum.action;
                 }
                 break;
 
@@ -171,15 +171,15 @@ export class Game {
                 if (this.needsDeploymentPhase) {
                     newPhase = Phase.Enum.deployment;
                 } else {
-                    newPhase = Phase.Enum.turns;
+                    newPhase = Phase.Enum.action;
                 }
                 break;
 
             case Phase.Enum.deployment:
-                newPhase = Phase.Enum.turns;
+                newPhase = Phase.Enum.action;
                 break;
 
-            case Phase.Enum.turns:
+            case Phase.Enum.action:
                 newPhase = Phase.Enum.game_over;
                 break;
 

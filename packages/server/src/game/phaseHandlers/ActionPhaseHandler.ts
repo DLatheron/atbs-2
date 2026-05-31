@@ -1,24 +1,22 @@
 import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
-import type { ClientMessageManager } from "../Game.js";
+// import type { ClientMessageManager } from "../Game.js";
 
-export class TurnPhaseHandler extends PhaseHandler {
-
+export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
-        return Phase.Enum.turns;
+        return Phase.Enum.action;
     }
 
     async initialise() {
         this.game.broadcastMessage({
             type: "server:phase",
-            payload: { phase: Phase.Enum.turns }
+            payload: { phase: Phase.Enum.action }
         });
         this.game.broadcastMessage({
             type: "server:wait",
             payload: null
-        });        
+        });
     }
 
-    registerMessageHandlers(_messageManager: ClientMessageManager): void {
-    }
+    registerMessageHandlers(/*_messageManager: ClientMessageManager*/): void {}
 }

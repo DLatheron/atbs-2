@@ -10,9 +10,8 @@ import {
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, TurnsPage } from "./pages";
+import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, ActionPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
-import { Container } from "@mui/material";
 import { WaitModal } from "./modals";
 
 export function App() {
@@ -103,7 +102,7 @@ export function App() {
     }
 
     return (
-        <Container sx={{ maxWidth: "100vw", maxHeight: "100vh" }}>
+        <>
             <MainMenuPage
                 visible={phase === Phase.Enum.main_menu}
                 defaultGameId={gameId}
@@ -111,7 +110,7 @@ export function App() {
                 onJoinGame={joinGame}
             />
             <LobbyPage
-                key={gameId}
+                key={`lobby-${gameId}`}
                 visible={phase === Phase.Enum.lobby}
                 clientId={clientId}
                 initialClientName={clientName}
@@ -132,10 +131,13 @@ export function App() {
                     setPhase(Phase.Enum.main_menu);
                 }}
             />
-            <ArmamentPage key={gameId} visible={phase === Phase.Enum.armament} />
-            <DeploymentPage key={gameId} visible={phase === Phase.Enum.deployment} />
-            <TurnsPage key={gameId} visible={phase === Phase.Enum.turns} />
+            <ArmamentPage key={`armamentlobby-${gameId}`} visible={phase === Phase.Enum.armament} />
+            <DeploymentPage
+                key={`deployment-${gameId}`}
+                visible={phase === Phase.Enum.deployment}
+            />
+            <ActionPage key={`turns-${gameId}`} visible={phase === Phase.Enum.action} />
             <WaitModal waitingFor={waitingFor} />
-        </Container>
+        </>
     );
 }

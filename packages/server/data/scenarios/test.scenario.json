@@ -28,7 +28,7 @@
                     "type": "fixed"
                 },
                 "deployment": {
-                    "type": "manual"
+                    "type": "fixed"
                 }
             }
         },
@@ -40,7 +40,7 @@
             "units": [],
             "phases": {
                 "armament": {
-                    "type": "manual"
+                    "type": "fixed"
                 },
                 "deployment": {
                     "type": "fixed"
