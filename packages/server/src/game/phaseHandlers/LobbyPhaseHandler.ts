@@ -7,7 +7,7 @@ const autoSetupGame = true; // Temporary Hack.
 
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
-        return Phase.Enum.lobby;
+        return Phase.enum.lobby;
     }
 
     get acceptingClients(): boolean {

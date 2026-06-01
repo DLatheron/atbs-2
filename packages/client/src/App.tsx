@@ -22,7 +22,7 @@ export function App() {
 
     const [waitingFor, setWaitingFor] = useState<WaitingFor | null>(null);
 
-    const [phase, setPhase] = useState<Phase>(Phase.Enum.main_menu);
+    const [phase, setPhase] = useState<Phase>(Phase.enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
 
     const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
@@ -71,7 +71,7 @@ export function App() {
 
     const onDisconnected = useCallback(() => {
         setGameSocket(null);
-        setPhase(Phase.Enum.main_menu);
+        setPhase(Phase.enum.main_menu);
     }, [setGameSocket]);
 
     const onMessage = useCallback(
@@ -104,14 +104,14 @@ export function App() {
     return (
         <>
             <MainMenuPage
-                visible={phase === Phase.Enum.main_menu}
+                visible={phase === Phase.enum.main_menu}
                 defaultGameId={gameId}
                 onCreateGame={createGame}
                 onJoinGame={joinGame}
             />
             <LobbyPage
                 key={`lobby-${gameId}`}
-                visible={phase === Phase.Enum.lobby}
+                visible={phase === Phase.enum.lobby}
                 clientId={clientId}
                 initialClientName={clientName}
                 gameId={gameId}
@@ -128,15 +128,15 @@ export function App() {
                 }}
                 onLeaveGame={() => {
                     leaveGame();
-                    setPhase(Phase.Enum.main_menu);
+                    setPhase(Phase.enum.main_menu);
                 }}
             />
-            <ArmamentPage key={`armamentlobby-${gameId}`} visible={phase === Phase.Enum.armament} />
+            <ArmamentPage key={`armamentlobby-${gameId}`} visible={phase === Phase.enum.armament} />
             <DeploymentPage
                 key={`deployment-${gameId}`}
-                visible={phase === Phase.Enum.deployment}
+                visible={phase === Phase.enum.deployment}
             />
-            <ActionPage key={`turns-${gameId}`} visible={phase === Phase.Enum.action} />
+            <ActionPage key={`turns-${gameId}`} visible={phase === Phase.enum.action} />
             <WaitModal waitingFor={waitingFor} />
         </>
     );

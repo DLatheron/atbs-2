@@ -1,5 +1,7 @@
-import { z } from "zod";
+import z from "zod";
 import { Phase } from "./Phase.js";
+import { Orientation } from "@atbs/maths";
+import { RenderMode } from "./RenderMode.js";
 
 export const ClientId = z.string().uuid();
 export type ClientId = z.infer<typeof ClientId>;
@@ -39,6 +41,33 @@ export type DescriptionText = z.infer<typeof DescriptionText>;
 
 export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
+
+export const RenderImage = z
+    .object({
+        imageId: z.string(),
+        orientation: z.enum(Orientation).optional(),
+        opacity: z.number().optional()
+    })
+    .strict();
+export type RenderImage = z.infer<typeof RenderImage>;
+
+export function isRenderImage(node: unknown): node is RenderImage {
+    return node === null || node === undefined || (typeof node === "object" && "imageId" in node);
+}
+
+export const RenderList = z.array(RenderImage);
+export type RenderList = z.infer<typeof RenderList>;
+
+export function isRenderList(node: unknown): node is RenderList {
+    return (
+        node === null ||
+        node === undefined ||
+        (Array.isArray(node) && (node.length === 0 || node.every(isRenderImage)))
+    );
+}
+
+export const RenderListByMode = z.record(RenderMode, RenderList);
+export type RenderListByMode = z.infer<typeof RenderListByMode>;
 
 export const DescriptionImage = z.object({
     image: z.string(),

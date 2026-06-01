@@ -99,19 +99,19 @@ export class Game {
         }
 
         switch (phase) {
-            case Phase.Enum.lobby:
+            case Phase.enum.lobby:
                 this._phaseHandler = new LobbyPhaseHandler(this);
                 break;
 
-            case Phase.Enum.armament:
+            case Phase.enum.armament:
                 this._phaseHandler = new ArmamentPhaseHandler(this);
                 break;
 
-            case Phase.Enum.deployment:
+            case Phase.enum.deployment:
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
-            case Phase.Enum.action:
+            case Phase.enum.action:
                 this._phaseHandler = new ActionPhaseHandler(this);
                 break;
 
@@ -153,38 +153,38 @@ export class Game {
         let newPhase: Phase;
 
         switch (currentPhase) {
-            case Phase.Enum.main_menu:
-                newPhase = Phase.Enum.lobby;
+            case Phase.enum.main_menu:
+                newPhase = Phase.enum.lobby;
                 break;
 
-            case Phase.Enum.lobby:
+            case Phase.enum.lobby:
                 if (this.needsArmamentPhase) {
-                    newPhase = Phase.Enum.armament;
+                    newPhase = Phase.enum.armament;
                 } else if (this.needsDeploymentPhase) {
-                    newPhase = Phase.Enum.deployment;
+                    newPhase = Phase.enum.deployment;
                 } else {
-                    newPhase = Phase.Enum.action;
+                    newPhase = Phase.enum.action;
                 }
                 break;
 
-            case Phase.Enum.armament:
+            case Phase.enum.armament:
                 if (this.needsDeploymentPhase) {
-                    newPhase = Phase.Enum.deployment;
+                    newPhase = Phase.enum.deployment;
                 } else {
-                    newPhase = Phase.Enum.action;
+                    newPhase = Phase.enum.action;
                 }
                 break;
 
-            case Phase.Enum.deployment:
-                newPhase = Phase.Enum.action;
+            case Phase.enum.deployment:
+                newPhase = Phase.enum.action;
                 break;
 
-            case Phase.Enum.action:
-                newPhase = Phase.Enum.game_over;
+            case Phase.enum.action:
+                newPhase = Phase.enum.game_over;
                 break;
 
-            case Phase.Enum.game_over:
-                newPhase = Phase.Enum.main_menu;
+            case Phase.enum.game_over:
+                newPhase = Phase.enum.main_menu;
                 break;
 
             default:

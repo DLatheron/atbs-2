@@ -1,6 +1,6 @@
 import "react";
 import { Box, Modal, Typography } from "@mui/material";
-import { Phase, WaitingFor } from "@atbs/shared-data";
+import { Phase, SideId, WaitingFor } from "@atbs/shared-data";
 
 export interface WaitModalProps {
     waitingFor: WaitingFor | null;
@@ -8,13 +8,13 @@ export interface WaitModalProps {
 
 function resolvePhaseName(phase: Phase | undefined): string {
     switch (phase) {
-        case Phase.Enum.armament:
+        case Phase.enum.armament:
             return "Armament Phase";
 
-        case Phase.Enum.deployment:
+        case Phase.enum.deployment:
             return "Deployment Phase";
 
-        case Phase.Enum.action:
+        case Phase.enum.action:
             return "Action Phase";
     }
 
@@ -46,7 +46,7 @@ export function WaitModal({ waitingFor }: WaitModalProps) {
                 </Typography>
                 <Typography id="modal-modal-description" sx={{ mt: 2 }}>
                     <ul>
-                        {waitingFor?.sides.map(({ id, name }) => (
+                        {waitingFor?.sides.map(({ id, name }: { id: SideId; name: string }) => (
                             <li key={id}>{name}</li>
                         ))}
                     </ul>

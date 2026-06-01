@@ -8,12 +8,11 @@ export const TerrainRecipe = z.object({
     category: z.string().min(1),
     description: Description,
     orientation: z.nativeEnum(Orientation).optional()
-    // renderable: RenderableRecipe
 });
 export type TerrainRecipe = z.infer<typeof TerrainRecipe>;
 
 export class Terrain {
-    protected _recipe: TerrainRecipe;
+    private readonly _recipe: TerrainRecipe;
 
     constructor(recipe: TerrainRecipe) {
         this._recipe = recipe;

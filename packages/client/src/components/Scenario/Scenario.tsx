@@ -1,7 +1,7 @@
 import { ScenarioSummary } from "@atbs/shared-data";
 import { Container, Typography } from "@mui/material";
 import { DescriptionComponent } from "../Description/Description";
-import { Fragment } from "react/jsx-runtime";
+import { Fragment } from "react";
 
 export interface ScenarioProps {
     scenario: ScenarioSummary;
@@ -17,7 +17,7 @@ export function ScenarioComponent({ scenario }: ScenarioProps) {
             <Typography variant="h5" sx={{ pb: 2 }}>
                 Sides
             </Typography>
-            {scenario.sides.map((side) => (
+            {scenario.sides.map((side: ScenarioSummary["sides"][0]) => (
                 <Fragment key={side.id}>
                     <Typography variant="h6" sx={{ pb: 1 }}>
                         {side.name}

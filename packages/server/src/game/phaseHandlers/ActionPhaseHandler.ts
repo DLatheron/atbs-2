@@ -4,13 +4,13 @@ import { PhaseHandler } from "./PhaseHandler.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
-        return Phase.Enum.action;
+        return Phase.enum.action;
     }
 
     async initialise() {
         this.game.broadcastMessage({
             type: "server:phase",
-            payload: { phase: Phase.Enum.action }
+            payload: { phase: Phase.enum.action }
         });
         this.game.broadcastMessage({
             type: "server:wait",
