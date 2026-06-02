@@ -27,6 +27,9 @@ export type ObjectId = z.infer<typeof ObjectId>;
 export const UnitId = z.string().min(1);
 export type UnitId = z.infer<typeof UnitId>;
 
+export const ImageId = z.string().min(1);
+export type ImageId = z.infer<typeof ImageId>;
+
 export const DescriptionH1 = z.object({ h1: z.string() });
 export type DescriptionH1 = z.infer<typeof DescriptionH1>;
 
@@ -43,7 +46,7 @@ export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
 
 export const RenderImage = z.object({
-    imageId: z.string(),
+    imageId: ImageId,
     orientation: z.enum(Orientation).optional(), // Assume NORTH.
     opacity: z.number().optional(), // Assume 1.
     visibilityFilter: z.boolean().optional() // Assume true (always draw).

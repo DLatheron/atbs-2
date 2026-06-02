@@ -36,6 +36,7 @@ export function ActionPage({ visible }: ActionPageProps) {
             data-testid="action-page"
             maxWidth={false}
             sx={{ m: 0, p: 0, width: "100vw", height: "100vh" }}
+            disableGutters
         >
             <MapComponent
                 renderMap={renderMap}

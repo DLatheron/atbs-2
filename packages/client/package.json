@@ -10,6 +10,7 @@
         "clean": "rm -rf dist tsconfig.tsbuildinfo"
     },
     "dependencies": {
+        "@atbs/maths": "workspace:*",
         "@atbs/misc": "workspace:*",
         "@atbs/shared-data": "workspace:*",
         "@emotion/react": "^11.14.0",

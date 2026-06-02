@@ -13,6 +13,7 @@ import { GameSocket } from "./GameSocket";
 import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, ActionPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
 import { WaitModal } from "./modals";
+import { Container } from "@mui/material";
 
 export function App() {
     const { clientId } = useClientId();
@@ -103,7 +104,7 @@ export function App() {
     }
 
     return (
-        <>
+        <Container maxWidth={false} sx={{ m: 0, p: 0 }} disableGutters>
             <MainMenuPage
                 visible={phase === Phase.enum.main_menu}
                 defaultGameId={gameId}
@@ -139,6 +140,6 @@ export function App() {
             />
             <ActionPage key={`turns-${gameId}`} visible={phase === Phase.enum.action} />
             <WaitModal waitingFor={waitingFor} />
-        </>
+        </Container>
     );
 }

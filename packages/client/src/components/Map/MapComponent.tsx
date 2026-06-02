@@ -43,6 +43,7 @@ export function MapComponent({
     return (
         <Container
             data-testid="map-component"
+            maxWidth={false}
             sx={{
                 width: "100%",
                 height: "100%",
@@ -54,6 +55,8 @@ export function MapComponent({
                 zIndex: 1,
                 backgroundColor: "pink"
             }}
+            disableGutters
+            ref={containerRef}
         >
             <canvas
                 id="main-map"

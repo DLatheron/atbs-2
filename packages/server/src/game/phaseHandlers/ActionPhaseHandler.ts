@@ -1,4 +1,4 @@
-import { Phase, RenderMode } from "@atbs/shared-data";
+import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 // import type { ClientMessageManager } from "../Game.js";
 

@@ -2,7 +2,6 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import { Container } from "@mui/material";
 
 const root = document.getElementById("root");
 
@@ -20,12 +19,6 @@ const router = createBrowserRouter([
 
 createRoot(root).render(
     // <StrictMode>
-    <Container
-        data-testid="root"
-        maxWidth={false}
-        sx={{ m: 0, p: 0, width: "100vw", height: "100vh" }}
-    >
-        <RouterProvider router={router} />
-    </Container>
+    <RouterProvider router={router} />
     // </StrictMode>
 );
