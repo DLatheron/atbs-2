@@ -1,5 +1,5 @@
 {
-    "id": "hostage-rescue",
+    "id": "hostage-rescue.scenario",
     "name": "Hostage Rescue",
     "description": [
         {
@@ -14,7 +14,7 @@
         },
         { "line": true }
     ],
-    "world": "mansion.world",
+    "worldMapId": "mansion.map",
     "sides": [
         {
             "id": "rescue-team",

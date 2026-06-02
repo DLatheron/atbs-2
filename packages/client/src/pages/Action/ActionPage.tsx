@@ -3,6 +3,7 @@ import { MapComponent } from "../../components/Map/MapComponent";
 import { useCallback } from "react";
 import { useWorld } from "../../hooks";
 import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
+import { useActionPage } from "./useActionPage";
 // import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
 
 export interface ActionPageProps {
@@ -10,7 +11,12 @@ export interface ActionPageProps {
 }
 
 export function ActionPage({ visible }: ActionPageProps) {
-    // const { onTurnPage } = useTurnsPage();
+    const { map } = useActionPage();
+    if (!map) {
+        console.info("No map");
+    } else {
+        console.info("!!!Map present!!!");
+    }
 
     const { world } = useWorld();
 

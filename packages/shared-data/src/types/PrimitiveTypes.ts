@@ -52,6 +52,17 @@ export const RenderImage = z
     .strict();
 export type RenderImage = z.infer<typeof RenderImage>;
 
+export const ClientMap = z.object({
+    width: z.number().positive(),
+    height: z.number().positive(),
+    tileSize: z.number().positive(),
+    tilesByRenderMode: {
+        [RenderMode.enum.MAP_MODE]: z.array(z.array(z.array(RenderImage))),
+        [RenderMode.enum.FIRE_MODE]: z.array(z.array(z.array(RenderImage)))
+    }
+});
+export type ClientMap = z.infer<typeof ClientMap>;
+
 export function isRenderImage(node: unknown): node is RenderImage {
     return node === null || node === undefined || (typeof node === "object" && "imageId" in node);
 }

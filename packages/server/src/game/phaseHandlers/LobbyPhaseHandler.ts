@@ -202,7 +202,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         // Temporary Hack: Scenario loading is non-fatal.
         //
         if (autoSetupGame) {
-            const scenarioId = "test-scenario";
+            const scenarioId = "test.scenario";
             const scenario = this.game.scenarioManager.get(scenarioId);
             const { sides } = scenario;
 

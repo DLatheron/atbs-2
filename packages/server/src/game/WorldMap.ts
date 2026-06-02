@@ -1,4 +1,4 @@
-import { WorldMapId } from "@atbs/shared-data";
+import { ClientMap, RenderMode, WorldMapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
@@ -104,5 +104,34 @@ export class WorldMap {
             return undefined;
         }
         return this._tiles[tilePos.row][tilePos.col];
+    }
+
+    renderClientMap(): ClientMap {
+        const mapModeTiles = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) =>
+                tile.getRenderList({
+                    renderMode: RenderMode.enum.MAP_MODE,
+                    states: []
+                })
+            )
+        );
+        const fireModeTiles = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) =>
+                tile.getRenderList({
+                    renderMode: RenderMode.enum.FIRE_MODE,
+                    states: []
+                })
+            )
+        );
+
+        return {
+            width: this.width,
+            height: this.height,
+            tileSize: this.tileSize,
+            tilesByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: mapModeTiles,
+                [RenderMode.enum.FIRE_MODE]: fireModeTiles
+            }
+        };
     }
 }

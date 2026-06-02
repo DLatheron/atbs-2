@@ -19,6 +19,7 @@ import { Scenario } from "./Scenario.js";
 import { ScenarioManager } from "./ScenarioManager.js";
 import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
+import { WorldMap } from "./WorldMap.js";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -146,6 +147,14 @@ export class Game {
         }
 
         return this._scenario.needsDeploymentPhase;
+    }
+
+    get worldMap(): WorldMap {
+        if (!this._scenario) {
+            throw new Error("No scenario set");
+        }
+
+        return this._scenario.worldMap;
     }
 
     async nextPhase(): Promise<Phase> {
@@ -336,6 +345,8 @@ export class Game {
 
     broadcastMessage(message: ServerToClientMessage, exclude?: ClientId | ClientId[]) {
         const excludes = exclude ? CastToArray(exclude) : [];
+
+        console.info("Broadcasting", message.type, "excluding", excludes);
 
         for (const client of this._clientManager.clients) {
             if (!excludes.includes(client.id)) {

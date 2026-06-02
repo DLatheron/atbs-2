@@ -1,6 +1,7 @@
 import z from "zod";
 import { LobbyState } from "./LobbyState.js";
 import {
+    ClientMap,
     ClientSummary,
     ScenarioId,
     ScenarioSummary,
@@ -87,6 +88,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:wait"),
         payload: WaitingFor.nullable()
+    }),
+    z.object({
+        type: z.literal("server:map"),
+        payload: ClientMap
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

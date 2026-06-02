@@ -9,6 +9,10 @@ export class ActionPhaseHandler extends PhaseHandler {
 
     async initialise() {
         this.game.broadcastMessage({
+            type: "server:map",
+            payload: this.game.worldMap.renderClientMap()
+        });
+        this.game.broadcastMessage({
             type: "server:phase",
             payload: { phase: Phase.enum.action }
         });
