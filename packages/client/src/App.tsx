@@ -80,7 +80,8 @@ export function App() {
 
             try {
                 message = ServerToClientMessage.parse(JSON.parse(String(data)));
-            } catch {
+            } catch (error) {
+                console.error("Failed to parse server message", error);
                 return;
             }
 

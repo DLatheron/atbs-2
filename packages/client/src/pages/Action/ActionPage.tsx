@@ -11,12 +11,13 @@ export interface ActionPageProps {
 }
 
 export function ActionPage({ visible }: ActionPageProps) {
-    const { map } = useActionPage();
+    const { map, unit } = useActionPage();
     if (!map) {
         console.info("No map");
     } else {
         console.info("!!!Map present!!!");
     }
+    console.info("unit", unit);
 
     const { world } = useWorld();
 

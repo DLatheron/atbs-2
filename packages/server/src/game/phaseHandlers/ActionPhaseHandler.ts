@@ -1,4 +1,4 @@
-import { Phase } from "@atbs/shared-data";
+import { Phase, RenderMode } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 // import type { ClientMessageManager } from "../Game.js";
 
@@ -8,6 +8,12 @@ export class ActionPhaseHandler extends PhaseHandler {
     }
 
     async initialise() {
+        this.game.broadcastMessage({
+            type: "server:unit",
+            payload: {
+                id: "captain-smith.unit"
+            }
+        });
         this.game.broadcastMessage({
             type: "server:map",
             payload: this.game.worldMap.renderClientMap()

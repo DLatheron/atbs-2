@@ -104,6 +104,7 @@ export class MessageManager<
         existingHandlers.push({ id: handlerId, handler });
         this._messageHandlers.set(type, existingHandlers);
 
+        console.info("Registered message handler for type", type, "id", handlerId);
         return [type, handlerId];
     }
 
@@ -111,7 +112,7 @@ export class MessageManager<
      * Unregister an existing handler from the manager (returns `true` is handler was found and removed, otherwise
      * `false`).
      */
-    unregisterHandler<TYPE extends MESSAGE["type"]>([type, id]: HandlerHandle<
+    unregisterHandler<TYPE extends MESSAGE["type"]>([type, handleId]: HandlerHandle<
         MESSAGE,
         TYPE
     >): boolean {
@@ -120,12 +121,14 @@ export class MessageManager<
             return false;
         }
 
-        const filteredHandlers = existingHandlers.filter((handler) => handler.id !== id);
+        const filteredHandlers = existingHandlers.filter(({ id }) => id !== handleId);
         if (filteredHandlers.length === existingHandlers.length) {
             return false;
         }
 
         this._messageHandlers.set(type, filteredHandlers);
+
+        console.info("Unregistered message handler for type", type, "id", handleId);
 
         return true;
     }

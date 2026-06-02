@@ -92,6 +92,12 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:map"),
         payload: ClientMap
+    }),
+    z.object({
+        type: z.literal("server:unit"),
+        payload: z.object({
+            id: z.string().min(1)
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

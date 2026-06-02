@@ -42,24 +42,22 @@ export type DescriptionText = z.infer<typeof DescriptionText>;
 export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
 
-export const RenderImage = z
-    .object({
-        imageId: z.string(),
-        orientation: z.enum(Orientation).optional(), // Assume NORTH.
-        opacity: z.number().optional(), // Assume 1.
-        visibilityFilter: z.boolean().optional() // Assume true (always draw).
-    })
-    .strict();
+export const RenderImage = z.object({
+    imageId: z.string(),
+    orientation: z.enum(Orientation).optional(), // Assume NORTH.
+    opacity: z.number().optional(), // Assume 1.
+    visibilityFilter: z.boolean().optional() // Assume true (always draw).
+});
 export type RenderImage = z.infer<typeof RenderImage>;
 
 export const ClientMap = z.object({
     width: z.number().positive(),
     height: z.number().positive(),
     tileSize: z.number().positive(),
-    tilesByRenderMode: {
+    tilesByRenderMode: z.object({
         [RenderMode.enum.MAP_MODE]: z.array(z.array(z.array(RenderImage))),
         [RenderMode.enum.FIRE_MODE]: z.array(z.array(z.array(RenderImage)))
-    }
+    })
 });
 export type ClientMap = z.infer<typeof ClientMap>;
 
