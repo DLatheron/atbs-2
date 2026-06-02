@@ -1,5 +1,5 @@
 {
-    "id": "test-scenario",
+    "id": "test.scenario",
     "name": "Test Scenario",
     "description": [
         {
@@ -16,6 +16,7 @@
         { "text": "This is a scenario loaded from a file." },
         { "line": true }
     ],
+    "worldMapId": "mansion.map",
     "sides": [
         {
             "id": "goodies",
@@ -28,7 +29,7 @@
                     "type": "fixed"
                 },
                 "deployment": {
-                    "type": "manual"
+                    "type": "fixed"
                 }
             }
         },
@@ -40,7 +41,7 @@
             "units": [],
             "phases": {
                 "armament": {
-                    "type": "manual"
+                    "type": "fixed"
                 },
                 "deployment": {
                     "type": "fixed"

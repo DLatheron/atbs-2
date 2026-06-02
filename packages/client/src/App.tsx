@@ -10,10 +10,10 @@ import {
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, TurnsPage } from "./pages";
+import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, ActionPage } from "./pages";
 import { useSearchParams } from "react-router-dom";
-import { Container } from "@mui/material";
 import { WaitModal } from "./modals";
+import { Container } from "@mui/material";
 
 export function App() {
     const { clientId } = useClientId();
@@ -23,7 +23,7 @@ export function App() {
 
     const [waitingFor, setWaitingFor] = useState<WaitingFor | null>(null);
 
-    const [phase, setPhase] = useState<Phase>(Phase.Enum.main_menu);
+    const [phase, setPhase] = useState<Phase>(Phase.enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
 
     const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
@@ -72,7 +72,7 @@ export function App() {
 
     const onDisconnected = useCallback(() => {
         setGameSocket(null);
-        setPhase(Phase.Enum.main_menu);
+        setPhase(Phase.enum.main_menu);
     }, [setGameSocket]);
 
     const onMessage = useCallback(
@@ -81,7 +81,8 @@ export function App() {
 
             try {
                 message = ServerToClientMessage.parse(JSON.parse(String(data)));
-            } catch {
+            } catch (error) {
+                console.error("Failed to parse server message", error);
                 return;
             }
 
@@ -103,16 +104,16 @@ export function App() {
     }
 
     return (
-        <Container sx={{ maxWidth: "100vw", maxHeight: "100vh" }}>
+        <Container maxWidth={false} sx={{ m: 0, p: 0 }} disableGutters>
             <MainMenuPage
-                visible={phase === Phase.Enum.main_menu}
+                visible={phase === Phase.enum.main_menu}
                 defaultGameId={gameId}
                 onCreateGame={createGame}
                 onJoinGame={joinGame}
             />
             <LobbyPage
-                key={gameId}
-                visible={phase === Phase.Enum.lobby}
+                key={`lobby-${gameId}`}
+                visible={phase === Phase.enum.lobby}
                 clientId={clientId}
                 initialClientName={clientName}
                 gameId={gameId}
@@ -129,12 +130,15 @@ export function App() {
                 }}
                 onLeaveGame={() => {
                     leaveGame();
-                    setPhase(Phase.Enum.main_menu);
+                    setPhase(Phase.enum.main_menu);
                 }}
             />
-            <ArmamentPage key={gameId} visible={phase === Phase.Enum.armament} />
-            <DeploymentPage key={gameId} visible={phase === Phase.Enum.deployment} />
-            <TurnsPage key={gameId} visible={phase === Phase.Enum.turns} />
+            <ArmamentPage key={`armamentlobby-${gameId}`} visible={phase === Phase.enum.armament} />
+            <DeploymentPage
+                key={`deployment-${gameId}`}
+                visible={phase === Phase.enum.deployment}
+            />
+            <ActionPage key={`turns-${gameId}`} visible={phase === Phase.enum.action} />
             <WaitModal waitingFor={waitingFor} />
         </Container>
     );

@@ -1,4 +1,6 @@
 import { z } from "zod";
 
-export const Phase = z.enum(["main_menu", "lobby", "armament", "deployment", "turns", "game_over"]);
+const phase = ["main_menu", "lobby", "armament", "deployment", "action", "game_over"] as const;
+
+export const Phase = z.enum(phase);
 export type Phase = z.infer<typeof Phase>;

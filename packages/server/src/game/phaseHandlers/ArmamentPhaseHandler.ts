@@ -7,7 +7,7 @@ export class ArmamentPhaseHandler extends PhaseHandler {
     private readonly _waitingSideIds: SideId[];
 
     get phase(): Phase {
-        return Phase.Enum.armament;
+        return Phase.enum.armament;
     }
 
     constructor(game: Game) {
@@ -32,7 +32,7 @@ export class ArmamentPhaseHandler extends PhaseHandler {
     async initialise() {
         this.game.broadcastMessage({
             type: "server:phase",
-            payload: { phase: Phase.Enum.armament }
+            payload: { phase: Phase.enum.armament }
         });
 
         this.sendWaitMessageToWaitingClient();

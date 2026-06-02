@@ -1,0 +1,10 @@
+{
+    "id": "concrete.terrain",
+    "name": "Concrete",
+    "category": "Terrain",
+    "description": [{ "text": "Solid concrete." }],
+    "renderable": {
+        "default": [{ "imageId": "concrete" }],
+        "fire-mode": []
+    }
+}

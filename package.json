@@ -34,7 +34,10 @@
         "globals": "^16.2.0",
         "prettier": "^3.5.3",
         "typescript": "^5.8.3",
-        "vitest": "^3.2.4",
-        "typescript-eslint": "^8.33.1"
+        "typescript-eslint": "^8.33.1",
+        "vitest": "^3.2.4"
+    },
+    "dependencies": {
+        "zod": "^4.4.3"
     }
 }

@@ -23,7 +23,7 @@ import {
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 
-import { ClientId, GameId } from "@atbs/shared-data";
+import { ClientId, GameId, LobbyState, ScenarioSummary } from "@atbs/shared-data";
 import { ScenarioComponent } from "../../components";
 import { ScenarioListComponent } from "../../components/ScenarioList";
 import { useLobbyPage } from "./useLobbyPage";
@@ -159,62 +159,70 @@ export function LobbyPage({
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                            {lobbyState.clients.map((client) => {
-                                                return (
-                                                    <TableRow key={client.id}>
-                                                        <TableCell>{client.name}</TableCell>
-                                                        <TableCell>
-                                                            <Select
-                                                                value={
-                                                                    !client.sideId
-                                                                        ? "None"
-                                                                        : client.sideId
-                                                                }
-                                                                disabled={
-                                                                    (client.id !== clientId &&
-                                                                        !isServer) ||
-                                                                    client.ready
-                                                                }
-                                                                onChange={(e) =>
-                                                                    onChangeSideId(
-                                                                        client.id,
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                            >
-                                                                <MenuItem value="None">
-                                                                    None
-                                                                </MenuItem>
-                                                                {scenario?.sides.map((side) => (
-                                                                    <MenuItem
-                                                                        key={side.id}
-                                                                        value={side.id}
-                                                                        disabled={
-                                                                            !lobbyState.options.availableSideIds.includes(
-                                                                                side.id
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        {side.name}
+                                            {lobbyState.clients.map(
+                                                (client: LobbyState["clients"][0]) => {
+                                                    return (
+                                                        <TableRow key={client.id}>
+                                                            <TableCell>{client.name}</TableCell>
+                                                            <TableCell>
+                                                                <Select
+                                                                    value={
+                                                                        !client.sideId
+                                                                            ? "None"
+                                                                            : client.sideId
+                                                                    }
+                                                                    disabled={
+                                                                        (client.id !== clientId &&
+                                                                            !isServer) ||
+                                                                        client.ready
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        onChangeSideId(
+                                                                            client.id,
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <MenuItem value="None">
+                                                                        None
                                                                     </MenuItem>
-                                                                ))}
-                                                            </Select>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Checkbox
-                                                                checked={client.ready}
-                                                                disabled={
-                                                                    client.id !== clientId ||
-                                                                    !client.sideId
-                                                                }
-                                                                onChange={(e) =>
-                                                                    onChangeReady(e.target.checked)
-                                                                }
-                                                            />
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
+                                                                    {scenario?.sides.map(
+                                                                        (
+                                                                            side: ScenarioSummary["sides"][0]
+                                                                        ) => (
+                                                                            <MenuItem
+                                                                                key={side.id}
+                                                                                value={side.id}
+                                                                                disabled={
+                                                                                    !lobbyState.options.availableSideIds.includes(
+                                                                                        side.id
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                {side.name}
+                                                                            </MenuItem>
+                                                                        )
+                                                                    )}
+                                                                </Select>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Checkbox
+                                                                    checked={client.ready}
+                                                                    disabled={
+                                                                        client.id !== clientId ||
+                                                                        !client.sideId
+                                                                    }
+                                                                    onChange={(e) =>
+                                                                        onChangeReady(
+                                                                            e.target.checked
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                }
+                                            )}
                                         </TableBody>
                                     </Table>
                                 </TableContainer>

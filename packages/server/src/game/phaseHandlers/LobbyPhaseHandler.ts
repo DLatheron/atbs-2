@@ -7,7 +7,7 @@ const autoSetupGame = true; // Temporary Hack.
 
 export class LobbyPhaseHandler extends PhaseHandler {
     get phase(): Phase {
-        return Phase.Enum.lobby;
+        return Phase.enum.lobby;
     }
 
     get acceptingClients(): boolean {
@@ -202,7 +202,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         // Temporary Hack: Scenario loading is non-fatal.
         //
         if (autoSetupGame) {
-            const scenarioId = "test-scenario";
+            const scenarioId = "test.scenario";
             const scenario = this.game.scenarioManager.get(scenarioId);
             const { sides } = scenario;
 

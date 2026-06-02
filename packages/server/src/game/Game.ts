@@ -18,7 +18,8 @@ import { CastToArray, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
 import { ScenarioManager } from "./ScenarioManager.js";
 import { Side } from "./Side.js";
-import { TurnPhaseHandler } from "./phaseHandlers/TurnPhaseHandler.js";
+import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
+import { WorldMap } from "./WorldMap.js";
 
 const FIXED_GAME_ID = true; // Temporary Hack.
 
@@ -99,20 +100,20 @@ export class Game {
         }
 
         switch (phase) {
-            case Phase.Enum.lobby:
+            case Phase.enum.lobby:
                 this._phaseHandler = new LobbyPhaseHandler(this);
                 break;
 
-            case Phase.Enum.armament:
+            case Phase.enum.armament:
                 this._phaseHandler = new ArmamentPhaseHandler(this);
                 break;
 
-            case Phase.Enum.deployment:
+            case Phase.enum.deployment:
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
-            case Phase.Enum.turns:
-                this._phaseHandler = new TurnPhaseHandler(this);
+            case Phase.enum.action:
+                this._phaseHandler = new ActionPhaseHandler(this);
                 break;
 
             default:
@@ -148,43 +149,51 @@ export class Game {
         return this._scenario.needsDeploymentPhase;
     }
 
+    get worldMap(): WorldMap {
+        if (!this._scenario) {
+            throw new Error("No scenario set");
+        }
+
+        return this._scenario.worldMap;
+    }
+
     async nextPhase(): Promise<Phase> {
         const { phase: currentPhase } = this._phaseHandler;
         let newPhase: Phase;
 
         switch (currentPhase) {
-            case Phase.Enum.main_menu:
-                newPhase = Phase.Enum.lobby;
+            case Phase.enum.main_menu:
+                newPhase = Phase.enum.lobby;
                 break;
 
-            case Phase.Enum.lobby:
+            case Phase.enum.lobby:
                 if (this.needsArmamentPhase) {
-                    newPhase = Phase.Enum.armament;
+                    newPhase = Phase.enum.armament;
                 } else if (this.needsDeploymentPhase) {
-                    newPhase = Phase.Enum.deployment;
+                    newPhase = Phase.enum.deployment;
                 } else {
-                    newPhase = Phase.Enum.turns;
+                    newPhase = Phase.enum.action;
                 }
                 break;
 
-            case Phase.Enum.armament:
+            case Phase.enum.armament:
                 if (this.needsDeploymentPhase) {
-                    newPhase = Phase.Enum.deployment;
+                    newPhase = Phase.enum.deployment;
                 } else {
-                    newPhase = Phase.Enum.turns;
+                    newPhase = Phase.enum.action;
                 }
                 break;
 
-            case Phase.Enum.deployment:
-                newPhase = Phase.Enum.turns;
+            case Phase.enum.deployment:
+                newPhase = Phase.enum.action;
                 break;
 
-            case Phase.Enum.turns:
-                newPhase = Phase.Enum.game_over;
+            case Phase.enum.action:
+                newPhase = Phase.enum.game_over;
                 break;
 
-            case Phase.Enum.game_over:
-                newPhase = Phase.Enum.main_menu;
+            case Phase.enum.game_over:
+                newPhase = Phase.enum.main_menu;
                 break;
 
             default:
@@ -336,6 +345,8 @@ export class Game {
 
     broadcastMessage(message: ServerToClientMessage, exclude?: ClientId | ClientId[]) {
         const excludes = exclude ? CastToArray(exclude) : [];
+
+        console.info("Broadcasting", message.type, "excluding", excludes);
 
         for (const client of this._clientManager.clients) {
             if (!excludes.includes(client.id)) {

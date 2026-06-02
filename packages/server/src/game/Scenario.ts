@@ -1,12 +1,15 @@
-import { Description, ScenarioSummary, SideId } from "@atbs/shared-data";
+import { Description, ScenarioSummary, SideId, WorldMapId } from "@atbs/shared-data";
 import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
 import { readFile } from "fs/promises";
+import { WorldMapManager } from "./WorldMapManager.js";
+import { WorldMap } from "./WorldMap.js";
 
 export const ScenarioRecipe = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: Description,
+    worldMapId: WorldMapId,
     sides: z.array(SideRecipe)
 });
 export type ScenarioRecipe = z.infer<typeof ScenarioRecipe>;
@@ -15,12 +18,16 @@ export class Scenario {
     private readonly _recipe: ScenarioRecipe;
     private readonly _sides: Side[];
     private readonly _sidesMap: Map<SideId, Side>;
+    private readonly _worldMap: WorldMap;
 
     constructor(recipe: ScenarioRecipe) {
         this._recipe = recipe;
 
         this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe));
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
+
+        // TODO: We need to clone this at some point OR we need to be non-destructive!!!
+        this._worldMap = WorldMapManager.GetSingleton().get(recipe.worldMapId);
     }
 
     get id() {
@@ -45,6 +52,10 @@ export class Scenario {
 
     get needsDeploymentPhase() {
         return this.sides.some((side) => side.needsDeploymentPhase);
+    }
+
+    get worldMap(): WorldMap {
+        return this._worldMap;
     }
 
     hasSide(sideId: SideId) {
