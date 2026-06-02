@@ -1,27 +1,27 @@
-import { WorldId } from "@atbs/shared-data";
+import { WorldMapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
 
-export const WorldRecipe = z.object({
-    id: WorldId,
+export const WorldMapRecipe = z.object({
+    id: WorldMapId,
     name: z.string().min(1),
     width: z.number().min(1).max(256),
     height: z.number().min(1).max(256),
     tileSize: z.number().min(50).max(200),
     tiles: z.array(z.array(TileRecipe))
 });
-export type WorldRecipe = z.infer<typeof WorldRecipe>;
+export type WorldMapRecipe = z.infer<typeof WorldMapRecipe>;
 
-export class World {
-    private readonly _id: WorldId;
+export class WorldMap {
+    private readonly _id: WorldMapId;
     private readonly _name: string;
     private readonly _width: number;
     private readonly _height: number;
     private readonly _tileSize: number;
     private readonly _tiles: Tile[][];
 
-    constructor(recipe: WorldRecipe) {
+    constructor(recipe: WorldMapRecipe) {
         this._id = recipe.id;
         this._name = recipe.name;
         this._width = recipe.width;

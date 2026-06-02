@@ -2,7 +2,7 @@ import express, { type Application } from "express";
 import { apiRouter } from "./routes/index.js";
 import { ScenarioManager } from "./game/ScenarioManager.js";
 import { TerrainManager } from "./game/TerrainManager.js";
-import { WorldManager } from "./game/WorldManager.js";
+import { WorldMapManager } from "./game/WorldMapManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -14,14 +14,14 @@ export async function createApp(): Promise<Application> {
     const terrainManager = TerrainManager.GetSingleton();
     await terrainManager.loadTerrain();
 
-    const worldManager = WorldManager.GetSingleton();
-    await worldManager.loadWorlds();
+    const worldMapManager = WorldMapManager.GetSingleton();
+    await worldMapManager.loadWorldMaps();
 
     const scenarioManager = new ScenarioManager();
     await scenarioManager.loadScenarios();
 
     app.locals.terrainManager = terrainManager;
-    app.locals.worldManager = worldManager;
+    app.locals.worldMapManager = worldMapManager;
     app.locals.scenarioManager = scenarioManager;
 
     return app;

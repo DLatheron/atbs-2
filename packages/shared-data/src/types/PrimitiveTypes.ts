@@ -3,7 +3,7 @@ import { Phase } from "./Phase.js";
 import { Orientation } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
-export const ClientId = z.string().uuid();
+export const ClientId = z.uuid();
 export type ClientId = z.infer<typeof ClientId>;
 
 export const GameId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
@@ -15,8 +15,8 @@ export type ScenarioId = z.infer<typeof ScenarioId>;
 export const SideId = z.string().min(1);
 export type SideId = z.infer<typeof SideId>;
 
-export const WorldId = z.string().min(1);
-export type WorldId = z.infer<typeof WorldId>;
+export const WorldMapId = z.string().min(1);
+export type WorldMapId = z.infer<typeof WorldMapId>;
 
 export const TerrainId = z.string().min(1);
 export type TerrainId = z.infer<typeof TerrainId>;
@@ -45,8 +45,9 @@ export type DescriptionLine = z.infer<typeof DescriptionLine>;
 export const RenderImage = z
     .object({
         imageId: z.string(),
-        orientation: z.enum(Orientation).optional(),
-        opacity: z.number().optional()
+        orientation: z.enum(Orientation).optional(), // Assume NORTH.
+        opacity: z.number().optional(), // Assume 1.
+        visibilityFilter: z.boolean().optional() // Assume true (always draw).
     })
     .strict();
 export type RenderImage = z.infer<typeof RenderImage>;

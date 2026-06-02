@@ -1,9 +1,9 @@
 import { Orientation } from "@atbs/maths";
-import { ModeNode, Renderable, RenderableContext } from "./Renderable.js";
+import { SceneNode, SceneObject, SceneContext } from "./SceneObject.js";
 import { RenderImage, RenderMode } from "@atbs/shared-data";
 
-describe("Renderable", () => {
-    const unitRenderableRecipe = {
+describe("SceneObject", () => {
+    const unitSceneObjectRecipe = {
         "ui-mode": {
             alive: {
                 "item-in-use": [{ imageId: "generic-carrying-4" }],
@@ -46,15 +46,15 @@ describe("Renderable", () => {
         },
         default: []
     };
-    const objectRenderableRecipe = {
+    const itemSceneObjectRecipe = {
         default: [{ imageId: "m4+m203" }],
         "fire-mode": []
     };
-    const terrainRenderableRecipe = {
+    const terrainSceneObjectRecipe = {
         default: [{ imageId: "grass" }],
         "fire-mode": []
     };
-    const furnitureRenderableRecipe = {
+    const furnitureSceneObjectRecipe = {
         default: {
             default: [{ imageId: "wall" }, { imageId: "wall", orientation: 2 }],
             destroyed: []
@@ -67,7 +67,7 @@ describe("Renderable", () => {
 
     it("should parse the object", () => {
         expect(
-            ModeNode.parse({
+            SceneNode.parse({
                 [RenderMode.enum.MAP_MODE]: {
                     default: [{ imageId: "idle" }],
                     playing: [
@@ -87,27 +87,27 @@ describe("Renderable", () => {
         );
     });
 
-    it("should parse the example unit renderable recipe", () => {
-        expect(ModeNode.parse(unitRenderableRecipe));
+    it("should parse the example unit scene node recipe", () => {
+        expect(SceneNode.parse(unitSceneObjectRecipe));
     });
 
-    it("should parse the example object renderable recipe", () => {
-        expect(ModeNode.parse(objectRenderableRecipe));
+    it("should parse the example object scene node recipe", () => {
+        expect(SceneNode.parse(itemSceneObjectRecipe));
     });
 
-    it("should parse the example terraint renderable recipe", () => {
-        expect(ModeNode.parse(terrainRenderableRecipe));
+    it("should parse the example terraint scene node recipe", () => {
+        expect(SceneNode.parse(terrainSceneObjectRecipe));
     });
 
-    it("should parse the example furniture renderable recipe", () => {
-        expect(ModeNode.parse(furnitureRenderableRecipe));
+    it("should parse the example furniture scene node recipe", () => {
+        expect(SceneNode.parse(furnitureSceneObjectRecipe));
     });
 
-    describe("Renderable", () => {
-        let renderable: Renderable;
+    describe("SceneObject", () => {
+        let sceneObject: SceneObject;
 
         beforeEach(() => {
-            renderable = new Renderable({
+            sceneObject = new SceneObject({
                 default: {
                     "state-1": {
                         "state-2": {
@@ -151,7 +151,7 @@ describe("Renderable", () => {
 
         const tests: {
             test: string;
-            context: RenderableContext;
+            context: SceneContext;
             expected: RenderImage[];
         }[] = [
             {
@@ -259,7 +259,7 @@ describe("Renderable", () => {
         ];
 
         it.only.each(tests)("should $test", ({ context, expected }: (typeof tests)[0]) => {
-            expect(renderable.getRenderList(context)).toStrictEqual(expected);
+            expect(sceneObject.getRenderList(context)).toStrictEqual(expected);
         });
     });
 });
