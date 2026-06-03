@@ -233,7 +233,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             this.game.queueMessage(
                 {
                     type: "client:lobby:game:start",
-                    payload: undefined
+                    payload: null
                 },
                 client
             );

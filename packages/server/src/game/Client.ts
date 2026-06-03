@@ -92,4 +92,8 @@ export class Client {
             this._socket.send(JSON.stringify(message));
         }
     }
+
+    forceDisconnect() {
+        this._socket?.close(1);
+    }
 }

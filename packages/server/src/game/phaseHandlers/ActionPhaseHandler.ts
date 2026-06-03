@@ -8,24 +8,25 @@ export class ActionPhaseHandler extends PhaseHandler {
         return Phase.enum.action;
     }
 
+    // TODO: Need to set just the first side off playing - other side should be hidden (and not receive any updates).
+
     async initialise() {
-        this.game.broadcastMessage({
-            type: "server:unit",
-            payload: {
-                id: "captain-smith.unit"
-            }
-        });
-        this.game.broadcastMessage({
-            type: "server:map",
-            payload: this.game.worldMap.renderClientMap()
-        });
+        this.game.startActionPhase();
+        this.game.startTurn();
+
+        // this.game.broadcastMessage({
+        //     type: "server:unit",
+        //     payload: {
+        //         id: "captain-smith.unit"
+        //     }
+        // });
+        // this.game.broadcastMessage({
+        //     type: "server:map",
+        //     payload: this.game.worldMap.renderClientMap()
+        // });
         this.game.broadcastMessage({
             type: "server:phase",
             payload: { phase: Phase.enum.action }
-        });
-        this.game.broadcastMessage({
-            type: "server:wait",
-            payload: null
         });
     }
 
@@ -42,6 +43,18 @@ export class ActionPhaseHandler extends PhaseHandler {
                     type: "server:map",
                     payload: this.game.worldMap.renderClientMap()
                 });
+            }),
+            messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
+                const playingClient = this.game.clients.find(
+                    ({ sideId }) => this.game.turnsSide.id === sideId
+                );
+                if (!playingClient) {
+                    throw new Error("Didn't find expected client");
+                }
+
+                if (from.id === playingClient.id) {
+                    game.nextSide();
+                }
             })
         ];
     }

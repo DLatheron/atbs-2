@@ -1,9 +1,10 @@
 import { Container } from "@mui/material";
 import { MapComponent } from "../../components/Map/MapComponent";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useWorld } from "../../hooks";
 import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
 import { useActionPage } from "./useActionPage";
+import { MapModePanelComponent, SidePanelComponent } from "../../components/SidePanel";
 // import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
 
 export interface ActionPageProps {
@@ -11,7 +12,8 @@ export interface ActionPageProps {
 }
 
 export function ActionPage({ visible }: ActionPageProps) {
-    const { map, unit } = useActionPage();
+    const [sidePanelMode] = useState<"map-mode" | "move-mode" | "fire-mode">("map-mode");
+    const { map, unit, onEndTurn } = useActionPage();
     if (!map) {
         console.info("No map");
     } else {
@@ -57,7 +59,15 @@ export function ActionPage({ visible }: ActionPageProps) {
         <Container
             data-testid="action-page"
             maxWidth={false}
-            sx={{ m: 0, p: 0, width: "100vw", height: "100vh" }}
+            sx={{
+                m: 0,
+                p: 0,
+                width: "100vw",
+                height: "100vh",
+                display: "grid",
+                gridTemplateAreas: "'map panel'",
+                gridTemplateColumns: "1fr 300px"
+            }}
             disableGutters
         >
             <MapComponent
@@ -69,9 +79,17 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onMouseDown={onMouseDown}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
+                sx={{ gridArea: "map " }}
                 // cursor={state.cursor}
                 // disabled={false}
             ></MapComponent>
+            <SidePanelComponent sx={{ gridArea: "panel" }}>
+                <MapModePanelComponent
+                    visible={sidePanelMode === "map-mode"}
+                    disabled={false}
+                    onEndTurn={onEndTurn}
+                />
+            </SidePanelComponent>
         </Container>
     );
 }

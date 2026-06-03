@@ -22,6 +22,13 @@ export const createGame: RequestHandler = async (
     const { clientId, name } = parsedBody.data;
 
     const game = new Game(clientId, req.app.locals.scenarioManager);
+    const existingGame = gameManager.findGame(game.id);
+    if (existingGame) {
+        gameManager.removeGame(existingGame.id);
+
+        existingGame.destroyGame();
+    }
+
     gameManager.addGame(game);
 
     const client = game.addClient(clientId, name);

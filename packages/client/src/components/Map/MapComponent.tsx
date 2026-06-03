@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef } from "react";
 
 import { CanvasLoopComponent, CanvasLoopComponentProps } from "../CanvasLoop";
 import { useComponentSize } from "../../hooks";
-import { Container } from "@mui/material";
+import { Container, SxProps } from "@mui/material";
 
 export interface MapComponentProps {
     renderMap?: (props: CanvasLoopComponentProps) => void;
@@ -18,6 +18,8 @@ export interface MapComponentProps {
     // disabled?: boolean;
     // cursor?: string;
     children?: ReactNode;
+
+    sx?: SxProps;
 }
 
 export function MapComponent({
@@ -33,7 +35,8 @@ export function MapComponent({
 
     // disabled = false,
     // cursor = "default",
-    children
+    children,
+    sx
 }: MapComponentProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,7 +60,8 @@ export function MapComponent({
                 position: "relative",
                 userSelect: "none",
                 zIndex: 1,
-                backgroundColor: "pink"
+                backgroundColor: "pink",
+                ...sx
             }}
             disableGutters
             ref={containerRef}

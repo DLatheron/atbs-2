@@ -37,19 +37,23 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("client:lobby:game:start"),
-        payload: z.undefined()
+        payload: z.null()
     }),
     z.object({
         type: z.literal("client:armament:end"),
-        payload: z.undefined()
+        payload: z.null()
     }),
     z.object({
         type: z.literal("client:deployment:end"),
-        payload: z.undefined()
+        payload: z.null()
     }),
     z.object({
         type: z.literal("client:game:refresh"),
-        payload: z.string()
+        payload: z.null()
+    }),
+    z.object({
+        type: z.literal("client:game:turn:end"),
+        payload: z.null()
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

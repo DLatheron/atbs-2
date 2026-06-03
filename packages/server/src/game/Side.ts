@@ -1,4 +1,4 @@
-import { Description, SideId } from "@atbs/shared-data";
+import { Description, SideId, SideSummary } from "@atbs/shared-data";
 import z from "zod";
 import { UnitRecipe } from "./Unit.js";
 
@@ -53,5 +53,12 @@ export class Side {
 
     get needsDeploymentPhase() {
         return this._recipe.phases.deployment.type === "manual";
+    }
+
+    toSummary(): SideSummary {
+        return {
+            id: this.id,
+            name: this.name
+        };
     }
 }

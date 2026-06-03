@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerMessageManager, useWorld } from "../../hooks";
 import { ClientMap } from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
@@ -15,7 +15,7 @@ export function useActionPage() {
     useEffect(() => {
         sendMessage({
             type: "client:game:refresh",
-            payload: ""
+            payload: null
         });
     }, [sendMessage, world.hasMap]);
 
@@ -45,5 +45,12 @@ export function useActionPage() {
         };
     }, [messageManager, sendMessage, world, imageCache]);
 
-    return { map, unit };
+    const onEndTurn = useCallback(() => {
+        sendMessage({
+            type: "client:game:turn:end",
+            payload: null
+        });
+    }, [sendMessage]);
+
+    return { map, unit, onEndTurn };
 }
