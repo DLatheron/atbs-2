@@ -1,5 +1,6 @@
 import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
+import { ClientMessageManager } from "../Game.js";
 // import type { ClientMessageManager } from "../Game.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
@@ -28,5 +29,20 @@ export class ActionPhaseHandler extends PhaseHandler {
         });
     }
 
-    registerMessageHandlers(/*_messageManager: ClientMessageManager*/): void {}
+    registerMessageHandlers(messageManager: ClientMessageManager): void {
+        this._handlerHandles = [
+            messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
+                from.sendMessage({
+                    type: "server:unit",
+                    payload: {
+                        id: "captain-smith.unit"
+                    }
+                });
+                from.sendMessage({
+                    type: "server:map",
+                    payload: this.game.worldMap.renderClientMap()
+                });
+            })
+        ];
+    }
 }

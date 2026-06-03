@@ -5,11 +5,19 @@ import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
 
 export function useActionPage() {
-    const { messageManager } = useServerMessageManager();
+    const { messageManager, sendMessage } = useServerMessageManager();
     const { imageCache } = useImageCache();
     const { world } = useWorld();
     const [map, setMap] = useState<ClientMap | null>(null);
     const [unit, setUnit] = useState<{ id: string } | null>(null);
+
+    // Temporary hack to reload the world if necessary...
+    useEffect(() => {
+        sendMessage({
+            type: "client:game:refresh",
+            payload: ""
+        });
+    }, [sendMessage, world.hasMap]);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -35,7 +43,7 @@ export function useActionPage() {
             console.info("Unmounting ActionPage Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
         };
-    }, [messageManager, world, imageCache]);
+    }, [messageManager, sendMessage, world, imageCache]);
 
     return { map, unit };
 }

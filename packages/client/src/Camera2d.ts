@@ -159,7 +159,7 @@ export class Camera2d {
     }
 
     interpolateByDelta(delta: Vec2, trackingSpeed = TrackingSpeed.VERY_SLOW) {
-        this.targetPos = this.constrainToBox(this.worldPos.sub(delta.scale(100)), this.worldBounds);
+        this.targetPos = this.constrainToBox(this.worldPos.sub(delta), this.worldBounds);
         this.trackingSpeed = trackingSpeed;
     }
 }
