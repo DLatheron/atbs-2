@@ -25,7 +25,29 @@ export function ActionPage({ visible }: ActionPageProps) {
         (props: CanvasLoopComponentProps) => world.renderWorld(props),
         [world]
     );
-    // const renderMap = useCallback((props: CanvasLoopComponentProps) => gameWorld?.renderWorld(props), [gameWorld]);
+
+    const onMouseEnter = useCallback(
+        (event: React.MouseEvent) => world?.onMouseEnter(event),
+        [world]
+    );
+    const onMouseLeave = useCallback(
+        (event: React.MouseEvent) => world?.onMouseLeave(event),
+        [world]
+    );
+    const onMouseMove = useCallback(
+        (event: React.MouseEvent) => world?.onMouseMove(event),
+        [world]
+    );
+    const onMouseUp = useCallback((event: React.MouseEvent) => world?.onMouseUp(event), [world]);
+    const onMouseDown = useCallback(
+        (event: React.MouseEvent) => world?.onMouseDown(event),
+        [world]
+    );
+    const onClick = useCallback((event: React.MouseEvent) => world?.onClick(event), [world]);
+    const onDoubleClick = useCallback(
+        (event: React.MouseEvent) => world?.onDoubleClick(event),
+        [world]
+    );
 
     if (!visible) {
         return null;
@@ -40,13 +62,13 @@ export function ActionPage({ visible }: ActionPageProps) {
         >
             <MapComponent
                 renderMap={renderMap}
-                // onMouseEnter={onMouseEnter}
-                // onMouseLeave={onMouseLeave}
-                // onMouseMove={onMouseMove}
-                // onMouseUp={onMouseUp}
-                // onMouseDown={onMouseDown}
-                // onClick={onClick}
-                // onDoubleClick={onDoubleClick}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                onMouseMove={onMouseMove}
+                onMouseUp={onMouseUp}
+                onMouseDown={onMouseDown}
+                onClick={onClick}
+                onDoubleClick={onDoubleClick}
                 // cursor={state.cursor}
                 // disabled={false}
             ></MapComponent>

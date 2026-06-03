@@ -7,6 +7,9 @@ import { Camera2d } from "./Camera2d";
 import { Orientation, OrientationToRadians } from "@atbs/maths";
 import { ImageCache } from "./ImageCache";
 import { Timer } from "./Timer";
+import { IInteractionHandler } from "./IInteractionHandler";
+import { MapModeHandler } from "./modeHandlers/MapModeHandler";
+import { ModeHandler } from "./modeHandlers/ModeHandler";
 
 export class World {
     private readonly _camera: Camera2d;
@@ -14,6 +17,7 @@ export class World {
     protected readonly _timer: Timer;
     private _renderMode: RenderMode;
     private _map: ClientMap | null;
+    private _interactionHandler: IInteractionHandler | null;
 
     constructor(imageCache: ImageCache) {
         this._camera = new Camera2d();
@@ -22,6 +26,11 @@ export class World {
 
         this._renderMode = RenderMode.enum.MAP_MODE;
         this._map = null;
+        this._interactionHandler = new MapModeHandler(this);
+    }
+
+    get hasMap(): boolean {
+        return !!this._map;
     }
 
     get map(): ClientMap {
@@ -116,6 +125,8 @@ export class World {
 
     update({ time, frameDelta }: { time: number; frameDelta: number }) {
         this.camera.worldBounds = this.worldBounds;
+
+        this._interactionHandler?.update?.({ time, frameDelta });
 
         this.camera.update({ time, frameDelta });
     }
@@ -236,10 +247,55 @@ export class World {
             tileSize,
             -((tileSize * scale.x) / 2),
             -((tileSize * scale.y) / 2),
-            tileSize * scale.x,
-            tileSize * scale.y
+            tileSize * scale.x + 1,
+            tileSize * scale.y + 1
         );
         context.rotate(-angleInRadians);
         context.translate(-(canvasPos.x + offset.x), -(canvasPos.y + offset.y));
+    }
+
+    onMouseEnter(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onMouseEnter?.(event);
+    }
+
+    onMouseLeave(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onMouseLeave?.(event);
+    }
+
+    onMouseMove(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onMouseMove?.(event);
+    }
+
+    onMouseUp(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onMouseUp?.(event);
+    }
+
+    onMouseDown(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onMouseDown?.(event);
+    }
+
+    onClick(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onClick?.(event);
+
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        const worldPos = this.camera.canvasToWorld(canvasPos);
+
+        this._interactionHandler?.onClickWorldPos?.(worldPos);
+
+        const tilePos = this.worldToTile(worldPos);
+        this._interactionHandler?.onClickTilePos?.(tilePos);
+    }
+
+    onDoubleClick(event: MouseEvent | React.MouseEvent) {
+        this._interactionHandler?.onDoubleClick?.(event);
+    }
+
+    onContextMenu(event: React.MouseEvent) {
+        this._interactionHandler?.onContextMenu?.(event);
+    }
+
+    private static readonly _singleton = new World(ImageCache.GetSingleton());
+    static GetSingleton(): World {
+        return World._singleton;
     }
 }

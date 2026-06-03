@@ -285,11 +285,14 @@ export class Game {
      */
     addClient(clientId: ClientId, name: string): Client | null {
         if (!this._phaseHandler.acceptingClients) {
-            this.reportError(``);
+            this.reportError(
+                `Game ${this.gameId} is in a phase that is not accepting new clients: ${this.phase}`
+            );
             return null;
         }
 
         if (this._clientManager.findClient(clientId)) {
+            this.reportError(`Client ${clientId} is already in game ${this.gameId}`);
             return null;
         }
 
