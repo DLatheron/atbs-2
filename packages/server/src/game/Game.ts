@@ -439,6 +439,13 @@ export class Game {
             payload: this.worldMap.renderClientMap()
         });
         playingClient.sendMessage({
+            type: "server:turn:start",
+            payload: {
+                turn: this.turn,
+                side: this.turnsSide.toSummary()
+            }
+        });
+        playingClient.sendMessage({
             type: "server:wait",
             payload: null
         });
@@ -475,7 +482,7 @@ export class Game {
         }
 
         this._playState.sides.shift();
-        
+
         console.info(`Side '${this.turnsSide.name}' to play`);
 
         this.startSide();

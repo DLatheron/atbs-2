@@ -1,16 +1,19 @@
-import { Button, Container } from "@mui/material";
+import { Button, Container, SxProps } from "@mui/material";
 
 export interface MapModePanelCompponentProps {
     visible: boolean;
     disabled: boolean;
 
     onEndTurn: () => void;
+
+    sx?: SxProps;
 }
 
 export function MapModePanelComponent({
     visible,
     disabled,
-    onEndTurn
+    onEndTurn,
+    sx
 }: MapModePanelCompponentProps) {
     if (!visible) {
         return null;
@@ -28,8 +31,9 @@ export function MapModePanelComponent({
                 `,
                 gridTemplateRows: "1fr auto",
                 rowGap: 2,
-                height: "100vh",
-                p: 1
+                height: "100%",
+                p: 1,
+                ...sx
             }}
         >
             <Button

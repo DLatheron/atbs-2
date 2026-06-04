@@ -137,7 +137,7 @@ export class World {
 
         context.clearRect(0, 0, width, height);
 
-        if (!this.map) {
+        if (!this.hasMap) {
             return;
         }
 

@@ -52,10 +52,7 @@ export class ArmamentPhaseHandler extends PhaseHandler {
     sendWaitMessageToWaitingClient() {
         const waitingFor: WaitingFor = {
             phase: this.phase,
-            sides: this._armingSideIds.map((sideId) => ({
-                id: sideId,
-                name: this.game.getSide(sideId).name
-            }))
+            sides: this._armingSideIds.map((sideId) => this.game.getSide(sideId).toSummary())
         };
 
         for (const client of this.game.clients) {

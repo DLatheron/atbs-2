@@ -71,16 +71,10 @@ export class LobbyPhaseHandler extends PhaseHandler {
                             },
                             oldSide: !oldSideId
                                 ? undefined
-                                : {
-                                      id: oldSideId,
-                                      name: scenario.getSide(oldSideId).name
-                                  },
+                                : scenario.getSide(oldSideId).toSummary(),
                             newSide: !newSideId
                                 ? undefined
-                                : {
-                                      id: newSideId,
-                                      name: scenario.getSide(newSideId).name
-                                  }
+                                : scenario.getSide(newSideId).toSummary()
                         }
                     });
                     game.broadcastMessage({

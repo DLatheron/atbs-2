@@ -30,35 +30,42 @@ export type SideRecipe = z.infer<typeof SideRecipe>;
 
 export class Side {
     private readonly _recipe: SideRecipe;
+    private _victoryPoints: number;
 
     constructor(recipe: SideRecipe) {
         this._recipe = recipe;
+        this._victoryPoints = 0;
     }
 
-    get id() {
+    get id(): SideId {
         return this._recipe.id;
     }
 
-    get name() {
+    get name(): string {
         return this._recipe.name;
     }
 
-    get description() {
+    get description(): Description {
         return this._recipe.description;
     }
 
-    get needsArmamentPhase() {
+    get victoryPoints(): number {
+        return this._victoryPoints;
+    }
+
+    get needsArmamentPhase(): boolean {
         return this._recipe.phases.armament.type === "manual";
     }
 
-    get needsDeploymentPhase() {
+    get needsDeploymentPhase(): boolean {
         return this._recipe.phases.deployment.type === "manual";
     }
 
     toSummary(): SideSummary {
         return {
             id: this.id,
-            name: this.name
+            name: this.name,
+            victoryPoints: this.victoryPoints
         };
     }
 }

@@ -104,7 +104,8 @@ export type Description = z.infer<typeof Description>;
 
 export const SideSummary = z.object({
     id: SideId,
-    name: z.string()
+    name: z.string(),
+    victoryPoints: z.number().min(0)
 });
 export type SideSummary = z.infer<typeof SideSummary>;
 
