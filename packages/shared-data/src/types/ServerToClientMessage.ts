@@ -98,6 +98,13 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.object({
             id: z.string().min(1)
         })
+    }),
+    z.object({
+        type: z.literal("server:turn:start"),
+        payload: z.object({
+            turn: z.number().min(1),
+            side: SideSummary
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

@@ -44,12 +44,10 @@ export function WaitModal({ waitingFor }: WaitModalProps) {
                 <Typography id="modal-modal-title" variant="h6" component="h2">
                     {resolvePhaseName(waitingFor?.phase)} Waiting
                 </Typography>
-                <Typography id="modal-modal-description" sx={{ mt: 2 }}>
-                    <ul>
-                        {waitingFor?.sides.map(({ id, name }: { id: SideId; name: string }) => (
-                            <li key={id}>{name}</li>
-                        ))}
-                    </ul>
+                <Typography id="modal-modal-description" component="ul" sx={{ mt: 2 }}>
+                    {waitingFor?.sides.map(({ id, name }: { id: SideId; name: string }) => (
+                        <li key={id}>{name}</li>
+                    ))}
                 </Typography>
             </Box>
         </Modal>

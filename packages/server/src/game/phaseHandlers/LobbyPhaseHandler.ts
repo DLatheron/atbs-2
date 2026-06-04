@@ -71,16 +71,10 @@ export class LobbyPhaseHandler extends PhaseHandler {
                             },
                             oldSide: !oldSideId
                                 ? undefined
-                                : {
-                                      id: oldSideId,
-                                      name: scenario.getSide(oldSideId).name
-                                  },
+                                : scenario.getSide(oldSideId).toSummary(),
                             newSide: !newSideId
                                 ? undefined
-                                : {
-                                      id: newSideId,
-                                      name: scenario.getSide(newSideId).name
-                                  }
+                                : scenario.getSide(newSideId).toSummary()
                         }
                     });
                     game.broadcastMessage({
@@ -233,7 +227,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
             this.game.queueMessage(
                 {
                     type: "client:lobby:game:start",
-                    payload: undefined
+                    payload: null
                 },
                 client
             );

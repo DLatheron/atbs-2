@@ -12,8 +12,8 @@ export abstract class ModeHandler implements IInteractionHandler {
 
     constructor(world: World, trackTiles: boolean = true) {
         this._world = world;
-     
-        this._trackTiles = trackTiles
+
+        this._trackTiles = trackTiles;
         this._lastTilePos = null;
     }
 
@@ -49,7 +49,8 @@ export abstract class ModeHandler implements IInteractionHandler {
         const worldPos = this.camera.canvasToWorld(canvasPos);
         const tilePos = this.world.worldToTile(worldPos);
 
-        const hasChangedTiles = this._lastTilePos === null || !TilePos.IsEqual(tilePos, this._lastTilePos);
+        const hasChangedTiles =
+            this._lastTilePos === null || !TilePos.IsEqual(tilePos, this._lastTilePos);
         if (hasChangedTiles) {
             if (this._lastTilePos) {
                 (this as IInteractionHandler).onTileLeave?.(this._lastTilePos);
@@ -58,5 +59,5 @@ export abstract class ModeHandler implements IInteractionHandler {
 
             this._lastTilePos = tilePos;
         }
-    }    
+    }
 }

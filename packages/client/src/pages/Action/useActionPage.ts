@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useServerMessageManager, useWorld } from "../../hooks";
-import { ClientMap } from "@atbs/shared-data";
+import { ClientMap, SideSummary } from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
 
@@ -8,6 +8,8 @@ export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
     const { imageCache } = useImageCache();
     const { world } = useWorld();
+    const [side, setSide] = useState<SideSummary | null>(null);
+    const [turn, setTurn] = useState<number>(0);
     const [map, setMap] = useState<ClientMap | null>(null);
     const [unit, setUnit] = useState<{ id: string } | null>(null);
 
@@ -15,7 +17,7 @@ export function useActionPage() {
     useEffect(() => {
         sendMessage({
             type: "client:game:refresh",
-            payload: ""
+            payload: null
         });
     }, [sendMessage, world.hasMap]);
 
@@ -36,6 +38,10 @@ export function useActionPage() {
             messageManager.registerHandler("server:unit", (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload.id);
                 setUnit(payload);
+            }),
+            messageManager.registerHandler("server:turn:start", (_context, payload) => {
+                setSide(payload.side);
+                setTurn(payload.turn);
             })
         ];
 
@@ -45,5 +51,12 @@ export function useActionPage() {
         };
     }, [messageManager, sendMessage, world, imageCache]);
 
-    return { map, unit };
+    const onEndTurn = useCallback(() => {
+        sendMessage({
+            type: "client:game:turn:end",
+            payload: null
+        });
+    }, [sendMessage]);
+
+    return { map, unit, turn, side, onEndTurn };
 }

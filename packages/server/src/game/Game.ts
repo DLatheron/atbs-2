@@ -63,6 +63,11 @@ export class Game {
     private _phaseHandler: PhaseHandler;
     private _scenario: Scenario | null;
 
+    private readonly _playState: {
+        sides: Side[];
+        turn: number;
+    };
+
     constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
         this._scenarioManager = scenarioManager;
         this._ownerId = ownerId;
@@ -82,6 +87,10 @@ export class Game {
         this._phaseHandler.registerMessageHandlers(this._messageManager);
 
         this._scenario = null;
+        this._playState = {
+            sides: [],
+            turn: 0
+        };
     }
 
     get id(): GameId {
@@ -291,9 +300,10 @@ export class Game {
             return null;
         }
 
-        if (this._clientManager.findClient(clientId)) {
+        const existingClient = this._clientManager.findClient(clientId);
+        if (existingClient) {
             this.reportError(`Client ${clientId} is already in game ${this.gameId}`);
-            return null;
+            return existingClient;
         }
 
         const client = new Client({ id: clientId, name }, this);
@@ -367,5 +377,116 @@ export class Game {
         const message = ClientToServerMessage.parse(JSON.parse(messageString));
 
         this.queueMessage(message, from);
+    }
+
+    destroyGame() {
+        console.info("DDD Destroying game", this.gameId);
+
+        while (this.clients.length > 0) {
+            const client = this.clients[0];
+
+            client.forceDisconnect();
+
+            this.removeClient(client.id);
+        }
+    }
+
+    get turn(): number {
+        if (this._playState.turn === 0) {
+            throw new Error("Action phase has not been started");
+        }
+
+        return this._playState.turn;
+    }
+
+    get turnsSide(): Side {
+        if (this._playState.sides.length === 0) {
+            throw new Error("No side currently playing");
+        }
+
+        return this._playState.sides[0];
+    }
+
+    startActionPhase(): void {
+        this._playState.turn = 1;
+    }
+
+    startSide(): void {
+        const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
+        if (!playingClient) {
+            throw new Error("Didn't find expected client");
+        }
+
+        this.broadcastMessage(
+            {
+                type: "server:wait",
+                payload: {
+                    phase: "action",
+                    sides: [this.turnsSide.toSummary()]
+                }
+            },
+            playingClient.id
+        );
+
+        playingClient.sendMessage({
+            type: "server:unit",
+            payload: {
+                id: "captain-smith.unit"
+            }
+        });
+        playingClient.sendMessage({
+            type: "server:map",
+            payload: this.worldMap.renderClientMap()
+        });
+        playingClient.sendMessage({
+            type: "server:turn:start",
+            payload: {
+                turn: this.turn,
+                side: this.turnsSide.toSummary()
+            }
+        });
+        playingClient.sendMessage({
+            type: "server:wait",
+            payload: null
+        });
+    }
+
+    startTurn(): void {
+        const { turn } = this;
+
+        console.info(`Starting turn: ${turn}`);
+
+        this._playState.sides = [...this.sides];
+
+        this.startSide();
+    }
+
+    endTurn(): void {
+        const { turn } = this;
+
+        console.info(`Ending turn: ${turn}`);
+
+        const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
+        if (!playingClient) {
+            throw new Error("Didn't find expected client");
+        }
+    }
+
+    nextSide(): boolean {
+        if (this._playState.sides.length === 1) {
+            this.endTurn();
+            this._playState.turn++;
+            this.startTurn();
+
+            return true;
+        }
+
+        this._playState.sides.shift();
+
+        console.info(`Side '${this.turnsSide.name}' to play`);
+
+        this.startSide();
+
+        return false;
     }
 }

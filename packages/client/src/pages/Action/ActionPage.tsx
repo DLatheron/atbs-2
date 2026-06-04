@@ -1,17 +1,21 @@
-import { Container } from "@mui/material";
+import { Container, Typography } from "@mui/material";
 import { MapComponent } from "../../components/Map/MapComponent";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useWorld } from "../../hooks";
 import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
 import { useActionPage } from "./useActionPage";
-// import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
+import { MapModePanelComponent, SidePanelComponent } from "../../components/SidePanel";
+import { TitleBarComponent } from "../../components/TitleBar";
 
 export interface ActionPageProps {
     visible: boolean;
 }
 
 export function ActionPage({ visible }: ActionPageProps) {
-    const { map, unit } = useActionPage();
+    const statusBarHeight = 60;
+
+    const [sidePanelMode] = useState<"map-mode" | "move-mode" | "fire-mode">("map-mode");
+    const { map, unit, turn, side, onEndTurn } = useActionPage();
     if (!map) {
         console.info("No map");
     } else {
@@ -57,9 +61,51 @@ export function ActionPage({ visible }: ActionPageProps) {
         <Container
             data-testid="action-page"
             maxWidth={false}
-            sx={{ m: 0, p: 0, width: "100vw", height: "100vh" }}
+            sx={{
+                m: 0,
+                p: 0,
+                width: "100vw",
+                height: "100vh",
+                display: "grid",
+                gridTemplateAreas: `
+                    'title-bar title-bar'
+                    'map panel'
+                `,
+                gridTemplateColumns: "1fr 300px",
+                gridTemplateRows: "auto 1fr"
+            }}
             disableGutters
         >
+            <TitleBarComponent
+                sx={{
+                    gridArea: "title-bar"
+                }}
+            >
+                <Container
+                    maxWidth={false}
+                    disableGutters
+                    sx={{
+                        display: "grid",
+                        gridTemplateAreas: "'title side turn' 'title vps turn'",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        columnGap: 3,
+                        height: statusBarHeight
+                    }}
+                >
+                    <Typography sx={{ m: "auto 0", gridArea: "title" }} variant="h4">
+                        ATBS
+                    </Typography>
+                    <Typography sx={{ m: "auto", gridArea: "side" }} variant="h5">
+                        {side?.name ?? "-"}
+                    </Typography>
+                    <Typography sx={{ m: "auto", gridArea: "vps" }} variant="body1">
+                        Victory Points: {side?.victoryPoints ?? "-"}
+                    </Typography>
+                    <Typography sx={{ m: "auto 0 auto auto", gridArea: "turn" }} variant="h5">
+                        Turn: {turn ?? "-"}
+                    </Typography>
+                </Container>
+            </TitleBarComponent>
             <MapComponent
                 renderMap={renderMap}
                 onMouseEnter={onMouseEnter}
@@ -69,9 +115,19 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onMouseDown={onMouseDown}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
+                sx={{ gridArea: "map " }}
                 // cursor={state.cursor}
                 // disabled={false}
             ></MapComponent>
+            <SidePanelComponent
+                sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeight})` }}
+            >
+                <MapModePanelComponent
+                    visible={sidePanelMode === "map-mode"}
+                    disabled={false}
+                    onEndTurn={onEndTurn}
+                />
+            </SidePanelComponent>
         </Container>
     );
 }
