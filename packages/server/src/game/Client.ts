@@ -2,6 +2,8 @@ import type { ClientId, ServerToClientMessage, SideId } from "@atbs/shared-data"
 import { WebSocket } from "ws";
 import type { Game } from "./Game.js";
 
+export const SOCKET_CLOSED_DUE_TO_GAME_DELETION = 4000;
+
 export class Client {
     private readonly _game: Game;
     private readonly _id: ClientId;
@@ -57,9 +59,9 @@ export class Client {
     }
 
     assignSocket(value: WebSocket) {
-        if (this._socket) {
-            throw new Error("Socket already assigned for this client");
-        }
+        // if (this._socket) {
+        //     throw new Error("Socket already assigned for this client");
+        // }
 
         // eslint-disable-next-line @typescript-eslint/no-this-alias -- needs aliasing to prevent errors inside lambdas.
         const client = this;
@@ -85,7 +87,8 @@ export class Client {
 
     sendMessage(message: ServerToClientMessage): void {
         if (!this._socket) {
-            throw new Error(`Socket not assigned to client ${this.id}`);
+            // throw new Error(`Socket not assigned to client ${this.id}`);
+            return;
         }
 
         if (this._socket.readyState === WebSocket.OPEN) {
@@ -94,6 +97,6 @@ export class Client {
     }
 
     forceDisconnect() {
-        this._socket?.close(1);
+        this._socket?.close(SOCKET_CLOSED_DUE_TO_GAME_DELETION);
     }
 }

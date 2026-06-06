@@ -154,6 +154,9 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+      zodified-config:
+        specifier: ^2.2.0
+        version: 2.2.0
     devDependencies:
       '@types/express':
         specifier: ^5.0.2
@@ -1248,6 +1251,10 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  config@3.3.12:
+    resolution: {integrity: sha512-Vmx389R/QVM3foxqBzXO8t2tUikYZP64Q6vQxGrsMpREeJc/aWRnPRERXWsYzOHAumx/AOoILWe6nU3ZJL+6Sw==}
+    engines: {node: '>= 10.0.0'}
+
   content-disposition@1.1.0:
     resolution: {integrity: sha512-5jRCH9Z/+DRP7rkvY83B+yGIGX96OYdJmzngqnw2SBSxqCFPd0w2km3s5iawpGX8krnwSGmF0FW5Nhr0Hfai3g==}
     engines: {node: '>=18'}
@@ -2289,6 +2296,10 @@ packages:
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
+  zodified-config@2.2.0:
+    resolution: {integrity: sha512-MKM8yp3It5Q61efaiNPCHxLentTExW78LUddS9GX7ImLI8pAE96oT9a6r4zjp8diKMmG109VTG7zE+yqph0qpQ==}
+    engines: {node: '>=14'}
+
 snapshots:
 
   '@babel/code-frame@7.29.0':
@@ -3290,6 +3301,10 @@ snapshots:
       supports-color: 8.1.1
       tree-kill: 1.2.2
       yargs: 17.7.2
+
+  config@3.3.12:
+    dependencies:
+      json5: 2.2.3
 
   content-disposition@1.1.0: {}
 
@@ -4326,3 +4341,8 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zod@4.4.3: {}
+
+  zodified-config@2.2.0:
+    dependencies:
+      config: 3.3.12
+      zod: 4.4.3

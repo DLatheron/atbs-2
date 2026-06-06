@@ -20,7 +20,8 @@
         "lodash": "^4.18.1",
         "pngjs": "^7.0.0",
         "ws": "^8.20.1",
-        "zod": "^4.4.3"
+        "zod": "^4.4.3",
+        "zodified-config": "^2.2.0"
     },
     "devDependencies": {
         "@types/express": "^5.0.2",

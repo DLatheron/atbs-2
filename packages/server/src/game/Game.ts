@@ -21,8 +21,6 @@ import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
 
-const FIXED_GAME_ID = true; // Temporary Hack.
-
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 function randomSegment(length: number): string {
@@ -34,11 +32,7 @@ function randomSegment(length: number): string {
 }
 
 function generateGameId(): string {
-    if (FIXED_GAME_ID) {
-        return "AAAA-AAAA";
-    } else {
-        return `${randomSegment(4)}-${randomSegment(4)}`;
-    }
+    return `${randomSegment(4)}-${randomSegment(4)}`;
 }
 
 interface ClientMessageContext {

@@ -6,6 +6,7 @@ import {
 import type { Request, RequestHandler, Response } from "express";
 import { Game } from "../../../game/Game.js";
 import { gameManager } from "../../../game/GameManager.js";
+import { config } from "../../../config/config.schema.js";
 
 export type CreateGameRequest = Request<unknown, CreateGameRequestBody>;
 export type CreateGameResponse = Response<CreateGameResponseBody | ErrorResponseBody>;
@@ -21,6 +22,10 @@ export const createGame: RequestHandler = async (
     }
     const { clientId, name } = parsedBody.data;
 
+    if (config.highlanderGameMode) {
+        gameManager.killAllGames();
+    }
+
     const game = new Game(clientId, req.app.locals.scenarioManager);
     const existingGame = gameManager.findGame(game.id);
     if (existingGame) {
@@ -33,7 +38,7 @@ export const createGame: RequestHandler = async (
 
     const client = game.addClient(clientId, name);
     if (!client) {
-        res.status(500).json({ error: "Failed to add client to created game " });
+        res.status(501).json({ error: "Failed to add client to created game " });
         return;
     }
 
