@@ -7,9 +7,17 @@ import { parseURLSearchParams, ConnectSocketQueryParams } from "@atbs/shared-dat
 
 import { createApp } from "./app.js";
 import { gameManager } from "./game/GameManager.js";
+import { config } from "./config/config.schema.js";
+
+process.on("uncaughtException", function (error) {
+    console.error(error);
+});
+
+console.info("Configuration:");
+console.dir(config, { depth: null, colors: true, compact: false });
 
 async function startServer() {
-    const port = Number(process.env.PORT ?? 3000);
+    const port = Number(config.port);
 
     const app = await createApp();
 

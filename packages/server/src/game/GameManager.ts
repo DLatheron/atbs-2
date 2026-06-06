@@ -1,14 +1,15 @@
+import { GameId } from "@atbs/shared-data";
 import { Game } from "./Game.js";
 
 export class GameManager {
-    private readonly games = new Map<string, Game>();
+    private readonly _games = new Map<GameId, Game>();
 
     addGame(game: Game): void {
-        this.games.set(game.gameId, game);
+        this._games.set(game.gameId, game);
     }
 
     removeGame(gameId: string): boolean {
-        return this.games.delete(gameId);
+        return this._games.delete(gameId);
     }
 
     getGame(gameId: string): Game {
@@ -20,7 +21,21 @@ export class GameManager {
     }
 
     findGame(gameId: string): Game | undefined {
-        return this.games.get(gameId);
+        return this._games.get(gameId);
+    }
+
+    killAllGames() {
+        for (const game of this._games.values()) {
+            game.destroyGame();
+        }
+
+        this._games.clear();
+
+        console.info("All games killed", this._games);
+    }
+
+    findOnlyGame(): GameId | undefined {
+        return this._games.values().next().value?.gameId;
     }
 }
 

@@ -1,6 +1,7 @@
 import { ErrorResponseBody, JoinGameRequestBody, JoinGameResponseBody } from "@atbs/shared-data";
 import type { Request, RequestHandler, Response } from "express";
 import { gameManager } from "../../../game/GameManager.js";
+import { config } from "../../../config/config.schema.js";
 
 export type JoinGameRequest = Request<unknown, JoinGameRequestBody>;
 export type JoinGameResponse = Response<JoinGameResponseBody | ErrorResponseBody>;
@@ -11,7 +12,20 @@ export const joinGame: RequestHandler = (req: JoinGameRequest, res: JoinGameResp
         res.status(400).json({ error: `invalid payload: ${parsedBody.error.toString()}` });
         return;
     }
-    const { gameId, clientId, name } = parsedBody.data;
+    const { clientId, name } = parsedBody.data;
+    let { gameId } = parsedBody.data;
+
+    console.info({ gameId, mode: config.highlanderGameMode });
+
+    if (config.highlanderGameMode) {
+        const onlyGameId = gameManager.findOnlyGame();
+        console.info({ onlyGameId });
+        if (!onlyGameId) {
+            res.status(500).json({ error: "Unable to find the one and only game" });
+            return;
+        }
+        gameId = onlyGameId;
+    }
 
     const game = gameManager.findGame(gameId);
     if (!game) {
@@ -21,7 +35,7 @@ export const joinGame: RequestHandler = (req: JoinGameRequest, res: JoinGameResp
 
     const client = game.addClient(clientId, name);
     if (!client) {
-        res.status(500).json({ error: "Failed to add client to created game " });
+        res.status(500).json({ error: "Failed to add client to created game" });
         return;
     }
 
