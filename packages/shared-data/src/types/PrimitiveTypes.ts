@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { Orientation } from "@atbs/maths";
+import { Orientation, TilePosRecipe } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const ClientId = z.uuid();
@@ -142,6 +142,8 @@ export const UnitSummary = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: Description,
+    orientation: z.enum(Orientation),
+    viewAngleInDegrees: z.number().positive(),
     isDirectional: z.boolean().optional().default(true),
     attributes: z.object({
         actionPoints: Attribute,
@@ -156,6 +158,23 @@ export const UnitSummary = z.object({
     uiImage: RenderList
 });
 export type UnitSummary = z.infer<typeof UnitSummary>;
+
+export const TileInfo = z.object({
+    tilePos: TilePosRecipe,
+    terrain: z.object({
+        name: z.string(),
+        uiImage: RenderList,
+        description: Description
+    }),
+    unit: z
+        .object({
+            name: z.string(),
+            uiImage: RenderList,
+            description: Description
+        })
+        .optional()
+});
+export type TileInfo = z.infer<typeof TileInfo>;
 
 export const WaitingFor = z.object({
     phase: Phase,

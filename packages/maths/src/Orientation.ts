@@ -94,7 +94,7 @@ export function relativeDirection(
     }
 }
 
-export const OrientationToCSSTransform = {
+export const OrientationToCSSTransform: Record<Orientation, string> = {
     [Orientation.NORTH]: "rotate(0deg)",
     [Orientation.NORTH_EAST]: "rotate(45deg)",
     [Orientation.EAST]: "rotate(90deg)",

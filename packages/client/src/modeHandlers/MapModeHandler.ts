@@ -3,6 +3,8 @@ import { TrackingSpeed } from "../Camera2d";
 import { TilePos, Vec2 } from "@atbs/maths";
 import { ModeHandler } from "./ModeHandler";
 
+const TILE_INFO_QUERY_DEBOUNCE_IN_MS = 500;
+
 export class MapModeHandler extends ModeHandler {
     private static readonly MOUSE_SPEED_SCALER = 1.0;
     private static readonly DRAG_DAMPING = 0.98;
@@ -15,12 +17,20 @@ export class MapModeHandler extends ModeHandler {
         movementDelta: Vec2;
     } | null;
     private _dragVelocity: Vec2 | null;
+    private _tileInfoQuery: {
+        tilePos: TilePos | null;
+        timerId: number;
+    };
 
     constructor(world: World) {
         super(world);
 
         this._mapDrag = null;
         this._dragVelocity = null;
+        this._tileInfoQuery = {
+            tilePos: null,
+            timerId: 0
+        };
     }
 
     initialise(): void {}
@@ -117,13 +127,50 @@ export class MapModeHandler extends ModeHandler {
 
     onMouseLeave(event: MouseEvent | React.MouseEvent): void {
         this.endMapDrag(event);
+        this._clearTileInfoQuery();
+    }
+
+    onDoubleClick(event: MouseEvent | React.MouseEvent): void {
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        const worldPos = this.camera.canvasToWorld(canvasPos);
+        const tilePos = this.world.worldToTile(worldPos);
+
+        this.world.sendMessage({
+            type: "client:game:tile:click",
+            payload: {
+                tilePos: [tilePos.col, tilePos.row],
+                worldPos: [worldPos.x, worldPos.y]
+            }
+        });
+    }
+
+    private _debounceTileInfoQuery(tilePos: TilePos) {
+        const existingTilePos = this._tileInfoQuery.tilePos;
+
+        if (existingTilePos && !TilePos.IsEqual(tilePos, existingTilePos)) {
+            this._clearTileInfoQuery();
+        }
+
+        this._tileInfoQuery.timerId = window.setTimeout(() => {
+            this.world.sendMessage({
+                type: "client:game:tile:info",
+                payload: { tilePos: [tilePos.col, tilePos.row] }
+            });
+        }, TILE_INFO_QUERY_DEBOUNCE_IN_MS);
+    }
+
+    private _clearTileInfoQuery() {
+        if (this._tileInfoQuery.timerId) {
+            clearTimeout(this._tileInfoQuery.timerId);
+            this._tileInfoQuery.timerId = 0;
+        }
     }
 
     onTileEnter(tilePos: TilePos): void {
-        console.info("Entering tile", tilePos);
+        this._debounceTileInfoQuery(tilePos);
     }
 
-    onTileLeave(tilePos: TilePos): void {
-        console.info("Leaving tile", tilePos);
+    onTileLeave(/*tilePos: TilePos*/): void {
+        this._clearTileInfoQuery();
     }
 }

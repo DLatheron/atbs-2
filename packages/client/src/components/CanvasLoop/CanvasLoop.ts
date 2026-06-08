@@ -1,6 +1,6 @@
 import { RefObject } from "react";
 
-export interface CanvasLoopComponentProps {
+export interface CanvasLoopProps {
     canvas: HTMLCanvasElement;
     context: CanvasRenderingContext2D;
 
@@ -11,9 +11,9 @@ export interface CanvasLoopComponentProps {
     time: number;
 }
 
-export function CanvasLoopComponent(
+export function CanvasLoop(
     canvasRef: RefObject<HTMLCanvasElement | null>,
-    loopFn?: (props: CanvasLoopComponentProps) => void
+    loopFn?: (props: CanvasLoopProps) => void
 ) {
     const canvas = canvasRef.current;
     if (!canvas) {

@@ -1,6 +1,7 @@
 import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
+import { TilePos } from "@atbs/maths";
 // import type { ClientMessageManager } from "../Game.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
@@ -34,12 +35,6 @@ export class ActionPhaseHandler extends PhaseHandler {
         this._handlerHandles = [
             messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
                 from.sendMessage({
-                    type: "server:unit",
-                    payload: {
-                        id: "captain-smith.unit"
-                    }
-                });
-                from.sendMessage({
                     type: "server:map",
                     payload: this.game.worldMap.renderClientMap()
                 });
@@ -55,7 +50,45 @@ export class ActionPhaseHandler extends PhaseHandler {
                 if (from.id === playingClient.id) {
                     game.nextSide();
                 }
-            })
+            }),
+            messageManager.registerHandler("client:game:tile:info", ({ game }, payload, from) => {
+                const { worldMap } = game;
+                const tilePos = new TilePos(payload.tilePos);
+                const tile = worldMap.getTile(tilePos);
+
+                from.sendMessage({
+                    type: "server:game:tile:info",
+                    payload: tile.getTileInfo()
+                });
+            }),
+            messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {
+                const { worldMap } = game;
+                const tilePos = new TilePos(payload.tilePos);
+                const tile = worldMap.getTile(tilePos);
+                const unit = tile.topmostUnit;
+
+                if (unit) {
+                    game.selectedUnit = unit;
+                }
+
+                from.sendMessage({
+                    type: "server:unit:selected",
+                    payload: unit?.toSummary() ?? null
+                });
+            }),
+            messageManager.registerHandler(
+                "client:unit:move:end",
+                ({ game }, selectedUnitId, from) => {
+                    const { selectedUnit } = game;
+                    if (selectedUnitId === selectedUnit?.id) {
+                        game.selectedUnit = null;
+                        from.sendMessage({
+                            type: "server:unit:selected",
+                            payload: null
+                        });
+                    }
+                }
+            )
         ];
     }
 }

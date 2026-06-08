@@ -38,6 +38,7 @@ export class TilePos implements ITilePos {
     constructor();
     constructor(col: number, row: number);
     constructor(vec: ITilePos);
+    constructor(recipe: TilePosRecipe);
     constructor(...args: unknown[]) {
         if (isTilePosRecipe(args[0])) {
             this.col = args[0][0];

@@ -16,6 +16,7 @@ export const UnitRecipe = z.object({
     name: z.string().min(1),
     description: Description,
     isDirectional: z.boolean().optional().default(true),
+    viewAngleInDegrees: z.number().optional().default(90.0),
     attributes: z.object({
         actionPoints: AttributeDef,
         constitution: AttributeDef,
@@ -79,9 +80,7 @@ export class Unit extends SceneObject {
             speed: setDefaultAttribute(recipe.attributes.speed),
             strength: setDefaultAttribute(recipe.attributes.strength)
         };
-        this._location = overrides.location
-            ? new TilePos(overrides.location[0], overrides.location[1])
-            : null;
+        this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._orientation = recipe.isDirectional
             ? (overrides.orientation ?? Orientation.NORTH)
             : (overrides.orientation ?? Orientation.CENTER);
@@ -165,6 +164,8 @@ export class Unit extends SceneObject {
             name: this.name,
             description: this.description,
             isDirectional: this.isDirectional,
+            orientation: this.orientation,
+            viewAngleInDegrees: this._recipe.viewAngleInDegrees,
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,
@@ -176,7 +177,7 @@ export class Unit extends SceneObject {
                 weight: this.weight
             },
             uiImage: this.getRenderList({
-                renderMode: RenderMode.enum.UI_MODE,
+                renderMode: RenderMode.enum.MAP_MODE,
                 states: [] // TODO: Populate current states when we have an inventory etc.
             })
         };

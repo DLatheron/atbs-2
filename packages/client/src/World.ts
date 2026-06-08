@@ -1,6 +1,6 @@
-import { ClientMap, RenderList, RenderMode } from "@atbs/shared-data";
+import { ClientMap, ClientToServerMessage, RenderList, RenderMode } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
-import { CanvasLoopComponentProps } from "./components/CanvasLoop";
+import { CanvasLoopProps } from "./components/CanvasLoop";
 import { TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
@@ -18,6 +18,7 @@ export class World {
     private _renderMode: RenderMode;
     private _map: ClientMap | null;
     private _interactionHandler: IInteractionHandler | null;
+    private _sendMessage: (message: ClientToServerMessage) => void;
 
     constructor(imageCache: ImageCache) {
         this._camera = new Camera2d();
@@ -27,6 +28,9 @@ export class World {
         this._renderMode = RenderMode.enum.MAP_MODE;
         this._map = null;
         this._interactionHandler = new MapModeHandler(this);
+        this._sendMessage = () => {
+            throw new Error("World:sendMessage function not set");
+        };
     }
 
     get hasMap(): boolean {
@@ -67,6 +71,14 @@ export class World {
 
     get imageCache(): ImageCache {
         return this._imageCache;
+    }
+
+    get sendMessage(): (message: ClientToServerMessage) => void {
+        return this._sendMessage;
+    }
+
+    set sendMessage(value: (message: ClientToServerMessage) => void) {
+        this._sendMessage = value;
     }
 
     getAt(renderMode: RenderMode, tilePos: TilePos): RenderList {
@@ -131,7 +143,7 @@ export class World {
         this.camera.update({ time, frameDelta });
     }
 
-    renderWorld({ canvas, context }: CanvasLoopComponentProps) {
+    renderWorld({ canvas, context }: CanvasLoopProps) {
         const { time, frameDelta } = this._timer;
         const { width, height } = canvas;
 

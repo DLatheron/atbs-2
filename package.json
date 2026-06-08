@@ -7,8 +7,10 @@
     },
     "scripts": {
         "build": "pnpm -r run build",
-        "dev": "concurrently -k -n shared,server,client -c yellow,blue,green \"pnpm dev:shared\" \"pnpm dev:server\" \"pnpm dev:client\"",
-        "dev:shared": "pnpm --filter @atbs/maths --filter @atbs/misc --filter @atbs/shared-data run dev",
+        "dev": "concurrently -k -n shared,misc,maths,server,client -c yellow,blue,green,red,magenta \"pnpm dev:shared\" \"pnpm dev:maths\" \"pnpm dev:misc\" \"pnpm dev:server\" \"pnpm dev:client\"",
+        "dev:shared": "pnpm --filter @atbs/shared-data dev",
+        "dev:maths": "pnpm --filter @atbs/misc dev",
+        "dev:misc": "pnpm --filter @atbs/maths dev",
         "dev:server": "pnpm --filter @atbs/server dev",
         "dev:client": "pnpm --filter @atbs/client dev",
         "test": "vitest run",

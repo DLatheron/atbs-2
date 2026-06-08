@@ -1,1 +1,1 @@
-export * from "./CanvasLoopComponent.js";
+export * from "./CanvasLoop.js";

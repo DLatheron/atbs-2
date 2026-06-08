@@ -4,7 +4,7 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
-import { RenderList } from "@atbs/shared-data";
+import { RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 
 export const TileRecipe = z.object({
@@ -114,5 +114,31 @@ export class Tile implements IRenderableEntity {
             ...this.terrain.getRenderList(context),
             ...this.units.map((unit) => unit.getRenderList(context)).flat()
         ];
+    }
+
+    getTileInfo(): TileInfo {
+        const { terrain, topmostUnit } = this;
+
+        return {
+            tilePos: [this._location.col, this._location.row],
+            terrain: {
+                name: terrain.name,
+                uiImage: terrain.getRenderList({
+                    renderMode: RenderMode.enum.UI_MODE,
+                    states: []
+                }),
+                description: terrain.description
+            },
+            ...(topmostUnit && {
+                unit: {
+                    name: topmostUnit.name,
+                    uiImage: topmostUnit.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: []
+                    }),
+                    description: topmostUnit.description
+                }
+            })
+        };
     }
 }

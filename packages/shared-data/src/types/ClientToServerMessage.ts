@@ -1,5 +1,6 @@
 import z from "zod";
-import { ClientId, ScenarioId, SideId } from "./PrimitiveTypes.js";
+import { ClientId, ScenarioId, SideId, UnitId } from "./PrimitiveTypes.js";
+import { TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
@@ -52,8 +53,25 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.null()
     }),
     z.object({
+        type: z.literal("client:game:tile:info"),
+        payload: z.object({
+            tilePos: TilePosRecipe
+        })
+    }),
+    z.object({
         type: z.literal("client:game:turn:end"),
         payload: z.null()
+    }),
+    z.object({
+        type: z.literal("client:game:tile:click"),
+        payload: z.object({
+            tilePos: TilePosRecipe,
+            worldPos: Vec2Recipe
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:move:end"),
+        payload: UnitId
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

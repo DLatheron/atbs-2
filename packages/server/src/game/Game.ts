@@ -61,7 +61,7 @@ export class Game {
     private readonly _playState: {
         sides: Side[];
         turn: number;
-        currentUnit: Unit | null;
+        selectedUnit: Unit | null;
     };
 
     constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
@@ -86,7 +86,7 @@ export class Game {
         this._playState = {
             sides: [],
             turn: 0,
-            currentUnit: null
+            selectedUnit: null
         };
     }
 
@@ -371,9 +371,15 @@ export class Game {
 
     receiveMessage(data: MessageEvent, from: Client) {
         const messageString = data.toString();
-        const message = ClientToServerMessage.parse(JSON.parse(messageString));
 
-        this.queueMessage(message, from);
+        try {
+            const message = ClientToServerMessage.parse(JSON.parse(messageString));
+
+            this.queueMessage(message, from);
+        } catch (error) {
+            console.error("Issue decoding message", messageString);
+            throw error;
+        }
     }
 
     destroyGame() {
@@ -404,13 +410,33 @@ export class Game {
         return this._playState.sides[0];
     }
 
-    get currentUnit(): Unit | null {
-        return this._playState.currentUnit;
+    get selectedUnit(): Unit | null {
+        return this._playState.selectedUnit;
+    }
+
+    set selectedUnit(value: Unit | null) {
+        const { selectedUnit } = this;
+
+        if (selectedUnit === value) {
+            return;
+        }
+
+        if (selectedUnit) {
+            console.info("Deselect unit", selectedUnit.name);
+            // TODO: Deal with unselecting the unit...
+        }
+
+        if (value) {
+            console.info("Selecting unit", value.name);
+            // TODO: Deal with selecting the unit.
+        }
+
+        this._playState.selectedUnit = value;
     }
 
     startActionPhase(): void {
         this._playState.turn = 1;
-        this._playState.currentUnit = null;
+        this.selectedUnit = null;
 
         // Place units into the map.
         this.sides.forEach((side) =>
@@ -438,12 +464,6 @@ export class Game {
         );
 
         playingClient.sendMessage({
-            type: "server:unit",
-            payload: {
-                id: "captain-smith.unit"
-            }
-        });
-        playingClient.sendMessage({
             type: "server:map",
             payload: this.worldMap.renderClientMap()
         });
@@ -466,7 +486,7 @@ export class Game {
         console.info(`Starting turn: ${turn}`);
 
         this._playState.sides = [...this.sides];
-        this._playState.currentUnit = null;
+        this.selectedUnit = null;
 
         this.startSide();
     }

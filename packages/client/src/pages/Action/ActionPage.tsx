@@ -1,11 +1,12 @@
 import { Container, Typography } from "@mui/material";
 import { MapComponent } from "../../components/Map/MapComponent";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useWorld } from "../../hooks";
-import { CanvasLoopComponentProps } from "../../components/CanvasLoop";
+import { CanvasLoopProps } from "../../components/CanvasLoop";
 import { useActionPage } from "./useActionPage";
-import { MapModePanelComponent, SidePanelComponent } from "../../components/SidePanel";
+import { MapModePanel, SidePanel } from "../../components/SidePanel";
 import { TitleBarComponent } from "../../components/TitleBar";
+import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -13,22 +14,13 @@ export interface ActionPageProps {
 
 export function ActionPage({ visible }: ActionPageProps) {
     const statusBarHeight = 60;
+    const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
 
-    const [sidePanelMode] = useState<"map-mode" | "move-mode" | "fire-mode">("map-mode");
-    const { map, unit, turn, side, onEndTurn } = useActionPage();
-    if (!map) {
-        console.info("No map");
-    } else {
-        console.info("!!!Map present!!!");
-    }
-    console.info("unit", unit);
+    const { unit, turn, side, tileInfo, sidePanelMode, onEndMovement, onEndTurn } = useActionPage();
 
     const { world } = useWorld();
 
-    const renderMap = useCallback(
-        (props: CanvasLoopComponentProps) => world.renderWorld(props),
-        [world]
-    );
+    const renderMap = useCallback((props: CanvasLoopProps) => world.renderWorld(props), [world]);
 
     const onMouseEnter = useCallback(
         (event: React.MouseEvent) => world?.onMouseEnter(event),
@@ -119,15 +111,24 @@ export function ActionPage({ visible }: ActionPageProps) {
                 // cursor={state.cursor}
                 // disabled={false}
             ></MapComponent>
-            <SidePanelComponent
-                sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeight})` }}
+            <SidePanel
+                sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
-                <MapModePanelComponent
+                <MapModePanel
                     visible={sidePanelMode === "map-mode"}
                     disabled={false}
+                    tileInfo={tileInfo}
                     onEndTurn={onEndTurn}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
-            </SidePanelComponent>
+                <MoveModePanel
+                    visible={sidePanelMode === "move-mode"}
+                    disabled={false}
+                    unit={unit}
+                    onEndTurn={onEndMovement}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
+                />
+            </SidePanel>
         </Container>
     );
 }

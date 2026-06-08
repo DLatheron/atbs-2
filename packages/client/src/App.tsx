@@ -80,9 +80,12 @@ export function App() {
             let message: ServerToClientMessage;
 
             try {
-                message = ServerToClientMessage.parse(JSON.parse(String(data)));
+                const jsonData = String(data);
+                const preParsedMessage = JSON.parse(jsonData);
+
+                message = ServerToClientMessage.parse(preParsedMessage);
             } catch (error) {
-                console.error("Failed to parse server message", error);
+                console.error("Failed to parse server message", data, error);
                 return;
             }
 
