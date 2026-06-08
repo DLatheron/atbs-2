@@ -1,12 +1,12 @@
 import { Container, SxProps } from "@mui/material";
 import { ReactNode } from "react";
 
-export interface SidePanelComponentProps {
+export interface SidePanelProps {
     children: ReactNode;
     sx: SxProps;
 }
 
-export function SidePanelComponent({ children, sx }: SidePanelComponentProps) {
+export function SidePanel({ children, sx }: SidePanelProps) {
     return (
         <Container
             data-testid="side-panel-component"

@@ -1,41 +1,46 @@
+import { TileInfo } from "@atbs/shared-data";
 import { Button, Container, SxProps } from "@mui/material";
+import { TileInfoComponent } from "../../TileInfo";
 
-export interface MapModePanelCompponentProps {
+export interface MapModePanelProps {
     visible: boolean;
     disabled: boolean;
+    tileInfo: TileInfo | null;
 
     onEndTurn: () => void;
 
     sx?: SxProps;
 }
 
-export function MapModePanelComponent({
-    visible,
-    disabled,
-    onEndTurn,
-    sx
-}: MapModePanelCompponentProps) {
+export function MapModePanel({ visible, disabled, tileInfo, onEndTurn, sx }: MapModePanelProps) {
     if (!visible) {
         return null;
     }
 
     return (
         <Container
+            data-testid="map-mode-panel"
             disableGutters
             maxWidth={false}
             sx={{
                 display: "grid",
                 gridTemplateAreas: `
-                'panel'
-                'exit-button'
+                    'tileInfo'
+                    'exit-button'
                 `,
                 gridTemplateRows: "1fr auto",
                 rowGap: 2,
-                height: "100%",
                 p: 1,
                 ...sx
             }}
         >
+            <Container
+                disableGutters
+                maxWidth={false}
+                sx={{ gridArea: "tileInfo", overflow: "auto" }}
+            >
+                <TileInfoComponent tileInfo={tileInfo} />
+            </Container>
             <Button
                 id="end-turn"
                 title="End the current side's turn"

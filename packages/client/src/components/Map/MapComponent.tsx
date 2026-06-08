@@ -1,11 +1,11 @@
 import { ReactNode, useEffect, useRef } from "react";
 
-import { CanvasLoopComponent, CanvasLoopComponentProps } from "../CanvasLoop";
+import { CanvasLoop, CanvasLoopProps } from "../CanvasLoop";
 import { useComponentSize } from "../../hooks";
 import { Container, SxProps } from "@mui/material";
 
 export interface MapComponentProps {
-    renderMap?: (props: CanvasLoopComponentProps) => void;
+    renderMap?: (props: CanvasLoopProps) => void;
 
     onMouseEnter?: (event: React.MouseEvent) => void;
     onMouseLeave?: (event: React.MouseEvent) => void;
@@ -44,7 +44,7 @@ export function MapComponent({
     const { width, height } = useComponentSize(containerRef);
 
     useEffect(() => {
-        CanvasLoopComponent(canvasRef, (props) => renderMap?.(props));
+        CanvasLoop(canvasRef, (props) => renderMap?.(props));
     }, [renderMap]);
 
     return (

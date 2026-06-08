@@ -1,5 +1,14 @@
+import { useEffect } from "react";
 import { World } from "../World";
+import { useServerMessageManager } from "./useServerMessageManager";
 
 export function useWorld() {
-    return { world: World.GetSingleton() };
+    const { sendMessage } = useServerMessageManager();
+    const world = World.GetSingleton();
+
+    useEffect(() => {
+        world.sendMessage = sendMessage;
+    }, [world, sendMessage]);
+
+    return { world };
 }

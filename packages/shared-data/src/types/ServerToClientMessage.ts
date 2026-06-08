@@ -6,6 +6,8 @@ import {
     ScenarioId,
     ScenarioSummary,
     SideSummary,
+    TileInfo,
+    UnitSummary,
     WaitingFor
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
@@ -94,10 +96,8 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: ClientMap
     }),
     z.object({
-        type: z.literal("server:unit"),
-        payload: z.object({
-            id: z.string().min(1)
-        })
+        type: z.literal("server:unit:selected"),
+        payload: UnitSummary.nullable()
     }),
     z.object({
         type: z.literal("server:turn:start"),
@@ -105,6 +105,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             turn: z.number().min(1),
             side: SideSummary
         })
+    }),
+    z.object({
+        type: z.literal("server:game:tile:info"),
+        payload: TileInfo
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

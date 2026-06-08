@@ -1,0 +1,80 @@
+import { UnitId } from "@atbs/shared-data";
+import { Unit, UnitAdditionalData, UnitOverrides, UnitRecipe } from "./Unit.js";
+import { readdir, readFile } from "fs/promises";
+import path from "path";
+
+const UnitDirectory = "./data/units";
+
+export class UnitRecipeManager {
+    private readonly _unitRecipeMap = new Map<UnitId, UnitRecipe>();
+
+    constructor() {
+        this._unitRecipeMap = new Map<UnitId, UnitRecipe>();
+    }
+
+    newUnit(unitId: UnitId, overrides: UnitOverrides, additionalData: UnitAdditionalData): Unit {
+        const unitRecipe = this.getRecipe(unitId);
+
+        return new Unit(unitRecipe, overrides, additionalData);
+    }
+
+    async loadUnitRecipes(directory = UnitDirectory): Promise<void> {
+        const directoryContents = await readdir(directory, {
+            encoding: "utf-8",
+            withFileTypes: true
+        });
+        const files = directoryContents
+            .filter((dirent) => dirent.isFile())
+            .filter((dirent) => path.extname(dirent.name).toLowerCase() === ".json")
+            .map(({ name }) => name);
+
+        for (const file of files) {
+            const fullPath = path.join(directory, file);
+
+            try {
+                const fileContents = await readFile(fullPath, "utf-8");
+                const rawRecipe = JSON.parse(fileContents);
+                const recipe = UnitRecipe.parse(rawRecipe);
+
+                console.info(`Loaded Unit Recipe: ${fullPath}`);
+
+                this.addRecipe(recipe);
+            } catch (error) {
+                console.error(`ERROR Loading Scenario: ${file}`, error);
+            }
+        }
+    }
+
+    findRecipe(unitId: UnitId): UnitRecipe | undefined {
+        return this._unitRecipeMap.get(unitId);
+    }
+
+    getRecipe(unitId: UnitId): UnitRecipe {
+        const scenario = this.findRecipe(unitId);
+        if (!scenario) {
+            throw new Error(`Unit recipe ${unitId} not found`);
+        }
+        return scenario;
+    }
+
+    hasRecipe(unitId: UnitId): boolean {
+        return !!this.findRecipe(unitId);
+    }
+
+    addRecipe(unitRecipe: UnitRecipe) {
+        if (this.findRecipe(unitRecipe.id)) {
+            throw new Error(`Unit recipe ${unitRecipe.id} already registered`);
+        }
+
+        this._unitRecipeMap.set(unitRecipe.id, unitRecipe);
+    }
+
+    removeRecipe(unitId: UnitId): boolean {
+        return this.removeRecipe(unitId);
+    }
+
+    private static readonly _singleton = new UnitRecipeManager();
+    static GetSingleton(): UnitRecipeManager {
+        return UnitRecipeManager._singleton;
+    }
+}

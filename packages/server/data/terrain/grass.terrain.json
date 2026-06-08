@@ -5,6 +5,6 @@
     "description": [{ "text": "A blanket of coarse grass." }],
     "renderable": {
         "default": [{ "imageId": "grass" }],
-        "fire-mode": []
+        "FIRE_MODE": []
     }
 }

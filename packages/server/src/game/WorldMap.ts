@@ -2,6 +2,7 @@ import { ClientMap, RenderMode, WorldMapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
+import { Unit } from "./Unit.js";
 
 export const WorldMapRecipe = z.object({
     id: WorldMapId,
@@ -133,5 +134,14 @@ export class WorldMap {
                 [RenderMode.enum.FIRE_MODE]: fireModeTiles
             }
         };
+    }
+
+    addUnit(unit: Unit) {
+        if (!unit.location) {
+            throw new Error(`Unit ${unit.id} does not have an assigned location`);
+        }
+
+        const tile = this.getTile(unit.location);
+        tile.addUnit(unit);
     }
 }

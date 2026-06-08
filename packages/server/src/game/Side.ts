@@ -1,12 +1,18 @@
-import { Description, SideId, SideSummary } from "@atbs/shared-data";
+import { Description, SideId, SideSummary, UnitId } from "@atbs/shared-data";
 import z from "zod";
-import { UnitRecipe } from "./Unit.js";
+import { Unit, UnitOverrides } from "./Unit.js";
+import { UnitRecipeManager } from "./UnitRecipeManager.js";
 
 export const SideRecipe = z.object({
     id: SideId,
     name: z.string().min(1),
     description: Description,
-    units: z.array(UnitRecipe),
+    units: z.array(
+        z.object({
+            id: UnitId,
+            overrides: UnitOverrides
+        })
+    ),
     phases: z.object({
         armament: z.discriminatedUnion("type", [
             z.object({
@@ -30,11 +36,23 @@ export type SideRecipe = z.infer<typeof SideRecipe>;
 
 export class Side {
     private readonly _recipe: SideRecipe;
+    private readonly _units: Unit[];
+    private readonly _unitMap: Map<UnitId, Unit>;
     private _victoryPoints: number;
 
     constructor(recipe: SideRecipe) {
         this._recipe = recipe;
         this._victoryPoints = 0;
+
+        this._units = [];
+        this._unitMap = new Map<UnitId, Unit>();
+
+        this._recipe.units.forEach(({ id, overrides }) => {
+            const unit = UnitRecipeManager.GetSingleton().newUnit(id, overrides, { side: this });
+
+            this._units.push(unit);
+            this._unitMap.set(unit.id, unit);
+        });
     }
 
     get id(): SideId {
@@ -59,6 +77,30 @@ export class Side {
 
     get needsDeploymentPhase(): boolean {
         return this._recipe.phases.deployment.type === "manual";
+    }
+
+    get units(): Unit[] {
+        return this._units;
+    }
+
+    get hasAliveUnits(): boolean {
+        return this._units.some((unit) => unit.isAlive);
+    }
+
+    get allUnitsDead(): boolean {
+        return this._units.every((unit) => unit.isDead);
+    }
+
+    findUnit(unitId: UnitId): Unit | undefined {
+        return this._unitMap.get(unitId);
+    }
+
+    getUnit(unitId: UnitId): Unit {
+        const unit = this.findUnit(unitId);
+        if (!unit) {
+            throw new Error(`Unit ${unitId} not found`);
+        }
+        return unit;
     }
 
     toSummary(): SideSummary {

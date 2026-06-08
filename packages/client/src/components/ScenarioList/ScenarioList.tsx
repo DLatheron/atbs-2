@@ -28,7 +28,7 @@ export function ScenarioListComponent({
     }, [selectedScenarioId, scenarios]);
 
     return (
-        <Stack spacing={3}>
+        <Stack data-testid="scenario-list-component" spacing={3}>
             <List>
                 {scenarios.map((scenario, index) => (
                     <ListItem key={scenario.id} disablePadding>
