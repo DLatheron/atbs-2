@@ -23,7 +23,12 @@
             "name": "Goodies",
             "description": [{ "text": "The goodies.", "pb": 2 }],
             "opposition": ["baddies"],
-            "units": [],
+            "units": [
+                {
+                    "id": "captain-smith.unit",
+                    "overrides": { "location": [2, 4], "orientation": 3 }
+                }
+            ],
             "phases": {
                 "armament": {
                     "type": "fixed"

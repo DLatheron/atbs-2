@@ -45,6 +45,15 @@ export type DescriptionText = z.infer<typeof DescriptionText>;
 export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
 
+export const AttributeDef = z.object({
+    max: z.number().positive(),
+    value: z.number().positive().optional()
+});
+export type AttributeDef = z.infer<typeof AttributeDef>;
+
+export const Attribute = z.object({ max: z.number().positive(), value: z.number().positive() });
+export type Attribute = z.infer<typeof Attribute>;
+
 export const RenderImage = z.object({
     imageId: ImageId,
     orientation: z.enum(Orientation).optional(), // Assume NORTH.
@@ -128,6 +137,25 @@ export const ScenarioSummary = z.object({
     )
 });
 export type ScenarioSummary = z.infer<typeof ScenarioSummary>;
+
+export const UnitSummary = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    description: Description,
+    isDirectional: z.boolean().optional().default(true),
+    attributes: z.object({
+        actionPoints: Attribute,
+        constitution: Attribute,
+        fitness: Attribute,
+        morale: Attribute,
+        stamina: Attribute,
+        speed: Attribute,
+        strength: Attribute,
+        weight: z.number().positive()
+    }),
+    uiImage: RenderList
+});
+export type UnitSummary = z.infer<typeof UnitSummary>;
 
 export const WaitingFor = z.object({
     phase: Phase,

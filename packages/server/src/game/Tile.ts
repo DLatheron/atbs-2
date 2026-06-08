@@ -5,6 +5,7 @@ import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
 import { RenderList } from "@atbs/shared-data";
+import { Unit } from "./Unit.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -47,18 +48,28 @@ export type TileRecipe = z.infer<typeof TileRecipe>;
 
 export class Tile implements IRenderableEntity {
     protected _location: TilePos;
-    protected _terrain: Terrain;
+    protected readonly _terrain: Terrain;
+    protected _units: Unit[];
 
     constructor(location: TilePos, recipe: TileRecipe) {
         this._location = location;
         this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
+        this._units = [];
     }
 
     get terrain(): Terrain {
-        return this.terrain;
+        return this._terrain;
     }
 
-    get location(): TilePos | null {
+    get units(): Unit[] {
+        return this._units;
+    }
+
+    get topmostUnit(): Unit | null {
+        return this._units[0] ?? null;
+    }
+
+    get location(): TilePos {
         return this._location;
     }
 
@@ -70,7 +81,38 @@ export class Tile implements IRenderableEntity {
         return Orientation.NORTH;
     }
 
+    addUnit(unit: Unit): void {
+        if (!unit.location) {
+            throw new Error(`Unit ${unit.id} does not have an assigned location`);
+        }
+        if (!TilePos.IsEqual(unit.location, this.location)) {
+            throw new Error(
+                `Unit ${unit.id} has location ${unit.location} but is attempting to be added to ${this.location}!`
+            );
+        }
+
+        this._units.unshift(unit);
+    }
+
+    removeUnit(unit: Unit): void {
+        if (!unit.location) {
+            throw new Error(`Unit ${unit.id} does not have an assigned location`);
+        }
+
+        this._units = this._units.filter(({ id }) => id !== unit.id);
+    }
+
     getRenderList(context: SceneContext): RenderList {
-        return [...this._terrain.getRenderList(context)];
+        if (this.units.length > 0) {
+            console.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
+                depth: null,
+                colors: true
+            });
+        }
+
+        return [
+            ...this.terrain.getRenderList(context),
+            ...this.units.map((unit) => unit.getRenderList(context)).flat()
+        ];
     }
 }

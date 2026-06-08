@@ -20,6 +20,7 @@ import { ScenarioManager } from "./ScenarioManager.js";
 import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
+import { Unit } from "./Unit.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -60,6 +61,7 @@ export class Game {
     private readonly _playState: {
         sides: Side[];
         turn: number;
+        currentUnit: Unit | null;
     };
 
     constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
@@ -83,7 +85,8 @@ export class Game {
         this._scenario = null;
         this._playState = {
             sides: [],
-            turn: 0
+            turn: 0,
+            currentUnit: null
         };
     }
 
@@ -401,8 +404,20 @@ export class Game {
         return this._playState.sides[0];
     }
 
+    get currentUnit(): Unit | null {
+        return this._playState.currentUnit;
+    }
+
     startActionPhase(): void {
         this._playState.turn = 1;
+        this._playState.currentUnit = null;
+
+        // Place units into the map.
+        this.sides.forEach((side) =>
+            side.units.forEach((unit) => {
+                this.worldMap.addUnit(unit);
+            })
+        );
     }
 
     startSide(): void {
@@ -451,6 +466,7 @@ export class Game {
         console.info(`Starting turn: ${turn}`);
 
         this._playState.sides = [...this.sides];
+        this._playState.currentUnit = null;
 
         this.startSide();
     }

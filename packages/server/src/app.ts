@@ -4,6 +4,7 @@ import { ScenarioManager } from "./game/ScenarioManager.js";
 import { TerrainManager } from "./game/TerrainManager.js";
 import { WorldMapManager } from "./game/WorldMapManager.js";
 import { ImageManager } from "./game/ImageManager.js";
+import { UnitRecipeManager } from "./game/UnitRecipeManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -21,6 +22,9 @@ export async function createApp(): Promise<Application> {
     const worldMapManager = WorldMapManager.GetSingleton();
     await worldMapManager.loadWorldMaps();
 
+    const unitRecipeManager = UnitRecipeManager.GetSingleton();
+    await unitRecipeManager.loadUnitRecipes();
+
     const scenarioManager = new ScenarioManager();
     await scenarioManager.loadScenarios();
 
@@ -28,6 +32,7 @@ export async function createApp(): Promise<Application> {
     app.locals.terrainManager = terrainManager;
     app.locals.worldMapManager = worldMapManager;
     app.locals.scenarioManager = scenarioManager;
+    app.locals.unitRecipeManager = unitRecipeManager;
 
     return app;
 }

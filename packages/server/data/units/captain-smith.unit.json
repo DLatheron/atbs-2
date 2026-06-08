@@ -1,0 +1,67 @@
+{
+    "id": "captain-smith.unit",
+    "name": "Captain Smith",
+    "description": [
+        {
+            "text": "The relatively inexperienced leader of the Hostage Rescue Team, but Smith is a crack shot with almost any weapon."
+        },
+        { "text": "Smith has smelly feet." }
+    ],
+    "attributes": {
+        "weight": 85,
+        "actionPoints": { "max": 47 },
+        "constitution": { "max": 50 },
+        "fitness": { "max": 80 },
+        "morale": { "max": 82 },
+        "stamina": { "max": 60 },
+        "speed": { "max": 70 },
+        "strength": { "max": 52 }
+    },
+    "collision": {
+        "shape": "circle",
+        "radius": 25
+    },
+    "renderable": {
+        "UI_MODE": {
+            "alive": {
+                "item-in-use": [{ "imageId": "generic-carrying-4" }],
+                "default": [{ "imageId": "generic-4" }]
+            },
+            "dead": [{ "imageId": "generic-dead" }],
+            "default": []
+        },
+        "MAP_MODE": {
+            "alive": {
+                "default": [
+                    [{ "imageId": "generic-0", "orientation": 8 }],
+                    [{ "imageId": "generic-1", "orientation": 8 }],
+                    [{ "imageId": "generic-2", "orientation": 8 }],
+                    [{ "imageId": "generic-3", "orientation": 8 }],
+                    [{ "imageId": "generic-4", "orientation": 8 }],
+                    [{ "imageId": "generic-5", "orientation": 8 }],
+                    [{ "imageId": "generic-6", "orientation": 8 }],
+                    [{ "imageId": "generic-7", "orientation": 8 }],
+                    []
+                ],
+                "item-in-use": [
+                    [{ "imageId": "generic-carrying-0", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-1", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-2", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-3", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-4", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-5", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-6", "orientation": 8 }],
+                    [{ "imageId": "generic-carrying-7", "orientation": 8 }],
+                    []
+                ]
+            },
+            "dead": [{ "imageId": "generic-dead" }],
+            "default": []
+        },
+        "FIRE_MODE": {
+            "default": [{ "imageId": "generic-cl", "orientation": 8 }],
+            "dead": []
+        },
+        "default": []
+    }
+}
