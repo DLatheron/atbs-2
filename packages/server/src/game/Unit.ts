@@ -161,13 +161,20 @@ export class Unit extends SceneObject {
     rotate(orientation: Orientation) {
         console.info("Rotating", this.name, "to orientation", orientation);
 
-        // TODO:
-        // - Check that rotation can take place.
-        // - Rotate unit.
-        // - Camera translate to position (all visible clients - possibly deferred).
-        // - Update visibility (later).
-        // - Process and send tile update (to all clients that can see).
-        // - Process and send unit attribute updates (to client controlling unit).
+        /**
+         *
+         * - [ ] Rotation
+         *    - [ ] Reject message if the unit is not directional
+         *    - [ ] Calculate the direction in which to turn (randomly decide on a direction if both ways are equal)
+         *    - [ ] Repeat the following actions based on this:
+         *       - [ ] Calculate the action points required to turn in that direction
+         *       - [ ] Do we have enough actions points? If not send message to client to display an error
+         *       - [ ] Rotate the unit by one-stop
+         *       - [ ] Send message to client (and any other clients who observe the change) to translate the camera to the unit
+         *       - [ ] Send message to client (and any other clients who observe the change) to update the tile
+         *       - [ ] Send message to client to update the user
+         *       - [ ] Repeat until direction reached or error
+         */
     }
 
     move(orientation: Orientation) {
