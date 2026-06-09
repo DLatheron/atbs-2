@@ -90,19 +90,28 @@ export function useActionPage() {
                 console.info("Camera move to", payload);
             }),
 
-            messageManager.registerHandler("server:map:update", (_context, payload) => {
-                setMap((map) => {
-                    payload.forEach((update) => {
-                        const tilePos = new TilePos(update.tilePos);
-                        if (map) {
+            messageManager.registerHandler("server:map:update", async (_context, payload) => {
+                const imageSet = new Set<ImageId>();
+                payload.forEach((update) => {
+                    ImageCache.CacheRenderListImages(update.tileByRenderMode[RenderMode.enum.MAP_MODE], imageSet);
+                    ImageCache.CacheRenderListImages(update.tileByRenderMode[RenderMode.enum.FIRE_MODE], imageSet);
+                });
+
+                await imageCache.waitForImagesToCache(imageSet);
+
+                setMap(map => {
+                    if (map) {
+                        payload.forEach((update) => {
+                            const tilePos = new TilePos(update.tilePos);
+
                             map.tilesByRenderMode[RenderMode.enum.MAP_MODE][tilePos.row][
                                 tilePos.col
                             ] = update.tileByRenderMode[RenderMode.enum.MAP_MODE];
                             map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][
                                 tilePos.col
                             ] = update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
-                        }
-                    });
+                        });
+                    }
                     return map;
                 });
             }),

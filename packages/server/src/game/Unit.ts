@@ -267,6 +267,14 @@ export class Unit extends SceneObject {
         while (Math.abs(relativeRotation) > 0) {
             this._orientation = rotateOrientation(this.orientation, Math.sign(relativeRotation));
 
+            messageRouter.send(
+                {
+                    type: "server:unit:selected:update",
+                    payload: { orientation: this._orientation }
+                },
+                this.side.id
+            );            
+
             if (!this._useActionPoints(game, ROTATION_APT_COST, messageRouter)) {
                 return;
             }
