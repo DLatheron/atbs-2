@@ -16,6 +16,7 @@
     },
     "dependencies": {
         "@atbs/maths": "workspace:*",
-        "zod": "^4.4.3"
+        "zod": "^4.4.3",
+        "zod-deep-partial": "^1.4.4"
     }
 }

@@ -39,18 +39,12 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: this.game.worldMap.renderClientMap()
                 });
             }),
-            messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
-                const playingClient = this.game.clients.find(
-                    ({ sideId }) => this.game.turnsSide.id === sideId
-                );
-                if (!playingClient) {
-                    throw new Error("Didn't find expected client");
-                }
 
-                if (from.id === playingClient.id) {
-                    game.nextSide();
-                }
+            messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
+                game.verifyFromPlayingClient(from);
+                game.nextSide();
             }),
+
             messageManager.registerHandler("client:game:tile:info", ({ game }, payload, from) => {
                 const { worldMap } = game;
                 const tilePos = new TilePos(payload.tilePos);
@@ -61,7 +55,10 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: tile.getTileInfo()
                 });
             }),
+
             messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {
+                game.verifyFromPlayingClient(from);
+
                 const { worldMap } = game;
                 const tilePos = new TilePos(payload.tilePos);
                 const tile = worldMap.getTile(tilePos);
@@ -76,10 +73,12 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: unit?.toSummary() ?? null
                 });
             }),
+
             messageManager.registerHandler(
                 "client:unit:move:end",
                 ({ game }, selectedUnitId, from) => {
-                    // TODO: Validate that from is from the correct client.
+                    game.verifyFromPlayingClient(from);
+
                     const { selectedUnit } = game;
                     if (selectedUnitId === selectedUnit?.id) {
                         game.selectedUnit = null;
@@ -90,23 +89,27 @@ export class ActionPhaseHandler extends PhaseHandler {
                     }
                 }
             ),
+
             messageManager.registerHandler(
                 "client:unit:move",
-                ({ game }, { unitId, orientation }) => {
-                    // TODO: Validate that from is from the correct client.
+                ({ game }, { unitId, orientation }, from) => {
+                    game.verifyFromPlayingClient(from);
+
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
-                        selectedUnit.move(orientation);
+                        selectedUnit.move(game, orientation, game.messageRouter);
                     }
                 }
             ),
+
             messageManager.registerHandler(
                 "client:unit:rotate",
-                ({ game }, { unitId, orientation }) => {
-                    // TODO: Validate that from is from the correct client.
+                ({ game }, { unitId, orientation }, from) => {
+                    game.verifyFromPlayingClient(from);
+
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
-                        selectedUnit.rotate(orientation);
+                        selectedUnit.rotate(game, orientation, game.messageRouter);
                     }
                 }
             )

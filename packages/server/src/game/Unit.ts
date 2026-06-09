@@ -2,14 +2,27 @@ import {
     Attribute,
     AttributeDef,
     Description,
+    ErrorType,
     RenderList,
     RenderMode,
     UnitSummary
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
-import { Orientation, TilePos, TilePosRecipe } from "@atbs/maths";
+import {
+    Maths,
+    Orientation,
+    relativeDirection,
+    rotateOrientation,
+    TilePos,
+    TilePosRecipe
+} from "@atbs/maths";
 import type { Side } from "./Side.js";
+import type { Game } from "./Game.js";
+import { MessageRouter } from "./MessageRouter.js";
+
+const ROTATION_APT_COST = 1;
+const INFINITE_ACTION_POINTS = false;
 
 export const UnitRecipe = z.object({
     id: z.string().min(1),
@@ -107,6 +120,14 @@ export class Unit extends SceneObject {
         return this._location;
     }
 
+    get mapLocation(): TilePos {
+        if (!this._location) {
+            throw new Error(`Unit ${this.id} is not on the map`);
+        }
+
+        return this._location;
+    }
+
     set location(value: TilePos | null) {
         this._location = value;
     }
@@ -158,26 +179,138 @@ export class Unit extends SceneObject {
         return super.getRenderList(unitContext);
     }
 
-    rotate(orientation: Orientation) {
-        console.info("Rotating", this.name, "to orientation", orientation);
+    private _hasSufficientActionPoints(
+        _game: Game,
+        aptCost: number,
+        messageRouter: MessageRouter
+    ): boolean {
+        if (aptCost <= this.actionPoints) {
+            return true;
+        }
 
-        /**
-         *
-         * - [ ] Rotation
-         *    - [ ] Reject message if the unit is not directional
-         *    - [ ] Calculate the direction in which to turn (randomly decide on a direction if both ways are equal)
-         *    - [ ] Repeat the following actions based on this:
-         *       - [ ] Calculate the action points required to turn in that direction
-         *       - [ ] Do we have enough actions points? If not send message to client to display an error
-         *       - [ ] Rotate the unit by one-stop
-         *       - [ ] Send message to client (and any other clients who observe the change) to translate the camera to the unit
-         *       - [ ] Send message to client (and any other clients who observe the change) to update the tile
-         *       - [ ] Send message to client to update the user
-         *       - [ ] Repeat until direction reached or error
-         */
+        messageRouter.send(
+            {
+                type: "server:error",
+                payload: ErrorType.enum.INSUFFICIENT_ACTION_POINTS
+            },
+            this.side.id
+        );
+        return false;
     }
 
-    move(orientation: Orientation) {
+    private _useActionPoints(_game: Game, aptCost: number, messageRouter: MessageRouter): boolean {
+        if (aptCost > this.actionPoints) {
+            throw new Error(
+                `Unit ${this.id} does not have sufficient action points to deduct ${aptCost}`
+            );
+        }
+
+        // Reduce the amount of disorientation based on the number of action points used.
+        // this._disorientation = Math.max(0, this._disorientation - aptCost);
+
+        if (!INFINITE_ACTION_POINTS) {
+            this._attributes.actionPoints.value -= aptCost;
+
+            messageRouter.send(
+                {
+                    type: "server:unit:selected:update",
+                    payload: {
+                        attributes: {
+                            actionPoints: { value: this._attributes.actionPoints.value }
+                        }
+                    }
+                },
+                this.side.id
+            );
+        }
+
+        // return this._inflictOngoingDamage(game, aptCost, eventList);
+
+        return true;
+    }
+
+    private _verifyDirectional(): void | never {
+        if (!this.isDirectional) {
+            throw new Error(`Unit ${this.id} is not directional, so cannot be rotated`);
+        }
+    }
+
+    rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
+        console.info("Rotating", this.name, "to orientation", orientation);
+
+        this._verifyDirectional();
+
+        const { mapLocation } = this;
+
+        let relativeRotation = relativeDirection(this.orientation, orientation);
+        if (Math.abs(relativeRotation) === 4 && Maths.Random(0, 1) > 0.5) {
+            relativeRotation = -relativeRotation;
+        }
+
+        const aptCost = ROTATION_APT_COST * Math.abs(relativeRotation);
+
+        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        messageRouter.sendIfVisible(
+            {
+                type: "server:camera:move:to",
+                payload: {
+                    target: "tile",
+                    tilePos: [mapLocation.col, mapLocation.row]
+                }
+            },
+            mapLocation
+        );
+
+        while (Math.abs(relativeRotation) > 0) {
+            this._orientation = rotateOrientation(this.orientation, Math.sign(relativeRotation));
+
+            if (!this._useActionPoints(game, ROTATION_APT_COST, messageRouter)) {
+                return;
+            }
+
+            // TODO: Update available actions.
+            // TODO: Refresh visibility (just yours).
+
+            const tile = game.worldMap.getTile(mapLocation);
+
+            messageRouter.sendIfVisible(
+                {
+                    type: "server:map:update",
+                    payload: [
+                        {
+                            tilePos: [mapLocation.col, mapLocation.row],
+                            tileByRenderMode: {
+                                [RenderMode.enum.MAP_MODE]: tile.getRenderList({
+                                    renderMode: RenderMode.enum.MAP_MODE,
+                                    states: []
+                                }),
+                                [RenderMode.enum.FIRE_MODE]: tile.getRenderList({
+                                    renderMode: RenderMode.enum.FIRE_MODE,
+                                    states: []
+                                })
+                            }
+                        }
+                    ]
+                },
+                mapLocation
+            );
+            messageRouter.sendIfVisible(
+                {
+                    type: "server:wait:time",
+                    payload: 250
+                },
+                mapLocation
+            );
+
+            relativeRotation = relativeDirection(this.orientation, orientation);
+        }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    move(_game: Game, orientation: Orientation, _messageRouter: MessageRouter) {
         console.info("Moving", this.name, "in orientation", orientation);
     }
 

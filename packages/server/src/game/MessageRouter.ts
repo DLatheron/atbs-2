@@ -1,6 +1,6 @@
 import { ClientId, ServerToClientMessage, SideId } from "@atbs/shared-data";
 import type { Client } from "./Client.js";
-import { Misc } from "@atbs/maths";
+import { Misc, TilePos } from "@atbs/maths";
 
 export class MessageRouter {
     private readonly _sideIds: SideId[];
@@ -39,7 +39,7 @@ export class MessageRouter {
         return client;
     }
 
-    pauseMessageSending(sideIds: SideId | SideId[]) {
+    pauseMessageSending(sideIds: SideId | SideId[]): void {
         for (const sideId of Misc.CastToArray(sideIds)) {
             if (!this._sideIdToMessageQueue.has(sideId)) {
                 this._sideIdToMessageQueue.set(sideId, []);
@@ -47,16 +47,20 @@ export class MessageRouter {
         }
     }
 
-    resumeMessageSending(sideIds: SideId | SideId[]) {
+    resumeMessageSending(sideIds: SideId | SideId[]): void {
         for (const sideId of Misc.CastToArray(sideIds)) {
             const messageQueue = this._sideIdToMessageQueue.get(sideId);
             this._sideIdToMessageQueue.delete(sideId);
 
-            messageQueue?.forEach((message) => this.sendMessage(message, sideId));
+            messageQueue?.forEach((message) => this.send(message, sideId));
         }
     }
 
-    sendMessage(message: ServerToClientMessage, sideIds: SideId | SideId[], bypassQueuing = false) {
+    send(
+        message: ServerToClientMessage,
+        sideIds: SideId | SideId[] = this._sideIds,
+        bypassQueuing = false
+    ): void {
         for (const sideId of Misc.CastToArray(sideIds)) {
             if (!bypassQueuing) {
                 const messageQueue = this._sideIdToMessageQueue.get(sideId);
@@ -72,15 +76,29 @@ export class MessageRouter {
         }
     }
 
-    broadcastMessage(
+    sendIfVisible(
+        message: ServerToClientMessage,
+        tilePos: TilePos,
+        sideIds: SideId | SideId[] = this._sideIds,
+        bypassQueuing = false
+    ) {
+        for (const sideId of Misc.CastToArray(sideIds)) {
+            console.info("Check if", tilePos, "is visible to", sideId, "ASSUMING YES!");
+
+            this.send(message, sideId, bypassQueuing);
+        }
+    }
+
+    broadcast(
         message: ServerToClientMessage,
         excludeSideIds: SideId | SideId[] = [],
         bypassQueuing = false
-    ) {
-        const includeSideIds = excludeSideIds.length === 0
-            ? this._sideIds
-            : this._sideIds.filter((sideId) => !excludeSideIds.includes(sideId));
+    ): void {
+        const includeSideIds =
+            excludeSideIds.length === 0
+                ? this._sideIds
+                : this._sideIds.filter((sideId) => !excludeSideIds.includes(sideId));
 
-        this.sendMessage(message, includeSideIds, bypassQueuing);
+        this.send(message, includeSideIds, bypassQueuing);
     }
 }

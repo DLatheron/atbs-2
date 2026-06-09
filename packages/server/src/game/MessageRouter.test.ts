@@ -4,29 +4,6 @@ import { Client } from "./Client.js";
 
 import { MessageRouter } from "./MessageRouter.js";
 import { Game } from "./Game.js";
-// import { Client } from "./Client.js";
-
-// vi.mock(import("./Client.js"), () => {
-//     const Client = vi.fn(
-//         class {
-//             id: string;
-//             name: string;
-//             sideId: SideId | null;
-
-//             constructor({ id, name }: { id: ClientId; name: string }, sideId: SideId | null) {
-//                 console.info("Client", id, sideId);
-//                 this.id = id;
-//                 this.name = name;
-//                 this.sideId = sideId;
-//             }
-
-//             sendMessage(message: ServerToClientMessage) {
-//                 console.info(message);
-//             }
-//         }
-//     );
-//     return { Client };
-// });
 
 describe("MessageRouter", () => {
     let router: MessageRouter;
@@ -71,7 +48,7 @@ describe("MessageRouter", () => {
                 payload: { gameId: "game-4" }
             }
         ];
-        
+
         router = new MessageRouter(sideIds, clients);
     });
 
@@ -81,10 +58,10 @@ describe("MessageRouter", () => {
             expect(router.getClientForSide("side-1")).toBe(clients[1]);
         });
     });
-    
-    describe("sendMessage", () => {
+
+    describe("send", () => {
         it("should send a message to the correct client for the side", () => {
-            router.sendMessage(messages[0], "side-0");
+            router.send(messages[0], "side-0");
 
             expect(clients[0].sendMessage).toHaveBeenCalledWith(messages[0]);
             expect(clients[0].sendMessage).toHaveBeenCalledTimes(1);
@@ -93,7 +70,7 @@ describe("MessageRouter", () => {
             vi.spyOn(clients[0], "sendMessage").mockReset();
             vi.spyOn(clients[1], "sendMessage").mockReset();
 
-            router.sendMessage(messages[1], "side-1");
+            router.send(messages[1], "side-1");
 
             expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[1]);
             expect(clients[1].sendMessage).toHaveBeenCalledTimes(1);
@@ -103,13 +80,13 @@ describe("MessageRouter", () => {
         it("should pause message sending when requested (unless bypassing the queuing)", () => {
             router.pauseMessageSending("side-0");
 
-            router.sendMessage(messages[0], "side-0");
-            router.sendMessage(messages[1], "side-0");
+            router.send(messages[0], "side-0");
+            router.send(messages[1], "side-0");
 
-            router.sendMessage(messages[3], "side-1");
+            router.send(messages[3], "side-1");
 
             // Next message should bypass queuing.
-            router.sendMessage(messages[2], "side-0", true);
+            router.send(messages[2], "side-0", true);
 
             expect(clients[0].sendMessage).toHaveBeenNthCalledWith(1, messages[2]);
             expect(clients[0].sendMessage).toHaveBeenCalledTimes(1);
@@ -124,7 +101,7 @@ describe("MessageRouter", () => {
             expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[3]);
             expect(clients[1].sendMessage).toHaveBeenCalledTimes(1);
 
-            router.sendMessage(messages[4], "side-0");
+            router.send(messages[4], "side-0");
             expect(clients[0].sendMessage).toHaveBeenNthCalledWith(4, messages[4]);
             expect(clients[0].sendMessage).toHaveBeenCalledTimes(4);
             expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[3]);
@@ -132,9 +109,9 @@ describe("MessageRouter", () => {
         });
     });
 
-    describe("broadcastMessage", () => {
+    describe("broadcast", () => {
         it("should send it to client", () => {
-            router.broadcastMessage(messages[0]);
+            router.broadcast(messages[0]);
 
             expect(clients[0].sendMessage).toHaveBeenCalledWith(messages[0]);
             expect(clients[0].sendMessage).toHaveBeenCalledTimes(1);
@@ -143,7 +120,7 @@ describe("MessageRouter", () => {
         });
 
         it("should send it to clients that are not excluded", () => {
-            router.broadcastMessage(messages[0], "side-0");
+            router.broadcast(messages[0], "side-0");
 
             expect(clients[0].sendMessage).not.toHaveBeenCalled();
             expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[0]);
@@ -151,7 +128,7 @@ describe("MessageRouter", () => {
         });
 
         it("should not send any messages if all clients are excluded", () => {
-            router.broadcastMessage(messages[0], ["side-0", "side-1"]);
+            router.broadcast(messages[0], ["side-0", "side-1"]);
 
             expect(clients[0].sendMessage).not.toHaveBeenCalled();
             expect(clients[1].sendMessage).not.toHaveBeenCalled();

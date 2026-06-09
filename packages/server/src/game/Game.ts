@@ -21,6 +21,7 @@ import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
 import { Unit } from "./Unit.js";
+import { MessageRouter } from "./MessageRouter.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -55,6 +56,7 @@ export class Game {
     private readonly _context: ClientMessageContext;
     private readonly _messageManager: ClientMessageManager;
 
+    private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
     private _scenario: Scenario | null;
 
@@ -79,6 +81,7 @@ export class Game {
 
         this._registerMessageHandlers();
 
+        this._messageRouter = null;
         this._phaseHandler = new LobbyPhaseHandler(this);
         this._phaseHandler.registerMessageHandlers(this._messageManager);
 
@@ -111,14 +114,26 @@ export class Game {
                 break;
 
             case Phase.enum.armament:
+                this._messageRouter = new MessageRouter(
+                    this.sides.map(({ id }) => id),
+                    this.clients
+                );
                 this._phaseHandler = new ArmamentPhaseHandler(this);
                 break;
 
             case Phase.enum.deployment:
+                this._messageRouter = new MessageRouter(
+                    this.sides.map(({ id }) => id),
+                    this.clients
+                );
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
             case Phase.enum.action:
+                this._messageRouter = new MessageRouter(
+                    this.sides.map(({ id }) => id),
+                    this.clients
+                );
                 this._phaseHandler = new ActionPhaseHandler(this);
                 break;
 
@@ -129,6 +144,14 @@ export class Game {
         this._phaseHandler.initialise();
 
         this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
+    get messageRouter(): MessageRouter {
+        if (!this._messageRouter) {
+            throw new Error("No message router set");
+        }
+
+        return this._messageRouter;
     }
 
     get sides(): Side[] {
@@ -518,5 +541,13 @@ export class Game {
         this.startSide();
 
         return false;
+    }
+
+    verifyFromPlayingClient(from: Client): void | never {
+        if (from.id !== this.messageRouter.getClientForSide(this.turnsSide.id).id) {
+            throw new Error(
+                `Message from client '${from.name}' (${from.id}) is unexpected - not their turn (${this.turnsSide.name})`
+            );
+        }
     }
 }

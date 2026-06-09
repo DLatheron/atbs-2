@@ -62,21 +62,6 @@ export const RenderImage = z.object({
 });
 export type RenderImage = z.infer<typeof RenderImage>;
 
-export const ClientMap = z.object({
-    width: z.number().positive(),
-    height: z.number().positive(),
-    tileSize: z.number().positive(),
-    tilesByRenderMode: z.object({
-        [RenderMode.enum.MAP_MODE]: z.array(z.array(z.array(RenderImage))),
-        [RenderMode.enum.FIRE_MODE]: z.array(z.array(z.array(RenderImage)))
-    })
-});
-export type ClientMap = z.infer<typeof ClientMap>;
-
-export function isRenderImage(node: unknown): node is RenderImage {
-    return node === null || node === undefined || (typeof node === "object" && "imageId" in node);
-}
-
 export const RenderList = z.array(RenderImage);
 export type RenderList = z.infer<typeof RenderList>;
 
@@ -86,6 +71,21 @@ export function isRenderList(node: unknown): node is RenderList {
         node === undefined ||
         (Array.isArray(node) && (node.length === 0 || node.every(isRenderImage)))
     );
+}
+
+export const ClientMap = z.object({
+    width: z.number().positive(),
+    height: z.number().positive(),
+    tileSize: z.number().positive(),
+    tilesByRenderMode: z.object({
+        [RenderMode.enum.MAP_MODE]: z.array(z.array(RenderList)),
+        [RenderMode.enum.FIRE_MODE]: z.array(z.array(RenderList))
+    })
+});
+export type ClientMap = z.infer<typeof ClientMap>;
+
+export function isRenderImage(node: unknown): node is RenderImage {
+    return node === null || node === undefined || (typeof node === "object" && "imageId" in node);
 }
 
 export const RenderListByMode = z.record(RenderMode, RenderList);
@@ -181,3 +181,8 @@ export const WaitingFor = z.object({
     sides: z.array(SideSummary)
 });
 export type WaitingFor = z.infer<typeof WaitingFor>;
+
+const errorType = ["INSUFFICIENT_ACTION_POINTS"] as const;
+
+export const ErrorType = z.enum(errorType);
+export type ErrorType = z.infer<typeof ErrorType>;

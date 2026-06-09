@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
+import { merge } from "lodash";
 import { useServerMessageManager, useWorld } from "../../hooks";
-import { ClientMap, ImageId, SideSummary, TileInfo, UnitSummary } from "@atbs/shared-data";
+import {
+    ClientMap,
+    ImageId,
+    RenderMode,
+    SideSummary,
+    TileInfo,
+    UnitSummary
+} from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
-import { Orientation } from "@atbs/maths";
+import { Misc, Orientation, TilePos } from "@atbs/maths";
 
 export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
@@ -40,6 +48,7 @@ export function useActionPage() {
                 world.map = payload;
                 setMap(payload);
             }),
+
             messageManager.registerHandler("server:unit:selected", (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
 
@@ -55,10 +64,12 @@ export function useActionPage() {
                     setSidePanelMode("map-mode");
                 }
             }),
+
             messageManager.registerHandler("server:turn:start", (_context, payload) => {
                 setSide(payload.side);
                 setTurn(payload.turn);
             }),
+
             messageManager.registerHandler("server:game:tile:info", async (_context, payload) => {
                 const imageSet = new Set<ImageId>();
                 ImageCache.CacheRenderListImages(payload.terrain.uiImage, imageSet);
@@ -69,6 +80,37 @@ export function useActionPage() {
                 await imageCache.waitForImagesToCache(imageSet);
 
                 setTileInfo(payload);
+            }),
+
+            messageManager.registerHandler("server:wait:time", async (_context, payload) => {
+                await Misc.delay(payload);
+            }),
+
+            messageManager.registerHandler("server:camera:move:to", async (_context, payload) => {
+                console.info("Camera move to", payload);
+            }),
+
+            messageManager.registerHandler("server:map:update", (_context, payload) => {
+                setMap((map) => {
+                    payload.forEach((update) => {
+                        const tilePos = new TilePos(update.tilePos);
+                        if (map) {
+                            map.tilesByRenderMode[RenderMode.enum.MAP_MODE][tilePos.row][
+                                tilePos.col
+                            ] = update.tileByRenderMode[RenderMode.enum.MAP_MODE];
+                            map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][
+                                tilePos.col
+                            ] = update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
+                        }
+                    });
+                    return map;
+                });
+            }),
+
+            messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
+                setUnit((unit) => {
+                    return merge({}, unit, payload);
+                });
             })
         ];
 

@@ -1,7 +1,8 @@
-import { ClientToServerMessage, Phase } from "@atbs/shared-data";
+import type { ClientToServerMessage, Phase } from "@atbs/shared-data";
 import type { ClientMessageManager, Game } from "../Game.js";
 import type { Client } from "../Client.js";
-import { HandlerHandle } from "@atbs/misc";
+import type { HandlerHandle } from "@atbs/misc";
+import type { MessageRouter } from "../MessageRouter.js";
 
 export abstract class PhaseHandler {
     private readonly _game: Game;
@@ -17,6 +18,10 @@ export abstract class PhaseHandler {
 
     protected get game(): Game {
         return this._game;
+    }
+
+    protected get messageRouter(): MessageRouter {
+        return this._game.messageRouter;
     }
 
     abstract get phase(): Phase;
