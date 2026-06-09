@@ -158,6 +158,22 @@ export class Unit extends SceneObject {
         return super.getRenderList(unitContext);
     }
 
+    rotate(orientation: Orientation) {
+        console.info("Rotating", this.name, "to orientation", orientation);
+
+        // TODO:
+        // - Check that rotation can take place.
+        // - Rotate unit.
+        // - Camera translate to position (all visible clients - possibly deferred).
+        // - Update visibility (later).
+        // - Process and send tile update (to all clients that can see).
+        // - Process and send unit attribute updates (to client controlling unit).
+    }
+
+    move(orientation: Orientation) {
+        console.info("Moving", this.name, "in orientation", orientation);
+    }
+
     toSummary(): UnitSummary {
         return {
             id: this.id,

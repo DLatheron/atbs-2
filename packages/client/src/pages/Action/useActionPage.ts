@@ -3,6 +3,7 @@ import { useServerMessageManager, useWorld } from "../../hooks";
 import { ClientMap, ImageId, SideSummary, TileInfo, UnitSummary } from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
+import { Orientation } from "@atbs/maths";
 
 export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
@@ -77,6 +78,36 @@ export function useActionPage() {
         };
     }, [messageManager, sendMessage, world, imageCache]);
 
+    const onMove = useCallback(
+        (orientation: Orientation) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:move",
+                    payload: {
+                        unitId: unit.id,
+                        orientation
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onRotateTo = useCallback(
+        (orientation: Orientation) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:rotate",
+                    payload: {
+                        unitId: unit.id,
+                        orientation
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
     const onEndMovement = useCallback(() => {
         if (unit?.id) {
             sendMessage({
@@ -100,6 +131,8 @@ export function useActionPage() {
         side,
         tileInfo,
         sidePanelMode,
+        onMove,
+        onRotateTo,
         onEndMovement,
         onEndTurn
     };

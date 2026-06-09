@@ -53,10 +53,7 @@ function parseDescription(entry: Description[0], index: number) {
 
 export function DescriptionComponent({ description }: DescriptionComponentProps) {
     return (
-        <Container
-            disableGutters
-            maxWidth={false}
-        >
+        <Container disableGutters maxWidth={false}>
             {description.map(parseDescription)}
         </Container>
     );

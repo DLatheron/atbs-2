@@ -79,6 +79,7 @@ export class ActionPhaseHandler extends PhaseHandler {
             messageManager.registerHandler(
                 "client:unit:move:end",
                 ({ game }, selectedUnitId, from) => {
+                    // TODO: Validate that from is from the correct client.
                     const { selectedUnit } = game;
                     if (selectedUnitId === selectedUnit?.id) {
                         game.selectedUnit = null;
@@ -86,6 +87,26 @@ export class ActionPhaseHandler extends PhaseHandler {
                             type: "server:unit:selected",
                             payload: null
                         });
+                    }
+                }
+            ),
+            messageManager.registerHandler(
+                "client:unit:move",
+                ({ game }, { unitId, orientation }) => {
+                    // TODO: Validate that from is from the correct client.
+                    const { selectedUnit } = game;
+                    if (unitId === selectedUnit?.id) {
+                        selectedUnit.move(orientation);
+                    }
+                }
+            ),
+            messageManager.registerHandler(
+                "client:unit:rotate",
+                ({ game }, { unitId, orientation }) => {
+                    // TODO: Validate that from is from the correct client.
+                    const { selectedUnit } = game;
+                    if (unitId === selectedUnit?.id) {
+                        selectedUnit.rotate(orientation);
                     }
                 }
             )

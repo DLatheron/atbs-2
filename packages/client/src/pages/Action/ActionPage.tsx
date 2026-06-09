@@ -16,7 +16,17 @@ export function ActionPage({ visible }: ActionPageProps) {
     const statusBarHeight = 60;
     const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
 
-    const { unit, turn, side, tileInfo, sidePanelMode, onEndMovement, onEndTurn } = useActionPage();
+    const {
+        unit,
+        turn,
+        side,
+        tileInfo,
+        sidePanelMode,
+        onMove,
+        onRotateTo,
+        onEndMovement,
+        onEndTurn
+    } = useActionPage();
 
     const { world } = useWorld();
 
@@ -125,7 +135,9 @@ export function ActionPage({ visible }: ActionPageProps) {
                     visible={sidePanelMode === "move-mode"}
                     disabled={false}
                     unit={unit}
-                    onEndTurn={onEndMovement}
+                    onMove={onMove}
+                    onRotateTo={onRotateTo}
+                    onEndMovement={onEndMovement}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
             </SidePanel>
