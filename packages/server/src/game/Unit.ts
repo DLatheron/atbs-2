@@ -292,6 +292,7 @@ export class Unit extends SceneObject {
 
             messageRouter.sendIfVisible(
                 [
+                    { type: "server:wait:time", payload: 300 },
                     {
                         type: "server:map:update",
                         payload: [
@@ -309,8 +310,7 @@ export class Unit extends SceneObject {
                                 }
                             }
                         ]
-                    },
-                    { type: "server:wait:time", payload: 250 }
+                    }
                 ],
                 mapLocation
             );

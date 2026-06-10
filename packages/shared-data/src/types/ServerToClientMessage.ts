@@ -107,7 +107,12 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:turn:start"),
         payload: z.object({
-            turn: z.number().min(1),
+            turn: z.number().min(1)
+        })
+    }),
+    z.object({
+        type: z.literal("server:side:start"),
+        payload: z.object({
             side: SideSummary
         })
     }),

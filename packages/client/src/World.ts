@@ -20,6 +20,9 @@ export class World {
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
 
+    _waitForRenderStart: Promise<void>;
+    _renderStarted: (() => void) | null = null;
+
     constructor(imageCache: ImageCache) {
         this._camera = new Camera2d();
         this._imageCache = imageCache;
@@ -31,6 +34,10 @@ export class World {
         this._sendMessage = () => {
             throw new Error("World:sendMessage function not set");
         };
+
+        this._waitForRenderStart = new Promise((resolve) => {
+            this._renderStarted = resolve;
+        });
     }
 
     get hasMap(): boolean {
@@ -162,6 +169,11 @@ export class World {
         const offset = new Vec2(tileSize / 2, tileSize / 2);
 
         this.renderTerrainAndFurniture(context, tileSize, scale, offset);
+
+        if (this._renderStarted) {
+            this._renderStarted();
+            this._renderStarted = null;
+        }
     }
 
     iterateViewportTiles(

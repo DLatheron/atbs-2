@@ -12,7 +12,7 @@ import {
 } from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
-import { Misc, Orientation, TilePos, Vec2 } from "@atbs/maths";
+import { Orientation, TilePos, Vec2 } from "@atbs/maths";
 
 function delay(delayInMs: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, delayInMs));
@@ -54,6 +54,8 @@ export function useActionPage() {
 
                 world.map = payload;
                 setMap(payload);
+
+                await world._waitForRenderStart;
             }),
 
             messageManager.registerHandler("server:unit:selected", (_context, payload) => {
@@ -73,8 +75,11 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:turn:start", (_context, payload) => {
-                setSide(payload.side);
                 setTurn(payload.turn);
+            }),
+
+            messageManager.registerHandler("server:side:start", (_context, payload) => {
+                setSide(payload.side);
             }),
 
             messageManager.registerHandler("server:game:tile:info", async (_context, payload) => {
@@ -94,8 +99,6 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:camera:move:to", async (_context, payload) => {
-                console.info("Camera move to", payload);
-
                 if (payload.target === "world") {
                     await new Promise<void>((resolve) =>
                         world.camera.interpolateToWorldPos(
@@ -149,8 +152,6 @@ export function useActionPage() {
 
                     return map;
                 });
-
-                await delay(1000);
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {

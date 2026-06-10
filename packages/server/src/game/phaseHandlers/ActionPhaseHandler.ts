@@ -12,6 +12,11 @@ export class ActionPhaseHandler extends PhaseHandler {
     // TODO: Need to set just the first side off playing - other side should be hidden (and not receive any updates).
 
     async initialise() {
+        this.messageRouter.broadcast({
+            type: "server:phase",
+            payload: { phase: Phase.enum.action }
+        });
+
         this.game.startActionPhase();
         this.game.startTurn();
 
@@ -25,10 +30,6 @@ export class ActionPhaseHandler extends PhaseHandler {
         //     type: "server:map",
         //     payload: this.game.worldMap.renderClientMap()
         // });
-        this.messageRouter.broadcast({
-            type: "server:phase",
-            payload: { phase: Phase.enum.action }
-        });
     }
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {

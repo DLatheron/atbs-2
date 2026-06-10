@@ -475,43 +475,14 @@ export class Game {
                 this.worldMap.addUnit(unit);
             })
         );
-    }
 
-    startSide(): void {
         this.messageRouter.broadcast(
             {
-                type: "server:wait",
-                payload: {
-                    phase: "action",
-                    sides: [this.turnsSide.toSummary()]
-                }
+                type: "server:map",
+                payload: this.worldMap.renderClientMap()
             },
-            this.turnsSideId,
-        );
-
-        this.messageRouter.resumeMessageSending(this.turnsSideId);
-        this.messageRouter.pauseMessageSending(this.oppositionSideIds);
-
-        this.messageRouter.broadcast({
-            type: "server:map",
-            payload: this.worldMap.renderClientMap()
-        });
-
-        this.messageRouter.send(
-            [
-                {
-                    type: "server:turn:start",
-                    payload: {
-                        turn: this.turn,
-                        side: this.turnsSide.toSummary()
-                    }
-                },
-                {
-                    type: "server:wait",
-                    payload: null
-                }
-            ],
-            this.turnsSideId
+            [],
+            true
         );
     }
 
@@ -520,10 +491,67 @@ export class Game {
 
         console.info(`Starting turn: ${turn}`);
 
+        this.messageRouter.broadcast(
+            {
+                type: "server:turn:start",
+                payload: { turn }
+            },
+            [],
+            true
+        );
+
         this._playState.sides = [...this.sides];
         this.selectedUnit = null;
 
         this.startSide();
+    }
+
+    startSide(): void {
+        // Make non-playing sides display the waiting modal.
+        this.messageRouter.send(
+            {
+                type: "server:wait",
+                payload: {
+                    phase: "action",
+                    sides: [this.turnsSide.toSummary()]
+                }
+            },
+            this.oppositionSideIds,
+            true
+        );
+
+        // Make the playing side start the side, disable their UI and clear their waiting model.
+        this.messageRouter.send(
+            [
+                {
+                    type: "server:side:start",
+                    payload: { side: this.turnsSide.toSummary() }
+                },
+                {
+                    type: "server:wait",
+                    payload: null
+                },
+                {
+                    type: "server:ui:disabled",
+                    payload: true
+                }
+            ],
+            this.turnsSideId,
+            true
+        );
+
+        // Playback any queued message.
+        this.messageRouter.pauseMessageSending(this.oppositionSideIds);
+        this.messageRouter.resumeMessageSending(this.turnsSideId);
+
+        // When done re-enable playing side's UI.
+        this.messageRouter.send(
+            {
+                type: "server:ui:disabled",
+                payload: false
+            },
+            this.turnsSideId
+        );
     }
 
     endTurn(): void {
