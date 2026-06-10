@@ -74,20 +74,20 @@ export class MessageManager<
     private async processNextMessage() {
         let entry: { message: MESSAGE; from: FROM } | undefined;
 
+        this._processingMessages = true;
         while ((entry = this._received.shift())) {
             const { message, from } = entry;
 
             const { type } = message;
             const messageHandlerEntries = this.getMessageHandlerEntries(type);
 
-            this._processingMessages = true;
             console.info("+++ Processing message", message.type, message.payload);
             for (const { handler } of messageHandlerEntries) {
                 await handler(this._context, message.payload, from);
             }
             console.info("--- Processed message", message.type, message.payload);
-            this._processingMessages = false;
         }
+        this._processingMessages = false;
     }
 
     /**

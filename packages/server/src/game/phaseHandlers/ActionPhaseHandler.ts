@@ -12,6 +12,11 @@ export class ActionPhaseHandler extends PhaseHandler {
     // TODO: Need to set just the first side off playing - other side should be hidden (and not receive any updates).
 
     async initialise() {
+        this.messageRouter.broadcast({
+            type: "server:phase",
+            payload: { phase: Phase.enum.action }
+        });
+
         this.game.startActionPhase();
         this.game.startTurn();
 
@@ -25,34 +30,24 @@ export class ActionPhaseHandler extends PhaseHandler {
         //     type: "server:map",
         //     payload: this.game.worldMap.renderClientMap()
         // });
-        this.game.broadcastMessage({
-            type: "server:phase",
-            payload: { phase: Phase.enum.action }
-        });
     }
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {
         this._handlerHandles = [
-            messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
-                from.sendMessage({
-                    type: "server:map",
-                    payload: this.game.worldMap.renderClientMap()
-                });
-            }),
-            messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
-                const playingClient = this.game.clients.find(
-                    ({ sideId }) => this.game.turnsSide.id === sideId
-                );
-                if (!playingClient) {
-                    throw new Error("Didn't find expected client");
-                }
+            // messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
+            //     from.sendMessage({
+            //         type: "server:map",
+            //         payload: this.game.worldMap.renderClientMap()
+            //     });
+            // }),
 
-                if (from.id === playingClient.id) {
-                    game.nextSide();
-                }
+            messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
+                game.verifyFromPlayingClient(from);
+                game.nextSide();
             }),
+
             messageManager.registerHandler("client:game:tile:info", ({ game }, payload, from) => {
-                const { worldMap } = game;
+                const { map: worldMap } = game;
                 const tilePos = new TilePos(payload.tilePos);
                 const tile = worldMap.getTile(tilePos);
 
@@ -61,24 +56,30 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: tile.getTileInfo()
                 });
             }),
+
             messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {
-                const { worldMap } = game;
+                game.verifyFromPlayingClient(from);
+
+                const { map: worldMap } = game;
                 const tilePos = new TilePos(payload.tilePos);
                 const tile = worldMap.getTile(tilePos);
                 const unit = tile.topmostUnit;
 
-                if (unit) {
+                if (unit && unit.side.id === from.sideId) {
                     game.selectedUnit = unit;
-                }
 
-                from.sendMessage({
-                    type: "server:unit:selected",
-                    payload: unit?.toSummary() ?? null
-                });
+                    from.sendMessage({
+                        type: "server:unit:selected",
+                        payload: unit.toSummary()
+                    });
+                }
             }),
+
             messageManager.registerHandler(
                 "client:unit:move:end",
                 ({ game }, selectedUnitId, from) => {
+                    game.verifyFromPlayingClient(from);
+
                     const { selectedUnit } = game;
                     if (selectedUnitId === selectedUnit?.id) {
                         game.selectedUnit = null;
@@ -86,6 +87,32 @@ export class ActionPhaseHandler extends PhaseHandler {
                             type: "server:unit:selected",
                             payload: null
                         });
+                    }
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:move",
+                ({ game }, { unitId, orientation }, from) => {
+                    game.verifyFromPlayingClient(from);
+
+                    const { selectedUnit } = game;
+                    if (unitId === selectedUnit?.id) {
+                        selectedUnit.move(game, orientation, game.messageRouter);
+                        from.sendMessage({ type: "server:ui:disabled", payload: false });
+                    }
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:rotate",
+                ({ game }, { unitId, orientation }, from) => {
+                    game.verifyFromPlayingClient(from);
+
+                    const { selectedUnit } = game;
+                    if (unitId === selectedUnit?.id) {
+                        selectedUnit.rotate(game, orientation, game.messageRouter);
+                        from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
             )

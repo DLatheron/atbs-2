@@ -1,28 +1,28 @@
-import { ClientMap, RenderMode, WorldMapId } from "@atbs/shared-data";
+import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 
-export const WorldMapRecipe = z.object({
-    id: WorldMapId,
+export const MapRecipe = z.object({
+    id: MapId,
     name: z.string().min(1),
     width: z.number().min(1).max(256),
     height: z.number().min(1).max(256),
     tileSize: z.number().min(50).max(200),
     tiles: z.array(z.array(TileRecipe))
 });
-export type WorldMapRecipe = z.infer<typeof WorldMapRecipe>;
+export type MapRecipe = z.infer<typeof MapRecipe>;
 
 export class WorldMap {
-    private readonly _id: WorldMapId;
+    private readonly _id: MapId;
     private readonly _name: string;
     private readonly _width: number;
     private readonly _height: number;
     private readonly _tileSize: number;
     private readonly _tiles: Tile[][];
 
-    constructor(recipe: WorldMapRecipe) {
+    constructor(recipe: Readonly<MapRecipe>) {
         this._id = recipe.id;
         this._name = recipe.name;
         this._width = recipe.width;

@@ -1,5 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Box, Button, Container, Grid, Stack, SxProps, Typography } from "@mui/material";
+import { Box, Button, Container, Grid, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../../Description/Description";
 import { AttributesComponent } from "../../Attributes";
 import {
@@ -14,18 +14,50 @@ import {
 } from "../../../helpers/formattingHelpers";
 import { DirectionComponent } from "../../Direction";
 import { ImageComponent } from "../../Image";
+import { Orientation, rotateOrientation } from "@atbs/maths";
+import { useMemo } from "react";
+import { useKeyboard } from "../../../hooks";
 
 export interface MoveModePanelProps {
     visible: boolean;
     disabled: boolean;
     unit: UnitSummary | null;
 
-    onEndTurn: () => void;
+    onMove: (orientation: Orientation) => void;
+    onRotateTo: (orientation: Orientation) => void;
+    onEndMovement: () => void;
 
     sx?: SxProps;
 }
 
-export function MoveModePanel({ visible, disabled, unit, onEndTurn, sx }: MoveModePanelProps) {
+export function MoveModePanel({
+    visible,
+    disabled,
+    unit,
+    onMove,
+    onRotateTo,
+    onEndMovement,
+    sx
+}: MoveModePanelProps) {
+    const keyMap = useMemo(
+        () => ({
+            KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
+            KeyD: () => unit && onRotateTo(rotateOrientation(unit.orientation, 1)),
+            KeyW: () => unit && onMove(Orientation.NORTH),
+            KeyS: () => unit && onMove(Orientation.SOUTH),
+            // KeyF: () => onEnterFireMode(),
+            // KeyI: () => onOpenInventory(),
+            // KeyU: () => onActionMode(!actionMode),
+            Escape: () => onEndMovement()
+        }),
+        [unit, onMove, onRotateTo, onEndMovement]
+    );
+
+    useKeyboard({
+        keyMap,
+        disabled: !visible || disabled
+    });
+
     if (!visible) {
         return null;
     }
@@ -69,19 +101,25 @@ export function MoveModePanel({ visible, disabled, unit, onEndTurn, sx }: MoveMo
                     rowGap: 2
                 }}
             >
-                <Typography variant="h5" sx={{ gridArea: "name", mx: "auto" }}>{unit.name}</Typography>
+                <Typography variant="h5" sx={{ gridArea: "name", mx: "auto" }}>
+                    {unit.name}
+                </Typography>
                 <ImageComponent sx={{ gridArea: "image", mx: "auto" }} images={unit.uiImage} />
                 <Box sx={{ gridArea: "description" }}>
                     <DescriptionComponent description={unit.description} />
                 </Box>
-                <Typography variant="h6" sx={{ gridArea: "direction-title"}}>Direction:</Typography>
+                <Typography variant="h6" sx={{ gridArea: "direction-title" }}>
+                    Direction:
+                </Typography>
                 <DirectionComponent
                     direction={unit.orientation}
                     viewAngleInDegrees={unit.viewAngleInDegrees}
-                    onDirectionChange={() => {}}
+                    onDirectionChange={onRotateTo}
                     sx={{ gridArea: "direction", mx: "auto" }}
                 />
-                <Typography variant="h6" sx={{ gridArea: "attributes-title"}}>Attributes:</Typography>
+                <Typography variant="h6" sx={{ gridArea: "attributes-title" }}>
+                    Attributes:
+                </Typography>
                 <AttributesComponent
                     attributes={[
                         {
@@ -137,7 +175,7 @@ export function MoveModePanel({ visible, disabled, unit, onEndTurn, sx }: MoveMo
                 title="End the current unit's movement"
                 variant="outlined"
                 disabled={disabled}
-                onClick={onEndTurn}
+                onClick={onEndMovement}
                 sx={{ gridArea: "exit-button" }}
             >
                 End Movement

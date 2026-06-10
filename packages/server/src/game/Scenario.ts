@@ -1,33 +1,33 @@
-import { Description, ScenarioSummary, SideId, WorldMapId } from "@atbs/shared-data";
+import { Description, ScenarioSummary, SideId, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
 import { readFile } from "fs/promises";
-import { WorldMapManager } from "./WorldMapManager.js";
+import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
 
 export const ScenarioRecipe = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: Description,
-    worldMapId: WorldMapId,
+    worldMapId: MapId,
     sides: z.array(SideRecipe)
 });
 export type ScenarioRecipe = z.infer<typeof ScenarioRecipe>;
 
 export class Scenario {
-    private readonly _recipe: ScenarioRecipe;
+    private readonly _recipe: Readonly<ScenarioRecipe>;
     private readonly _sides: Side[];
     private readonly _sidesMap: Map<SideId, Side>;
-    private readonly _worldMap: WorldMap;
+    private readonly _map: WorldMap;
 
-    constructor(recipe: ScenarioRecipe) {
+    constructor(recipe: Readonly<ScenarioRecipe>) {
         this._recipe = recipe;
 
         this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe));
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
 
-        // TODO: We need to clone this at some point OR we need to be non-destructive!!!
-        this._worldMap = WorldMapManager.GetSingleton().get(recipe.worldMapId);
+        const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);
+        this._map = new WorldMap(mapRecipe);
     }
 
     get id() {
@@ -54,8 +54,8 @@ export class Scenario {
         return this.sides.some((side) => side.needsDeploymentPhase);
     }
 
-    get worldMap(): WorldMap {
-        return this._worldMap;
+    get map(): WorldMap {
+        return this._map;
     }
 
     hasSide(sideId: SideId) {

@@ -7,6 +7,7 @@ import { useActionPage } from "./useActionPage";
 import { MapModePanel, SidePanel } from "../../components/SidePanel";
 import { TitleBarComponent } from "../../components/TitleBar";
 import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
+import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -16,7 +17,20 @@ export function ActionPage({ visible }: ActionPageProps) {
     const statusBarHeight = 60;
     const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
 
-    const { unit, turn, side, tileInfo, sidePanelMode, onEndMovement, onEndTurn } = useActionPage();
+    const {
+        unit,
+        turn,
+        side,
+        tileInfo,
+        sidePanelMode,
+        error,
+        disabled,
+        onMove,
+        onRotateTo,
+        onEndMovement,
+        onEndTurn,
+        onEndError
+    } = useActionPage();
 
     const { world } = useWorld();
 
@@ -109,23 +123,31 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onDoubleClick={onDoubleClick}
                 sx={{ gridArea: "map " }}
                 // cursor={state.cursor}
-                // disabled={false}
+                disabled={disabled}
             ></MapComponent>
             <SidePanel
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
                 <MapModePanel
-                    visible={sidePanelMode === "map-mode"}
-                    disabled={false}
+                    visible={!error && sidePanelMode === "map-mode"}
+                    disabled={disabled}
                     tileInfo={tileInfo}
                     onEndTurn={onEndTurn}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <MoveModePanel
-                    visible={sidePanelMode === "move-mode"}
-                    disabled={false}
+                    visible={!error && sidePanelMode === "move-mode"}
+                    disabled={disabled}
                     unit={unit}
-                    onEndTurn={onEndMovement}
+                    onMove={onMove}
+                    onRotateTo={onRotateTo}
+                    onEndMovement={onEndMovement}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
+                />
+                <ErrorPanel
+                    error={error}
+                    timeout={3000}
+                    onEndError={onEndError}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
             </SidePanel>

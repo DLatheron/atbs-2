@@ -25,7 +25,7 @@
                     "pb": 2
                 }
             ],
-            "opposition": ["terrorists"],
+            "oppositionSideIds": ["terrorists"],
             "units": [],
             "phases": {
                 "armament": {
@@ -42,7 +42,7 @@
             "description": [
                 { "text": "A rag, tag group of terrorists led by the evil Häns Gruber", "pb": 2 }
             ],
-            "opposition": ["rescue-tem"],
+            "oppositionSideIds": ["rescue-tem"],
             "units": [],
             "phases": {
                 "armament": {

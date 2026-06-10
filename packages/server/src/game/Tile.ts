@@ -51,7 +51,7 @@ export class Tile implements IRenderableEntity {
     protected readonly _terrain: Terrain;
     protected _units: Unit[];
 
-    constructor(location: TilePos, recipe: TileRecipe) {
+    constructor(location: TilePos, recipe: Readonly<TileRecipe>) {
         this._location = location;
         this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
         this._units = [];

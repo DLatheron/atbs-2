@@ -7,6 +7,7 @@ export const SideRecipe = z.object({
     id: SideId,
     name: z.string().min(1),
     description: Description,
+    oppositionSideIds: z.array(SideId),
     units: z.array(
         z.object({
             id: UnitId,
@@ -35,12 +36,12 @@ export const SideRecipe = z.object({
 export type SideRecipe = z.infer<typeof SideRecipe>;
 
 export class Side {
-    private readonly _recipe: SideRecipe;
+    private readonly _recipe: Readonly<SideRecipe>;
     private readonly _units: Unit[];
     private readonly _unitMap: Map<UnitId, Unit>;
     private _victoryPoints: number;
 
-    constructor(recipe: SideRecipe) {
+    constructor(recipe: Readonly<SideRecipe>) {
         this._recipe = recipe;
         this._victoryPoints = 0;
 
@@ -65,6 +66,10 @@ export class Side {
 
     get description(): Description {
         return this._recipe.description;
+    }
+
+    get oppositionSideIds(): SideId[] {
+        return this._recipe.oppositionSideIds;
     }
 
     get victoryPoints(): number {

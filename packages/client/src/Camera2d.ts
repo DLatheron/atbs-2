@@ -1,22 +1,17 @@
 import { Aabb, Maths, Vec2 } from "@atbs/maths";
-
-export const enum TrackingSpeed {
-    VERY_SLOW = 0.00001,
-    SLOW = 0.01,
-    MEDIUM = 0.2,
-    FAST = 0.15,
-    PRETTY_FAST = 0.25,
-    VERY_FAST = 0.35,
-    IMMEDIATE = 1.0
-}
+import { TrackingSpeed } from "@atbs/shared-data";
 
 export class Camera2d {
+    private static readonly ADDITIONAL_VELOCITY_DAMPING = 0.98;
+
     private _worldPos: Vec2 = new Vec2();
     private _targetPos?: Vec2;
-    private _trackingSpeed: number = TrackingSpeed.FAST;
+    private _targetCallback?: () => void;
+    private _trackingSpeed: number = TrackingSpeed.enum.FAST;
 
     private _worldBounds?: Aabb;
     private _viewportDimensions?: Vec2;
+    private _additionalVelocity: Vec2 | null = null;
 
     get worldPos() {
         return this._worldPos;
@@ -110,6 +105,14 @@ export class Camera2d {
         );
     }
 
+    get additionalVelocity(): Vec2 | null {
+        return this._additionalVelocity;
+    }
+
+    set additionalVelocity(value: Vec2 | null) {
+        this._additionalVelocity = value;
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update({ time: _time, frameDelta: _frameDelta }: { time: number; frameDelta: number }) {
         const { targetPos } = this;
@@ -117,7 +120,21 @@ export class Camera2d {
             this.worldPos = Vec2.Interpolate(this.worldPos, targetPos, this.trackingSpeed);
 
             if (this.worldPos.isEqual(targetPos, 1.0)) {
+                this._targetCallback?.();
                 this.targetPos = undefined;
+            }
+
+            let { additionalVelocity } = this;
+            if (additionalVelocity) {
+                this.interpolateByDelta(additionalVelocity, TrackingSpeed.enum.IMMEDIATE);
+
+                additionalVelocity = additionalVelocity.scale(Camera2d.ADDITIONAL_VELOCITY_DAMPING);
+
+                if (additionalVelocity.length <= 1) {
+                    this._additionalVelocity = null;
+                } else {
+                    this._additionalVelocity = additionalVelocity;
+                }
             }
         }
     }
@@ -153,13 +170,25 @@ export class Camera2d {
         return worldPos.sub(this.viewportTopLeft);
     }
 
-    interpolateToWorldPos(targetPos: Vec2, trackingSpeed = TrackingSpeed.FAST) {
+    interpolateToWorldPos(
+        targetPos: Vec2,
+        trackingSpeed = TrackingSpeed.enum.FAST,
+        callback?: () => void
+    ) {
         this.targetPos = this.constrainToBox(targetPos, this.worldBounds);
+        this._targetCallback = callback;
         this.trackingSpeed = trackingSpeed;
+        this._additionalVelocity = null;
     }
 
-    interpolateByDelta(delta: Vec2, trackingSpeed = TrackingSpeed.VERY_SLOW) {
+    interpolateByDelta(
+        delta: Vec2,
+        trackingSpeed = TrackingSpeed.enum.VERY_SLOW,
+        callback?: () => void
+    ) {
         this.targetPos = this.constrainToBox(this.worldPos.sub(delta), this.worldBounds);
+        this._targetCallback = callback;
         this.trackingSpeed = trackingSpeed;
+        this._additionalVelocity = null;
     }
 }

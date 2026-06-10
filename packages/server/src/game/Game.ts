@@ -16,11 +16,12 @@ import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
 import { DeploymentPhaseHandler } from "./phaseHandlers/DeploymentPhaseHandler.js";
 import { CastToArray, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
-import { ScenarioManager } from "./ScenarioManager.js";
+import { ScenarioRecipeManager } from "./ScenarioRecipeManager.js";
 import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
 import { Unit } from "./Unit.js";
+import { MessageRouter } from "./MessageRouter.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -47,7 +48,7 @@ export type ClientMessageManager = MessageManager<
 >;
 
 export class Game {
-    private readonly _scenarioManager: ScenarioManager;
+    private readonly _scenarioRecipeManager: ScenarioRecipeManager;
 
     private _ownerId: ClientId;
     private readonly _id: GameId;
@@ -55,6 +56,7 @@ export class Game {
     private readonly _context: ClientMessageContext;
     private readonly _messageManager: ClientMessageManager;
 
+    private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
     private _scenario: Scenario | null;
 
@@ -64,8 +66,8 @@ export class Game {
         selectedUnit: Unit | null;
     };
 
-    constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
-        this._scenarioManager = scenarioManager;
+    constructor(ownerId: ClientId, scenarioManager: ScenarioRecipeManager) {
+        this._scenarioRecipeManager = scenarioManager;
         this._ownerId = ownerId;
         this._id = generateGameId();
         this._clientManager = new ClientManager();
@@ -79,6 +81,7 @@ export class Game {
 
         this._registerMessageHandlers();
 
+        this._messageRouter = null;
         this._phaseHandler = new LobbyPhaseHandler(this);
         this._phaseHandler.registerMessageHandlers(this._messageManager);
 
@@ -111,14 +114,26 @@ export class Game {
                 break;
 
             case Phase.enum.armament:
+                this._messageRouter = new MessageRouter(
+                    this.sides.map(({ id }) => id),
+                    this.clients
+                );
                 this._phaseHandler = new ArmamentPhaseHandler(this);
                 break;
 
             case Phase.enum.deployment:
+                this._messageRouter = new MessageRouter(
+                    this.sides.map(({ id }) => id),
+                    this.clients
+                );
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
             case Phase.enum.action:
+                this._messageRouter = new MessageRouter(
+                    this.sides.map(({ id }) => id),
+                    this.clients
+                );
                 this._phaseHandler = new ActionPhaseHandler(this);
                 break;
 
@@ -129,6 +144,14 @@ export class Game {
         this._phaseHandler.initialise();
 
         this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
+    get messageRouter(): MessageRouter {
+        if (!this._messageRouter) {
+            throw new Error("No message router set");
+        }
+
+        return this._messageRouter;
     }
 
     get sides(): Side[] {
@@ -155,12 +178,12 @@ export class Game {
         return this._scenario.needsDeploymentPhase;
     }
 
-    get worldMap(): WorldMap {
+    get map(): WorldMap {
         if (!this._scenario) {
             throw new Error("No scenario set");
         }
 
-        return this._scenario.worldMap;
+        return this._scenario.map;
     }
 
     async nextPhase(): Promise<Phase> {
@@ -245,8 +268,8 @@ export class Game {
         return this._scenario;
     }
 
-    get scenarioManager(): ScenarioManager {
-        return this._scenarioManager;
+    get scenarioRecipeManager(): ScenarioRecipeManager {
+        return this._scenarioRecipeManager;
     }
 
     set scenario(value: Scenario | null) {
@@ -410,6 +433,14 @@ export class Game {
         return this._playState.sides[0];
     }
 
+    get turnsSideId(): SideId {
+        return this.turnsSide.id;
+    }
+
+    get oppositionSideIds(): SideId[] {
+        return this.turnsSide.oppositionSideIds;
+    }
+
     get selectedUnit(): Unit | null {
         return this._playState.selectedUnit;
     }
@@ -441,43 +472,18 @@ export class Game {
         // Place units into the map.
         this.sides.forEach((side) =>
             side.units.forEach((unit) => {
-                this.worldMap.addUnit(unit);
+                this.map.addUnit(unit);
             })
         );
-    }
 
-    startSide(): void {
-        const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
-        if (!playingClient) {
-            throw new Error("Didn't find expected client");
-        }
-
-        this.broadcastMessage(
+        this.messageRouter.broadcast(
             {
-                type: "server:wait",
-                payload: {
-                    phase: "action",
-                    sides: [this.turnsSide.toSummary()]
-                }
+                type: "server:map",
+                payload: this.map.renderClientMap()
             },
-            playingClient.id
+            [],
+            true
         );
-
-        playingClient.sendMessage({
-            type: "server:map",
-            payload: this.worldMap.renderClientMap()
-        });
-        playingClient.sendMessage({
-            type: "server:turn:start",
-            payload: {
-                turn: this.turn,
-                side: this.turnsSide.toSummary()
-            }
-        });
-        playingClient.sendMessage({
-            type: "server:wait",
-            payload: null
-        });
     }
 
     startTurn(): void {
@@ -485,10 +491,69 @@ export class Game {
 
         console.info(`Starting turn: ${turn}`);
 
+        this.messageRouter.broadcast(
+            {
+                type: "server:turn:start",
+                payload: { turn }
+            },
+            [],
+            true
+        );
+
         this._playState.sides = [...this.sides];
         this.selectedUnit = null;
 
         this.startSide();
+    }
+
+    startSide(): void {
+        // Make non-playing sides display the waiting modal.
+        this.messageRouter.send(
+            {
+                type: "server:wait",
+                payload: {
+                    phase: "action",
+                    sides: [this.turnsSide.toSummary()]
+                }
+            },
+            this.oppositionSideIds,
+            true
+        );
+
+        // Make the playing side start the side, disable their UI and clear their waiting model.
+        this.messageRouter.send(
+            [
+                {
+                    type: "server:side:start",
+                    payload: { side: this.turnsSide.toSummary() }
+                },
+                {
+                    type: "server:wait",
+                    payload: null
+                },
+                {
+                    type: "server:ui:disabled",
+                    payload: true
+                }
+            ],
+            this.turnsSideId,
+            true
+        );
+
+        // Playback any queued message.
+        this.messageRouter.pauseMessageSending(this.oppositionSideIds);
+        this.messageRouter.resumeMessageSending(this.turnsSideId);
+
+        // When done re-enable playing side's UI.
+        this.messageRouter.send(
+            {
+                type: "server:ui:disabled",
+                payload: false
+            },
+            this.turnsSideId
+        );
+
+        this.turnsSide.units.forEach(unit => unit.startTurn());
     }
 
     endTurn(): void {
@@ -518,5 +583,13 @@ export class Game {
         this.startSide();
 
         return false;
+    }
+
+    verifyFromPlayingClient(from: Client): void | never {
+        if (from.id !== this.messageRouter.getClientForSide(this.turnsSide.id).id) {
+            throw new Error(
+                `Message from client '${from.name}' (${from.id}) is unexpected - not their turn (${this.turnsSide.name})`
+            );
+        }
     }
 }

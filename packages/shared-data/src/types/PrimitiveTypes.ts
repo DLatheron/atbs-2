@@ -15,8 +15,8 @@ export type ScenarioId = z.infer<typeof ScenarioId>;
 export const SideId = z.string().min(1);
 export type SideId = z.infer<typeof SideId>;
 
-export const WorldMapId = z.string().min(1);
-export type WorldMapId = z.infer<typeof WorldMapId>;
+export const MapId = z.string().min(1);
+export type MapId = z.infer<typeof MapId>;
 
 export const TerrainId = z.string().min(1);
 export type TerrainId = z.infer<typeof TerrainId>;
@@ -46,12 +46,15 @@ export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
 
 export const AttributeDef = z.object({
-    max: z.number().positive(),
-    value: z.number().positive().optional()
+    max: z.number().nonnegative(),
+    value: z.number().nonnegative().optional()
 });
 export type AttributeDef = z.infer<typeof AttributeDef>;
 
-export const Attribute = z.object({ max: z.number().positive(), value: z.number().positive() });
+export const Attribute = z.object({
+    max: z.number().nonnegative(),
+    value: z.number().nonnegative()
+});
 export type Attribute = z.infer<typeof Attribute>;
 
 export const RenderImage = z.object({
@@ -62,21 +65,6 @@ export const RenderImage = z.object({
 });
 export type RenderImage = z.infer<typeof RenderImage>;
 
-export const ClientMap = z.object({
-    width: z.number().positive(),
-    height: z.number().positive(),
-    tileSize: z.number().positive(),
-    tilesByRenderMode: z.object({
-        [RenderMode.enum.MAP_MODE]: z.array(z.array(z.array(RenderImage))),
-        [RenderMode.enum.FIRE_MODE]: z.array(z.array(z.array(RenderImage)))
-    })
-});
-export type ClientMap = z.infer<typeof ClientMap>;
-
-export function isRenderImage(node: unknown): node is RenderImage {
-    return node === null || node === undefined || (typeof node === "object" && "imageId" in node);
-}
-
 export const RenderList = z.array(RenderImage);
 export type RenderList = z.infer<typeof RenderList>;
 
@@ -86,6 +74,21 @@ export function isRenderList(node: unknown): node is RenderList {
         node === undefined ||
         (Array.isArray(node) && (node.length === 0 || node.every(isRenderImage)))
     );
+}
+
+export const ClientMap = z.object({
+    width: z.number().positive(),
+    height: z.number().positive(),
+    tileSize: z.number().positive(),
+    tilesByRenderMode: z.object({
+        [RenderMode.enum.MAP_MODE]: z.array(z.array(RenderList)),
+        [RenderMode.enum.FIRE_MODE]: z.array(z.array(RenderList))
+    })
+});
+export type ClientMap = z.infer<typeof ClientMap>;
+
+export function isRenderImage(node: unknown): node is RenderImage {
+    return node === null || node === undefined || (typeof node === "object" && "imageId" in node);
 }
 
 export const RenderListByMode = z.record(RenderMode, RenderList);
@@ -181,3 +184,8 @@ export const WaitingFor = z.object({
     sides: z.array(SideSummary)
 });
 export type WaitingFor = z.infer<typeof WaitingFor>;
+
+const errorType = ["INSUFFICIENT_ACTION_POINTS", "UNABLE_TO_MOVE_THERE"] as const;
+
+export const ErrorType = z.enum(errorType);
+export type ErrorType = z.infer<typeof ErrorType>;

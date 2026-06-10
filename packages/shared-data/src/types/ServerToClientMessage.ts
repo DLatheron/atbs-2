@@ -3,6 +3,8 @@ import { LobbyState } from "./LobbyState.js";
 import {
     ClientMap,
     ClientSummary,
+    ErrorType,
+    RenderList,
     ScenarioId,
     ScenarioSummary,
     SideSummary,
@@ -11,6 +13,9 @@ import {
     WaitingFor
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
+import { zodDeepPartial } from "zod-deep-partial";
+import { TilePosRecipe, Vec2Recipe } from "@atbs/maths";
+import { RenderMode } from "./RenderMode.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -102,13 +107,61 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:turn:start"),
         payload: z.object({
-            turn: z.number().min(1),
+            turn: z.number().min(1)
+        })
+    }),
+    z.object({
+        type: z.literal("server:side:start"),
+        payload: z.object({
             side: SideSummary
         })
     }),
     z.object({
         type: z.literal("server:game:tile:info"),
         payload: TileInfo
+    }),
+    z.object({
+        type: z.literal("server:error"),
+        payload: ErrorType
+    }),
+    z.object({
+        type: z.literal("server:camera:move:to"),
+        payload: z.discriminatedUnion("target", [
+            z.object({
+                target: z.literal("world"),
+                worldPos: Vec2Recipe,
+                trackingSpeed: z.number()
+            }),
+            z.object({
+                target: z.literal("tile"),
+                tilePos: TilePosRecipe,
+                trackingSpeed: z.number()
+            })
+        ])
+    }),
+    z.object({
+        type: z.literal("server:wait:time"),
+        payload: z.number().positive()
+    }),
+    z.object({
+        type: z.literal("server:unit:selected:update"),
+        payload: zodDeepPartial(UnitSummary)
+    }),
+    z.object({
+        type: z.literal("server:map:update"),
+        payload: z.array(
+            z.object({
+                tilePos: TilePosRecipe,
+                tileByRenderMode: z.object({
+                    [RenderMode.enum.MAP_MODE]: RenderList,
+                    [RenderMode.enum.FIRE_MODE]: RenderList
+                })
+            })
+        )
+    }),
+    z.object({
+        type: z.literal("server:ui:disabled"),
+        payload: z.boolean()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;
