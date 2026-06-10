@@ -7,7 +7,6 @@ const TILE_INFO_QUERY_DEBOUNCE_IN_MS = 500;
 
 export class MapModeHandler extends ModeHandler {
     private static readonly MOUSE_SPEED_SCALER = 1.0;
-    private static readonly DRAG_DAMPING = 0.98;
 
     private _mapDrag: {
         worldPos: Vec2;
@@ -16,7 +15,6 @@ export class MapModeHandler extends ModeHandler {
         lastCanvasPos: Vec2;
         movementDelta: Vec2;
     } | null;
-    private _dragVelocity: Vec2 | null;
     private _tileInfoQuery: {
         tilePos: TilePos | null;
         timerId: number;
@@ -26,7 +24,6 @@ export class MapModeHandler extends ModeHandler {
         super(world);
 
         this._mapDrag = null;
-        this._dragVelocity = null;
         this._tileInfoQuery = {
             tilePos: null,
             timerId: 0
@@ -40,16 +37,6 @@ export class MapModeHandler extends ModeHandler {
     update() {
         if (this._mapDrag) {
             this._mapDrag.lastCanvasPos = this._mapDrag.currCanvasPos;
-        }
-
-        if (this._dragVelocity) {
-            this.camera.interpolateByDelta(this._dragVelocity, TrackingSpeed.enum.IMMEDIATE);
-
-            this._dragVelocity = this._dragVelocity.scale(MapModeHandler.DRAG_DAMPING);
-
-            if (this._dragVelocity.length <= 1) {
-                this._dragVelocity = null;
-            }
         }
     }
 
@@ -85,14 +72,14 @@ export class MapModeHandler extends ModeHandler {
             lastCanvasPos: baseCanvasPos,
             movementDelta: Vec2.Zero()
         };
-        this._dragVelocity = null;
+        this.camera.additionalVelocity = null;
     }
 
     endMapDrag(event: MouseEvent | React.MouseEvent): void {
         if (this._mapDrag) {
             this.updateDelta(event, TrackingSpeed.enum.FAST);
 
-            this._dragVelocity = this._mapDrag.movementDelta;
+            this.camera.additionalVelocity = this._mapDrag.movementDelta;
 
             this._mapDrag = null;
         }

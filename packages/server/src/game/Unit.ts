@@ -66,7 +66,7 @@ function setDefaultAttribute(attributeDef: AttributeDef): Attribute {
 }
 
 export class Unit extends SceneObject {
-    private readonly _recipe: UnitRecipe;
+    private readonly _recipe: Readonly<UnitRecipe>;
     private readonly _attributes: {
         actionPoints: Attribute;
         constitution: Attribute;
@@ -81,7 +81,11 @@ export class Unit extends SceneObject {
     private _location: TilePos | null;
     private _orientation: Orientation;
 
-    constructor(recipe: UnitRecipe, overrides: UnitOverrides, additionalData: UnitAdditionalData) {
+    constructor(
+        recipe: Readonly<UnitRecipe>,
+        overrides: Readonly<UnitOverrides>,
+        additionalData: Readonly<UnitAdditionalData>
+    ) {
         super(recipe.renderable);
 
         this._recipe = recipe;

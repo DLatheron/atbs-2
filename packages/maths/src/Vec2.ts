@@ -26,7 +26,7 @@ export class Vec2 implements IVec2 {
 
     constructor();
     constructor(x: number, y: number);
-    constructor(recipe: Vec2Recipe);
+    constructor(recipe: Readonly<Vec2Recipe>);
     constructor(vec: IVec2);
     constructor(...args: unknown[]) {
         if (isVec2Recipe(args[0])) {

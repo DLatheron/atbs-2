@@ -15,8 +15,8 @@ export type ScenarioId = z.infer<typeof ScenarioId>;
 export const SideId = z.string().min(1);
 export type SideId = z.infer<typeof SideId>;
 
-export const WorldMapId = z.string().min(1);
-export type WorldMapId = z.infer<typeof WorldMapId>;
+export const MapId = z.string().min(1);
+export type MapId = z.infer<typeof MapId>;
 
 export const TerrainId = z.string().min(1);
 export type TerrainId = z.infer<typeof TerrainId>;
@@ -46,12 +46,15 @@ export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
 
 export const AttributeDef = z.object({
-    max: z.number().positive(),
-    value: z.number().positive().optional()
+    max: z.number().nonnegative(),
+    value: z.number().nonnegative().optional()
 });
 export type AttributeDef = z.infer<typeof AttributeDef>;
 
-export const Attribute = z.object({ max: z.number().positive(), value: z.number().positive() });
+export const Attribute = z.object({
+    max: z.number().nonnegative(),
+    value: z.number().nonnegative()
+});
 export type Attribute = z.infer<typeof Attribute>;
 
 export const RenderImage = z.object({

@@ -2,6 +2,7 @@ import { ClientId, LobbyState, Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager } from "../Game.js";
 import { Client } from "../Client.js";
+import { Scenario } from "../Scenario.js";
 
 const autoSetupGame = true; // Temporary Hack.
 
@@ -123,21 +124,24 @@ export class LobbyPhaseHandler extends PhaseHandler {
 
                     const client = this.game.getClient(clientId);
                     const oldScenario = game.scenario;
-                    const scenario = scenarioId ? game.scenarioManager.get(scenarioId) : null;
-                    game.scenario = scenario;
+                    if (scenarioId) {
+                        const scenarioRecipe = game.scenarioRecipeManager.get(scenarioId);
+                        game.scenario = new Scenario(scenarioRecipe);
 
-                    game.broadcastMessage({
-                        type: "server:lobby:scenario:changed",
-                        payload: {
-                            client: { id: client.id, name: client.name },
-                            oldScenario: oldScenario
-                                ? { id: oldScenario.id, name: oldScenario.name }
-                                : undefined,
-                            newScenario: scenario
-                                ? { id: scenario.id, name: scenario.name }
-                                : undefined
-                        }
-                    });
+                        game.broadcastMessage({
+                            type: "server:lobby:scenario:changed",
+                            payload: {
+                                client: { id: client.id, name: client.name },
+                                oldScenario: oldScenario
+                                    ? { id: oldScenario.id, name: oldScenario.name }
+                                    : undefined,
+                                newScenario: scenarioRecipe
+                                    ? { id: scenarioRecipe.id, name: scenarioRecipe.name }
+                                    : undefined
+                            }
+                        });
+                    }
+
                     game.broadcastMessage({
                         type: "server:lobby:state",
                         payload: this._buildLobbyState()
@@ -185,7 +189,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                 {
                     type: "server:lobby:scenario:list",
                     payload: {
-                        scenarios: this.game.scenarioManager.toScenarioSummaries()
+                        scenarios: this.game.scenarioRecipeManager.toScenarioSummaries()
                     }
                 },
                 client.id
@@ -197,7 +201,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         //
         if (autoSetupGame) {
             const scenarioId = "test.scenario";
-            const scenario = this.game.scenarioManager.get(scenarioId);
+            const scenario = this.game.scenarioRecipeManager.get(scenarioId);
             const { sides } = scenario;
 
             if (clientIsOwner) {

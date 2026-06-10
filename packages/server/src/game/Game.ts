@@ -16,7 +16,7 @@ import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
 import { DeploymentPhaseHandler } from "./phaseHandlers/DeploymentPhaseHandler.js";
 import { CastToArray, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
-import { ScenarioManager } from "./ScenarioManager.js";
+import { ScenarioRecipeManager } from "./ScenarioRecipeManager.js";
 import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
@@ -48,7 +48,7 @@ export type ClientMessageManager = MessageManager<
 >;
 
 export class Game {
-    private readonly _scenarioManager: ScenarioManager;
+    private readonly _scenarioRecipeManager: ScenarioRecipeManager;
 
     private _ownerId: ClientId;
     private readonly _id: GameId;
@@ -66,8 +66,8 @@ export class Game {
         selectedUnit: Unit | null;
     };
 
-    constructor(ownerId: ClientId, scenarioManager: ScenarioManager) {
-        this._scenarioManager = scenarioManager;
+    constructor(ownerId: ClientId, scenarioManager: ScenarioRecipeManager) {
+        this._scenarioRecipeManager = scenarioManager;
         this._ownerId = ownerId;
         this._id = generateGameId();
         this._clientManager = new ClientManager();
@@ -268,8 +268,8 @@ export class Game {
         return this._scenario;
     }
 
-    get scenarioManager(): ScenarioManager {
-        return this._scenarioManager;
+    get scenarioRecipeManager(): ScenarioRecipeManager {
+        return this._scenarioRecipeManager;
     }
 
     set scenario(value: Scenario | null) {

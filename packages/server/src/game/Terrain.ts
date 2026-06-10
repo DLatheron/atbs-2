@@ -15,9 +15,9 @@ export const TerrainRecipe = z.object({
 export type TerrainRecipe = z.infer<typeof TerrainRecipe>;
 
 export class Terrain extends SceneObject {
-    private readonly _recipe: TerrainRecipe;
+    private readonly _recipe: Readonly<TerrainRecipe>;
 
-    constructor(recipe: TerrainRecipe) {
+    constructor(recipe: Readonly<TerrainRecipe>) {
         super(recipe.renderable);
         this._recipe = recipe;
     }

@@ -35,12 +35,12 @@ export const SideRecipe = z.object({
 export type SideRecipe = z.infer<typeof SideRecipe>;
 
 export class Side {
-    private readonly _recipe: SideRecipe;
+    private readonly _recipe: Readonly<SideRecipe>;
     private readonly _units: Unit[];
     private readonly _unitMap: Map<UnitId, Unit>;
     private _victoryPoints: number;
 
-    constructor(recipe: SideRecipe) {
+    constructor(recipe: Readonly<SideRecipe>) {
         this._recipe = recipe;
         this._victoryPoints = 0;
 
