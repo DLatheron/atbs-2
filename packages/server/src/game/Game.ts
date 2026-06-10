@@ -178,12 +178,12 @@ export class Game {
         return this._scenario.needsDeploymentPhase;
     }
 
-    get worldMap(): WorldMap {
+    get map(): WorldMap {
         if (!this._scenario) {
             throw new Error("No scenario set");
         }
 
-        return this._scenario.worldMap;
+        return this._scenario.map;
     }
 
     async nextPhase(): Promise<Phase> {
@@ -472,14 +472,14 @@ export class Game {
         // Place units into the map.
         this.sides.forEach((side) =>
             side.units.forEach((unit) => {
-                this.worldMap.addUnit(unit);
+                this.map.addUnit(unit);
             })
         );
 
         this.messageRouter.broadcast(
             {
                 type: "server:map",
-                payload: this.worldMap.renderClientMap()
+                payload: this.map.renderClientMap()
             },
             [],
             true
@@ -552,6 +552,8 @@ export class Game {
             },
             this.turnsSideId
         );
+
+        this.turnsSide.units.forEach(unit => unit.startTurn());
     }
 
     endTurn(): void {

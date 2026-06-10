@@ -25,6 +25,33 @@ import { MessageRouter } from "./MessageRouter.js";
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
 
+const STRAIGHT_MOVEMENT_APT_COST = 2;
+const DIAGONAL_MOVEMENT_APT_COST = 3;
+
+const DEFAULT_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
+    [Orientation.NORTH]: STRAIGHT_MOVEMENT_APT_COST,
+    [Orientation.NORTH_EAST]: DIAGONAL_MOVEMENT_APT_COST,
+    [Orientation.EAST]: STRAIGHT_MOVEMENT_APT_COST,
+    [Orientation.SOUTH_EAST]: DIAGONAL_MOVEMENT_APT_COST,
+    [Orientation.SOUTH]: STRAIGHT_MOVEMENT_APT_COST,
+    [Orientation.SOUTH_WEST]: DIAGONAL_MOVEMENT_APT_COST,
+    [Orientation.WEST]: STRAIGHT_MOVEMENT_APT_COST,
+    [Orientation.NORTH_WEST]: DIAGONAL_MOVEMENT_APT_COST,
+    [Orientation.CENTER]: 0
+};
+
+const DIRECTIONAL_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
+    [Orientation.NORTH]: 2,
+    [Orientation.NORTH_EAST]: 3,
+    [Orientation.EAST]: 3,
+    [Orientation.SOUTH_EAST]: 4,
+    [Orientation.SOUTH]: 4,
+    [Orientation.SOUTH_WEST]: 4,
+    [Orientation.WEST]: 3,
+    [Orientation.NORTH_WEST]: 3,
+    [Orientation.CENTER]: 0
+};
+
 export const UnitRecipe = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
@@ -240,6 +267,23 @@ export class Unit extends SceneObject {
         }
     }
 
+    startTurn() {
+        console.info("Starting turn for unit", this.id);
+
+        // if (this.disorientated) {
+        //     // Reduce the amount of disorientation based on the number of action points remaining...
+        //     this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
+        // }
+
+        if (this.isAlive) {
+            // TODO: Restore action points based on burden and wounds.
+            // this._instance.attributes.actionPoints.max - (this._instance.attributes.burden * ACTION_POINT_LOSS_PER_BURDEN) - (this._instance.attributes.wounds * ACTION_POINT_LOSS_PER_WOUND)
+            this._attributes.actionPoints.value = this.maxActionPoints;
+        }
+
+        // this.updateAvailableActions(game.map);
+    }    
+
     rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
         console.info("Rotating", this.name, "to orientation", orientation);
 
@@ -288,7 +332,7 @@ export class Unit extends SceneObject {
             // TODO: Update available actions.
             // TODO: Refresh visibility (just yours).
 
-            const tile = game.worldMap.getTile(mapLocation);
+            const tile = game.map.getTile(mapLocation);
 
             messageRouter.sendIfVisible(
                 [
@@ -319,9 +363,123 @@ export class Unit extends SceneObject {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    move(_game: Game, orientation: Orientation, _messageRouter: MessageRouter) {
-        console.info("Moving", this.name, "in orientation", orientation);
+    move(game: Game, orientation: Orientation, messageRouter: MessageRouter) {
+        const { map } = game;
+
+        const direction = this.isDirectional
+            ? rotateOrientation(this.orientation, orientation)
+            : orientation;
+
+        let aptCost = this.isDirectional
+            ? DIRECTIONAL_MOVEMENT_APT_COST_MAP[orientation]
+            : DEFAULT_MOVEMENT_APT_COST_MAP[direction];
+
+        const srcPos = new TilePos(this.mapLocation.col, this.mapLocation.row);
+        const dstPos = srcPos.stepInDirection(direction);
+
+        const dstTile = map.sampleTile(dstPos);
+        if (!dstTile) {
+            messageRouter.send(
+                {
+                    type: "server:error",
+                    payload: ErrorType.enum.UNABLE_TO_MOVE_THERE
+                },
+                this.side.id
+            );
+            return;
+        }
+
+        // const movementObstruction = dstTile.getMovementObstruction(this.unitType);
+        // if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
+        //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.UNABLE_TO_MOVE_THERE));
+        //     return false;
+        // }
+
+        aptCost *= 1 /* + movementObstruction */;
+        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        // TODO: Overtaking stuff...
+
+        if (!this._useActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        const srcTile = map.getTile(this.mapLocation);
+        srcTile.removeUnit(this);
+        messageRouter.sendIfVisible(
+            [
+                { type: "server:wait:time", payload: 300 },
+                {
+                    type: "server:map:update",
+                    payload: [
+                        {
+                            tilePos: [srcPos.col, srcPos.row],
+                            tileByRenderMode: {
+                                [RenderMode.enum.MAP_MODE]: srcTile.getRenderList({
+                                    renderMode: RenderMode.enum.MAP_MODE,
+                                    states: []
+                                }),
+                                [RenderMode.enum.FIRE_MODE]: srcTile.getRenderList({
+                                    renderMode: RenderMode.enum.FIRE_MODE,
+                                    states: []
+                                })
+                            }
+                        }
+                    ]
+                }
+            ],
+            srcPos
+        );
+
+        this.location = dstTile.location;
+        dstTile.addUnit(this);
+        messageRouter.sendIfVisible([
+            {
+                type: "server:map:update",
+                payload: [
+                    {
+                        tilePos: [dstPos.col, dstPos.row],
+                        tileByRenderMode: {
+                            [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
+                                renderMode: RenderMode.enum.MAP_MODE,
+                                states: []
+                            }),
+                            [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
+                                renderMode: RenderMode.enum.FIRE_MODE,
+                                states: []
+                            })
+                        }
+                    }
+                ]
+            },
+            {
+                type: "server:camera:move:to",
+                payload: {
+                    target: "tile",
+                    tilePos: [dstPos.col, dstPos.row],
+                    trackingSpeed: TrackingSpeed.enum.MEDIUM
+                }
+            },
+        ], dstPos);        
+
+        // this.updateAvailableActions(map);
+
+        // visibilityManager.refresh({
+        //     povUnit: this,
+        //     speedScaler: 0.75,
+        //     unitMoves: [this]
+        // });
+
+        // eventList.addEvents(
+        //     { relativeToStartOfLastEvent: 0, duration: 250 },
+        //     eventList.allSideIds,
+        //     Event.UnitsChangeEvent(this),
+        //     Event.VisibilityChangeEvent(visibilityManager.allForUI())
+        // );
+
+        return true;
     }
 
     toSummary(): UnitSummary {

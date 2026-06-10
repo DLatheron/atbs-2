@@ -54,7 +54,7 @@ export class Scenario {
         return this.sides.some((side) => side.needsDeploymentPhase);
     }
 
-    get worldMap(): WorldMap {
+    get map(): WorldMap {
         return this._map;
     }
 

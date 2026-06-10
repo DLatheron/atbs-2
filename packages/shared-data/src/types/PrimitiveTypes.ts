@@ -185,7 +185,7 @@ export const WaitingFor = z.object({
 });
 export type WaitingFor = z.infer<typeof WaitingFor>;
 
-const errorType = ["INSUFFICIENT_ACTION_POINTS"] as const;
+const errorType = ["INSUFFICIENT_ACTION_POINTS", "UNABLE_TO_MOVE_THERE"] as const;
 
 export const ErrorType = z.enum(errorType);
 export type ErrorType = z.infer<typeof ErrorType>;

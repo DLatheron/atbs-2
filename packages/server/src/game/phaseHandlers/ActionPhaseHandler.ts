@@ -47,7 +47,7 @@ export class ActionPhaseHandler extends PhaseHandler {
             }),
 
             messageManager.registerHandler("client:game:tile:info", ({ game }, payload, from) => {
-                const { worldMap } = game;
+                const { map: worldMap } = game;
                 const tilePos = new TilePos(payload.tilePos);
                 const tile = worldMap.getTile(tilePos);
 
@@ -60,19 +60,19 @@ export class ActionPhaseHandler extends PhaseHandler {
             messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {
                 game.verifyFromPlayingClient(from);
 
-                const { worldMap } = game;
+                const { map: worldMap } = game;
                 const tilePos = new TilePos(payload.tilePos);
                 const tile = worldMap.getTile(tilePos);
                 const unit = tile.topmostUnit;
 
-                if (unit) {
+                if (unit && unit.side.id === from.sideId) {
                     game.selectedUnit = unit;
-                }
 
-                from.sendMessage({
-                    type: "server:unit:selected",
-                    payload: unit?.toSummary() ?? null
-                });
+                    from.sendMessage({
+                        type: "server:unit:selected",
+                        payload: unit.toSummary()
+                    });
+                }
             }),
 
             messageManager.registerHandler(
