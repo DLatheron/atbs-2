@@ -7,6 +7,7 @@ import { useActionPage } from "./useActionPage";
 import { MapModePanel, SidePanel } from "../../components/SidePanel";
 import { TitleBarComponent } from "../../components/TitleBar";
 import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
+import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -22,10 +23,12 @@ export function ActionPage({ visible }: ActionPageProps) {
         side,
         tileInfo,
         sidePanelMode,
+        error,
         onMove,
         onRotateTo,
         onEndMovement,
-        onEndTurn
+        onEndTurn,
+        onEndError
     } = useActionPage();
 
     const { world } = useWorld();
@@ -125,19 +128,25 @@ export function ActionPage({ visible }: ActionPageProps) {
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
                 <MapModePanel
-                    visible={sidePanelMode === "map-mode"}
+                    visible={!error && sidePanelMode === "map-mode"}
                     disabled={false}
                     tileInfo={tileInfo}
                     onEndTurn={onEndTurn}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <MoveModePanel
-                    visible={sidePanelMode === "move-mode"}
+                    visible={!error && sidePanelMode === "move-mode"}
                     disabled={false}
                     unit={unit}
                     onMove={onMove}
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
+                />
+                <ErrorPanel
+                    error={error}
+                    timeout={3000}
+                    onEndError={onEndError}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
             </SidePanel>

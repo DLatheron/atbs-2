@@ -124,11 +124,13 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.discriminatedUnion("target", [
             z.object({
                 target: z.literal("world"),
-                worldPos: Vec2Recipe
+                worldPos: Vec2Recipe,
+                trackingSpeed: z.number()
             }),
             z.object({
                 target: z.literal("tile"),
-                tilePos: TilePosRecipe
+                tilePos: TilePosRecipe,
+                trackingSpeed: z.number()
             })
         ])
     }),

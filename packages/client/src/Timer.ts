@@ -1,5 +1,5 @@
 import { Maths } from "@atbs/Maths";
-import { TrackingSpeed } from "./Camera2d";
+import { TrackingSpeed } from "@atbs/shared-data";
 
 const FREQUENCY_60HZ = 60;
 
@@ -115,7 +115,11 @@ export class Timer {
         if (!this.paused) {
             ++this._frameNumber;
 
-            this._scaler = Maths.Lerp(this._scaler, this._targetScaler, TrackingSpeed.PRETTY_FAST);
+            this._scaler = Maths.Lerp(
+                this._scaler,
+                this._targetScaler,
+                TrackingSpeed.enum.PRETTY_FAST
+            );
 
             const newFrameTime = this.calcTimeOfFrame(this._frameNumber);
 

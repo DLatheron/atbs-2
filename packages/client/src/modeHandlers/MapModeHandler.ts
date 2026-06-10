@@ -1,7 +1,7 @@
 import { World } from "../World";
-import { TrackingSpeed } from "../Camera2d";
 import { TilePos, Vec2 } from "@atbs/maths";
 import { ModeHandler } from "./ModeHandler";
+import { TrackingSpeed } from "@atbs/shared-data";
 
 const TILE_INFO_QUERY_DEBOUNCE_IN_MS = 500;
 
@@ -43,7 +43,7 @@ export class MapModeHandler extends ModeHandler {
         }
 
         if (this._dragVelocity) {
-            this.camera.interpolateByDelta(this._dragVelocity, TrackingSpeed.IMMEDIATE);
+            this.camera.interpolateByDelta(this._dragVelocity, TrackingSpeed.enum.IMMEDIATE);
 
             this._dragVelocity = this._dragVelocity.scale(MapModeHandler.DRAG_DAMPING);
 
@@ -90,7 +90,7 @@ export class MapModeHandler extends ModeHandler {
 
     endMapDrag(event: MouseEvent | React.MouseEvent): void {
         if (this._mapDrag) {
-            this.updateDelta(event, TrackingSpeed.FAST);
+            this.updateDelta(event, TrackingSpeed.enum.FAST);
 
             this._dragVelocity = this._mapDrag.movementDelta;
 
@@ -121,7 +121,7 @@ export class MapModeHandler extends ModeHandler {
             return;
         }
 
-        this.updateDelta(event, TrackingSpeed.VERY_FAST);
+        this.updateDelta(event, TrackingSpeed.enum.VERY_FAST);
         this.trackTile(event);
     }
 

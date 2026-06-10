@@ -5,6 +5,7 @@ import {
     ErrorType,
     RenderList,
     RenderMode,
+    TrackingSpeed,
     UnitSummary
 } from "@atbs/shared-data";
 import z from "zod";
@@ -258,7 +259,8 @@ export class Unit extends SceneObject {
                 type: "server:camera:move:to",
                 payload: {
                     target: "tile",
-                    tilePos: [mapLocation.col, mapLocation.row]
+                    tilePos: [mapLocation.col, mapLocation.row],
+                    trackingSpeed: TrackingSpeed.enum.MEDIUM
                 }
             },
             mapLocation
@@ -273,7 +275,7 @@ export class Unit extends SceneObject {
                     payload: { orientation: this._orientation }
                 },
                 this.side.id
-            );            
+            );
 
             if (!this._useActionPoints(game, ROTATION_APT_COST, messageRouter)) {
                 return;

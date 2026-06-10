@@ -3,6 +3,7 @@ import { merge } from "lodash";
 import { useServerMessageManager, useWorld } from "../../hooks";
 import {
     ClientMap,
+    ErrorType,
     ImageId,
     RenderMode,
     SideSummary,
@@ -11,7 +12,7 @@ import {
 } from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
-import { Misc, Orientation, TilePos } from "@atbs/maths";
+import { Misc, Orientation, TilePos, Vec2 } from "@atbs/maths";
 
 export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
@@ -25,6 +26,7 @@ export function useActionPage() {
     const [map, setMap] = useState<ClientMap | null>(null);
     const [unit, setUnit] = useState<UnitSummary | null>(null);
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
+    const [error, setError] = useState<ErrorType | null>(null);
 
     // Temporary hack to reload the world if necessary...
     useEffect(() => {
@@ -88,38 +90,68 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:camera:move:to", async (_context, payload) => {
                 console.info("Camera move to", payload);
+
+                if (payload.target === "world") {
+                    await new Promise<void>((resolve) =>
+                        world.camera.interpolateToWorldPos(
+                            new Vec2(payload.worldPos),
+                            payload.trackingSpeed,
+                            () => resolve()
+                        )
+                    );
+                } else {
+                    const worldPos = world.tileCenterToWorld(new TilePos(payload.tilePos));
+
+                    await new Promise<void>((resolve) =>
+                        world.camera.interpolateToWorldPos(
+                            new Vec2(worldPos),
+                            payload.trackingSpeed,
+                            () => resolve()
+                        )
+                    );
+                }
             }),
 
             messageManager.registerHandler("server:map:update", async (_context, payload) => {
                 const imageSet = new Set<ImageId>();
-                payload.forEach((update) => {
-                    ImageCache.CacheRenderListImages(update.tileByRenderMode[RenderMode.enum.MAP_MODE], imageSet);
-                    ImageCache.CacheRenderListImages(update.tileByRenderMode[RenderMode.enum.FIRE_MODE], imageSet);
-                });
+
+                for (const update of payload) {
+                    ImageCache.CacheRenderListImages(
+                        update.tileByRenderMode[RenderMode.enum.MAP_MODE],
+                        imageSet
+                    );
+                    ImageCache.CacheRenderListImages(
+                        update.tileByRenderMode[RenderMode.enum.FIRE_MODE],
+                        imageSet
+                    );
+                }
 
                 await imageCache.waitForImagesToCache(imageSet);
 
-                setMap(map => {
-                    if (map) {
-                        payload.forEach((update) => {
-                            const tilePos = new TilePos(update.tilePos);
-
-                            map.tilesByRenderMode[RenderMode.enum.MAP_MODE][tilePos.row][
-                                tilePos.col
-                            ] = update.tileByRenderMode[RenderMode.enum.MAP_MODE];
-                            map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][
-                                tilePos.col
-                            ] = update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
-                        });
+                setMap((map: ClientMap | null) => {
+                    if (!map) {
+                        return null;
                     }
+
+                    for (const update of payload) {
+                        const tilePos = new TilePos(update.tilePos);
+
+                        map.tilesByRenderMode[RenderMode.enum.MAP_MODE][tilePos.row][tilePos.col] =
+                            update.tileByRenderMode[RenderMode.enum.MAP_MODE];
+                        map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][tilePos.col] =
+                            update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
+                    }
+
                     return map;
                 });
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
-                setUnit((unit) => {
-                    return merge({}, unit, payload);
-                });
+                setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
+            }),
+
+            messageManager.registerHandler("server:error", (_context, error) => {
+                setError(error);
             })
         ];
 
@@ -175,6 +207,10 @@ export function useActionPage() {
         });
     }, [sendMessage]);
 
+    const onEndError = useCallback(() => {
+        setError(null);
+    }, []);
+
     return {
         map,
         unit,
@@ -182,9 +218,11 @@ export function useActionPage() {
         side,
         tileInfo,
         sidePanelMode,
+        error,
         onMove,
         onRotateTo,
         onEndMovement,
-        onEndTurn
+        onEndTurn,
+        onEndError
     };
 }
