@@ -25,7 +25,7 @@ export class ActionPhaseHandler extends PhaseHandler {
         //     type: "server:map",
         //     payload: this.game.worldMap.renderClientMap()
         // });
-        this.game.broadcastMessage({
+        this.messageRouter.broadcast({
             type: "server:phase",
             payload: { phase: Phase.enum.action }
         });
@@ -33,12 +33,12 @@ export class ActionPhaseHandler extends PhaseHandler {
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {
         this._handlerHandles = [
-            messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
-                from.sendMessage({
-                    type: "server:map",
-                    payload: this.game.worldMap.renderClientMap()
-                });
-            }),
+            // messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
+            //     from.sendMessage({
+            //         type: "server:map",
+            //         payload: this.game.worldMap.renderClientMap()
+            //     });
+            // }),
 
             messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
                 game.verifyFromPlayingClient(from);
@@ -98,6 +98,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
                         selectedUnit.move(game, orientation, game.messageRouter);
+                        from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
             ),
@@ -110,6 +111,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
                         selectedUnit.rotate(game, orientation, game.messageRouter);
+                        from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
             )

@@ -22,7 +22,7 @@
             "id": "goodies",
             "name": "Goodies",
             "description": [{ "text": "The goodies.", "pb": 2 }],
-            "opposition": ["baddies"],
+            "oppositionSideIds": ["baddies"],
             "units": [
                 {
                     "id": "captain-smith.unit",
@@ -42,7 +42,7 @@
             "id": "baddies",
             "name": "Baddies",
             "description": [{ "text": "The baddies.", "pb": 2 }],
-            "opposition": ["goodies"],
+            "oppositionSideIds": ["goodies"],
             "units": [],
             "phases": {
                 "armament": {

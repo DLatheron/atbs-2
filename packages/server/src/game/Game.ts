@@ -433,6 +433,14 @@ export class Game {
         return this._playState.sides[0];
     }
 
+    get turnsSideId(): SideId {
+        return this.turnsSide.id;
+    }
+
+    get oppositionSideIds(): SideId[] {
+        return this.turnsSide.oppositionSideIds;
+    }
+
     get selectedUnit(): Unit | null {
         return this._playState.selectedUnit;
     }
@@ -470,12 +478,7 @@ export class Game {
     }
 
     startSide(): void {
-        const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
-        if (!playingClient) {
-            throw new Error("Didn't find expected client");
-        }
-
-        this.broadcastMessage(
+        this.messageRouter.broadcast(
             {
                 type: "server:wait",
                 payload: {
@@ -483,24 +486,33 @@ export class Game {
                     sides: [this.turnsSide.toSummary()]
                 }
             },
-            playingClient.id
+            this.turnsSideId,
         );
 
-        playingClient.sendMessage({
+        this.messageRouter.resumeMessageSending(this.turnsSideId);
+        this.messageRouter.pauseMessageSending(this.oppositionSideIds);
+
+        this.messageRouter.broadcast({
             type: "server:map",
             payload: this.worldMap.renderClientMap()
         });
-        playingClient.sendMessage({
-            type: "server:turn:start",
-            payload: {
-                turn: this.turn,
-                side: this.turnsSide.toSummary()
-            }
-        });
-        playingClient.sendMessage({
-            type: "server:wait",
-            payload: null
-        });
+
+        this.messageRouter.send(
+            [
+                {
+                    type: "server:turn:start",
+                    payload: {
+                        turn: this.turn,
+                        side: this.turnsSide.toSummary()
+                    }
+                },
+                {
+                    type: "server:wait",
+                    payload: null
+                }
+            ],
+            this.turnsSideId
+        );
     }
 
     startTurn(): void {

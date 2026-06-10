@@ -153,6 +153,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
                 })
             })
         )
+    }),
+    z.object({
+        type: z.literal("server:ui:disabled"),
+        payload: z.boolean()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

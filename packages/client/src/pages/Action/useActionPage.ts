@@ -14,6 +14,10 @@ import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
 import { Misc, Orientation, TilePos, Vec2 } from "@atbs/maths";
 
+function delay(delayInMs: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, delayInMs));
+}
+
 export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
     const { imageCache } = useImageCache();
@@ -27,14 +31,15 @@ export function useActionPage() {
     const [unit, setUnit] = useState<UnitSummary | null>(null);
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
     const [error, setError] = useState<ErrorType | null>(null);
+    const [disabled, setDisabled] = useState<boolean>(false);
 
-    // Temporary hack to reload the world if necessary...
-    useEffect(() => {
-        sendMessage({
-            type: "client:game:refresh",
-            payload: null
-        });
-    }, [sendMessage, world.hasMap]);
+    // // Temporary hack to reload the world if necessary...
+    // useEffect(() => {
+    //     sendMessage({
+    //         type: "client:game:refresh",
+    //         payload: null
+    //     });
+    // }, [sendMessage, world.hasMap]);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -85,7 +90,7 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:wait:time", async (_context, payload) => {
-                await Misc.delay(payload);
+                await delay(payload);
             }),
 
             messageManager.registerHandler("server:camera:move:to", async (_context, payload) => {
@@ -144,6 +149,8 @@ export function useActionPage() {
 
                     return map;
                 });
+
+                await delay(1000);
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
@@ -152,6 +159,10 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:error", (_context, error) => {
                 setError(error);
+            }),
+
+            messageManager.registerHandler("server:ui:disabled", (_context, disabled) => {
+                setDisabled(disabled);
             })
         ];
 
@@ -164,6 +175,7 @@ export function useActionPage() {
     const onMove = useCallback(
         (orientation: Orientation) => {
             if (unit?.id) {
+                setDisabled(true);
                 sendMessage({
                     type: "client:unit:move",
                     payload: {
@@ -179,6 +191,7 @@ export function useActionPage() {
     const onRotateTo = useCallback(
         (orientation: Orientation) => {
             if (unit?.id) {
+                setDisabled(true);
                 sendMessage({
                     type: "client:unit:rotate",
                     payload: {
@@ -219,6 +232,7 @@ export function useActionPage() {
         tileInfo,
         sidePanelMode,
         error,
+        disabled,
         onMove,
         onRotateTo,
         onEndMovement,

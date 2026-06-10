@@ -291,31 +291,27 @@ export class Unit extends SceneObject {
             const tile = game.worldMap.getTile(mapLocation);
 
             messageRouter.sendIfVisible(
-                {
-                    type: "server:map:update",
-                    payload: [
-                        {
-                            tilePos: [mapLocation.col, mapLocation.row],
-                            tileByRenderMode: {
-                                [RenderMode.enum.MAP_MODE]: tile.getRenderList({
-                                    renderMode: RenderMode.enum.MAP_MODE,
-                                    states: []
-                                }),
-                                [RenderMode.enum.FIRE_MODE]: tile.getRenderList({
-                                    renderMode: RenderMode.enum.FIRE_MODE,
-                                    states: []
-                                })
+                [
+                    {
+                        type: "server:map:update",
+                        payload: [
+                            {
+                                tilePos: [mapLocation.col, mapLocation.row],
+                                tileByRenderMode: {
+                                    [RenderMode.enum.MAP_MODE]: tile.getRenderList({
+                                        renderMode: RenderMode.enum.MAP_MODE,
+                                        states: []
+                                    }),
+                                    [RenderMode.enum.FIRE_MODE]: tile.getRenderList({
+                                        renderMode: RenderMode.enum.FIRE_MODE,
+                                        states: []
+                                    })
+                                }
                             }
-                        }
-                    ]
-                },
-                mapLocation
-            );
-            messageRouter.sendIfVisible(
-                {
-                    type: "server:wait:time",
-                    payload: 250
-                },
+                        ]
+                    },
+                    { type: "server:wait:time", payload: 250 }
+                ],
                 mapLocation
             );
 

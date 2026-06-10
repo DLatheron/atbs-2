@@ -24,6 +24,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         tileInfo,
         sidePanelMode,
         error,
+        disabled,
         onMove,
         onRotateTo,
         onEndMovement,
@@ -122,21 +123,21 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onDoubleClick={onDoubleClick}
                 sx={{ gridArea: "map " }}
                 // cursor={state.cursor}
-                // disabled={false}
+                disabled={disabled}
             ></MapComponent>
             <SidePanel
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
                 <MapModePanel
                     visible={!error && sidePanelMode === "map-mode"}
-                    disabled={false}
+                    disabled={disabled}
                     tileInfo={tileInfo}
                     onEndTurn={onEndTurn}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <MoveModePanel
                     visible={!error && sidePanelMode === "move-mode"}
-                    disabled={false}
+                    disabled={disabled}
                     unit={unit}
                     onMove={onMove}
                     onRotateTo={onRotateTo}

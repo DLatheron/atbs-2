@@ -15,7 +15,7 @@ export interface MapComponentProps {
     onClick?: (event: React.MouseEvent) => void;
     onDoubleClick?: (event: React.MouseEvent) => void;
 
-    // disabled?: boolean;
+    disabled?: boolean;
     // cursor?: string;
     children?: ReactNode;
 

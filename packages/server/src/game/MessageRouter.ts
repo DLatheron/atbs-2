@@ -57,7 +57,7 @@ export class MessageRouter {
     }
 
     send(
-        message: ServerToClientMessage,
+        messages: ServerToClientMessage | ServerToClientMessage[],
         sideIds: SideId | SideId[] = this._sideIds,
         bypassQueuing = false
     ): void {
@@ -65,19 +65,21 @@ export class MessageRouter {
             if (!bypassQueuing) {
                 const messageQueue = this._sideIdToMessageQueue.get(sideId);
                 if (messageQueue !== undefined) {
-                    messageQueue.push(message);
+                    messageQueue.push(...Misc.CastToArray(messages));
                     continue;
                 }
             }
 
             const client = this.getClientForSide(sideId);
 
-            client.sendMessage(message);
+            for (const message of Misc.CastToArray(messages)) {
+                client.sendMessage(message);
+            }
         }
     }
 
     sendIfVisible(
-        message: ServerToClientMessage,
+        messages: ServerToClientMessage | ServerToClientMessage[],
         tilePos: TilePos,
         sideIds: SideId | SideId[] = this._sideIds,
         bypassQueuing = false
@@ -85,12 +87,12 @@ export class MessageRouter {
         for (const sideId of Misc.CastToArray(sideIds)) {
             console.info("Check if", tilePos, "is visible to", sideId, "ASSUMING YES!");
 
-            this.send(message, sideId, bypassQueuing);
+            this.send(messages, sideId, bypassQueuing);
         }
     }
 
     broadcast(
-        message: ServerToClientMessage,
+        messages: ServerToClientMessage | ServerToClientMessage[],
         excludeSideIds: SideId | SideId[] = [],
         bypassQueuing = false
     ): void {
@@ -99,6 +101,6 @@ export class MessageRouter {
                 ? this._sideIds
                 : this._sideIds.filter((sideId) => !excludeSideIds.includes(sideId));
 
-        this.send(message, includeSideIds, bypassQueuing);
+        this.send(messages, includeSideIds, bypassQueuing);
     }
 }

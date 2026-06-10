@@ -7,6 +7,7 @@ export const SideRecipe = z.object({
     id: SideId,
     name: z.string().min(1),
     description: Description,
+    oppositionSideIds: z.array(SideId),
     units: z.array(
         z.object({
             id: UnitId,
@@ -65,6 +66,10 @@ export class Side {
 
     get description(): Description {
         return this._recipe.description;
+    }
+
+    get oppositionSideIds(): SideId[] {
+        return this._recipe.oppositionSideIds;
     }
 
     get victoryPoints(): number {
