@@ -26,7 +26,11 @@ export const createGame: RequestHandler = async (
         gameManager.killAllGames();
     }
 
-    const game = new Game(clientId, req.app.locals.scenarioManager);
+    const game = new Game(
+        clientId,
+        req.app.locals.scenarioRecipeManager,
+        req.app.locals.itemRecipeManager
+    );
     const existingGame = gameManager.findGame(game.id);
     if (existingGame) {
         gameManager.removeGame(existingGame.id);

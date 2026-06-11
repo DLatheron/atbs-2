@@ -282,7 +282,7 @@ export class Unit extends SceneObject {
         }
 
         // this.updateAvailableActions(game.map);
-    }    
+    }
 
     rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
         console.info("Rotating", this.name, "to orientation", orientation);
@@ -435,34 +435,37 @@ export class Unit extends SceneObject {
 
         this.location = dstTile.location;
         dstTile.addUnit(this);
-        messageRouter.sendIfVisible([
-            {
-                type: "server:map:update",
-                payload: [
-                    {
-                        tilePos: [dstPos.col, dstPos.row],
-                        tileByRenderMode: {
-                            [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
-                                renderMode: RenderMode.enum.MAP_MODE,
-                                states: []
-                            }),
-                            [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
-                                renderMode: RenderMode.enum.FIRE_MODE,
-                                states: []
-                            })
+        messageRouter.sendIfVisible(
+            [
+                {
+                    type: "server:map:update",
+                    payload: [
+                        {
+                            tilePos: [dstPos.col, dstPos.row],
+                            tileByRenderMode: {
+                                [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
+                                    renderMode: RenderMode.enum.MAP_MODE,
+                                    states: []
+                                }),
+                                [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
+                                    renderMode: RenderMode.enum.FIRE_MODE,
+                                    states: []
+                                })
+                            }
                         }
+                    ]
+                },
+                {
+                    type: "server:camera:move:to",
+                    payload: {
+                        target: "tile",
+                        tilePos: [dstPos.col, dstPos.row],
+                        trackingSpeed: TrackingSpeed.enum.MEDIUM
                     }
-                ]
-            },
-            {
-                type: "server:camera:move:to",
-                payload: {
-                    target: "tile",
-                    tilePos: [dstPos.col, dstPos.row],
-                    trackingSpeed: TrackingSpeed.enum.MEDIUM
                 }
-            },
-        ], dstPos);        
+            ],
+            dstPos
+        );
 
         // this.updateAvailableActions(map);
 

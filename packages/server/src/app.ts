@@ -5,6 +5,7 @@ import { TerrainManager } from "./game/TerrainManager.js";
 import { MapRecipeManager } from "./game/MapRecipeManager.js";
 import { ImageManager } from "./game/ImageManager.js";
 import { UnitRecipeManager } from "./game/UnitRecipeManager.js";
+import { ItemRecipeManager } from "./game/ItemRecipeManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -25,14 +26,18 @@ export async function createApp(): Promise<Application> {
     const unitRecipeManager = UnitRecipeManager.GetSingleton();
     await unitRecipeManager.loadUnitRecipes();
 
-    const scenarioManager = new ScenarioRecipeManager();
-    await scenarioManager.loadScenarios();
+    const itemRecipeManager = ItemRecipeManager.GetSingleton();
+    await itemRecipeManager.loadItemRecipes();
+
+    const scenarioRecipeManager = new ScenarioRecipeManager();
+    await scenarioRecipeManager.loadScenarioRecipes();
 
     app.locals.imageManager = imageManager;
     app.locals.terrainManager = terrainManager;
     app.locals.mapRecipeManager = mapRecipeManager;
-    app.locals.scenarioManager = scenarioManager;
     app.locals.unitRecipeManager = unitRecipeManager;
+    app.locals.itemRecipeManager = itemRecipeManager;
+    app.locals.scenarioRecipeManager = scenarioRecipeManager;
 
     return app;
 }

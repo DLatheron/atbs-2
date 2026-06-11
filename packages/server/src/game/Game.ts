@@ -22,6 +22,8 @@ import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
 import { Unit } from "./Unit.js";
 import { MessageRouter } from "./MessageRouter.js";
+import { ItemManager } from "./ItemManager.js";
+import { ItemRecipeManager } from "./ItemRecipeManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -55,6 +57,7 @@ export class Game {
     private readonly _clientManager: ClientManager;
     private readonly _context: ClientMessageContext;
     private readonly _messageManager: ClientMessageManager;
+    private readonly _itemManager: ItemManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -66,11 +69,16 @@ export class Game {
         selectedUnit: Unit | null;
     };
 
-    constructor(ownerId: ClientId, scenarioManager: ScenarioRecipeManager) {
-        this._scenarioRecipeManager = scenarioManager;
+    constructor(
+        ownerId: ClientId,
+        scenarioRecipeManager: ScenarioRecipeManager,
+        itemRecipeManager: ItemRecipeManager
+    ) {
+        this._scenarioRecipeManager = scenarioRecipeManager;
         this._ownerId = ownerId;
         this._id = generateGameId();
         this._clientManager = new ClientManager();
+        this._itemManager = new ItemManager(itemRecipeManager);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -270,6 +278,10 @@ export class Game {
 
     get scenarioRecipeManager(): ScenarioRecipeManager {
         return this._scenarioRecipeManager;
+    }
+
+    get itemManager(): ItemManager {
+        return this._itemManager;
     }
 
     set scenario(value: Scenario | null) {
@@ -553,7 +565,7 @@ export class Game {
             this.turnsSideId
         );
 
-        this.turnsSide.units.forEach(unit => unit.startTurn());
+        this.turnsSide.units.forEach((unit) => unit.startTurn());
     }
 
     endTurn(): void {

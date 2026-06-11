@@ -27,6 +27,12 @@ export type ObjectId = z.infer<typeof ObjectId>;
 export const UnitId = z.string().min(1);
 export type UnitId = z.infer<typeof UnitId>;
 
+export const ItemId = z.string().min(1);
+export type ItemId = z.infer<typeof ItemId>;
+
+export const InstanceId = z.string().min(1);
+export type InstanceId = z.infer<typeof InstanceId>;
+
 export const ImageId = z.string().min(1);
 export type ImageId = z.infer<typeof ImageId>;
 
@@ -189,3 +195,12 @@ const errorType = ["INSUFFICIENT_ACTION_POINTS", "UNABLE_TO_MOVE_THERE"] as cons
 
 export const ErrorType = z.enum(errorType);
 export type ErrorType = z.infer<typeof ErrorType>;
+
+export const ItemSummary = z.object({
+    id: ItemId,
+    name: z.string(),
+    description: Description,
+    quantity: z.number().nonnegative(),
+    weight: z.number().positive()
+});
+export type ItemSummary = z.infer<typeof ItemSummary>;
