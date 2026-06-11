@@ -1,4 +1,4 @@
-import { Description, InstanceId, ItemId, RenderList } from "@atbs/shared-data";
+import { Description, Explosion, FireModes, InstanceId, ItemId, Quantity, RenderList, Weight } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import { TilePos, TilePosRecipe } from "@atbs/maths";
@@ -7,7 +7,7 @@ import { unsafeEntries } from "@atbs/misc";
 
 export const Slot = z.object({
     id: z.string().min(1),
-    quantity: z.number().nonnegative().optional().default(1)
+    quantity: Quantity.optional().default(1)
 });
 export type Slot = z.infer<typeof Slot>;
 
@@ -17,7 +17,7 @@ export type SlotType = z.infer<typeof SlotType>;
 export const AvailableSlot = z.object({
     slot: SlotType,
     compatible: z.array(ItemId).optional().default([]),
-    maxQuantity: z.number().nonnegative().optional().default(0)
+    maxQuantity: Quantity.optional().default(0)
 });
 export type AvailableSlot = z.infer<typeof AvailableSlot>;
 
@@ -25,18 +25,20 @@ export const ItemRecipe = z.object({
     id: ItemId,
     name: z.string(),
     description: Description,
-    quantity: z.number().nonnegative().optional().default(1),
-    weight: z.number().positive(),
+    quantity: Quantity.optional().default(1),
+    weight: Weight,
     renderable: SceneNode,
     availableSlots: z.array(AvailableSlot).optional(),
-    slots: z.partialRecord(SlotType, Slot).optional()
+    slots: z.partialRecord(SlotType, Slot).optional(),
+    fireModes: FireModes.optional(),
+    explosion: Explosion.optional()
 });
 export type ItemRecipe = z.infer<typeof ItemRecipe>;
 
 export const ItemOverrides = z
     .object({
         location: TilePosRecipe,
-        quantity: z.number().positive()
+        quantity: Quantity
     })
     .partial();
 export type ItemOverrides = z.infer<typeof ItemOverrides>;
@@ -110,12 +112,56 @@ export class Item extends SceneObject {
         this._location = value;
     }
 
-    get quantity(): number {
+    get quantity(): Quantity {
         return this._quantity;
     }
 
-    set quantity(value: number) {
+    set quantity(value: Quantity) {
         this._quantity = value;
+    }
+
+    get emptyWeight(): Weight {
+        return this._recipe.weight;
+    }
+
+    get weight(): Weight {
+        return this.allItems.reduce(
+            (totalWeight, { emptyWeight, quantity }) => totalWeight + emptyWeight * quantity,
+            0.0
+        );
+    }
+
+    get canFire(): boolean {
+        return !!this._recipe.fireModes;
+    }
+
+    get getFireables(): Item[] {
+        return this.subItems.filter((item) => item.canFire);
+    }
+
+    get willExplode(): boolean {
+        return !!this._recipe.explosion;
+    }
+
+    get getExplosion(): Explosion {
+        if (!this._recipe.explosion) {
+            throw new Error(`${this.id} does not have an explosion`);
+        }
+
+        return this._recipe.explosion;
+    }
+
+    get subItems(): Item[] {
+        return Array.from(this._slots.values());
+    }
+
+    get allItems(): Item[] {
+        const subItems = this.subItems;
+
+        return subItems.reduce((subItems, item) => {
+            subItems.push(...item.allItems);
+            return subItems;
+        }, subItems);
     }
 
     getRenderList(context: SceneContext): RenderList {

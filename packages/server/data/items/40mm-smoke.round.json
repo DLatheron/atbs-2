@@ -12,5 +12,9 @@
     "renderable": {
         "default": [{ "imageId": "40mm-smoke.round" }],
         "FIRE_MODE": []
+    },
+    "explosion": {
+        "type": "gas",
+        "particles": [12, 8, 4]
     }
 }

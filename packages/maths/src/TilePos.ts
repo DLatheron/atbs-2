@@ -4,7 +4,7 @@ import { Clamp } from "./Maths.js";
 import { Orientation } from "./Orientation.js";
 import { IVec2, Vec2, isIVec2 } from "./Vec2.js";
 
-export const TilePosRecipe = z.tuple([z.number(), z.number()]);
+export const TilePosRecipe = z.tuple([z.int().nonnegative(), z.int().nonnegative()]);
 export type TilePosRecipe = z.infer<typeof TilePosRecipe>;
 
 export function isTilePosRecipe(arg: unknown): arg is TilePosRecipe {
@@ -12,8 +12,8 @@ export function isTilePosRecipe(arg: unknown): arg is TilePosRecipe {
 }
 
 export const ITilePos = z.object({
-    col: z.number(),
-    row: z.number()
+    col: z.int().nonnegative(),
+    row: z.int().nonnegative()
 });
 export type ITilePos = z.infer<typeof ITilePos>;
 

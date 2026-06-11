@@ -3,7 +3,7 @@ import z from "zod";
 
 const Config = z
     .object({
-        port: z.number().optional().default(3000),
+        port: z.int().min(1024).max(65534).optional().default(3000),
         highlanderGameMode: z.boolean().optional().default(false)
     })
     .strict();

@@ -8,7 +8,7 @@
         },
         { "text": "The underslung M203 grenade launcher fires 40mm grenades." }
     ],
-    "weight": 4.28,
+    "weight": 0,
     "renderable": {
         "default": [{ "imageId": "m4+m203" }],
         "FIRE_MODE": []

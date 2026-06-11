@@ -12,5 +12,10 @@
     "renderable": {
         "default": [{ "imageId": "40mm-he.round" }],
         "FIRE_MODE": []
+    },
+    "explosion": {
+        "type": "fragment",
+        "maxRange": { "min": 150, "max": 300 },
+        "numFragments": 200
     }
 }

@@ -46,6 +46,11 @@ export async function createApp(): Promise<Application> {
     const itemManager = new ItemManager(itemRecipeManager);
     const item = itemManager.createItem("m4+m203.gun", {});
     console.dir(item, { depth: null, colors: true });
+    console.info("Sub Items", item.subItems.map(({ quantity, id }) => `${quantity}x ${id}`));
+    console.info("All items", item.allItems.map(({ quantity, id }) => `${quantity}x ${id}`));
+    console.info("Empty weight", item.emptyWeight, "kg");
+    console.info("Total weight", item.weight, "kg");
+    console.dir({ fireables: item.getFireables.map(({ quantity, id }) => `${quantity}x ${id}`) });
 
     return app;
 }

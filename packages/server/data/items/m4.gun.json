@@ -18,5 +18,49 @@
             "compatible": ["m16-30.magazine", "m16-20.magazine"]
         }
     ],
-    "slots": { "ammo": { "id": "m16-30.magazine" } }
+    "slots": { "ammo": { "id": "m16-30.magazine" } },
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 80,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "burst": {
+            "ammoUse": 3,
+            "rpm": 950,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 35
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 20
+                }
+            }
+        },
+        "auto": {
+            "rpm": 950,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 40,
+                    "actionPoints": 10,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 30,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }    
 }

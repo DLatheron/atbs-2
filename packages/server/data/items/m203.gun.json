@@ -11,5 +11,20 @@
             "compatible": ["40mm-he.round", "40mm-smoke.round"]
         }
     ],
-    "slots": { "ammo": { "id": "40mm-he.round", "quantity": 1 } }
+    "slots": { "ammo": { "id": "40mm-he.round", "quantity": 1 } },
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 90,
+                    "actionPoints": 30
+                },
+                "snapshot": {
+                    "accuracy": 30,
+                    "actionPoints": 18
+                }
+            }
+        }
+    }
 }
