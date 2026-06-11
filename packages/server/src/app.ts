@@ -6,6 +6,7 @@ import { MapRecipeManager } from "./game/MapRecipeManager.js";
 import { ImageManager } from "./game/ImageManager.js";
 import { UnitRecipeManager } from "./game/UnitRecipeManager.js";
 import { ItemRecipeManager } from "./game/ItemRecipeManager.js";
+import { ItemManager } from "./game/ItemManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -38,6 +39,13 @@ export async function createApp(): Promise<Application> {
     app.locals.unitRecipeManager = unitRecipeManager;
     app.locals.itemRecipeManager = itemRecipeManager;
     app.locals.scenarioRecipeManager = scenarioRecipeManager;
+
+    /**
+     * Temporary Test Code
+     */
+    const itemManager = new ItemManager(itemRecipeManager);
+    const item = itemManager.createItem("m4+m203.gun", {});
+    console.dir(item, { depth: null, colors: true });
 
     return app;
 }

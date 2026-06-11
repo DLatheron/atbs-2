@@ -1,7 +1,7 @@
 import { ItemId } from "@atbs/shared-data";
-import { Item, ItemAdditionalData, ItemOverrides, ItemRecipe } from "./Item.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
+import { ItemRecipe } from "./Item.js";
 
 const ItemDirectory = "./data/items";
 
@@ -10,12 +10,6 @@ export class ItemRecipeManager {
 
     constructor() {
         this._ItemRecipeMap = new Map<ItemId, ItemRecipe>();
-    }
-
-    newItem(ItemId: ItemId, overrides: ItemOverrides, additionalData: ItemAdditionalData): Item {
-        const ItemRecipe = this.getRecipe(ItemId);
-
-        return new Item(ItemRecipe, overrides, additionalData);
     }
 
     async loadItemRecipes(directory = ItemDirectory): Promise<void> {

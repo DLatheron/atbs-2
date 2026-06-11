@@ -1,0 +1,16 @@
+{
+    "id": "40mm-smoke.round",
+    "type": "round",
+    "name": "40mm Smoke Grenade",
+    "shortName": "5.56mm NATO",
+    "description": [
+        {
+            "text": "40mm Smoke Grenade suitable for the M203 underslung grenade launcher. The grenade rapid emits a large amount of thick smoke, obscuring vision."
+        }
+    ],
+    "weight": 0.368,
+    "renderable": {
+        "default": [{ "imageId": "40mm-smoke.round" }],
+        "FIRE_MODE": []
+    }
+}

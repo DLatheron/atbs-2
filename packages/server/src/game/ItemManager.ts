@@ -23,7 +23,7 @@ export class ItemManager {
         const recipe = this._itemRecipeManager.getRecipe(itemId);
         const instanceIndex = this._getInstanceIndex(itemId);
 
-        const item = new Item(recipe, overrides, { instanceIndex });
+        const item = new Item(recipe, overrides, { instanceIndex }, this);
 
         this._itemMap.set(item.id, item);
 

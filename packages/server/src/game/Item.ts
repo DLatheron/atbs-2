@@ -2,6 +2,24 @@ import { Description, InstanceId, ItemId, RenderList } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import { TilePos, TilePosRecipe } from "@atbs/maths";
+import { ItemManager } from "./ItemManager.js";
+import { unsafeEntries } from "@atbs/misc";
+
+export const Slot = z.object({
+    id: z.string().min(1),
+    quantity: z.number().nonnegative().optional().default(1)
+});
+export type Slot = z.infer<typeof Slot>;
+
+export const SlotType = z.union([z.literal(0), z.literal(1), z.literal("ammo")]);
+export type SlotType = z.infer<typeof SlotType>;
+
+export const AvailableSlot = z.object({
+    slot: SlotType,
+    compatible: z.array(ItemId).optional().default([]),
+    maxQuantity: z.number().nonnegative().optional().default(0)
+});
+export type AvailableSlot = z.infer<typeof AvailableSlot>;
 
 export const ItemRecipe = z.object({
     id: ItemId,
@@ -9,7 +27,9 @@ export const ItemRecipe = z.object({
     description: Description,
     quantity: z.number().nonnegative().optional().default(1),
     weight: z.number().positive(),
-    renderable: SceneNode
+    renderable: SceneNode,
+    availableSlots: z.array(AvailableSlot).optional(),
+    slots: z.partialRecord(SlotType, Slot).optional()
 });
 export type ItemRecipe = z.infer<typeof ItemRecipe>;
 
@@ -28,6 +48,7 @@ export interface ItemAdditionalData {
 export class Item extends SceneObject {
     private readonly _id: ItemId;
     private readonly _recipe: Readonly<ItemRecipe>;
+    private readonly _slots: Map<SlotType, Item>;
 
     private _location: TilePos | null;
     private _quantity;
@@ -35,7 +56,8 @@ export class Item extends SceneObject {
     constructor(
         recipe: ItemRecipe,
         overrides: Readonly<ItemOverrides>,
-        additionalData: Readonly<ItemAdditionalData>
+        additionalData: Readonly<ItemAdditionalData>,
+        itemManager: ItemManager
     ) {
         super(recipe.renderable);
 
@@ -44,6 +66,16 @@ export class Item extends SceneObject {
 
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._quantity = overrides.quantity ?? recipe.quantity;
+
+        this._slots = new Map<SlotType, Item>();
+        const { slots } = recipe;
+        if (slots) {
+            for (const [slotType, { id, quantity }] of unsafeEntries(slots)) {
+                const slotItem = itemManager.createItem(id, { quantity });
+
+                this._slots.set(slotType, slotItem);
+            }
+        }
     }
 
     get id(): InstanceId {
