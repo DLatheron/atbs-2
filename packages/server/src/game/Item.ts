@@ -1,4 +1,13 @@
-import { Description, Explosion, InstanceId, ItemId, ItemType, Quantity, RenderList, Weight } from "@atbs/shared-data";
+import {
+    Description,
+    Explosion,
+    InstanceId,
+    ItemId,
+    ItemType,
+    Quantity,
+    RenderList,
+    Weight
+} from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
 import { TilePos } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";

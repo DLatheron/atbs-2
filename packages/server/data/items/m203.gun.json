@@ -6,13 +6,18 @@
     "description": [{ "text": "The underslung M203 grenade launcher fires 40mm grenades." }],
     "weight": 1.36,
     "renderable": { "default": [] },
-    "sight": "iron",
+    "sight": "ranged",
     "slotProps": {
         "ammo": {
-            "compatibleIds": ["40mm-he.round", "40mm-smoke.round"]
+            "compatibleIds": [
+                "40mm-he.round",
+                "40mm-smoke.round",
+                "40mm-gas.round",
+                "40mm-stun.round"
+            ]
         }
     },
-    "slots": { "ammo": { "id": "40mm-he.round", "quantity": 1 } },
+    "slots": { "ammo": { "id": "40mm-gas.round", "quantity": 1 } },
     "fireModes": {
         "single": {
             "ammoUse": 1,

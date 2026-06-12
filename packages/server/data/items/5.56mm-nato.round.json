@@ -12,5 +12,9 @@
     "renderable": {
         "default": [{ "imageId": "5.56mm-nato.round" }],
         "FIRE_MODE": []
+    },
+    "damage": {
+        "human": 18,
+        "default": 20
     }
 }

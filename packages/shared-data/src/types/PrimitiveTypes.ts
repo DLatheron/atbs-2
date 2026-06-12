@@ -208,11 +208,13 @@ export type Distribution = z.infer<typeof Distribution>;
 
 export const JitteredValue = z.union([
     z.number().positive(),
-    z.object({
-        min: z.number().positive(),
-        max: z.number().positive(),
-        distribution: z.literal(Distribution.enum.linear).optional()
-    }).refine(({ min, max }) => min < max)
+    z
+        .object({
+            min: z.number().positive(),
+            max: z.number().positive(),
+            distribution: z.literal(Distribution.enum.linear).optional()
+        })
+        .refine(({ min, max }) => min < max)
 ]);
 export type JitteredValue = z.infer<typeof JitteredValue>;
 
@@ -231,11 +233,23 @@ export function resolveJitteredValue(value: JitteredValue) {
     }
 }
 
+const damageType = ["default", "disorientation"] as const;
+export const DamageType = z.enum(damageType);
+export type DamageType = z.infer<typeof DamageType>;
+
+export const DamageMap = z.intersection(
+    z.record(z.string(), z.number().positive()),
+    z.object({
+        type: DamageType.default(DamageType.enum.default),
+        default: z.number().positive()
+    })
+);
+
 const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
 export const ItemType = z.enum(itemType);
 export type ItemType = z.infer<typeof ItemType>;
 
-const explosionType = ["fragment", "gas", "shockwave"] as const;
+const explosionType = ["fragment", "gas", "smoke", "shockwave"] as const;
 export const ExplosionType = z.enum(explosionType);
 export type ExplosionType = z.infer<typeof ExplosionType>;
 
@@ -243,7 +257,7 @@ const fireType = ["direct", "indirect"] as const;
 export const FireType = z.enum(fireType);
 export type FireType = z.infer<typeof FireType>;
 
-const sightType = ["iron", "optical", "laser"] as const;
+const sightType = ["iron", "optical", "laser", "ranged"] as const;
 export const SightType = z.enum(sightType);
 export type SightType = z.infer<typeof SightType>;
 
@@ -278,9 +292,12 @@ export const FireModes = z.object({
     [FireSelector.enum.auto]: z
         .object({
             rpm: z.int().positive(),
-            fireModeDetails: z.record(FireMode, FireModeDetails.extend({
-                actionPointsPerRound: z.int().positive()
-            }))
+            fireModeDetails: z.record(
+                FireMode,
+                FireModeDetails.extend({
+                    actionPointsPerRound: z.int().positive()
+                })
+            )
         })
         .optional()
 });
@@ -289,13 +306,21 @@ export type FireModes = z.infer<typeof FireModes>;
 export const FragmentExplosion = z.object({
     type: z.literal(ExplosionType.enum.fragment),
     maxRange: JitteredValue,
-    numFragments: JitteredValue
+    numFragments: JitteredValue,
+    damage: DamageMap
     // TODO: Other properties...
 });
 export type FragmentExplosion = z.infer<typeof FragmentExplosion>;
 
-export const GasExplosion = z.object({
+export const SmokeExplosion = z.object({
     type: z.literal(ExplosionType.enum.gas),
+    particles: z.array(JitteredValue)
+    // TODO: Other properties.
+});
+export type SmokeExplosion = z.infer<typeof SmokeExplosion>;
+
+export const GasExplosion = z.object({
+    type: z.literal(ExplosionType.enum.smoke),
     particles: z.array(JitteredValue)
     // TODO: Other properties.
 });
@@ -307,7 +332,12 @@ export const ShockwaveExplosion = z.object({
 });
 export type ShockwaveExplosion = z.infer<typeof ShockwaveExplosion>;
 
-export const Explosion = z.discriminatedUnion("type", [FragmentExplosion, GasExplosion, ShockwaveExplosion]);
+export const Explosion = z.discriminatedUnion("type", [
+    FragmentExplosion,
+    SmokeExplosion,
+    GasExplosion,
+    ShockwaveExplosion
+]);
 export type Explosion = z.infer<typeof Explosion>;
 
 export const ItemSummary = z.object({

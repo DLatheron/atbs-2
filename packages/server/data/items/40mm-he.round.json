@@ -13,9 +13,11 @@
         "default": [{ "imageId": "40mm-he.round" }],
         "FIRE_MODE": []
     },
+    "damage": { "default": 1 },
     "explosion": {
         "type": "fragment",
         "maxRange": { "min": 150, "max": 300 },
-        "numFragments": 200
+        "numFragments": 200,
+        "damage": { "default": 10 }
     }
 }

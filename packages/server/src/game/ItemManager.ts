@@ -1,6 +1,7 @@
 import { InstanceId, ItemId } from "@atbs/shared-data";
-import { Item, ItemOverrides } from "./Item.js";
+import { Item } from "./Item.js";
 import { ItemRecipeManager } from "./ItemRecipeManager.js";
+import { ItemOverrides } from "./ItemRecipe.js";
 
 export class ItemManager {
     private readonly _itemRecipeManager: ItemRecipeManager;

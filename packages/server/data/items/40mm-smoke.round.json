@@ -14,7 +14,7 @@
         "FIRE_MODE": []
     },
     "explosion": {
-        "type": "gas",
+        "type": "smoke",
         "particles": [12, 8, 4]
     }
 }

@@ -1,4 +1,14 @@
-import { Quantity, ItemId, Description, Weight, FireModes, Explosion, ItemType, SightType } from "@atbs/shared-data";
+import {
+    Quantity,
+    ItemId,
+    Description,
+    Weight,
+    FireModes,
+    Explosion,
+    ItemType,
+    SightType,
+    DamageMap
+} from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
 import { TilePosRecipe } from "@atbs/maths";
@@ -15,12 +25,12 @@ export type SlotType = z.infer<typeof SlotType>;
 
 export const SlotProps = z.object({
     compatibleIds: z.array(ItemId).optional().default([]),
-    maxQuantity: Quantity.optional().default(1),
+    maxQuantity: Quantity.optional().default(1)
 });
 export type SlotProps = z.infer<typeof SlotProps>;
 
 export const ItemRecipe = z.discriminatedUnion("type", [
-     z.object({
+    z.object({
         id: ItemId,
         type: z.literal(ItemType.enum.item),
         name: z.string(),
@@ -71,7 +81,8 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireModes: z.undefined().optional(),
-        explosion: Explosion.optional()
+        explosion: Explosion.optional(),
+        damage: DamageMap
     }),
     z.object({
         id: ItemId,
@@ -85,7 +96,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireModes: z.undefined().optional(),
         explosion: Explosion
-    }),
+    })
 ]);
 export type ItemRecipe = z.infer<typeof ItemRecipe>;
 
