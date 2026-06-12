@@ -6,7 +6,9 @@ import {
     RenderList,
     RenderMode,
     TrackingSpeed,
-    UnitSummary
+    UnitId,
+    UnitSummary,
+    UnitType
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
@@ -54,6 +56,7 @@ const DIRECTIONAL_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
 
 export const UnitRecipe = z.object({
     id: z.string().min(1),
+    type: UnitType.default(UnitType.enum.human),
     name: z.string().min(1),
     description: Description,
     isDirectional: z.boolean().optional().default(true),
@@ -132,19 +135,23 @@ export class Unit extends SceneObject {
         this._side = additionalData.side;
     }
 
-    get id() {
+    get id(): UnitId {
         return this._recipe.id;
     }
 
-    get name() {
+    get type(): UnitType {
+        return this._recipe.type;
+    }
+
+    get name(): string {
         return this._recipe.name;
     }
 
-    get side() {
+    get side(): Side {
         return this._side;
     }
 
-    get description() {
+    get description(): Description {
         return this._recipe.description;
     }
 
@@ -180,7 +187,7 @@ export class Unit extends SceneObject {
         return this.constitution === 0;
     }
 
-    get weight() {
+    get weight(): number {
         // TODO: Add in the weight of inventory?
         return this._recipe.attributes.weight;
     }

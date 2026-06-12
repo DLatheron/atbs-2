@@ -6,6 +6,7 @@ import {
     ItemType,
     Quantity,
     RenderList,
+    UnitType,
     Weight
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
@@ -107,7 +108,7 @@ export class Item extends SceneObject {
     }
 
     get canFire(): boolean {
-        return !!this._recipe.fireModes;
+        return "fireModes" in this._recipe;
     }
 
     get getFireables(): Item[] {
@@ -115,11 +116,11 @@ export class Item extends SceneObject {
     }
 
     get willExplode(): boolean {
-        return !!this._recipe.explosion;
+        return "explosion" in this._recipe && !!this._recipe.explosion;
     }
 
     get getExplosion(): Explosion {
-        if (!this._recipe.explosion) {
+        if (!("explosion" in this._recipe && !!this._recipe.explosion)) {
             throw new Error(`${this.id} does not have an explosion`);
         }
 
@@ -143,6 +144,10 @@ export class Item extends SceneObject {
         const ammoSlotType = this.findSlotProps(SlotType.enum.ammo);
 
         return ammoSlotType ? ammoSlotType.compatibleIds : [];
+    }
+
+    get maxRange(): number {
+        return "maxRange" in this._recipe ? this._recipe.maxRange : 0;
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -175,6 +180,14 @@ export class Item extends SceneObject {
             throw new Error(`Unable to find slot props for ${slot}`);
         }
         return slotProps;
+    }
+
+    calcDamage(unitType: UnitType): number {
+        if (!("damage" in this._recipe)) {
+            return 0;
+        }
+
+        return this._recipe.damage[unitType] ?? this._recipe.damage.default;
     }
 
     getRenderList(context: SceneContext): RenderList {

@@ -233,12 +233,16 @@ export function resolveJitteredValue(value: JitteredValue) {
     }
 }
 
+const unitType = ["human"] as const;
+export const UnitType = z.enum(unitType);
+export type UnitType = z.infer<typeof UnitType>;
+
 const damageType = ["default", "disorientation"] as const;
 export const DamageType = z.enum(damageType);
 export type DamageType = z.infer<typeof DamageType>;
 
 export const DamageMap = z.intersection(
-    z.record(z.string(), z.number().positive()),
+    z.record(UnitType, z.number().positive()),
     z.object({
         type: DamageType.default(DamageType.enum.default),
         default: z.number().positive()

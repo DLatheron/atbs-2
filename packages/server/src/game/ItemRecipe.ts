@@ -39,9 +39,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
-        slots: z.partialRecord(SlotType, Slot).optional(),
-        fireModes: z.undefined().optional(),
-        explosion: z.undefined().optional()
+        slots: z.partialRecord(SlotType, Slot).optional()
     }),
     z.object({
         id: ItemId,
@@ -54,8 +52,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         sight: SightType.default(SightType.enum.iron),
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        fireModes: FireModes,
-        explosion: z.undefined().optional()
+        fireModes: FireModes
     }),
     z.object({
         id: ItemId,
@@ -67,7 +64,6 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        fireModes: z.undefined().optional(),
         explosion: Explosion.optional()
     }),
     z.object({
@@ -78,9 +74,9 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         quantity: Quantity.default(1),
         weight: Weight,
         renderable: SceneNode,
+        maxRange: z.number().positive(),
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        fireModes: z.undefined().optional(),
         explosion: Explosion.optional(),
         damage: DamageMap
     }),
@@ -94,7 +90,6 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        fireModes: z.undefined().optional(),
         explosion: Explosion
     })
 ]);
