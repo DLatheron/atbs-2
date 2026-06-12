@@ -51,6 +51,8 @@ export async function createApp(): Promise<Application> {
     console.info("Empty weight", item.emptyWeight, "kg");
     console.info("Total weight", item.weight, "kg");
     console.dir({ fireables: item.getFireables.map(({ quantity, id }) => `${quantity}x ${id}`) });
+    console.dir({ compatibleAmmoIds: item.getSlot("0").compatibleAmmoIds});
+    console.dir({ compatibleAmmoIds: item.getSlot("1").compatibleAmmoIds});
 
     return app;
 }

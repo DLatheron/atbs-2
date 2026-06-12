@@ -1,47 +1,9 @@
-import { Description, Explosion, FireModes, InstanceId, ItemId, Quantity, RenderList, Weight } from "@atbs/shared-data";
-import z from "zod";
-import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
-import { TilePos, TilePosRecipe } from "@atbs/maths";
+import { Description, Explosion, InstanceId, ItemId, ItemType, Quantity, RenderList, Weight } from "@atbs/shared-data";
+import { SceneContext, SceneObject } from "./SceneObject.js";
+import { TilePos } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";
-
-export const Slot = z.object({
-    id: z.string().min(1),
-    quantity: Quantity.optional().default(1)
-});
-export type Slot = z.infer<typeof Slot>;
-
-export const SlotType = z.union([z.literal(0), z.literal(1), z.literal("ammo")]);
-export type SlotType = z.infer<typeof SlotType>;
-
-export const AvailableSlot = z.object({
-    slot: SlotType,
-    compatible: z.array(ItemId).optional().default([]),
-    maxQuantity: Quantity.optional().default(0)
-});
-export type AvailableSlot = z.infer<typeof AvailableSlot>;
-
-export const ItemRecipe = z.object({
-    id: ItemId,
-    name: z.string(),
-    description: Description,
-    quantity: Quantity.optional().default(1),
-    weight: Weight,
-    renderable: SceneNode,
-    availableSlots: z.array(AvailableSlot).optional(),
-    slots: z.partialRecord(SlotType, Slot).optional(),
-    fireModes: FireModes.optional(),
-    explosion: Explosion.optional()
-});
-export type ItemRecipe = z.infer<typeof ItemRecipe>;
-
-export const ItemOverrides = z
-    .object({
-        location: TilePosRecipe,
-        quantity: Quantity
-    })
-    .partial();
-export type ItemOverrides = z.infer<typeof ItemOverrides>;
+import { SlotProps, ItemOverrides, ItemRecipe, SlotType } from "./ItemRecipe.js";
 
 export interface ItemAdditionalData {
     instanceIndex: number;
@@ -82,6 +44,10 @@ export class Item extends SceneObject {
 
     get id(): InstanceId {
         return this._id;
+    }
+
+    get type(): ItemType {
+        return this._recipe.type;
     }
 
     get recipeId(): ItemId {
@@ -162,6 +128,44 @@ export class Item extends SceneObject {
             subItems.push(...item.allItems);
             return subItems;
         }, subItems);
+    }
+
+    get compatibleAmmoIds(): ItemId[] {
+        const ammoSlotType = this.findSlotProps(SlotType.enum.ammo);
+
+        return ammoSlotType ? ammoSlotType.compatibleIds : [];
+    }
+
+    hasSlot(slot: SlotType): boolean {
+        return !!this.findSlot(slot);
+    }
+
+    findSlot(slot: SlotType): Item | undefined {
+        return this._slots.get(slot);
+    }
+
+    getSlot(slot: SlotType): Item {
+        const item = this.findSlot(slot);
+        if (!item) {
+            throw new Error(`Unable to find a slot for ${slot}`);
+        }
+        return item;
+    }
+
+    hasSlotProps(slot: SlotType): boolean {
+        return !!this.findSlotProps(slot);
+    }
+
+    findSlotProps(slot: SlotType): SlotProps | undefined {
+        return this._recipe.slotProps?.[slot];
+    }
+
+    getSlotProps(slot: SlotType): SlotProps {
+        const slotProps = this.findSlotProps(slot);
+        if (!slotProps) {
+            throw new Error(`Unable to find slot props for ${slot}`);
+        }
+        return slotProps;
     }
 
     getRenderList(context: SceneContext): RenderList {

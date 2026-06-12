@@ -231,9 +231,21 @@ export function resolveJitteredValue(value: JitteredValue) {
     }
 }
 
+const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
+export const ItemType = z.enum(itemType);
+export type ItemType = z.infer<typeof ItemType>;
+
 const explosionType = ["fragment", "gas", "shockwave"] as const;
 export const ExplosionType = z.enum(explosionType);
 export type ExplosionType = z.infer<typeof ExplosionType>;
+
+const fireType = ["direct", "indirect"] as const;
+export const FireType = z.enum(fireType);
+export type FireType = z.infer<typeof FireType>;
+
+const sightType = ["iron", "optical", "laser"] as const;
+export const SightType = z.enum(sightType);
+export type SightType = z.infer<typeof SightType>;
 
 const fireSelector = ["single", "burst", "auto"] as const;
 export const FireSelector = z.enum(fireSelector);

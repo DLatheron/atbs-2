@@ -1,7 +1,7 @@
 import { ItemId } from "@atbs/shared-data";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
-import { ItemRecipe } from "./Item.js";
+import { ItemRecipe } from "./ItemRecipe.js";
 
 const ItemDirectory = "./data/items";
 

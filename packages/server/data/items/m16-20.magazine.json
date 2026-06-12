@@ -1,5 +1,6 @@
 {
     "id": "m16-20.magazine",
+    "type": "magazine",
     "name": "M16 20 Round Magazine",
     "shortName": "M16x20",
     "description": [{ "text": "A 20-round magazine for the M16/M4 assault rifle." }],
@@ -8,12 +9,11 @@
         "default": [{ "imageId": "m16-20" }],
         "FIRE_MODE": []
     },
-    "availableSlots": [
-        {
-            "slot": "ammo",
+    "slotProps": {
+        "ammo": {
             "compatible": ["5.56mm.round"],
             "maxQuantity": 20
         }
-    ],
+    },
     "slots": { "ammo": { "id": "5.56mm-nato.round", "quantity": 20 } }
 }

@@ -1,5 +1,6 @@
 {
     "id": "m4.gun",
+    "type": "gun",
     "name": "M4 Assault Rifle",
     "shortName": "M4",
     "description": [
@@ -12,12 +13,12 @@
         "default": [{ "imageId": "m4" }],
         "FIRE_MODE": []
     },
-    "availableSlots": [
-        {
-            "slot": "ammo",
-            "compatible": ["m16-30.magazine", "m16-20.magazine"]
+    "sight": "optical",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["m16-30.magazine", "m16-20.magazine"]
         }
-    ],
+    },
     "slots": { "ammo": { "id": "m16-30.magazine" } },
     "fireModes": {
         "single": {
