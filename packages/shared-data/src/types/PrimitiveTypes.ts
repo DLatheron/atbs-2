@@ -279,22 +279,22 @@ export const FireModeDetails = z.object({
 });
 export type FireModeDetails = z.infer<typeof FireModeDetails>;
 
-export const FireModes = z.object({
-    [FireSelector.enum.single]: z
-        .object({
+export const FireModes = z.union([
+    z.object({
+        [FireSelector.enum.single]: z.object({
             ammoUse: z.int().positive(),
             fireModeDetails: z.record(FireMode, FireModeDetails)
         })
-        .optional(),
-    [FireSelector.enum.burst]: z
-        .object({
+    }),
+    z.object({
+        [FireSelector.enum.burst]: z.object({
             ammoUse: z.int().positive(),
             rpm: z.int().positive(),
             fireModeDetails: z.record(FireMode, FireModeDetails)
         })
-        .optional(),
-    [FireSelector.enum.auto]: z
-        .object({
+    }),
+    z.object({
+        [FireSelector.enum.auto]: z.object({
             rpm: z.int().positive(),
             fireModeDetails: z.record(
                 FireMode,
@@ -303,8 +303,8 @@ export const FireModes = z.object({
                 })
             )
         })
-        .optional()
-});
+    })
+]);
 export type FireModes = z.infer<typeof FireModes>;
 
 export const FragmentExplosion = z.object({
@@ -347,8 +347,20 @@ export type Explosion = z.infer<typeof Explosion>;
 export const ItemSummary = z.object({
     id: ItemId,
     name: z.string(),
+    shortName: z.string(),
     description: Description,
-    quantity: z.int().nonnegative(),
-    weight: z.number().positive()
+    quantity: Quantity,
+    weight: Weight,
+    weapons: z.array(
+        z.object({
+            id: ItemId,
+            name: z.string(),
+            shortName: z.string(),
+            description: Description,
+            capacity: z.int().nonnegative(),
+            maxCapacity: z.int().nonnegative(),
+            fireModes: FireModes
+        })
+    )
 });
 export type ItemSummary = z.infer<typeof ItemSummary>;

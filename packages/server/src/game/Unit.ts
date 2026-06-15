@@ -23,6 +23,7 @@ import {
 import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
+import { Clamp } from "../../../maths/src/Maths.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -490,6 +491,11 @@ export class Unit extends SceneObject {
         // );
 
         return true;
+    }
+
+    calcWeaponAccuracy(baseAccuracy: number): number {
+        return Clamp(baseAccuracy, 0, 100);
+        // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 
     toSummary(): UnitSummary {

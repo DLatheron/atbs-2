@@ -1,8 +1,12 @@
 import {
     Description,
     Explosion,
+    FireMode,
+    FireModes,
+    FireSelector,
     InstanceId,
     ItemId,
+    ItemSummary,
     ItemType,
     Quantity,
     RenderList,
@@ -14,6 +18,8 @@ import { TilePos } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";
 import { SlotProps, ItemOverrides, ItemRecipe, SlotType } from "./ItemRecipe.js";
+import type { Unit } from "./Unit.js";
+import cloneDeep from "lodash/cloneDeep.js";
 
 export interface ItemAdditionalData {
     instanceIndex: number;
@@ -68,6 +74,10 @@ export class Item extends SceneObject {
 
     get name(): string {
         return this._recipe.name;
+    }
+
+    get shortName(): string {
+        return this._recipe.shortName ?? this.name;
     }
 
     get description(): Description {
@@ -152,16 +162,24 @@ export class Item extends SceneObject {
         return "maxRange" in this._recipe ? this._recipe.maxRange : 0;
     }
 
-    hasSlot(slot: SlotType): boolean {
-        return !!this.findSlot(slot);
+    get capacity(): number {
+        return this.findSlotContents(SlotType.enum.ammo)?.quantity ?? 0;
     }
 
-    findSlot(slot: SlotType): Item | undefined {
+    get maxCapacity(): number {
+        return this.findSlotProps(SlotType.enum.ammo)?.maxQuantity ?? 0;
+    }
+
+    hasSlot(slot: SlotType): boolean {
+        return !!this.findSlotContents(slot);
+    }
+
+    findSlotContents(slot: SlotType): Item | undefined {
         return this._slots.get(slot);
     }
 
     getSlotContents(slot: SlotType): Item {
-        const item = this.findSlot(slot);
+        const item = this.findSlotContents(slot);
         if (!item) {
             throw new Error(`Unable to find a slot for ${slot}`);
         }
@@ -294,5 +312,83 @@ export class Item extends SceneObject {
         const unitContext = { ...context, states: [] };
 
         return super.getRenderList(unitContext);
+    }
+
+    getWeapons(): Item[] {
+        if (this.hasSlot(SlotType.enum[0])) {
+            if (this.hasSlot(SlotType.enum[1])) {
+                return [
+                    this.getSlotContents(SlotType.enum[0]),
+                    this.getSlotContents(SlotType.enum[1])
+                ];
+            } else {
+                return [this.getSlotContents(SlotType.enum[0])];
+            }
+        }
+
+        return [];
+    }
+
+    getFireModes(unit: Unit): FireModes {
+        if (this._recipe.type !== ItemType.enum.gun) {
+            throw new Error(`Item ${this.id} does not have any fire modes`);
+        }
+
+        const fireModes = cloneDeep(this._recipe.fireModes);
+
+        if (FireSelector.enum.single in fireModes) {
+            const { fireModeDetails } = fireModes[FireSelector.enum.single];
+
+            fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
+                fireModeDetails[FireMode.enum.aimed].accuracy
+            );
+            fireModeDetails[FireMode.enum.snapshot].accuracy = unit.calcWeaponAccuracy(
+                fireModeDetails[FireMode.enum.snapshot].accuracy
+            );
+        }
+
+        if (FireSelector.enum.burst in fireModes) {
+            const { fireModeDetails } = fireModes[FireSelector.enum.burst];
+
+            fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
+                fireModeDetails[FireMode.enum.aimed].accuracy
+            );
+            fireModeDetails[FireMode.enum.snapshot].accuracy = unit.calcWeaponAccuracy(
+                fireModeDetails[FireMode.enum.snapshot].accuracy
+            );
+        }
+
+        if (FireSelector.enum.auto in fireModes) {
+            const { fireModeDetails } = fireModes[FireSelector.enum.auto];
+
+            fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
+                fireModeDetails[FireMode.enum.aimed].accuracy
+            );
+            fireModeDetails[FireMode.enum.snapshot].accuracy = unit.calcWeaponAccuracy(
+                fireModeDetails[FireMode.enum.snapshot].accuracy
+            );
+        }
+
+        return fireModes;
+    }
+
+    getItemSummary(unit: Unit): ItemSummary {
+        return {
+            id: this.id,
+            name: this.name,
+            shortName: this.shortName,
+            description: this.description,
+            quantity: this.quantity,
+            weight: this.weight,
+            weapons: this.getWeapons().map((weapon) => ({
+                id: weapon.id,
+                name: weapon.name,
+                shortName: weapon.shortName,
+                description: weapon.description,
+                capacity: weapon.capacity,
+                maxCapacity: weapon.maxCapacity,
+                fireModes: weapon.getFireModes(unit)
+            }))
+        };
     }
 }

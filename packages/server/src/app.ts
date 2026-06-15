@@ -66,5 +66,7 @@ export async function createApp(): Promise<Application> {
     console.info("Loading:", removedAmmo);
     console.info("Loading:", item.getSlotContents("0").load(removedAmmo!));
 
+    // console.info("Summary", item.getItemSummary());
+
     return app;
 }
