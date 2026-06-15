@@ -285,7 +285,9 @@ export class Item extends SceneObject {
             return 0;
         }
 
-        return this._recipe.damage[unitType] ?? this._recipe.damage.default;
+        return unitType in this._recipe.damage
+            ? this._recipe.damage[unitType]
+            : this._recipe.damage.default;
     }
 
     getRenderList(context: SceneContext): RenderList {

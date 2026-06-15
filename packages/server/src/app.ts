@@ -61,7 +61,7 @@ export async function createApp(): Promise<Application> {
     console.dir({ compatibleAmmoIds: item.getSlotContents("1").compatibleAmmoIds });
 
     const ammo = itemManager.createItem("m16-20.magazine", {});
-    const removedAmmo = item.getSlotContents("0").load(ammo)
+    const removedAmmo = item.getSlotContents("0").load(ammo);
 
     console.info("Loading:", removedAmmo);
     console.info("Loading:", item.getSlotContents("0").load(removedAmmo!));
