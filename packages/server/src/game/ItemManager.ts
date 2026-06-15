@@ -20,11 +20,11 @@ export class ItemManager {
         return instanceIndex;
     }
 
-    createItem(itemId: ItemId, overrides: ItemOverrides): Item {
+    createItem(itemId: ItemId, overrides?: ItemOverrides): Item {
         const recipe = this._itemRecipeManager.getRecipe(itemId);
         const instanceIndex = this._getInstanceIndex(itemId);
 
-        const item = new Item(recipe, overrides, { instanceIndex }, this);
+        const item = new Item(recipe, overrides ?? {}, { instanceIndex }, this);
 
         this._itemMap.set(item.id, item);
 

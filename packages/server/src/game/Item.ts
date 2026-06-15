@@ -170,6 +170,10 @@ export class Item extends SceneObject {
         return this.findSlotProps(SlotType.enum.ammo)?.maxQuantity ?? 0;
     }
 
+    get canCollapse(): boolean {
+        return this.type === ItemType.enum.round;
+    }
+
     hasSlot(slot: SlotType): boolean {
         return !!this.findSlotContents(slot);
     }

@@ -2,6 +2,7 @@ import { Description, SideId, SideSummary, UnitId } from "@atbs/shared-data";
 import z from "zod";
 import { Unit, UnitOverrides } from "./Unit.js";
 import { UnitRecipeManager } from "./UnitRecipeManager.js";
+import { ItemManager } from "./ItemManager.js";
 
 export const SideRecipe = z.object({
     id: SideId,
@@ -41,7 +42,7 @@ export class Side {
     private readonly _unitMap: Map<UnitId, Unit>;
     private _victoryPoints: number;
 
-    constructor(recipe: Readonly<SideRecipe>) {
+    constructor(recipe: Readonly<SideRecipe>, itemManager: ItemManager) {
         this._recipe = recipe;
         this._victoryPoints = 0;
 
@@ -49,7 +50,12 @@ export class Side {
         this._unitMap = new Map<UnitId, Unit>();
 
         this._recipe.units.forEach(({ id, overrides }) => {
-            const unit = UnitRecipeManager.GetSingleton().newUnit(id, overrides, { side: this });
+            const unit = UnitRecipeManager.GetSingleton().newUnit(
+                id,
+                overrides,
+                { side: this },
+                itemManager
+            );
 
             this._units.push(unit);
             this._unitMap.set(unit.id, unit);

@@ -24,6 +24,8 @@ import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { Clamp } from "../../../maths/src/Maths.js";
+import { Inventory, InventoryRecipe } from "./Inventory.js";
+import { ItemManager } from "./ItemManager.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -72,6 +74,7 @@ export const UnitRecipe = z.object({
         strength: AttributeDef,
         weight: z.number().positive()
     }),
+    inventory: InventoryRecipe,
     collision: z.object({
         shape: z.literal("circle"),
         radius: z.number().positive()
@@ -107,6 +110,7 @@ export class Unit extends SceneObject {
         speed: Attribute;
         strength: Attribute;
     };
+    private readonly _inventory: Inventory;
     private readonly _side: Side;
 
     private _location: TilePos | null;
@@ -115,7 +119,8 @@ export class Unit extends SceneObject {
     constructor(
         recipe: Readonly<UnitRecipe>,
         overrides: Readonly<UnitOverrides>,
-        additionalData: Readonly<UnitAdditionalData>
+        additionalData: Readonly<UnitAdditionalData>,
+        itemManager: ItemManager
     ) {
         super(recipe.renderable);
 
@@ -129,6 +134,7 @@ export class Unit extends SceneObject {
             speed: setDefaultAttribute(recipe.attributes.speed),
             strength: setDefaultAttribute(recipe.attributes.strength)
         };
+        this._inventory = new Inventory(this._recipe.inventory, itemManager);
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._orientation = recipe.isDirectional
             ? (overrides.orientation ?? Orientation.NORTH)
@@ -154,6 +160,10 @@ export class Unit extends SceneObject {
 
     get description(): Description {
         return this._recipe.description;
+    }
+
+    get inventory(): Inventory {
+        return this._inventory;
     }
 
     get location(): TilePos | null {

@@ -2,6 +2,7 @@ import { UnitId } from "@atbs/shared-data";
 import { Unit, UnitAdditionalData, UnitOverrides, UnitRecipe } from "./Unit.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
+import { ItemManager } from "./ItemManager.js";
 
 const UnitDirectory = "./data/units";
 
@@ -12,10 +13,15 @@ export class UnitRecipeManager {
         this._unitRecipeMap = new Map<UnitId, UnitRecipe>();
     }
 
-    newUnit(unitId: UnitId, overrides: UnitOverrides, additionalData: UnitAdditionalData): Unit {
+    newUnit(
+        unitId: UnitId,
+        overrides: UnitOverrides,
+        additionalData: UnitAdditionalData,
+        itemManager: ItemManager
+    ): Unit {
         const unitRecipe = this.getRecipe(unitId);
 
-        return new Unit(unitRecipe, overrides, additionalData);
+        return new Unit(unitRecipe, overrides, additionalData, itemManager);
     }
 
     async loadUnitRecipes(directory = UnitDirectory): Promise<void> {

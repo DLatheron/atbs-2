@@ -1,9 +1,9 @@
 import { Description, ScenarioSummary, SideId, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
-import { readFile } from "fs/promises";
 import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
+import { ItemManager } from "./ItemManager.js";
 
 export const ScenarioRecipe = z.object({
     id: z.string().min(1),
@@ -20,10 +20,10 @@ export class Scenario {
     private readonly _sidesMap: Map<SideId, Side>;
     private readonly _map: WorldMap;
 
-    constructor(recipe: Readonly<ScenarioRecipe>) {
+    constructor(recipe: Readonly<ScenarioRecipe>, itemManager: ItemManager) {
         this._recipe = recipe;
 
-        this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe));
+        this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe, itemManager));
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
 
         const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);
@@ -87,18 +87,18 @@ export class Scenario {
         };
     }
 
-    static async LoadScenario(fullPath: string): Promise<Scenario | null> {
-        try {
-            const fileContents = await readFile(fullPath, "utf-8");
-            const rawRecipe = JSON.parse(fileContents);
-            const recipe = ScenarioRecipe.parse(rawRecipe);
+    // static async LoadScenario(fullPath: string, itemManager: ItemManager): Promise<Scenario | null> {
+    //     try {
+    //         const fileContents = await readFile(fullPath, "utf-8");
+    //         const rawRecipe = JSON.parse(fileContents);
+    //         const recipe = ScenarioRecipe.parse(rawRecipe);
 
-            const scenario = new Scenario(recipe);
+    //         const scenario = new Scenario(recipe, itemManager);
 
-            return scenario;
-        } catch (error) {
-            console.error(`ERROR Loading Recipe: ${fullPath}`, error);
-            return null;
-        }
-    }
+    //         return scenario;
+    //     } catch (error) {
+    //         console.error(`ERROR Loading Recipe: ${fullPath}`, error);
+    //         return null;
+    //     }
+    // }
 }

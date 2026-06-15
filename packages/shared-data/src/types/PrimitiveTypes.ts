@@ -364,3 +364,9 @@ export const ItemSummary = z.object({
     )
 });
 export type ItemSummary = z.infer<typeof ItemSummary>;
+
+export const InventorySummary = z.object({
+    inUse: z.number().min(-1),
+    items: ItemSummary
+});
+export type InventorySummary = z.infer<typeof InventorySummary>;
