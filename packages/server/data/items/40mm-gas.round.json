@@ -3,6 +3,7 @@
     "type": "round",
     "name": "40mm Gas Grenade",
     "shortName": "40mm Gas",
+    "maxRange": 3000,
     "description": [
         {
             "text": "40mm Gas Grenade suitable for the M203 underslung grenade launcher. The grenade rapid emits a large amount of thick smoke, obscuring vision, disorientation and causing damage to units without respirators."

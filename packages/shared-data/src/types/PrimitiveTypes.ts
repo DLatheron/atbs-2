@@ -241,13 +241,13 @@ const damageType = ["default", "disorientation"] as const;
 export const DamageType = z.enum(damageType);
 export type DamageType = z.infer<typeof DamageType>;
 
-export const DamageMap = z.intersection(
+export const DamageMap = z.union([
     z.record(UnitType, z.number().positive()),
     z.object({
         type: DamageType.default(DamageType.enum.default),
         default: z.number().positive()
     })
-);
+]);
 
 const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
 export const ItemType = z.enum(itemType);

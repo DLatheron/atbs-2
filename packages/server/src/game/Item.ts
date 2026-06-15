@@ -22,6 +22,7 @@ export interface ItemAdditionalData {
 export class Item extends SceneObject {
     private readonly _id: ItemId;
     private readonly _recipe: Readonly<ItemRecipe>;
+    private readonly _itemManager: ItemManager;
     private readonly _slots: Map<SlotType, Item>;
 
     private _location: TilePos | null;
@@ -37,6 +38,7 @@ export class Item extends SceneObject {
 
         this._id = `${recipe.id}-${additionalData.instanceIndex}`;
         this._recipe = recipe;
+        this._itemManager = itemManager;
 
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._quantity = overrides.quantity ?? recipe.quantity;
@@ -158,12 +160,20 @@ export class Item extends SceneObject {
         return this._slots.get(slot);
     }
 
-    getSlot(slot: SlotType): Item {
+    getSlotContents(slot: SlotType): Item {
         const item = this.findSlot(slot);
         if (!item) {
             throw new Error(`Unable to find a slot for ${slot}`);
         }
         return item;
+    }
+
+    emptySlot(slot: SlotType): void {
+        this._slots.delete(slot);
+    }
+
+    setSlotContents(slot: SlotType, item: Item): void {
+        this._slots.set(slot, item);
     }
 
     hasSlotProps(slot: SlotType): boolean {
@@ -180,6 +190,94 @@ export class Item extends SceneObject {
             throw new Error(`Unable to find slot props for ${slot}`);
         }
         return slotProps;
+    }
+
+    canLoad(): boolean {
+        return this.hasSlotProps(SlotType.enum.ammo);
+    }
+
+    /**
+     * Attempts to load the given ammunition into the gun
+     * @param ammo Item to use as ammunition.
+     * @returns The existing magazine (if applicable) or what remains in of the passed ammo.
+     */
+    load(ammo: Item): Item | null {
+        if (!this.canLoad) {
+            throw new Error(`Item ${this.id} cannot be loaded`);
+        }
+
+        if (ammo.type !== ItemType.enum.magazine && ammo.type !== ItemType.enum.round) {
+            throw new Error(`Cannot load item ${this.id} with item ${ammo.id}, type ${ammo.type}`);
+        }
+
+        const ammoRecipeId = ammo.recipeId;
+        const slotProps = this.getSlotProps(SlotType.enum.ammo);
+        if (!slotProps.compatibleIds.includes(ammoRecipeId)) {
+            throw new Error(
+                `${ammo.id} is not a compatible ammo for ${this.id}, only: ${slotProps.compatibleIds.join(", ")} are`
+            );
+        }
+
+        if (ammo.type === ItemType.enum.magazine) {
+            //
+            // Magazines
+            //
+            const existingMagazine = this.getSlotContents(SlotType.enum.ammo);
+
+            this.setSlotContents(SlotType.enum.ammo, ammo);
+
+            return existingMagazine;
+        } else {
+            //
+            // Rounds
+            //
+            const { maxQuantity } = slotProps;
+
+            let itemsRounds = this.getSlotContents(SlotType.enum.ammo);
+            let spaceForRounds: number;
+
+            if (itemsRounds) {
+                if (itemsRounds.recipeId !== ammo.recipeId) {
+                    throw new Error(
+                        `Cannot load ${ammo.id} into ${this.id} as item already contains ${itemsRounds.quantity}x ${itemsRounds.recipeId}`
+                    );
+                }
+
+                spaceForRounds = maxQuantity - itemsRounds.quantity;
+            } else {
+                itemsRounds = this._itemManager.createItem(ammo.recipeId, { quantity: 0 });
+                spaceForRounds = maxQuantity;
+            }
+            if (spaceForRounds <= 0) {
+                throw new Error(`${this.id} is already fully loaded`);
+            }
+
+            const roundsThatCanBeLoaded = Math.min(spaceForRounds, ammo.quantity);
+
+            itemsRounds.quantity += roundsThatCanBeLoaded;
+            ammo.quantity -= roundsThatCanBeLoaded;
+
+            return ammo.quantity > 0 ? ammo : null;
+        }
+    }
+
+    /**
+     * Unloads any ammunition from the item
+     * @returns The unloaded ammo, if any.
+     */
+    unload(): Item | null {
+        if (!this.canLoad) {
+            throw new Error(`Item ${this.id} cannot be loaded`);
+        }
+
+        const ammo = this.getSlotContents(SlotType.enum.ammo);
+        if (!ammo) {
+            return null;
+        }
+
+        this.emptySlot(SlotType.enum.ammo);
+
+        return ammo;
     }
 
     calcDamage(unitType: UnitType): number {

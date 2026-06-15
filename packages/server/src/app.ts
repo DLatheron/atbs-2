@@ -57,8 +57,14 @@ export async function createApp(): Promise<Application> {
     console.info("Empty weight", item.emptyWeight, "kg");
     console.info("Total weight", item.weight, "kg");
     console.dir({ fireables: item.getFireables.map(({ quantity, id }) => `${quantity}x ${id}`) });
-    console.dir({ compatibleAmmoIds: item.getSlot("0").compatibleAmmoIds });
-    console.dir({ compatibleAmmoIds: item.getSlot("1").compatibleAmmoIds });
+    console.dir({ compatibleAmmoIds: item.getSlotContents("0").compatibleAmmoIds });
+    console.dir({ compatibleAmmoIds: item.getSlotContents("1").compatibleAmmoIds });
+
+    const ammo = itemManager.createItem("m16-20.magazine", {});
+    const removedAmmo = item.getSlotContents("0").load(ammo)
+
+    console.info("Loading:", removedAmmo);
+    console.info("Loading:", item.getSlotContents("0").load(removedAmmo!));
 
     return app;
 }

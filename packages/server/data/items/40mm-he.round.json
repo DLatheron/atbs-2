@@ -2,7 +2,8 @@
     "id": "40mm-he.round",
     "type": "round",
     "name": "40mm HE Grenade",
-    "shortName": "5.56mm NATO",
+    "shortName": "40mm HE",
+    "maxRange": 3000,
     "description": [
         {
             "text": "40mm High-Explosive Grenade suitable for the M203 underslung grenade launcher. The grenade has a kill-radius of 5 metres and causes casualities outside the range."

@@ -3,6 +3,7 @@
     "type": "round",
     "name": "40mm Stun Grenade",
     "shortName": "40mm Stun",
+    "maxRange": 3000,
     "description": [
         {
             "text": "40mm Stun grenade."
