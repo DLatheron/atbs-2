@@ -1,4 +1,4 @@
-import { UnitSummary } from "@atbs/shared-data";
+import { ItemSummary, UnitSummary } from "@atbs/shared-data";
 import { Box, Button, Container, Grid, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../../Description/Description";
 import { AttributesComponent } from "../../Attributes";
@@ -14,67 +14,41 @@ import {
 } from "../../../helpers/formattingHelpers";
 import { DirectionComponent } from "../../Direction";
 import { ImageComponent } from "../../Image";
-import { Orientation, rotateOrientation } from "@atbs/maths";
-import { useMemo } from "react";
-import { useKeyboard } from "../../../hooks";
-import { useImageCache } from "../../../hooks/useImageCache";
+import { Orientation } from "@atbs/maths";
 
-export interface MoveModePanelProps {
+export interface ThrowModePanelProps {
     visible: boolean;
     disabled: boolean;
     unit: UnitSummary | null;
+    unitItem: ItemSummary | null;
 
-    onMove: (orientation: Orientation) => void;
     onRotateTo: (orientation: Orientation) => void;
-    onEndMovement: () => void;
-    onFireMode: () => void;
-    onThrowMode: () => void;
+    onEndThrowMode: () => void;
 
     sx?: SxProps;
 }
 
-export function MoveModePanel({
+export function ThrowModePanel({
     visible,
     disabled,
     unit,
-    onMove,
+    unitItem,
     onRotateTo,
-    onEndMovement,
-    onFireMode,
-    onThrowMode,
+    onEndThrowMode,
     sx
-}: MoveModePanelProps) {
-    const { imageCache } = useImageCache();
-
-    const keyMap = useMemo(
-        () => ({
-            KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
-            KeyD: () => unit && onRotateTo(rotateOrientation(unit.orientation, 1)),
-            KeyW: () => unit && onMove(Orientation.NORTH),
-            KeyS: () => unit && onMove(Orientation.SOUTH),
-            // KeyF: () => onEnterFireMode(),
-            // KeyI: () => onOpenInventory(),
-            // KeyU: () => onActionMode(!actionMode),
-            Escape: () => onEndMovement()
-        }),
-        [unit, onMove, onRotateTo, onEndMovement]
-    );
-
-    useKeyboard({
-        keyMap,
-        disabled: !visible || disabled
-    });
+}: ThrowModePanelProps) {
+    // const { imageCache } = useImageCache();
 
     if (!visible) {
         return null;
     }
-    if (!unit) {
+    if (!unit || !unitItem) {
         return null;
     }
 
     return (
         <Container
-            data-testid="move-mode-panel"
+            data-testid="throw-move-panel"
             disableGutters
             maxWidth={false}
             sx={{
@@ -178,85 +152,16 @@ export function MoveModePanel({
                     sx={{ gridArea: "attributes" }}
                 />
             </Grid>
-            <Grid
-                sx={{
-                    gridArea: "action-buttons",
-                    display: "grid",
-                    gridTemplateAreas: `
-                        'fire-mode throw-mode action-mode inventory'
-                    `,
-                    gridTemplateRows: "1fr",
-                    gridTemplateColumns: "1fr 1fr 1fr 1fr"
-                }}
-            >
-                <Button
-                    id="fire-mode"
-                    title="Fire mode"
-                    variant="outlined"
-                    disabled={disabled || !unit.actions.canFire}
-                    sx={{ gridArea: "fire-mode" }}
-                    onClick={onFireMode}
-                >
-                    <img
-                        src={imageCache.getDataSafe("fireMode")}
-                        width={40}
-                        height={40}
-                        alt="Fire Mode"
-                    />
-                </Button>
-                <Button
-                    id="throw-mode"
-                    title="Throw mode"
-                    variant="outlined"
-                    disabled={disabled || !unit.actions.canThrow}
-                    sx={{ gridArea: "throw-mode" }}
-                    onClick={onThrowMode}
-                >
-                    <img
-                        src={imageCache.getDataSafe("throw")}
-                        width={40}
-                        height={40}
-                        alt="Throw Mode"
-                    />
-                </Button>
-                <Button
-                    id="action-mode"
-                    title="Action mode"
-                    variant="outlined"
-                    disabled={disabled || !unit.actions.canAction}
-                    sx={{ gridArea: "action-mode" }}
-                >
-                    <img
-                        src={imageCache.getDataSafe("action")}
-                        width={40}
-                        height={40}
-                        alt="Action Mode"
-                    />
-                </Button>
-                <Button
-                    id="inventory"
-                    title="Inventory"
-                    variant="outlined"
-                    disabled={disabled || !unit.actions.canInventory}
-                    sx={{ gridArea: "inventory" }}
-                >
-                    <img
-                        src={imageCache.getDataSafe("inventory")}
-                        width={40}
-                        height={40}
-                        alt="Inventory"
-                    />
-                </Button>
-            </Grid>
+            {unitItem.name}
             <Button
-                id="end-move"
-                title="End the current unit's movement"
+                id="end-throw"
+                title="End the current unit's throw mode"
                 variant="outlined"
                 disabled={disabled}
-                onClick={onEndMovement}
+                onClick={onEndThrowMode}
                 sx={{ gridArea: "exit-button" }}
             >
-                End Movement
+                End Throw Mode
             </Button>
         </Container>
     );

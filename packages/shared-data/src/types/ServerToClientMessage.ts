@@ -4,6 +4,8 @@ import {
     ClientMap,
     ClientSummary,
     ErrorType,
+    FireModeItemSummary,
+    ItemSummary,
     RenderList,
     ScenarioId,
     ScenarioSummary,
@@ -101,8 +103,16 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: ClientMap
     }),
     z.object({
-        type: z.literal("server:unit:selected"),
+        type: z.literal("server:unit:mode:move"),
         payload: UnitSummary.nullable()
+    }),
+    z.object({
+        type: z.literal("server:unit:mode:fire"),
+        payload: FireModeItemSummary.nullable()
+    }),
+    z.object({
+        type: z.literal("server:unit:mode:throw"),
+        payload: ItemSummary.nullable()
     }),
     z.object({
         type: z.literal("server:turn:start"),

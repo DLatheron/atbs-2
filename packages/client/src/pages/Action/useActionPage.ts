@@ -4,7 +4,9 @@ import { useServerMessageManager, useWorld } from "../../hooks";
 import {
     ClientMap,
     ErrorType,
+    FireModeItemSummary,
     ImageId,
+    ItemSummary,
     RenderMode,
     SideSummary,
     TileInfo,
@@ -22,13 +24,15 @@ export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
     const { imageCache } = useImageCache();
     const { world } = useWorld();
-    const [sidePanelMode, setSidePanelMode] = useState<"map-mode" | "move-mode" | "fire-mode">(
-        "map-mode"
-    );
+    const [sidePanelMode, setSidePanelMode] = useState<
+        "map-mode" | "move-mode" | "fire-mode" | "throw-mode"
+    >("map-mode");
     const [side, setSide] = useState<SideSummary | null>(null);
     const [turn, setTurn] = useState<number>(0);
     const [map, setMap] = useState<ClientMap | null>(null);
     const [unit, setUnit] = useState<UnitSummary | null>(null);
+    const [unitWeapon, setUnitWeapon] = useState<FireModeItemSummary | null>(null);
+    const [unitItem, setUnitItem] = useState<ItemSummary | null>(null);
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
@@ -64,7 +68,7 @@ export function useActionPage() {
                 await world._waitForRenderStart;
             }),
 
-            messageManager.registerHandler("server:unit:selected", (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:move", (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
 
                 if (payload) {
@@ -75,6 +79,38 @@ export function useActionPage() {
                 setUnit(payload);
                 if (payload) {
                     setSidePanelMode("move-mode");
+                } else {
+                    setSidePanelMode("map-mode");
+                }
+            }),
+
+            messageManager.registerHandler("server:unit:mode:fire", (_context, payload) => {
+                console.info("$$$ Received unit message $$$", payload?.id);
+
+                // if (payload) {
+                //     const imageSet = new Set<ImageId>();
+                //     ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                // }
+
+                setUnitWeapon(payload);
+                if (payload) {
+                    setSidePanelMode("fire-mode");
+                } else {
+                    setSidePanelMode("map-mode");
+                }
+            }),
+
+            messageManager.registerHandler("server:unit:mode:throw", (_context, payload) => {
+                console.info("$$$ Received unit message $$$", payload?.id);
+
+                // if (payload) {
+                //     const imageSet = new Set<ImageId>();
+                //     ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                // }
+
+                setUnitItem(payload);
+                if (payload) {
+                    setSidePanelMode("throw-mode");
                 } else {
                     setSidePanelMode("map-mode");
                 }
@@ -231,9 +267,37 @@ export function useActionPage() {
         setError(null);
     }, []);
 
+    const onFireMode = useCallback(() => {
+        if (unit?.id) {
+            sendMessage({
+                type: "client:unit:mode:fire",
+                payload: unit.id
+            });
+        }
+    }, [sendMessage, unit?.id]);
+
+    const onThrowMode = useCallback(() => {
+        if (unit?.id) {
+            sendMessage({
+                type: "client:unit:mode:throw",
+                payload: unit.id
+            });
+        }
+    }, [sendMessage, unit?.id]);
+
+    const onEndFireMode = useCallback(() => {
+        setSidePanelMode("move-mode");
+    }, []);
+
+    const onEndThrowMode = useCallback(() => {
+        setSidePanelMode("move-mode");
+    }, []);
+
     return {
         map,
         unit,
+        unitWeapon,
+        unitItem,
         turn,
         side,
         tileInfo,
@@ -244,6 +308,10 @@ export function useActionPage() {
         onRotateTo,
         onEndMovement,
         onEndTurn,
-        onEndError
+        onEndError,
+        onFireMode,
+        onThrowMode,
+        onEndFireMode,
+        onEndThrowMode
     };
 }

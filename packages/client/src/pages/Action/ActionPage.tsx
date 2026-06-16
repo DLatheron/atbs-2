@@ -8,6 +8,8 @@ import { MapModePanel, SidePanel } from "../../components/SidePanel";
 import { TitleBarComponent } from "../../components/TitleBar";
 import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
 import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
+import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
+import { ThrowModePanel } from "../../components/SidePanel/ThrowModePanel/ThrowModePanel";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -19,6 +21,8 @@ export function ActionPage({ visible }: ActionPageProps) {
 
     const {
         unit,
+        unitWeapon,
+        unitItem,
         turn,
         side,
         tileInfo,
@@ -29,7 +33,11 @@ export function ActionPage({ visible }: ActionPageProps) {
         onRotateTo,
         onEndMovement,
         onEndTurn,
-        onEndError
+        onEndError,
+        onFireMode,
+        onThrowMode,
+        onEndFireMode,
+        onEndThrowMode
     } = useActionPage();
 
     const { world } = useWorld();
@@ -142,6 +150,26 @@ export function ActionPage({ visible }: ActionPageProps) {
                     onMove={onMove}
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
+                    onFireMode={onFireMode}
+                    onThrowMode={onThrowMode}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
+                />
+                <FireModePanel
+                    visible={!error && sidePanelMode === "fire-mode"}
+                    disabled={disabled}
+                    unit={unit}
+                    unitWeapon={unitWeapon}
+                    onRotateTo={onRotateTo}
+                    onEndFireMode={onEndFireMode}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
+                />
+                <ThrowModePanel
+                    visible={!error && sidePanelMode === "throw-mode"}
+                    disabled={disabled}
+                    unit={unit}
+                    unitItem={unitItem}
+                    onRotateTo={onRotateTo}
+                    onEndThrowMode={onEndThrowMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <ErrorPanel

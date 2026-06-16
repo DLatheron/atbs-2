@@ -69,7 +69,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     game.selectedUnit = unit;
 
                     from.sendMessage({
-                        type: "server:unit:selected",
+                        type: "server:unit:mode:move",
                         payload: unit.toSummary()
                     });
                 }
@@ -84,7 +84,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     if (selectedUnitId === selectedUnit?.id) {
                         game.selectedUnit = null;
                         from.sendMessage({
-                            type: "server:unit:selected",
+                            type: "server:unit:mode:move",
                             payload: null
                         });
                     }
@@ -115,7 +115,25 @@ export class ActionPhaseHandler extends PhaseHandler {
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
-            )
+            ),
+
+            messageManager.registerHandler("client:unit:mode:fire", ({ game }, _null, from) => {
+                game.verifyFromPlayingClient(from);
+                const { selectedUnit } = game;
+                from.sendMessage({
+                    type: "server:unit:mode:fire",
+                    payload: selectedUnit?.itemInUse?.getFireModeItemSummary(selectedUnit) ?? null
+                });
+            }),
+
+            messageManager.registerHandler("client:unit:mode:throw", ({ game }, _null, from) => {
+                game.verifyFromPlayingClient(from);
+                const { selectedUnit } = game;
+                from.sendMessage({
+                    type: "server:unit:mode:throw",
+                    payload: selectedUnit?.itemInUse?.getItemSummary() ?? null
+                });
+            })
         ];
     }
 }
