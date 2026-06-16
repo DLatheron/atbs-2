@@ -24,11 +24,7 @@ export function OnTargetComponent({ onTarget, show, sx }: OnTargetComponentProps
     }, [show, transition]);
 
     return (
-        <Container
-            data-testid="on-target-component"
-            className={transition}
-            sx={sx}
-        >
+        <Container data-testid="on-target-component" className={transition} sx={sx}>
             <Typography variant="h1">{isOnTarget ? "🎯 On Target" : "◎ Off Target"}</Typography>
         </Container>
     );

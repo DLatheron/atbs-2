@@ -1,6 +1,5 @@
 import { FireModeItemSummary, UnitSummary } from "@atbs/shared-data";
-import { Box, Button, Container, Grid, SxProps, Typography } from "@mui/material";
-import { DescriptionComponent } from "../../Description/Description";
+import { Button, Container, Grid, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -13,8 +12,8 @@ import {
     STRENGTH_LEVELS
 } from "../../../helpers/formattingHelpers";
 import { DirectionComponent } from "../../Direction";
-import { ImageComponent } from "../../Image";
 import { Orientation } from "@atbs/maths";
+import { UnitDetailsComponent } from "../../UnitDetails";
 
 export interface FireModePanelProps {
     visible: boolean;
@@ -70,35 +69,22 @@ export function FireModePanel({
                     overflow: "auto",
                     display: "grid",
                     gridTemplateAreas: `
-                        'name'
-                        'image'
-                        'description'
-                        'direction-title'
+                        'unit'
                         'direction'
-                        'attributes-title'
                         'attributes'
                         'next'
                     `,
-                    gridTemplateRows: "auto auto auto auto auto autoauto 1fr",
+                    gridTemplateRows: "auto auto auto 1fr",
                     rowGap: 2
                 }}
             >
-                <Typography variant="h5" sx={{ gridArea: "name", mx: "auto" }}>
-                    {unit.name}
-                </Typography>
-                <ImageComponent sx={{ gridArea: "image", mx: "auto" }} images={unit.uiImage} />
-                <Typography variant="h6" sx={{ gridArea: "direction-title" }}>
-                    Direction:
-                </Typography>
+                <UnitDetailsComponent unit={unit} sx={{ gridArea: "unit" }} />
                 <DirectionComponent
                     direction={unit.orientation}
                     viewAngleInDegrees={unit.viewAngleInDegrees}
                     onDirectionChange={onRotateTo}
-                    sx={{ gridArea: "direction", mx: "auto" }}
+                    sx={{ gridArea: "direction" }}
                 />
-                <Typography variant="h6" sx={{ gridArea: "attributes-title" }}>
-                    Attributes:
-                </Typography>
                 <AttributesComponent
                     attributes={[
                         {

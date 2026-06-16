@@ -12,7 +12,8 @@ import {
     Quantity,
     RenderList,
     UnitType,
-    Weight
+    Weight,
+    RenderMode
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
 import { TilePos } from "@atbs/maths";
@@ -385,7 +386,11 @@ export class Item extends SceneObject {
             shortName: this.shortName,
             description: this.description,
             quantity: this.quantity,
-            weight: this.weight
+            weight: this.weight,
+            uiImage: this.getRenderList({
+                renderMode: RenderMode.enum.UI_MODE,
+                states: []
+            })
         };
     }
 
@@ -399,7 +404,11 @@ export class Item extends SceneObject {
                 description: weapon.description,
                 capacity: weapon.capacity,
                 maxCapacity: weapon.maxCapacity,
-                fireModes: weapon.getFireModes(unit)
+                fireModes: weapon.getFireModes(unit),
+                uiImage: weapon.getRenderList({
+                    renderMode: RenderMode.enum.UI_MODE,
+                    states: []
+                })
             }))
         };
     }

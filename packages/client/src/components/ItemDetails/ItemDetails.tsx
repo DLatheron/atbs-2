@@ -1,21 +1,27 @@
-import { UnitSummary } from "@atbs/shared-data";
+import { ItemSummary } from "@atbs/shared-data";
 import { Box, Stack, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../Description";
 import { ImageComponent } from "../Image";
 
-export interface UnitDetailsComponentProps {
-    unit: UnitSummary;
+export interface ItemDetailsComponentProps {
+    title?: string;
+    item: ItemSummary | null;
     noImages?: boolean;
     noDescription?: boolean;
     sx?: SxProps;
 }
 
-export function UnitDetailsComponent({
-    unit,
+export function ItemDetailsComponent({
+    title,
+    item,
     noImages = false,
     noDescription = false,
     sx
-}: UnitDetailsComponentProps) {
+}: ItemDetailsComponentProps) {
+    if (!item) {
+        return null;
+    }
+
     return (
         <Box
             sx={{
@@ -24,28 +30,34 @@ export function UnitDetailsComponent({
                 display: "grid",
                 backgroundColor: "beige",
                 gridTemplateAreas: `
+                    'title'
                     'name'
                     'image'
                     'description'
                 `,
-                gridTemplateRows: "auto minmax(0, auto) minmax(0, auto)",
+                gridTemplateRows: "minmax(0, auto) auto minmax(0, auto) minmax(0, auto)",
                 rowGap: 2,
                 p: 1,
                 ...sx
             }}
         >
-            {unit && (
+            {item && (
                 <>
-                    <Typography variant="h5" sx={{ gridArea: "name", m: "auto" }}>
-                        {unit.name}
+                    {title && (
+                        <Typography variant="h5" sx={{ gridArea: "title", m: "auto" }}>
+                            {title}
+                        </Typography>
+                    )}
+                    <Typography variant="h6" sx={{ gridArea: "name", m: "auto" }}>
+                        {item.name}
                     </Typography>
                     {!noImages && (
-                        <ImageComponent images={unit.uiImage} sx={{ gridArea: "image" }} />
+                        <ImageComponent images={item.uiImage} sx={{ gridArea: "image" }} />
                     )}
                     {!noDescription && (
                         <Stack sx={{ gridArea: "description" }} spacing={1}>
                             <Typography variant="h6">Description:</Typography>
-                            <DescriptionComponent description={unit.description} />
+                            <DescriptionComponent description={item.description} />
                         </Stack>
                     )}
                 </>

@@ -153,33 +153,6 @@ export const ScenarioSummary = z.object({
 });
 export type ScenarioSummary = z.infer<typeof ScenarioSummary>;
 
-export const UnitSummary = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
-    description: Description,
-    orientation: z.enum(Orientation),
-    viewAngleInDegrees: z.int().positive(),
-    isDirectional: z.boolean().optional().default(true),
-    attributes: z.object({
-        actionPoints: Attribute,
-        constitution: Attribute,
-        fitness: Attribute,
-        morale: Attribute,
-        stamina: Attribute,
-        speed: Attribute,
-        strength: Attribute,
-        weight: z.number().positive()
-    }),
-    uiImage: RenderList,
-    actions: z.object({
-        canFire: z.boolean(),
-        canThrow: z.boolean(),
-        canAction: z.boolean(),
-        canInventory: z.boolean()
-    })
-});
-export type UnitSummary = z.infer<typeof UnitSummary>;
-
 export const TileInfo = z.object({
     tilePos: TilePosRecipe,
     terrain: z.object({
@@ -356,9 +329,38 @@ export const ItemSummary = z.object({
     shortName: z.string(),
     description: Description,
     quantity: Quantity,
-    weight: Weight
+    weight: Weight,
+    uiImage: RenderList
 });
 export type ItemSummary = z.infer<typeof ItemSummary>;
+
+export const UnitSummary = z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+    description: Description,
+    orientation: z.enum(Orientation),
+    viewAngleInDegrees: z.int().positive(),
+    isDirectional: z.boolean().optional().default(true),
+    attributes: z.object({
+        actionPoints: Attribute,
+        constitution: Attribute,
+        fitness: Attribute,
+        morale: Attribute,
+        stamina: Attribute,
+        speed: Attribute,
+        strength: Attribute,
+        weight: z.number().positive()
+    }),
+    uiImage: RenderList,
+    actions: z.object({
+        canFire: z.boolean(),
+        canThrow: z.boolean(),
+        canAction: z.boolean(),
+        canInventory: z.boolean()
+    }),
+    itemInUse: ItemSummary.nullable()
+});
+export type UnitSummary = z.infer<typeof UnitSummary>;
 
 export const FireModeItemSummary = ItemSummary.extend({
     weapons: z.array(
@@ -369,7 +371,8 @@ export const FireModeItemSummary = ItemSummary.extend({
             description: Description,
             capacity: z.int().nonnegative(),
             maxCapacity: z.int().nonnegative(),
-            fireModes: FireModes
+            fireModes: FireModes,
+            uiImage: RenderList
         })
     )
 });

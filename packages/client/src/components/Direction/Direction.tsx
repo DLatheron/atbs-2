@@ -9,7 +9,7 @@ import {
     roundDegrees,
     Vec2
 } from "@atbs/maths";
-import { Box, SxProps } from "@mui/material";
+import { Box, SxProps, Typography } from "@mui/material";
 import { JSX, useMemo } from "react";
 
 export interface DirectionComponentProps {
@@ -95,111 +95,135 @@ export function DirectionComponent({
         <Box
             data-testid="direction-component"
             sx={{
-                borderRadius: "10px",
-                backgroundColor: "white",
-                border: disabled ? "2px solid grey" : "2px solid black",
-                width: 96,
-                height: 96,
-                overflow: "hidden",
-                position: "relative",
-                cursor: disabled ? "not-allowed" : "pointer",
+                borderRadius: 2,
+                border: "1px black solid",
+                display: "grid",
+                backgroundColor: "beige",
+                gridTemplateAreas: `
+                    'title'
+                    'direction'
+                `,
+                gridTemplateRows: "auto auto",
+                rowGap: 1,
+                p: 1,
                 ...sx
             }}
-            onClick={(event: React.MouseEvent<HTMLDivElement>) => {
-                const rect = (
-                    event.target as HTMLDivElement
-                ).parentElement?.getBoundingClientRect();
-                if (!rect) {
-                    return;
-                }
-                const pos = new Vec2(event.clientX - rect.x, event.clientY - rect.y);
-                if (pos.x < 0 || pos.x > rect.height || pos.y < 0 || pos.y > rect.height) {
-                    console.info("Out of rect");
-                    return;
-                }
-                const center = new Vec2(96 / 2, 96 / 2);
-                const up = new Vec2(0, 48).normalise();
-                const vec = pos.sub(center).normalise();
-                vec.y = -vec.y;
-                vec.x = -vec.x;
-
-                const angle = radiansToDegrees(Vec2.AngleBetweenInRadians(up, vec));
-                const roundedAngle = roundDegrees(angle);
-                const orientation = angleInDegreesToDirection(clampAngleInDegrees(roundedAngle));
-
-                onDirectionChange(orientation);
-            }}
         >
-            <svg
-                className="direction-component--non-viewcone"
-                viewBox="0 0 96 96"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                    position: "absolute",
-                    transformOrigin: "center",
-                    transform: `rotate(${rotateNonViewConePath}deg)`
+            <Typography variant="h6" sx={{ gridArea: "title", m: "auto" }}>
+                Direction
+            </Typography>
+            <Box
+                sx={{
+                    gridArea: "direction",
+                    m: "auto",
+                    borderRadius: "10px",
+                    backgroundColor: "white",
+                    border: disabled ? "2px solid grey" : "2px solid black",
+                    width: 96,
+                    height: 96,
+                    overflow: "hidden",
+                    position: "relative",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    ...sx
+                }}
+                onClick={(event: React.MouseEvent<HTMLDivElement>) => {
+                    const rect = (
+                        event.target as HTMLDivElement
+                    ).parentElement?.getBoundingClientRect();
+                    if (!rect) {
+                        return;
+                    }
+                    const pos = new Vec2(event.clientX - rect.x, event.clientY - rect.y);
+                    if (pos.x < 0 || pos.x > rect.height || pos.y < 0 || pos.y > rect.height) {
+                        console.info("Out of rect");
+                        return;
+                    }
+                    const center = new Vec2(96 / 2, 96 / 2);
+                    const up = new Vec2(0, 48).normalise();
+                    const vec = pos.sub(center).normalise();
+                    vec.y = -vec.y;
+                    vec.x = -vec.x;
+
+                    const angle = radiansToDegrees(Vec2.AngleBetweenInRadians(up, vec));
+                    const roundedAngle = roundDegrees(angle);
+                    const orientation = angleInDegreesToDirection(
+                        clampAngleInDegrees(roundedAngle)
+                    );
+
+                    onDirectionChange(orientation);
                 }}
             >
-                <path d={nonViewConePath} fill="rgb(240, 74, 99)" />
-            </svg>
-            <svg
-                className="direction-component--viewcone"
-                viewBox="0 0 96 96"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                    position: "absolute",
-                    transformOrigin: "center",
-                    transform: `rotate(${rotateViewConePath}deg)`
-                }}
-            >
-                <path d={viewConePath} fill="rgb(30, 201, 104)" />
-            </svg>
-            <svg
-                className="direction-component--arrow"
-                viewBox="0 0 96 96"
-                xmlns="http://www.w3.org/2000/svg"
-                style={{
-                    transform: `translate(48px, 48px) rotate(${directionToDegrees(direction)}deg) translate(-48px, -48px)`,
-                    position: "absolute",
-                    transformOrigin: "top left"
-                }}
-            >
-                <line
-                    x1="48"
-                    y1="48"
-                    x2="48"
-                    y2="10"
-                    strokeWidth="2"
-                    stroke={stroke}
-                    style={{ pointerEvents: "none" }}
-                />
-                <line
-                    x1="48"
-                    y1="10"
-                    x2="38"
-                    y2="20"
-                    strokeWidth="2"
-                    stroke={stroke}
-                    style={{ pointerEvents: "none" }}
-                />
-                <line
-                    x1="48"
-                    y1="10"
-                    x2="58"
-                    y2="20"
-                    strokeWidth="2"
-                    stroke={stroke}
-                    style={{ pointerEvents: "none" }}
-                />
-                <ellipse
-                    cx="48"
-                    cy="48"
-                    rx="10"
-                    ry="10"
-                    fill="black"
-                    style={{ pointerEvents: "none" }}
-                />
-            </svg>
+                <svg
+                    className="direction-component--non-viewcone"
+                    viewBox="0 0 96 96"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{
+                        position: "absolute",
+                        transformOrigin: "center",
+                        transform: `rotate(${rotateNonViewConePath}deg)`
+                    }}
+                >
+                    <path d={nonViewConePath} fill="rgb(240, 74, 99)" />
+                </svg>
+                <svg
+                    className="direction-component--viewcone"
+                    viewBox="0 0 96 96"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{
+                        position: "absolute",
+                        transformOrigin: "center",
+                        transform: `rotate(${rotateViewConePath}deg)`
+                    }}
+                >
+                    <path d={viewConePath} fill="rgb(30, 201, 104)" />
+                </svg>
+                <svg
+                    className="direction-component--arrow"
+                    viewBox="0 0 96 96"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{
+                        transform: `translate(48px, 48px) rotate(${directionToDegrees(direction)}deg) translate(-48px, -48px)`,
+                        position: "absolute",
+                        transformOrigin: "top left"
+                    }}
+                >
+                    <line
+                        x1="48"
+                        y1="48"
+                        x2="48"
+                        y2="10"
+                        strokeWidth="2"
+                        stroke={stroke}
+                        style={{ pointerEvents: "none" }}
+                    />
+                    <line
+                        x1="48"
+                        y1="10"
+                        x2="38"
+                        y2="20"
+                        strokeWidth="2"
+                        stroke={stroke}
+                        style={{ pointerEvents: "none" }}
+                    />
+                    <line
+                        x1="48"
+                        y1="10"
+                        x2="58"
+                        y2="20"
+                        strokeWidth="2"
+                        stroke={stroke}
+                        style={{ pointerEvents: "none" }}
+                    />
+                    <ellipse
+                        cx="48"
+                        cy="48"
+                        rx="10"
+                        ry="10"
+                        fill="lightgrey"
+                        style={{ pointerEvents: "none" }}
+                    />
+                </svg>
+            </Box>
         </Box>
     );
 }

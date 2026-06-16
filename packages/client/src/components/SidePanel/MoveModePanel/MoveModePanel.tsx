@@ -1,6 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Box, Button, Container, Grid, SxProps, Typography } from "@mui/material";
-import { DescriptionComponent } from "../../Description/Description";
+import { Button, Container, Grid, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -13,12 +12,12 @@ import {
     STRENGTH_LEVELS
 } from "../../../helpers/formattingHelpers";
 import { DirectionComponent } from "../../Direction";
-import { ImageComponent } from "../../Image";
 import { Orientation, rotateOrientation } from "@atbs/maths";
 import { useMemo } from "react";
 import { useKeyboard } from "../../../hooks";
 import { useImageCache } from "../../../hooks/useImageCache";
 import { UnitDetailsComponent } from "../../UnitDetails";
+import { ItemDetailsComponent } from "../../ItemDetails";
 
 export interface MoveModePanelProps {
     visible: boolean;
@@ -98,29 +97,22 @@ export function MoveModePanel({
                     display: "grid",
                     gridTemplateAreas: `
                         'unit'
-                        'direction-title'
                         'direction'
-                        'attributes-title'
                         'attributes'
-                        'next'
+                        'item'
+                        'action-buttons'
                     `,
-                    gridTemplateRows: "auto auto auto auto auto autoauto 1fr",
+                    gridTemplateRows: "auto auto auto 1fr",
                     rowGap: 2
                 }}
             >
                 <UnitDetailsComponent unit={unit} sx={{ gridArea: "unit" }} />
-                <Typography variant="h6" sx={{ gridArea: "direction-title" }}>
-                    Direction:
-                </Typography>
                 <DirectionComponent
                     direction={unit.orientation}
                     viewAngleInDegrees={unit.viewAngleInDegrees}
                     onDirectionChange={onRotateTo}
-                    sx={{ gridArea: "direction", mx: "auto" }}
+                    sx={{ gridArea: "direction" }}
                 />
-                <Typography variant="h6" sx={{ gridArea: "attributes-title" }}>
-                    Attributes:
-                </Typography>
                 <AttributesComponent
                     attributes={[
                         {
@@ -169,6 +161,11 @@ export function MoveModePanel({
                         }
                     ]}
                     sx={{ gridArea: "attributes" }}
+                />
+                <ItemDetailsComponent
+                    title="Item in Use"
+                    item={unit.itemInUse}
+                    sx={{ gridArea: "item" }}
                 />
             </Grid>
             <Grid

@@ -514,8 +514,6 @@ export class Unit extends SceneObject {
     }
 
     toSummary(): UnitSummary {
-        console.info("Item in use:", this.itemInUse, this.itemInUse?.canFire);
-
         return {
             id: this.id,
             name: this.name,
@@ -534,15 +532,16 @@ export class Unit extends SceneObject {
                 weight: this.weight
             },
             uiImage: this.getRenderList({
-                renderMode: RenderMode.enum.MAP_MODE,
-                states: [] // TODO: Populate current states when we have an inventory etc.
+                renderMode: RenderMode.enum.UI_MODE,
+                states: ["alive", this.itemInUse ? "item-in-use" : "default"]
             }),
             actions: {
                 canFire: this.itemInUse?.canFire ?? false,
                 canThrow: !!this.itemInUse,
                 canAction: false,
                 canInventory: false
-            }
+            },
+            itemInUse: this.itemInUse?.getItemSummary() ?? null
         };
     }
 }

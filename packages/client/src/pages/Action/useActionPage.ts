@@ -68,12 +68,16 @@ export function useActionPage() {
                 await world._waitForRenderStart;
             }),
 
-            messageManager.registerHandler("server:unit:mode:move", (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:move", async (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
 
                 if (payload) {
                     const imageSet = new Set<ImageId>();
                     ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                    if (payload.itemInUse) {
+                        ImageCache.CacheRenderListImages(payload.itemInUse.uiImage, imageSet);
+                    }
+                    await imageCache.waitForImagesToCache(imageSet);
                 }
 
                 setUnit(payload);
@@ -84,13 +88,17 @@ export function useActionPage() {
                 }
             }),
 
-            messageManager.registerHandler("server:unit:mode:fire", (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:fire", async (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
 
-                // if (payload) {
-                //     const imageSet = new Set<ImageId>();
-                //     ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
-                // }
+                if (payload) {
+                    const imageSet = new Set<ImageId>();
+                    ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                    for (const weapon of payload.weapons) {
+                        ImageCache.CacheRenderListImages(weapon.uiImage, imageSet);
+                    }
+                    await imageCache.waitForImagesToCache(imageSet);
+                }
 
                 setUnitWeapon(payload);
                 if (payload) {
@@ -100,13 +108,14 @@ export function useActionPage() {
                 }
             }),
 
-            messageManager.registerHandler("server:unit:mode:throw", (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:throw", async (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
 
-                // if (payload) {
-                //     const imageSet = new Set<ImageId>();
-                //     ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
-                // }
+                if (payload) {
+                    const imageSet = new Set<ImageId>();
+                    ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                    await imageCache.waitForImagesToCache(imageSet);
+                }
 
                 setUnitItem(payload);
                 if (payload) {
