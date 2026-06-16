@@ -170,7 +170,13 @@ export const UnitSummary = z.object({
         strength: Attribute,
         weight: z.number().positive()
     }),
-    uiImage: RenderList
+    uiImage: RenderList,
+    actions: z.object({
+        canFire: z.boolean(),
+        canThrow: z.boolean(),
+        canAction: z.boolean(),
+        canInventory: z.boolean()
+    })
 });
 export type UnitSummary = z.infer<typeof UnitSummary>;
 
@@ -350,7 +356,11 @@ export const ItemSummary = z.object({
     shortName: z.string(),
     description: Description,
     quantity: Quantity,
-    weight: Weight,
+    weight: Weight
+});
+export type ItemSummary = z.infer<typeof ItemSummary>;
+
+export const FireModeItemSummary = ItemSummary.extend({
     weapons: z.array(
         z.object({
             id: ItemId,
@@ -363,7 +373,7 @@ export const ItemSummary = z.object({
         })
     )
 });
-export type ItemSummary = z.infer<typeof ItemSummary>;
+export type FireModeItemSummary = z.infer<typeof FireModeItemSummary>;
 
 export const InventorySummary = z.object({
     inUse: z.number().min(-1),

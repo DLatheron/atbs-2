@@ -26,6 +26,7 @@ import { MessageRouter } from "./MessageRouter.js";
 import { Clamp } from "../../../maths/src/Maths.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
+import type { Item } from "./Item.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -164,6 +165,10 @@ export class Unit extends SceneObject {
 
     get inventory(): Inventory {
         return this._inventory;
+    }
+
+    get itemInUse(): Item | null {
+        return this.inventory.itemInUse;
     }
 
     get location(): TilePos | null {
@@ -509,6 +514,8 @@ export class Unit extends SceneObject {
     }
 
     toSummary(): UnitSummary {
+        console.info("Item in use:", this.itemInUse, this.itemInUse?.canFire);
+
         return {
             id: this.id,
             name: this.name,
@@ -529,7 +536,13 @@ export class Unit extends SceneObject {
             uiImage: this.getRenderList({
                 renderMode: RenderMode.enum.MAP_MODE,
                 states: [] // TODO: Populate current states when we have an inventory etc.
-            })
+            }),
+            actions: {
+                canFire: this.itemInUse?.canFire ?? false,
+                canThrow: !!this.itemInUse,
+                canAction: false,
+                canInventory: false
+            }
         };
     }
 }

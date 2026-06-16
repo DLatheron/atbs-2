@@ -43,28 +43,28 @@ export async function createApp(): Promise<Application> {
     /**
      * Temporary Test Code
      */
-    const itemManager = new ItemManager(itemRecipeManager);
-    const item = itemManager.createItem("m4+m203.gun", {});
-    console.dir(item, { depth: null, colors: true });
-    console.info(
-        "Sub Items",
-        item.subItems.map(({ quantity, id }) => `${quantity}x ${id}`)
-    );
-    console.info(
-        "All items",
-        item.allItems.map(({ quantity, id }) => `${quantity}x ${id}`)
-    );
-    console.info("Empty weight", item.emptyWeight, "kg");
-    console.info("Total weight", item.weight, "kg");
-    console.dir({ fireables: item.getFireables.map(({ quantity, id }) => `${quantity}x ${id}`) });
-    console.dir({ compatibleAmmoIds: item.getSlotContents("0").compatibleAmmoIds });
-    console.dir({ compatibleAmmoIds: item.getSlotContents("1").compatibleAmmoIds });
+    // const itemManager = new ItemManager(itemRecipeManager);
+    // const item = itemManager.createItem("m4+m203.gun", {});
+    // console.dir(item, { depth: null, colors: true });
+    // console.info(
+    //     "Sub Items",
+    //     item.subItems.map(({ quantity, id }) => `${quantity}x ${id}`)
+    // );
+    // console.info(
+    //     "All items",
+    //     item.allItems.map(({ quantity, id }) => `${quantity}x ${id}`)
+    // );
+    // console.info("Empty weight", item.emptyWeight, "kg");
+    // console.info("Total weight", item.weight, "kg");
+    // console.dir({ fireables: item.getFireables.map(({ quantity, id }) => `${quantity}x ${id}`) });
+    // console.dir({ compatibleAmmoIds: item.getSlotContents("0").compatibleAmmoIds });
+    // console.dir({ compatibleAmmoIds: item.getSlotContents("1").compatibleAmmoIds });
 
-    const ammo = itemManager.createItem("m16-20.magazine", {});
-    const removedAmmo = item.getSlotContents("0").load(ammo);
+    // const ammo = itemManager.createItem("m16-20.magazine", {});
+    // const removedAmmo = item.getSlotContents("0").load(ammo);
 
-    console.info("Loading:", removedAmmo);
-    console.info("Loading:", item.getSlotContents("0").load(removedAmmo!));
+    // console.info("Loading:", removedAmmo);
+    // console.info("Loading:", item.getSlotContents("0").load(removedAmmo!));
 
     // console.info("Summary", item.getItemSummary());
 

@@ -50,6 +50,12 @@ export function useActionPage() {
 
                 const imageSet = ImageCache.CacheClientMapImages(payload);
 
+                // TEMPORARY:
+                imageSet.add("fireMode");
+                imageSet.add("throw");
+                imageSet.add("action");
+                imageSet.add("inventory");
+
                 await imageCache.waitForImagesToCache(imageSet);
 
                 world.map = payload;

@@ -25,8 +25,12 @@ export class Inventory {
 
         recipe.items.forEach(({ id, overrides }) => {
             const item = itemManager.createItem(id, overrides);
-            this.addItem(item);
+            this.addItem(item, this._items.length);
         });
+    }
+
+    get itemInUse(): Item | null {
+        return this._inUse >= 0 ? this._items[this._inUse] : null;
     }
 
     selectItem(item: Item) {

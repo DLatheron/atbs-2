@@ -14,6 +14,7 @@
         "default": [{ "imageId": "40mm-smoke.round" }],
         "FIRE_MODE": []
     },
+    "damage": { "default": 1 },
     "explosion": {
         "type": "smoke",
         "particles": [12, 8, 4]

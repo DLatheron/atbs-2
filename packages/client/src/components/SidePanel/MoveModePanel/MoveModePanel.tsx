@@ -1,5 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Box, Button, Container, Grid, SxProps, Typography } from "@mui/material";
+import { Box, Button, Container, Grid, Stack, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../../Description/Description";
 import { AttributesComponent } from "../../Attributes";
 import {
@@ -17,6 +17,7 @@ import { ImageComponent } from "../../Image";
 import { Orientation, rotateOrientation } from "@atbs/maths";
 import { useMemo } from "react";
 import { useKeyboard } from "../../../hooks";
+import { useImageCache } from "../../../hooks/useImageCache";
 
 export interface MoveModePanelProps {
     visible: boolean;
@@ -39,6 +40,8 @@ export function MoveModePanel({
     onEndMovement,
     sx
 }: MoveModePanelProps) {
+    const { imageCache } = useImageCache();
+
     const keyMap = useMemo(
         () => ({
             KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
@@ -73,18 +76,19 @@ export function MoveModePanel({
             sx={{
                 display: "grid",
                 gridTemplateAreas: `
-                'unitInfo'
-                'exit-button'
+                    'unit-info'
+                    'action-buttons'
+                    'exit-button'
                 `,
-                gridTemplateRows: "1fr auto",
-                rowGap: 0,
+                gridTemplateRows: "1fr auto auto",
+                rowGap: 1,
                 p: 1,
                 ...sx
             }}
         >
             <Grid
                 sx={{
-                    gridArea: "unitInfo",
+                    gridArea: "unit-info",
                     overflow: "auto",
                     display: "grid",
                     gridTemplateAreas: `
@@ -169,6 +173,54 @@ export function MoveModePanel({
                     ]}
                     sx={{ gridArea: "attributes" }}
                 />
+            </Grid>
+            <Grid
+                sx={{
+                    gridArea: "action-buttons",
+                    display: "grid",
+                    gridTemplateAreas: `
+                        'fire-mode throw-mode action-mode inventory'
+                    `,
+                    gridTemplateRows: "1fr",
+                    gridTemplateColumns: "1fr 1fr 1fr 1fr"
+                }}
+            >
+                <Button
+                    id="fire-mode"
+                    title="Fire mode"
+                    variant="outlined"
+                    disabled={disabled || !unit.actions.canFire}
+                    sx={{ gridArea: "fire-mode" }}
+                >
+                    <img src={imageCache.getDataSafe("fireMode")} width={40} height={40} alt="Fire Mode" />
+                </Button>
+                <Button
+                    id="throw-mode"
+                    title="Throw mode"
+                    variant="outlined"
+                    disabled={disabled || !unit.actions.canThrow}
+                    sx={{ gridArea: "throw-mode" }}
+                >
+                    <img src={imageCache.getDataSafe("throw")} width={40} height={40} alt="Throw Mode" />
+                </Button>
+                <Button
+                    id="action-mode"
+                    title="Action mode"
+                    variant="outlined"
+                    disabled={disabled || !unit.actions.canAction}
+                    sx={{ gridArea: "action-mode" }}
+                >
+                    <img src={imageCache.getDataSafe("action")} width={40} height={40} alt="Action Mode" />
+                </Button>
+                <Button
+                    id="inventory"
+                    title="Inventory"
+                    variant="outlined"
+                    disabled={disabled || !unit.actions.canInventory}
+                    sx={{ gridArea: "inventory" }}
+                >
+                    <img src={imageCache.getDataSafe("inventory")} width={40} height={40} alt="Inventory" />
+                </Button>                                                
             </Grid>
             <Button
                 id="end-move"

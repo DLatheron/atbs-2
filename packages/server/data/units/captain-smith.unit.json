@@ -18,9 +18,9 @@
         "strength": { "max": 52 }
     },
     "inventory": {
-        "inUse": -1,
+        "inUse": 0,
         "items": [
-            { "id": "m4+M203.gun" },
+            { "id": "m4+m203.gun" },
             { "id": "m16-30.magazine" },
             { "id": "m16-30.magazine" },
             { "id": "m16-20.magazine" },
@@ -32,7 +32,7 @@
             { "id": "40mm-gas.round" },
             { "id": "40mm-gas.round" },
             { "id": "40mm-stun.round" },
-            { "id": "40mm-sun.round" }
+            { "id": "40mm-stun.round" }
         ]
     },
     "collision": {

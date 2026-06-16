@@ -5,6 +5,7 @@ import {
     FireModes,
     FireSelector,
     InstanceId,
+    FireModeItemSummary,
     ItemId,
     ItemSummary,
     ItemType,
@@ -120,7 +121,8 @@ export class Item extends SceneObject {
     }
 
     get canFire(): boolean {
-        return "fireModes" in this._recipe;
+        // Has fire modes or at least one sub-item in a weapon slot.
+        return "fireModes" in this._recipe || this.hasSlot(SlotType.enum[0]);
     }
 
     get getFireables(): Item[] {
@@ -376,14 +378,20 @@ export class Item extends SceneObject {
         return fireModes;
     }
 
-    getItemSummary(unit: Unit): ItemSummary {
+    getItemSummary(): ItemSummary {
         return {
             id: this.id,
             name: this.name,
             shortName: this.shortName,
             description: this.description,
             quantity: this.quantity,
-            weight: this.weight,
+            weight: this.weight
+        };
+    }
+
+    getFireModeItemSummary(unit: Unit): FireModeItemSummary {
+        return {
+            ...this.getItemSummary(),
             weapons: this.getWeapons().map((weapon) => ({
                 id: weapon.id,
                 name: weapon.name,
