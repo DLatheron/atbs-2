@@ -87,9 +87,6 @@ export function FireModePanel({
                     {unit.name}
                 </Typography>
                 <ImageComponent sx={{ gridArea: "image", mx: "auto" }} images={unit.uiImage} />
-                <Box sx={{ gridArea: "description" }}>
-                    <DescriptionComponent description={unit.description} />
-                </Box>
                 <Typography variant="h6" sx={{ gridArea: "direction-title" }}>
                     Direction:
                 </Typography>

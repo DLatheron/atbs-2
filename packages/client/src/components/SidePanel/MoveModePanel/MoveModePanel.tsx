@@ -18,6 +18,7 @@ import { Orientation, rotateOrientation } from "@atbs/maths";
 import { useMemo } from "react";
 import { useKeyboard } from "../../../hooks";
 import { useImageCache } from "../../../hooks/useImageCache";
+import { UnitDetailsComponent } from "../../UnitDetails";
 
 export interface MoveModePanelProps {
     visible: boolean;
@@ -96,9 +97,7 @@ export function MoveModePanel({
                     overflow: "auto",
                     display: "grid",
                     gridTemplateAreas: `
-                        'name'
-                        'image'
-                        'description'
+                        'unit'
                         'direction-title'
                         'direction'
                         'attributes-title'
@@ -109,13 +108,7 @@ export function MoveModePanel({
                     rowGap: 2
                 }}
             >
-                <Typography variant="h5" sx={{ gridArea: "name", mx: "auto" }}>
-                    {unit.name}
-                </Typography>
-                <ImageComponent sx={{ gridArea: "image", mx: "auto" }} images={unit.uiImage} />
-                <Box sx={{ gridArea: "description" }}>
-                    <DescriptionComponent description={unit.description} />
-                </Box>
+                <UnitDetailsComponent unit={unit} sx={{ gridArea: "unit" }} />
                 <Typography variant="h6" sx={{ gridArea: "direction-title" }}>
                     Direction:
                 </Typography>
