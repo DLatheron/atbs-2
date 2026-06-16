@@ -6,7 +6,6 @@ import { MapRecipeManager } from "./game/MapRecipeManager.js";
 import { ImageManager } from "./game/ImageManager.js";
 import { UnitRecipeManager } from "./game/UnitRecipeManager.js";
 import { ItemRecipeManager } from "./game/ItemRecipeManager.js";
-import { ItemManager } from "./game/ItemManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();

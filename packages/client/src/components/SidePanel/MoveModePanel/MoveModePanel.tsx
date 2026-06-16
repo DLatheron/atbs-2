@@ -1,5 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Box, Button, Container, Grid, Stack, SxProps, Typography } from "@mui/material";
+import { Box, Button, Container, Grid, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../../Description/Description";
 import { AttributesComponent } from "../../Attributes";
 import {
@@ -192,7 +192,12 @@ export function MoveModePanel({
                     disabled={disabled || !unit.actions.canFire}
                     sx={{ gridArea: "fire-mode" }}
                 >
-                    <img src={imageCache.getDataSafe("fireMode")} width={40} height={40} alt="Fire Mode" />
+                    <img
+                        src={imageCache.getDataSafe("fireMode")}
+                        width={40}
+                        height={40}
+                        alt="Fire Mode"
+                    />
                 </Button>
                 <Button
                     id="throw-mode"
@@ -201,7 +206,12 @@ export function MoveModePanel({
                     disabled={disabled || !unit.actions.canThrow}
                     sx={{ gridArea: "throw-mode" }}
                 >
-                    <img src={imageCache.getDataSafe("throw")} width={40} height={40} alt="Throw Mode" />
+                    <img
+                        src={imageCache.getDataSafe("throw")}
+                        width={40}
+                        height={40}
+                        alt="Throw Mode"
+                    />
                 </Button>
                 <Button
                     id="action-mode"
@@ -210,7 +220,12 @@ export function MoveModePanel({
                     disabled={disabled || !unit.actions.canAction}
                     sx={{ gridArea: "action-mode" }}
                 >
-                    <img src={imageCache.getDataSafe("action")} width={40} height={40} alt="Action Mode" />
+                    <img
+                        src={imageCache.getDataSafe("action")}
+                        width={40}
+                        height={40}
+                        alt="Action Mode"
+                    />
                 </Button>
                 <Button
                     id="inventory"
@@ -219,8 +234,13 @@ export function MoveModePanel({
                     disabled={disabled || !unit.actions.canInventory}
                     sx={{ gridArea: "inventory" }}
                 >
-                    <img src={imageCache.getDataSafe("inventory")} width={40} height={40} alt="Inventory" />
-                </Button>                                                
+                    <img
+                        src={imageCache.getDataSafe("inventory")}
+                        width={40}
+                        height={40}
+                        alt="Inventory"
+                    />
+                </Button>
             </Grid>
             <Button
                 id="end-move"
