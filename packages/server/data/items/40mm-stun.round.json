@@ -1,0 +1,27 @@
+{
+    "id": "40mm-stun.round",
+    "type": "round",
+    "name": "40mm Stun Grenade",
+    "shortName": "40mm Stun",
+    "maxRange": 3000,
+    "description": [
+        {
+            "text": "40mm Stun grenade."
+        }
+    ],
+    "weight": 0.368,
+    "renderable": {
+        "default": [{ "imageId": "40mm-stun.round" }],
+        "FIRE_MODE": []
+    },
+    "damage": { "default": 1 },
+    "explosion": {
+        "type": "shockwave",
+        "maxRange": { "min": 150, "max": 300 },
+        "numFragments": 200,
+        "damage": {
+            "type": "disorientation",
+            "default": 100
+        }
+    }
+}

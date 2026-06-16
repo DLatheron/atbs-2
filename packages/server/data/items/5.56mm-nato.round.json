@@ -1,0 +1,21 @@
+{
+    "id": "5.56mm-nato.round",
+    "type": "round",
+    "name": "5.56mm NATO round",
+    "shortName": "5.56mm NATO",
+    "maxRange": 8000,
+    "description": [
+        {
+            "text": "Standard 5.56mm NATO cartridge. The cartridge's 'hard-point' gives the round good penetration at the expense of damage of large calibre bullets."
+        }
+    ],
+    "weight": 0.01231,
+    "renderable": {
+        "default": [{ "imageId": "5.56mm-nato.round" }],
+        "FIRE_MODE": []
+    },
+    "damage": {
+        "human": 18,
+        "default": 20
+    }
+}

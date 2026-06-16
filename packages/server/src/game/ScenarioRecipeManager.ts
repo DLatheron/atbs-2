@@ -14,7 +14,7 @@ export class ScenarioRecipeManager {
         this._scenarioRecipeMap = new Map<ScenarioId, ScenarioRecipe>();
     }
 
-    async loadScenarios(directory = ScenarioDirectory): Promise<void> {
+    async loadScenarioRecipes(directory = ScenarioDirectory): Promise<void> {
         const directoryContents = await readdir(directory, {
             encoding: "utf-8",
             withFileTypes: true

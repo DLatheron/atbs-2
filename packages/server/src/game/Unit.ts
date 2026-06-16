@@ -6,7 +6,9 @@ import {
     RenderList,
     RenderMode,
     TrackingSpeed,
-    UnitSummary
+    UnitId,
+    UnitSummary,
+    UnitType
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
@@ -21,6 +23,10 @@ import {
 import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
+import { Clamp } from "../../../maths/src/Maths.js";
+import { Inventory, InventoryRecipe } from "./Inventory.js";
+import { ItemManager } from "./ItemManager.js";
+import type { Item } from "./Item.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -54,6 +60,7 @@ const DIRECTIONAL_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
 
 export const UnitRecipe = z.object({
     id: z.string().min(1),
+    type: UnitType.default(UnitType.enum.human),
     name: z.string().min(1),
     description: Description,
     isDirectional: z.boolean().optional().default(true),
@@ -68,6 +75,7 @@ export const UnitRecipe = z.object({
         strength: AttributeDef,
         weight: z.number().positive()
     }),
+    inventory: InventoryRecipe,
     collision: z.object({
         shape: z.literal("circle"),
         radius: z.number().positive()
@@ -103,6 +111,7 @@ export class Unit extends SceneObject {
         speed: Attribute;
         strength: Attribute;
     };
+    private readonly _inventory: Inventory;
     private readonly _side: Side;
 
     private _location: TilePos | null;
@@ -111,7 +120,8 @@ export class Unit extends SceneObject {
     constructor(
         recipe: Readonly<UnitRecipe>,
         overrides: Readonly<UnitOverrides>,
-        additionalData: Readonly<UnitAdditionalData>
+        additionalData: Readonly<UnitAdditionalData>,
+        itemManager: ItemManager
     ) {
         super(recipe.renderable);
 
@@ -125,6 +135,7 @@ export class Unit extends SceneObject {
             speed: setDefaultAttribute(recipe.attributes.speed),
             strength: setDefaultAttribute(recipe.attributes.strength)
         };
+        this._inventory = new Inventory(this._recipe.inventory, itemManager);
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._orientation = recipe.isDirectional
             ? (overrides.orientation ?? Orientation.NORTH)
@@ -132,20 +143,32 @@ export class Unit extends SceneObject {
         this._side = additionalData.side;
     }
 
-    get id() {
+    get id(): UnitId {
         return this._recipe.id;
     }
 
-    get name() {
+    get type(): UnitType {
+        return this._recipe.type;
+    }
+
+    get name(): string {
         return this._recipe.name;
     }
 
-    get side() {
+    get side(): Side {
         return this._side;
     }
 
-    get description() {
+    get description(): Description {
         return this._recipe.description;
+    }
+
+    get inventory(): Inventory {
+        return this._inventory;
+    }
+
+    get itemInUse(): Item | null {
+        return this.inventory.itemInUse;
     }
 
     get location(): TilePos | null {
@@ -180,7 +203,7 @@ export class Unit extends SceneObject {
         return this.constitution === 0;
     }
 
-    get weight() {
+    get weight(): number {
         // TODO: Add in the weight of inventory?
         return this._recipe.attributes.weight;
     }
@@ -282,7 +305,7 @@ export class Unit extends SceneObject {
         }
 
         // this.updateAvailableActions(game.map);
-    }    
+    }
 
     rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
         console.info("Rotating", this.name, "to orientation", orientation);
@@ -435,34 +458,37 @@ export class Unit extends SceneObject {
 
         this.location = dstTile.location;
         dstTile.addUnit(this);
-        messageRouter.sendIfVisible([
-            {
-                type: "server:map:update",
-                payload: [
-                    {
-                        tilePos: [dstPos.col, dstPos.row],
-                        tileByRenderMode: {
-                            [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
-                                renderMode: RenderMode.enum.MAP_MODE,
-                                states: []
-                            }),
-                            [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
-                                renderMode: RenderMode.enum.FIRE_MODE,
-                                states: []
-                            })
+        messageRouter.sendIfVisible(
+            [
+                {
+                    type: "server:map:update",
+                    payload: [
+                        {
+                            tilePos: [dstPos.col, dstPos.row],
+                            tileByRenderMode: {
+                                [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
+                                    renderMode: RenderMode.enum.MAP_MODE,
+                                    states: []
+                                }),
+                                [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
+                                    renderMode: RenderMode.enum.FIRE_MODE,
+                                    states: []
+                                })
+                            }
                         }
+                    ]
+                },
+                {
+                    type: "server:camera:move:to",
+                    payload: {
+                        target: "tile",
+                        tilePos: [dstPos.col, dstPos.row],
+                        trackingSpeed: TrackingSpeed.enum.MEDIUM
                     }
-                ]
-            },
-            {
-                type: "server:camera:move:to",
-                payload: {
-                    target: "tile",
-                    tilePos: [dstPos.col, dstPos.row],
-                    trackingSpeed: TrackingSpeed.enum.MEDIUM
                 }
-            },
-        ], dstPos);        
+            ],
+            dstPos
+        );
 
         // this.updateAvailableActions(map);
 
@@ -482,7 +508,14 @@ export class Unit extends SceneObject {
         return true;
     }
 
+    calcWeaponAccuracy(baseAccuracy: number): number {
+        return Clamp(baseAccuracy, 0, 100);
+        // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
+    }
+
     toSummary(): UnitSummary {
+        console.info("Item in use:", this.itemInUse, this.itemInUse?.canFire);
+
         return {
             id: this.id,
             name: this.name,
@@ -503,7 +536,13 @@ export class Unit extends SceneObject {
             uiImage: this.getRenderList({
                 renderMode: RenderMode.enum.MAP_MODE,
                 states: [] // TODO: Populate current states when we have an inventory etc.
-            })
+            }),
+            actions: {
+                canFire: this.itemInUse?.canFire ?? false,
+                canThrow: !!this.itemInUse,
+                canAction: false,
+                canInventory: false
+            }
         };
     }
 }

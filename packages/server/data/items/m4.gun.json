@@ -1,0 +1,67 @@
+{
+    "id": "m4.gun",
+    "type": "gun",
+    "name": "M4 Assault Rifle",
+    "shortName": "M4",
+    "description": [
+        {
+            "text": "The Colt M4 Carbine is a short variant of the M16A2 Assault Rifle. It fires the same 5.56x45mm NATO round from the same magazines and can fire single-shot, three-round burst or fully automatic."
+        }
+    ],
+    "weight": 2.92,
+    "renderable": {
+        "default": [{ "imageId": "m4" }],
+        "FIRE_MODE": []
+    },
+    "sight": "optical",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["m16-30.magazine", "m16-20.magazine"]
+        }
+    },
+    "slots": { "ammo": { "id": "m16-30.magazine" } },
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 80,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "burst": {
+            "ammoUse": 3,
+            "rpm": 950,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 35
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 20
+                }
+            }
+        },
+        "auto": {
+            "rpm": 950,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 40,
+                    "actionPoints": 10,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 30,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}
