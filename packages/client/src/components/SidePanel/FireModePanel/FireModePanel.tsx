@@ -14,6 +14,7 @@ import {
 import { DirectionComponent } from "../../Direction";
 import { Orientation } from "@atbs/maths";
 import { UnitDetailsComponent } from "../../UnitDetails";
+import { FireModesComponent } from "../../FireModes";
 
 export interface FireModePanelProps {
     visible: boolean;
@@ -72,6 +73,7 @@ export function FireModePanel({
                         'unit'
                         'direction'
                         'attributes'
+                        'fire-modes'
                         'next'
                     `,
                     gridTemplateRows: "auto auto auto 1fr",
@@ -86,6 +88,8 @@ export function FireModePanel({
                     sx={{ gridArea: "direction" }}
                 />
                 <AttributesComponent
+                    sx={{ gridArea: "attributes" }}
+                    title="Attributes"
                     attributes={[
                         {
                             id: "action-points",
@@ -132,10 +136,10 @@ export function FireModePanel({
                             value: getAttributeValue(unit.attributes.morale)
                         }
                     ]}
-                    sx={{ gridArea: "attributes" }}
+                    surround
                 />
+                <FireModesComponent sx={{ gridArea: "fire-modes" }} unitWeapon={unitWeapon} />
             </Grid>
-            {unitWeapon.name}
             <Button
                 id="end-fire"
                 title="End the current unit's fire mode"

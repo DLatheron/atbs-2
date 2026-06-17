@@ -114,6 +114,8 @@ export function MoveModePanel({
                     sx={{ gridArea: "direction" }}
                 />
                 <AttributesComponent
+                    sx={{ gridArea: "attributes" }}
+                    title="Attributes"
                     attributes={[
                         {
                             id: "action-points",
@@ -160,7 +162,7 @@ export function MoveModePanel({
                             value: getAttributeValue(unit.attributes.morale)
                         }
                     ]}
-                    sx={{ gridArea: "attributes" }}
+                    surround
                 />
                 <ItemDetailsComponent
                     title="Item in Use"

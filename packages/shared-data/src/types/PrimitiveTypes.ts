@@ -362,19 +362,21 @@ export const UnitSummary = z.object({
 });
 export type UnitSummary = z.infer<typeof UnitSummary>;
 
+export const FireModeWeaponSummary = z.object({
+    id: ItemId,
+    name: z.string(),
+    shortName: z.string(),
+    description: Description,
+    capacity: z.int().nonnegative().optional(),
+    maxCapacity: z.int().nonnegative().optional(),
+    loadedRound: z.string().optional(),
+    fireModes: FireModes,
+    uiImage: RenderList
+});
+export type FireModeWeaponSummary = z.infer<typeof FireModeWeaponSummary>;
+
 export const FireModeItemSummary = ItemSummary.extend({
-    weapons: z.array(
-        z.object({
-            id: ItemId,
-            name: z.string(),
-            shortName: z.string(),
-            description: Description,
-            capacity: z.int().nonnegative(),
-            maxCapacity: z.int().nonnegative(),
-            fireModes: FireModes,
-            uiImage: RenderList
-        })
-    )
+    weapons: z.array(FireModeWeaponSummary)
 });
 export type FireModeItemSummary = z.infer<typeof FireModeItemSummary>;
 

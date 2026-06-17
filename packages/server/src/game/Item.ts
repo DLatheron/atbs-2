@@ -165,16 +165,29 @@ export class Item extends SceneObject {
         return "maxRange" in this._recipe ? this._recipe.maxRange : 0;
     }
 
-    get capacity(): number {
-        return this.findSlotContents(SlotType.enum.ammo)?.quantity ?? 0;
+    get capacity(): number | undefined {
+        return this.findSlotContents(SlotType.enum.ammo)?.quantity;
     }
 
-    get maxCapacity(): number {
-        return this.findSlotProps(SlotType.enum.ammo)?.maxQuantity ?? 0;
+    get maxCapacity(): number | undefined {
+        return this.findSlotProps(SlotType.enum.ammo)?.maxQuantity;
     }
 
     get canCollapse(): boolean {
         return this.type === ItemType.enum.round;
+    }
+
+    get loadedMagazine(): Item | null {
+        const item = this.findSlotContents(SlotType.enum.ammo);
+
+        return item?.type === ItemType.enum.magazine ? item : null;
+    }
+
+    get loadedRound(): Item | null {
+        const item = this.findSlotContents(SlotType.enum.ammo);
+        const subItem = item?.findSlotContents(SlotType.enum.ammo);
+
+        return subItem ?? item ?? null;
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -397,19 +410,26 @@ export class Item extends SceneObject {
     getFireModeItemSummary(unit: Unit): FireModeItemSummary {
         return {
             ...this.getItemSummary(),
-            weapons: this.getWeapons().map((weapon) => ({
-                id: weapon.id,
-                name: weapon.name,
-                shortName: weapon.shortName,
-                description: weapon.description,
-                capacity: weapon.capacity,
-                maxCapacity: weapon.maxCapacity,
-                fireModes: weapon.getFireModes(unit),
-                uiImage: weapon.getRenderList({
-                    renderMode: RenderMode.enum.UI_MODE,
-                    states: []
-                })
-            }))
+            // TODO: Handle M4 on its own...
+            weapons: this.getWeapons().map((weapon) => {
+                const { loadedMagazine } = weapon;
+                const { loadedRound } = weapon;
+
+                return {
+                    id: weapon.id,
+                    name: weapon.name,
+                    shortName: weapon.shortName,
+                    description: weapon.description,
+                    capacity: (loadedMagazine ?? weapon).capacity,
+                    maxCapacity: (loadedMagazine ?? weapon).maxCapacity,
+                    fireModes: weapon.getFireModes(unit),
+                    loadedRound: loadedRound?.name,
+                    uiImage: weapon.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: []
+                    })
+                };
+            })
         };
     }
 }
