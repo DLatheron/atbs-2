@@ -252,41 +252,49 @@ const fireMode = ["aimed", "snapshot"] as const;
 export const FireMode = z.enum(fireMode);
 export type FireMode = z.infer<typeof FireMode>;
 
-export const FireModeDetails = z.object({
+export const FireModeDetail = z.object({
     accuracy: z.number().min(0).max(100),
     actionPoints: z.int().positive()
 });
+export type FireModeDetail = z.infer<typeof FireModeDetail>;
+
+export const FireModeExtendedDetail = FireModeDetail.extend({
+    actionPointsPerRound: z.int().positive()
+});
+export type FireModeExtendedDetail = z.infer<typeof FireModeExtendedDetail>;
+
+export const FireModeDetails = z.record(FireMode, FireModeDetail);
 export type FireModeDetails = z.infer<typeof FireModeDetails>;
+
+export const FireModeExtendedDetails = z.record(FireMode, FireModeExtendedDetail);
+export type FireModeExtendedDetails = z.infer<typeof FireModeExtendedDetails>;
 
 export const FireModeSingle = z.object({
     ammoUse: z.int().positive(),
-    fireModeDetails: z.record(FireMode, FireModeDetails)
+    fireModeDetails: FireModeDetails
 });
 export type FireModeSingle = z.infer<typeof FireModeSingle>;
 
 export const FireModeBurst = z.object({
     ammoUse: z.int().positive(),
     rpm: z.int().positive(),
-    fireModeDetails: z.record(FireMode, FireModeDetails)
+    fireModeDetails: FireModeDetails
 });
 export type FireModeBurst = z.infer<typeof FireModeBurst>;
 
 export const FireModeAuto = z.object({
     rpm: z.int().positive(),
-    fireModeDetails: z.record(
-        FireMode,
-        FireModeDetails.extend({
-            actionPointsPerRound: z.int().positive()
-        })
-    )
+    fireModeDetails: FireModeExtendedDetails
 });
 export type FireModeAuto = z.infer<typeof FireModeAuto>;
 
 // This is horrible, but seems to be the only way to build such a scheme 🤷‍♂️
 export const FireModes = z.union([
-    z.object({ [FireSelector.enum.single]: FireModeSingle }),
-    z.object({ [FireSelector.enum.burst]: FireModeBurst }),
-    z.object({ [FireSelector.enum.auto]: FireModeAuto }),
+    z.object({
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.burst]: FireModeBurst,
+        [FireSelector.enum.auto]: FireModeAuto
+    }),
     z.object({
         [FireSelector.enum.single]: FireModeSingle,
         [FireSelector.enum.burst]: FireModeBurst
@@ -296,11 +304,9 @@ export const FireModes = z.union([
         [FireSelector.enum.auto]: FireModeAuto
     }),
     z.object({ [FireSelector.enum.burst]: FireModeBurst, [FireSelector.enum.auto]: FireModeAuto }),
-    z.object({
-        [FireSelector.enum.single]: FireModeSingle,
-        [FireSelector.enum.burst]: FireModeBurst,
-        [FireSelector.enum.auto]: FireModeAuto
-    })
+    z.object({ [FireSelector.enum.single]: FireModeSingle }),
+    z.object({ [FireSelector.enum.burst]: FireModeBurst }),
+    z.object({ [FireSelector.enum.auto]: FireModeAuto })
 ]);
 export type FireModes = z.infer<typeof FireModes>;
 
