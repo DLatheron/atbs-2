@@ -9,6 +9,7 @@ export interface ImageComponentProps {
     width?: number;
     height?: number;
     children?: ReactNode;
+    disabled?: boolean;
     sx?: SxProps;
 }
 
@@ -17,6 +18,7 @@ export function ImageComponent({
     width = 100,
     height = 100,
     children,
+    disabled = false,
     sx
 }: ImageComponentProps) {
     const { imageCache } = useImageCache();
@@ -47,7 +49,8 @@ export function ImageComponent({
                         transform:
                             OrientationToCSSTransform[
                                 rotateOrientation(Orientation.NORTH, orientation)
-                            ]
+                            ],
+                        ...(disabled && { filter: "grayscale(100%)", opacity: 0.5 })
                     }}
                     draggable={false}
                 />

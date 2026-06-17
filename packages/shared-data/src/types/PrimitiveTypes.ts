@@ -259,29 +259,32 @@ export const FireModeDetails = z.object({
 export type FireModeDetails = z.infer<typeof FireModeDetails>;
 
 export const FireModes = z.union([
+    z.object({}).catchall(z.never()),
     z.object({
-        [FireSelector.enum.single]: z.object({
-            ammoUse: z.int().positive(),
-            fireModeDetails: z.record(FireMode, FireModeDetails)
-        })
-    }),
-    z.object({
-        [FireSelector.enum.burst]: z.object({
-            ammoUse: z.int().positive(),
-            rpm: z.int().positive(),
-            fireModeDetails: z.record(FireMode, FireModeDetails)
-        })
-    }),
-    z.object({
-        [FireSelector.enum.auto]: z.object({
-            rpm: z.int().positive(),
-            fireModeDetails: z.record(
-                FireMode,
-                FireModeDetails.extend({
-                    actionPointsPerRound: z.int().positive()
-                })
-            )
-        })
+        [FireSelector.enum.single]: z
+            .object({
+                ammoUse: z.int().positive(),
+                fireModeDetails: z.record(FireMode, FireModeDetails)
+            })
+            .optional(),
+        [FireSelector.enum.burst]: z
+            .object({
+                ammoUse: z.int().positive(),
+                rpm: z.int().positive(),
+                fireModeDetails: z.record(FireMode, FireModeDetails)
+            })
+            .optional(),
+        [FireSelector.enum.auto]: z
+            .object({
+                rpm: z.int().positive(),
+                fireModeDetails: z.record(
+                    FireMode,
+                    FireModeDetails.extend({
+                        actionPointsPerRound: z.int().positive()
+                    })
+                )
+            })
+            .optional()
     })
 ]);
 export type FireModes = z.infer<typeof FireModes>;

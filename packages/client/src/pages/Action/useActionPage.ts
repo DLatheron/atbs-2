@@ -59,6 +59,9 @@ export function useActionPage() {
                 imageSet.add("throw");
                 imageSet.add("action");
                 imageSet.add("inventory");
+                imageSet.add("fireSingle");
+                imageSet.add("fireBurst");
+                imageSet.add("fireAuto");
 
                 await imageCache.waitForImagesToCache(imageSet);
 

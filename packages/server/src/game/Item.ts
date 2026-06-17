@@ -357,7 +357,8 @@ export class Item extends SceneObject {
         const fireModes = cloneDeep(this._recipe.fireModes);
 
         if (FireSelector.enum.single in fireModes) {
-            const { fireModeDetails } = fireModes[FireSelector.enum.single];
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            const { fireModeDetails } = fireModes[FireSelector.enum.single]!;
 
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
@@ -368,7 +369,8 @@ export class Item extends SceneObject {
         }
 
         if (FireSelector.enum.burst in fireModes) {
-            const { fireModeDetails } = fireModes[FireSelector.enum.burst];
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            const { fireModeDetails } = fireModes[FireSelector.enum.burst]!;
 
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
@@ -379,7 +381,8 @@ export class Item extends SceneObject {
         }
 
         if (FireSelector.enum.auto in fireModes) {
-            const { fireModeDetails } = fireModes[FireSelector.enum.auto];
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            const { fireModeDetails } = fireModes[FireSelector.enum.auto]!;
 
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
@@ -388,6 +391,8 @@ export class Item extends SceneObject {
                 fireModeDetails[FireMode.enum.snapshot].accuracy
             );
         }
+
+        console.info({ id: this.id, fireModes: this._recipe.fireModes });
 
         return fireModes;
     }
