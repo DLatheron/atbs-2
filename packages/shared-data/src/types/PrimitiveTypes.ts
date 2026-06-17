@@ -258,33 +258,48 @@ export const FireModeDetails = z.object({
 });
 export type FireModeDetails = z.infer<typeof FireModeDetails>;
 
+export const FireModeSingle = z.object({
+    ammoUse: z.int().positive(),
+    fireModeDetails: z.record(FireMode, FireModeDetails)
+});
+export type FireModeSingle = z.infer<typeof FireModeSingle>;
+
+export const FireModeBurst = z.object({
+    ammoUse: z.int().positive(),
+    rpm: z.int().positive(),
+    fireModeDetails: z.record(FireMode, FireModeDetails)
+});
+export type FireModeBurst = z.infer<typeof FireModeBurst>;
+
+export const FireModeAuto = z.object({
+    rpm: z.int().positive(),
+    fireModeDetails: z.record(
+        FireMode,
+        FireModeDetails.extend({
+            actionPointsPerRound: z.int().positive()
+        })
+    )
+});
+export type FireModeAuto = z.infer<typeof FireModeAuto>;
+
+// This is horrible, but seems to be the only way to build such a scheme 🤷‍♂️
 export const FireModes = z.union([
-    z.object({}).catchall(z.never()),
+    z.object({ [FireSelector.enum.single]: FireModeSingle }),
+    z.object({ [FireSelector.enum.burst]: FireModeBurst }),
+    z.object({ [FireSelector.enum.auto]: FireModeAuto }),
     z.object({
-        [FireSelector.enum.single]: z
-            .object({
-                ammoUse: z.int().positive(),
-                fireModeDetails: z.record(FireMode, FireModeDetails)
-            })
-            .optional(),
-        [FireSelector.enum.burst]: z
-            .object({
-                ammoUse: z.int().positive(),
-                rpm: z.int().positive(),
-                fireModeDetails: z.record(FireMode, FireModeDetails)
-            })
-            .optional(),
-        [FireSelector.enum.auto]: z
-            .object({
-                rpm: z.int().positive(),
-                fireModeDetails: z.record(
-                    FireMode,
-                    FireModeDetails.extend({
-                        actionPointsPerRound: z.int().positive()
-                    })
-                )
-            })
-            .optional()
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.burst]: FireModeBurst
+    }),
+    z.object({
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.auto]: FireModeAuto
+    }),
+    z.object({ [FireSelector.enum.burst]: FireModeBurst, [FireSelector.enum.auto]: FireModeAuto }),
+    z.object({
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.burst]: FireModeBurst,
+        [FireSelector.enum.auto]: FireModeAuto
     })
 ]);
 export type FireModes = z.infer<typeof FireModes>;
