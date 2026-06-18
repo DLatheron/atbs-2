@@ -1,4 +1,6 @@
 import {
+    Action,
+    Actions,
     Attribute,
     AttributeDef,
     Description,
@@ -27,6 +29,7 @@ import { Clamp } from "../../../maths/src/Maths.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
+import { cloneDeep } from "lodash";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -80,7 +83,8 @@ export const UnitRecipe = z.object({
         shape: z.literal("circle"),
         radius: z.number().positive()
     }),
-    renderable: SceneNode
+    renderable: SceneNode,
+    actions: Actions
 });
 export type UnitRecipe = z.infer<typeof UnitRecipe>;
 
@@ -222,6 +226,26 @@ export class Unit extends SceneObject {
 
     get constitution(): number {
         return this._attributes.constitution.value;
+    }
+
+    get canFire(): boolean {
+        return !!this.itemInUse?.canFire;
+    }
+
+    get canThrow(): boolean {
+        return Action.enum.throw in this._recipe.actions && !!this.itemInUse;
+    }
+
+    getActions(): Actions {
+        const actions = cloneDeep(this._recipe.actions);
+
+        if (Action.enum.throw in actions) {
+            actions[Action.enum.throw].accuracy = this.calcThrowAccuracy(
+                actions[Action.enum.throw].accuracy
+            );
+        }
+
+        return actions;
     }
 
     getRenderList(context: SceneContext): RenderList {
@@ -513,6 +537,11 @@ export class Unit extends SceneObject {
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 
+    calcThrowAccuracy(baseAccuracy: number): number {
+        return Clamp(baseAccuracy, 0, 100);
+        // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
+    }
+
     toSummary(): UnitSummary {
         return {
             id: this.id,
@@ -535,13 +564,14 @@ export class Unit extends SceneObject {
                 renderMode: RenderMode.enum.UI_MODE,
                 states: ["alive", this.itemInUse ? "item-in-use" : "default"]
             }),
-            actions: {
-                canFire: this.itemInUse?.canFire ?? false,
-                canThrow: !!this.itemInUse,
+            interactions: {
+                canFire: this.canFire,
+                canThrow: this.canThrow,
                 canAction: false,
                 canInventory: false
             },
-            itemInUse: this.itemInUse?.getItemSummary() ?? null
+            itemInUse: this.itemInUse?.getItemSummary() ?? null,
+            actions: this.getActions()
         };
     }
 }

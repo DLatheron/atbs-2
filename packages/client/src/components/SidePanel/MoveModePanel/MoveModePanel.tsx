@@ -185,7 +185,7 @@ export function MoveModePanel({
                     id="fire-mode"
                     title="Fire mode"
                     variant="outlined"
-                    disabled={disabled || !unit.actions.canFire}
+                    disabled={disabled || !unit.interactions.canFire}
                     sx={{ gridArea: "fire-mode" }}
                     onClick={onFireMode}
                 >
@@ -200,7 +200,7 @@ export function MoveModePanel({
                     id="throw-mode"
                     title="Throw mode"
                     variant="outlined"
-                    disabled={disabled || !unit.actions.canThrow}
+                    disabled={disabled || !unit.interactions.canThrow}
                     sx={{ gridArea: "throw-mode" }}
                     onClick={onThrowMode}
                 >
@@ -215,7 +215,7 @@ export function MoveModePanel({
                     id="action-mode"
                     title="Action mode"
                     variant="outlined"
-                    disabled={disabled || !unit.actions.canAction}
+                    disabled={disabled || !unit.interactions.canAction}
                     sx={{ gridArea: "action-mode" }}
                 >
                     <img
@@ -229,7 +229,7 @@ export function MoveModePanel({
                     id="inventory"
                     title="Inventory"
                     variant="outlined"
-                    disabled={disabled || !unit.actions.canInventory}
+                    disabled={disabled || !unit.interactions.canInventory}
                     sx={{ gridArea: "inventory" }}
                 >
                     <img

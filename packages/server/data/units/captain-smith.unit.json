@@ -18,9 +18,10 @@
         "strength": { "max": 52 }
     },
     "inventory": {
-        "inUse": 0,
+        "inUse": 1,
         "items": [
             { "id": "m4+m203.gun" },
+            { "id": "m4.gun" },
             { "id": "m16-30.magazine" },
             { "id": "m16-30.magazine" },
             { "id": "m16-20.magazine" },

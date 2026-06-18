@@ -447,9 +447,34 @@ export class Item extends SceneObject {
     }
 
     getFireModeItemSummary(unit: Unit): FireModeItemSummary {
+        if (this.type === ItemType.enum.gun) {
+            const { loadedMagazine } = this;
+            const { loadedRound } = this;
+
+            return {
+                ...this.getItemSummary(),
+                weapons: [
+                    {
+                        id: this.id,
+                        name: this.name,
+                        shortName: this.shortName,
+                        description: this.description,
+                        capacity: (loadedMagazine ?? this).capacity,
+                        maxCapacity: (loadedMagazine ?? this).maxCapacity,
+                        fireSelector: this.fireSelector,
+                        fireModes: this.getFireModes(unit),
+                        loadedRound: loadedRound?.name,
+                        uiImage: this.getRenderList({
+                            renderMode: RenderMode.enum.UI_MODE,
+                            states: []
+                        })
+                    }
+                ]
+            };
+        }
+
         return {
             ...this.getItemSummary(),
-            // TODO: Handle M4 on its own...
             weapons: this.getWeapons().map((weapon) => {
                 const { loadedMagazine } = weapon;
                 const { loadedRound } = weapon;

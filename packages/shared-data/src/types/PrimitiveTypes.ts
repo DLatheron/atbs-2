@@ -314,6 +314,13 @@ export const FireModes = z.union([
 ]);
 export type FireModes = z.infer<typeof FireModes>;
 
+const action = ["throw"] as const;
+export const Action = z.enum(action);
+export type Action = z.infer<typeof Action>;
+
+export const Actions = z.union([z.object({}), z.object({ [Action.enum.throw]: FireModeDetail })]);
+export type Actions = z.infer<typeof Actions>;
+
 export const FragmentExplosion = z.object({
     type: z.literal(ExplosionType.enum.fragment),
     maxRange: JitteredValue,
@@ -380,13 +387,14 @@ export const UnitSummary = z.object({
         weight: z.number().positive()
     }),
     uiImage: RenderList,
-    actions: z.object({
+    interactions: z.object({
         canFire: z.boolean(),
         canThrow: z.boolean(),
         canAction: z.boolean(),
         canInventory: z.boolean()
     }),
-    itemInUse: ItemSummary.nullable()
+    itemInUse: ItemSummary.nullable(),
+    actions: Actions
 });
 export type UnitSummary = z.infer<typeof UnitSummary>;
 
