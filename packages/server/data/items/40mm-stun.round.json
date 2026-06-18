@@ -11,7 +11,7 @@
     ],
     "weight": 0.368,
     "renderable": {
-        "default": [{ "imageId": "40mm-stun.round" }],
+        "default": [{ "imageId": "40mm-stun" }],
         "FIRE_MODE": []
     },
     "damage": { "default": 1 },

@@ -11,7 +11,7 @@
     ],
     "weight": 0.368,
     "renderable": {
-        "default": [{ "imageId": "40mm-smoke.round" }],
+        "default": [{ "imageId": "40mm-smoke" }],
         "FIRE_MODE": []
     },
     "damage": { "default": 1 },

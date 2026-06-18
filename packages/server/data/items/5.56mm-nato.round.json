@@ -11,7 +11,7 @@
     ],
     "weight": 0.01231,
     "renderable": {
-        "default": [{ "imageId": "5.56mm-nato.round" }],
+        "default": [{ "imageId": "5.56mm-nato" }],
         "FIRE_MODE": []
     },
     "damage": {

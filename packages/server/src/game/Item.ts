@@ -149,12 +149,12 @@ export class Item extends SceneObject {
     }
 
     get allItems(): Item[] {
-        const subItems = this.subItems;
+        const allItems: Item[] = [this];
 
-        return subItems.reduce((subItems, item) => {
+        return this.subItems.reduce((subItems, item) => {
             subItems.push(...item.allItems);
             return subItems;
-        }, subItems);
+        }, allItems);
     }
 
     get compatibleAmmoIds(): ItemId[] {

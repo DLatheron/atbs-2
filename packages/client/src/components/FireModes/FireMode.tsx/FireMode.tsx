@@ -5,28 +5,42 @@ import {
     ItemId,
     FireModeDetails,
     FireModeExtendedDetails,
-    FireModes
+    FireModes,
+    FireModeEx,
+    FireModeItemSummary,
+    UnitSummary,
+    Action
 } from "@atbs/shared-data";
 import {
-    Box,
     Typography,
     ToggleButtonGroup,
     ToggleButton,
     styled,
     toggleButtonClasses,
-    toggleButtonGroupClasses
+    toggleButtonGroupClasses,
+    Stack
 } from "@mui/material";
 import { startCase } from "lodash";
-import { formatAccuracy, formatActionPoints } from "../../../helpers/formattingHelpers";
+import {
+    formatAccuracy,
+    formatActionPoints,
+    formatWeight
+} from "../../../helpers/formattingHelpers";
 import { AttributesComponent } from "../../Attributes";
 import { ImageComponent } from "../../Image";
 import { useEffect, useState } from "react";
+import z from "zod";
 
 export interface FireModeComponentProps {
-    actionPoints: number;
-    weapon: FireModeWeaponSummary;
+    unit: UnitSummary;
+    unitWeapon: FireModeItemSummary;
+    weapon: FireModeWeaponSummary | null;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
 }
+
+const mode = ["none", "aimed", "snapshot", "throw"] as const;
+const Mode = z.enum(mode);
+type Mode = z.infer<typeof Mode>;
 
 function getFireModeDetailsHelper(
     fireModes: FireModes,
@@ -45,26 +59,56 @@ function getFireModeDetailsHelper(
     );
 }
 
-function getFireModeHelper(
-    actionPoints: number,
-    weapon: FireModeWeaponSummary
-): FireMode | undefined {
-    const fireModeDetails = getFireModeDetailsHelper(weapon.fireModes, weapon.fireSelector);
-    if (actionPoints >= fireModeDetails.aimed.actionPoints) {
-        return FireMode.enum.aimed;
-    } else if (actionPoints >= fireModeDetails.snapshot.actionPoints) {
-        return FireMode.enum.snapshot;
+/**
+ * Determine the base fire/throw mode.
+ */
+function getModeHelper(unit: UnitSummary, weapon: FireModeWeaponSummary | null): Mode {
+    const { value: actionPoints } = unit.attributes.actionPoints;
+    if (weapon) {
+        const fireModeDetails = getFireModeDetailsHelper(weapon.fireModes, weapon.fireSelector);
+
+        if (actionPoints >= fireModeDetails[FireMode.enum.aimed].actionPoints) {
+            return Mode.enum.aimed;
+        } else if (actionPoints >= fireModeDetails[FireMode.enum.snapshot].actionPoints) {
+            return Mode.enum.snapshot;
+        }
     }
+
+    if (actionPoints >= unit.actions[Action.enum.throw].actionPoints) {
+        return Mode.enum.throw;
+    }
+
+    return Mode.enum.none;
 }
 
-function isFireModeAvailable(
-    actionPoints: number,
-    weapon: FireModeWeaponSummary,
-    fireMode: FireMode
+/**
+ * Check if the currently selected mode is available.
+ */
+function isModeAvailable(
+    mode: Mode,
+    unit: UnitSummary,
+    weapon: FireModeWeaponSummary | null
 ): boolean {
-    const fireModeDetails = getFireModeDetailsHelper(weapon.fireModes, weapon.fireSelector);
+    const { value: actionPoints } = unit.attributes.actionPoints;
 
-    return actionPoints >= fireModeDetails[fireMode].actionPoints;
+    switch (mode) {
+        case Mode.enum.none:
+            return true;
+
+        case Mode.enum.throw:
+            return actionPoints >= unit.actions[Action.enum.throw].actionPoints;
+
+        case Mode.enum.aimed:
+        case Mode.enum.snapshot: {
+            if (!weapon) {
+                return false;
+            }
+
+            const fireModeDetails = getFireModeDetailsHelper(weapon.fireModes, weapon.fireSelector);
+
+            return actionPoints >= fireModeDetails[mode].actionPoints;
+        }
+    }
 }
 
 const StyledToggleButtonGroup = styled(ToggleButtonGroup)(({ theme }) => ({
@@ -85,163 +129,177 @@ const StyledToggleButtonGroup = styled(ToggleButtonGroup)(({ theme }) => ({
 }));
 
 export function FireModeComponent({
-    actionPoints,
+    unit,
+    unitWeapon,
     weapon,
     onChangeFireSelector
 }: FireModeComponentProps) {
-    const [fireMode, setFireMode] = useState<FireMode | undefined>(
-        getFireModeHelper(actionPoints, weapon)
-    );
+    const { value: actionPoints } = unit.attributes.actionPoints;
+
+    const [mode, setMode] = useState<Mode>(getModeHelper(unit, weapon));
 
     useEffect(() => {
-        if (fireMode !== undefined && !isFireModeAvailable(actionPoints, weapon, fireMode)) {
-            setFireMode(getFireModeHelper(actionPoints, weapon));
+        if (!isModeAvailable(mode, unit, weapon)) {
+            setMode(getModeHelper(unit, weapon));
         }
-    }, [actionPoints, weapon, fireMode]);
+    }, [mode, unit, weapon]);
 
     return (
-        <Box
-            sx={{
-                display: "grid",
-                gridTemplateAreas: `
-                        'title'
-                        'attributes'
-                        'fire-selector'
-                        'fire-selector-attributes'
-                        'throw'
-                    `,
-                gridTemplateRows: "auto auto auto auto auto",
-                rowGap: 2
-            }}
-        >
-            <Typography variant="h6" sx={{ gridArea: "title", m: "auto" }}>
-                {weapon.name}
+        <Stack spacing={1}>
+            <Typography variant="h6" sx={{ m: "auto", textAlign: "center" }}>
+                {weapon?.name || unitWeapon.name}
             </Typography>
-            <AttributesComponent
-                sx={{ gridArea: "attributes" }}
-                attributes={[
-                    {
-                        id: "ammo",
-                        label: "Ammunition",
-                        value: `${weapon.capacity ?? "-"}/${weapon.maxCapacity ?? "-"}`
-                    },
-                    {
-                        id: "round",
-                        label: "Loaded",
-                        value: weapon.loadedRound ?? "-"
-                    }
-                ]}
-            />
-            <ToggleButtonGroup
-                value={weapon.fireSelector}
-                onChange={(_event, fireSelector) => onChangeFireSelector(weapon.id, fireSelector)}
-                exclusive
-                fullWidth
-            >
-                <ToggleButton
-                    id="single-shot"
-                    title="Single shot"
-                    value={FireSelector.enum.single}
-                    disabled={!("single" in weapon.fireModes)}
-                >
-                    <ImageComponent
-                        images={[{ imageId: "fireSingle" }]}
-                        width={40}
-                        height={40}
-                        disabled={!("single" in weapon.fireModes)}
+            {weapon && (
+                <>
+                    <AttributesComponent
+                        attributes={[
+                            {
+                                id: "ammo",
+                                label: "Ammunition",
+                                value: `${weapon.capacity ?? "-"}/${weapon.maxCapacity ?? "-"}`
+                            },
+                            {
+                                id: "round",
+                                label: "Loaded",
+                                value: weapon.loadedRound ?? "-"
+                            }
+                        ]}
                     />
-                </ToggleButton>
-                <ToggleButton
-                    id="burst-fire"
-                    title="Burst fire"
-                    value={FireSelector.enum.burst}
-                    disabled={!("burst" in weapon.fireModes)}
-                >
-                    <ImageComponent
-                        images={[{ imageId: "fireBurst" }]}
-                        width={40}
-                        height={40}
-                        disabled={!("burst" in weapon.fireModes)}
-                    />
-                </ToggleButton>
-                <ToggleButton
-                    id="full-auto"
-                    title="Fulauto"
-                    value={FireSelector.enum.auto}
-                    disabled={!("auto" in weapon.fireModes)}
-                >
-                    <ImageComponent
-                        images={[{ imageId: "fireAuto" }]}
-                        width={40}
-                        height={40}
-                        disabled={!("auto" in weapon.fireModes)}
-                    />
-                </ToggleButton>
-            </ToggleButtonGroup>
+                    <ToggleButtonGroup
+                        value={weapon.fireSelector}
+                        onChange={(_event, fireSelector) =>
+                            onChangeFireSelector(weapon.id, fireSelector)
+                        }
+                        exclusive
+                        fullWidth
+                    >
+                        <ToggleButton
+                            id="single-shot"
+                            title="Single shot"
+                            value={FireSelector.enum.single}
+                            disabled={!("single" in weapon.fireModes)}
+                        >
+                            <ImageComponent
+                                images={[{ imageId: "fireSingle" }]}
+                                width={40}
+                                height={40}
+                                disabled={!("single" in weapon.fireModes)}
+                            />
+                        </ToggleButton>
+                        <ToggleButton
+                            id="burst-fire"
+                            title="Burst fire"
+                            value={FireSelector.enum.burst}
+                            disabled={!("burst" in weapon.fireModes)}
+                        >
+                            <ImageComponent
+                                images={[{ imageId: "fireBurst" }]}
+                                width={40}
+                                height={40}
+                                disabled={!("burst" in weapon.fireModes)}
+                            />
+                        </ToggleButton>
+                        <ToggleButton
+                            id="full-auto"
+                            title="Fulauto"
+                            value={FireSelector.enum.auto}
+                            disabled={!("auto" in weapon.fireModes)}
+                        >
+                            <ImageComponent
+                                images={[{ imageId: "fireAuto" }]}
+                                width={40}
+                                height={40}
+                                disabled={!("auto" in weapon.fireModes)}
+                            />
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                </>
+            )}
             <StyledToggleButtonGroup
                 orientation="vertical"
-                value={fireMode}
-                onChange={(_event, fireMode) => setFireMode(fireMode)}
+                value={mode}
+                onChange={(_event, fireMode) => setMode(fireMode)}
                 exclusive
                 sx={{ gap: 2 }}
             >
-                {[FireMode.enum.aimed, FireMode.enum.snapshot].map((fireMode) => {
-                    const fireModeDetails = getFireModeDetailsHelper(
-                        weapon.fireModes,
-                        weapon.fireSelector
-                    )[fireMode];
-                    const formattedAccuracy = formatAccuracy(fireModeDetails.accuracy);
-                    const actionPointCost = fireModeDetails.actionPoints;
-                    const actionPointCostPerRound =
-                        "actionPointsPerRound" in fireModeDetails
-                            ? fireModeDetails.actionPointsPerRound
-                            : undefined;
-                    const formattedActionPoints = formatActionPoints(
-                        actionPointCost,
-                        actionPointCostPerRound
-                    );
+                {weapon &&
+                    [Mode.enum.aimed, Mode.enum.snapshot].map((fireMode) => {
+                        const fireModeDetails = getFireModeDetailsHelper(
+                            weapon.fireModes,
+                            weapon.fireSelector
+                        )[fireMode];
+                        const formattedAccuracy = formatAccuracy(fireModeDetails.accuracy);
+                        const actionPointCost = fireModeDetails.actionPoints;
+                        const actionPointCostPerRound =
+                            "actionPointsPerRound" in fireModeDetails
+                                ? fireModeDetails.actionPointsPerRound
+                                : undefined;
+                        const formattedActionPoints = formatActionPoints(
+                            actionPointCost,
+                            actionPointCostPerRound
+                        );
 
-                    return (
-                        <Box
-                            key={fireMode}
-                            sx={{
-                                display: "grid",
-                                gridTemplateAreas: `
-                                        'button'
-                                        'attributes'
-                                    `,
-                                gridTemplateRows: "auto auto",
-                                rowGap: 2
-                            }}
+                        return (
+                            <Stack key={fireMode} spacing={1}>
+                                <ToggleButton
+                                    id={fireMode}
+                                    title={startCase(fireMode)}
+                                    value={fireMode}
+                                    disabled={actionPoints < actionPointCost}
+                                >
+                                    {startCase(fireMode)}
+                                </ToggleButton>
+                                <AttributesComponent
+                                    attributes={[
+                                        {
+                                            id: "accuracy",
+                                            label: "Accuracy",
+                                            value: formattedAccuracy
+                                        },
+                                        {
+                                            id: "action-points",
+                                            label: "Action Points",
+                                            value: formattedActionPoints
+                                        }
+                                    ]}
+                                />
+                            </Stack>
+                        );
+                    })}
+                {Mode.enum.throw in unit.actions && (
+                    <Stack key={mode} spacing={1}>
+                        <ToggleButton
+                            id={FireModeEx.enum.throw}
+                            title={startCase(FireModeEx.enum.throw)}
+                            value={FireModeEx.enum.throw}
+                            disabled={actionPoints < unit.actions[Action.enum.throw].actionPoints}
                         >
-                            <ToggleButton
-                                id={fireMode}
-                                title={startCase(fireMode)}
-                                value={fireMode}
-                                sx={{ gridArea: "button" }}
-                                disabled={actionPoints < actionPointCost}
-                            >
-                                {startCase(fireMode)}
-                            </ToggleButton>
-                            <AttributesComponent
-                                sx={{ gridArea: "attributes" }}
-                                attributes={[
-                                    {
-                                        id: "accuracy",
-                                        label: "Accuracy",
-                                        value: formattedAccuracy
-                                    },
-                                    {
-                                        id: "action-points",
-                                        label: "Action Points",
-                                        value: formattedActionPoints
-                                    }
-                                ]}
-                            />
-                        </Box>
-                    );
-                })}
+                            {startCase(FireModeEx.enum.throw)}
+                        </ToggleButton>
+                        <AttributesComponent
+                            attributes={[
+                                {
+                                    id: "weight",
+                                    label: "Weight",
+                                    value: formatWeight(unitWeapon.weight)
+                                },
+                                {
+                                    id: "accuracy",
+                                    label: "Accuracy",
+                                    value: formatAccuracy(unit.actions[Action.enum.throw].accuracy)
+                                },
+                                {
+                                    id: "action-points",
+                                    label: "Action Points",
+                                    value: formatActionPoints(
+                                        unit.actions[Action.enum.throw].actionPoints
+                                    )
+                                }
+                            ]}
+                        />
+                    </Stack>
+                )}
             </StyledToggleButtonGroup>
-        </Box>
+        </Stack>
     );
 }

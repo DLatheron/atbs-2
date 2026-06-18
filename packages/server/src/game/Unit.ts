@@ -29,7 +29,7 @@ import { Clamp } from "../../../maths/src/Maths.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
-import { cloneDeep } from "lodash";
+import cloneDeep from "lodash/cloneDeep.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -244,6 +244,8 @@ export class Unit extends SceneObject {
                 actions[Action.enum.throw].accuracy
             );
         }
+
+        console.dir({ actions });
 
         return actions;
     }

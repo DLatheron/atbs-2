@@ -1,5 +1,5 @@
 import { FireModeItemSummary, FireSelector, ItemId, UnitSummary } from "@atbs/shared-data";
-import { Button, Container, Grid, SxProps } from "@mui/material";
+import { Button, Container, Stack, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -56,41 +56,23 @@ export function FireModePanel({
             sx={{
                 display: "grid",
                 gridTemplateAreas: `
-                    'unit-info'
-                    'action-buttons'
-                    'exit-button'
+                    'panel-info'
+                    'bottom-bar'
                 `,
-                gridTemplateRows: "1fr auto auto",
-                rowGap: 1,
-                p: 1,
+                gridTemplateRows: "1fr auto",
+                rowGap: 0,
+                p: 0,
                 ...sx
             }}
         >
-            <Grid
-                sx={{
-                    gridArea: "unit-info",
-                    overflow: "auto",
-                    display: "grid",
-                    gridTemplateAreas: `
-                        'unit'
-                        'direction'
-                        'attributes'
-                        'fire-modes'
-                        'next'
-                    `,
-                    gridTemplateRows: "auto auto auto 1fr",
-                    rowGap: 2
-                }}
-            >
-                <UnitDetailsComponent unit={unit} sx={{ gridArea: "unit" }} />
+            <Stack spacing={1} sx={{ gridArea: "panel-info", p: 1, overflowY: "scroll" }}>
+                <UnitDetailsComponent unit={unit} />
                 <DirectionComponent
                     direction={unit.orientation}
                     viewAngleInDegrees={unit.viewAngleInDegrees}
                     onDirectionChange={onRotateTo}
-                    sx={{ gridArea: "direction" }}
                 />
                 <AttributesComponent
-                    sx={{ gridArea: "attributes" }}
                     title="Attributes"
                     attributes={[
                         {
@@ -141,22 +123,23 @@ export function FireModePanel({
                     surround
                 />
                 <FireModesComponent
-                    sx={{ gridArea: "fire-modes" }}
-                    actionPoints={unit.attributes.actionPoints.value}
+                    unit={unit}
                     unitWeapon={unitWeapon}
                     onChangeFireSelector={onChangeFireSelector}
                 />
-            </Grid>
-            <Button
-                id="end-fire"
-                title="End the current unit's fire mode"
-                variant="outlined"
-                disabled={disabled}
-                onClick={onEndFireMode}
-                sx={{ gridArea: "exit-button" }}
-            >
-                End Fire Mode
-            </Button>
+            </Stack>
+            <Stack spacing={1} sx={{ gridArea: "bottom-bar", px: 1, pb: 1 }}>
+                <Button
+                    id="end-fire"
+                    title="End the current unit's fire mode"
+                    variant="outlined"
+                    disabled={disabled}
+                    onClick={onEndFireMode}
+                    sx={{ gridArea: "exit-button" }}
+                >
+                    End Fire Mode
+                </Button>
+            </Stack>
         </Container>
     );
 }

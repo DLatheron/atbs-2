@@ -1,5 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Button, Container, Grid, SxProps } from "@mui/material";
+import { Button, Container, Grid, Stack, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -80,41 +80,23 @@ export function MoveModePanel({
             sx={{
                 display: "grid",
                 gridTemplateAreas: `
-                    'unit-info'
-                    'action-buttons'
-                    'exit-button'
+                    'panel-info'
+                    'bottom-bar'
                 `,
-                gridTemplateRows: "1fr auto auto",
-                rowGap: 1,
-                p: 1,
+                gridTemplateRows: "1fr auto",
+                rowGap: 0,
+                p: 0,
                 ...sx
             }}
         >
-            <Grid
-                sx={{
-                    gridArea: "unit-info",
-                    overflow: "auto",
-                    display: "grid",
-                    gridTemplateAreas: `
-                        'unit'
-                        'direction'
-                        'attributes'
-                        'item'
-                        'action-buttons'
-                    `,
-                    gridTemplateRows: "auto auto auto 1fr",
-                    rowGap: 2
-                }}
-            >
-                <UnitDetailsComponent unit={unit} sx={{ gridArea: "unit" }} />
+            <Stack spacing={1} sx={{ gridArea: "panel-info", p: 1, overflowY: "scroll" }}>
+                <UnitDetailsComponent unit={unit} />
                 <DirectionComponent
                     direction={unit.orientation}
                     viewAngleInDegrees={unit.viewAngleInDegrees}
                     onDirectionChange={onRotateTo}
-                    sx={{ gridArea: "direction" }}
                 />
                 <AttributesComponent
-                    sx={{ gridArea: "attributes" }}
                     title="Attributes"
                     attributes={[
                         {
@@ -164,92 +146,90 @@ export function MoveModePanel({
                     ]}
                     surround
                 />
-                <ItemDetailsComponent
-                    title="Item in Use"
-                    item={unit.itemInUse}
-                    sx={{ gridArea: "item" }}
-                />
-            </Grid>
-            <Grid
-                sx={{
-                    gridArea: "action-buttons",
-                    display: "grid",
-                    gridTemplateAreas: `
-                        'fire-mode throw-mode action-mode inventory'
-                    `,
-                    gridTemplateRows: "1fr",
-                    gridTemplateColumns: "1fr 1fr 1fr 1fr"
-                }}
-            >
-                <Button
-                    id="fire-mode"
-                    title="Fire mode"
-                    variant="outlined"
-                    disabled={disabled || !unit.interactions.canFire}
-                    sx={{ gridArea: "fire-mode" }}
-                    onClick={onFireMode}
+                <ItemDetailsComponent title="Item in Use" item={unit.itemInUse} />
+            </Stack>
+            <Stack spacing={1} sx={{ gridArea: "bottom-bar", px: 1, pb: 1 }}>
+                <Grid
+                    sx={{
+                        display: "grid",
+                        gridTemplateAreas: `
+                            'fire-mode throw-mode action-mode inventory'
+                        `,
+                        gridTemplateRows: "1fr",
+                        gridTemplateColumns: "1fr 1fr 1fr 1fr"
+                    }}
                 >
-                    <img
-                        src={imageCache.getDataSafe("fireMode")}
-                        width={40}
-                        height={40}
-                        alt="Fire Mode"
-                    />
-                </Button>
+                    <Button
+                        id="fire-mode"
+                        title="Fire mode"
+                        variant="outlined"
+                        disabled={
+                            disabled || (!unit.interactions.canFire && !unit.interactions.canThrow)
+                        }
+                        sx={{ gridArea: "fire-mode" }}
+                        onClick={onFireMode}
+                    >
+                        <img
+                            src={imageCache.getDataSafe("fireMode")}
+                            width={40}
+                            height={40}
+                            alt="Fire Mode"
+                        />
+                    </Button>
+                    <Button
+                        id="throw-mode"
+                        title="Throw mode"
+                        variant="outlined"
+                        disabled={disabled || !unit.interactions.canThrow}
+                        sx={{ gridArea: "throw-mode" }}
+                        onClick={onThrowMode}
+                    >
+                        <img
+                            src={imageCache.getDataSafe("throw")}
+                            width={40}
+                            height={40}
+                            alt="Throw Mode"
+                        />
+                    </Button>
+                    <Button
+                        id="action-mode"
+                        title="Action mode"
+                        variant="outlined"
+                        disabled={disabled || !unit.interactions.canAction}
+                        sx={{ gridArea: "action-mode" }}
+                    >
+                        <img
+                            src={imageCache.getDataSafe("action")}
+                            width={40}
+                            height={40}
+                            alt="Action Mode"
+                        />
+                    </Button>
+                    <Button
+                        id="inventory"
+                        title="Inventory"
+                        variant="outlined"
+                        disabled={disabled || !unit.interactions.canInventory}
+                        sx={{ gridArea: "inventory" }}
+                    >
+                        <img
+                            src={imageCache.getDataSafe("inventory")}
+                            width={40}
+                            height={40}
+                            alt="Inventory"
+                        />
+                    </Button>
+                </Grid>
                 <Button
-                    id="throw-mode"
-                    title="Throw mode"
+                    id="end-move"
+                    title="End the current unit's movement"
                     variant="outlined"
-                    disabled={disabled || !unit.interactions.canThrow}
-                    sx={{ gridArea: "throw-mode" }}
-                    onClick={onThrowMode}
+                    disabled={disabled}
+                    onClick={onEndMovement}
                 >
-                    <img
-                        src={imageCache.getDataSafe("throw")}
-                        width={40}
-                        height={40}
-                        alt="Throw Mode"
-                    />
+                    End Movement
                 </Button>
-                <Button
-                    id="action-mode"
-                    title="Action mode"
-                    variant="outlined"
-                    disabled={disabled || !unit.interactions.canAction}
-                    sx={{ gridArea: "action-mode" }}
-                >
-                    <img
-                        src={imageCache.getDataSafe("action")}
-                        width={40}
-                        height={40}
-                        alt="Action Mode"
-                    />
-                </Button>
-                <Button
-                    id="inventory"
-                    title="Inventory"
-                    variant="outlined"
-                    disabled={disabled || !unit.interactions.canInventory}
-                    sx={{ gridArea: "inventory" }}
-                >
-                    <img
-                        src={imageCache.getDataSafe("inventory")}
-                        width={40}
-                        height={40}
-                        alt="Inventory"
-                    />
-                </Button>
-            </Grid>
-            <Button
-                id="end-move"
-                title="End the current unit's movement"
-                variant="outlined"
-                disabled={disabled}
-                onClick={onEndMovement}
-                sx={{ gridArea: "exit-button" }}
-            >
-                End Movement
-            </Button>
+            </Stack>
         </Container>
     );
 }

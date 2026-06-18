@@ -318,7 +318,7 @@ const action = ["throw"] as const;
 export const Action = z.enum(action);
 export type Action = z.infer<typeof Action>;
 
-export const Actions = z.union([z.object({}), z.object({ [Action.enum.throw]: FireModeDetail })]);
+export const Actions = z.union([z.object({ [Action.enum.throw]: FireModeDetail }), z.object({})]);
 export type Actions = z.infer<typeof Actions>;
 
 export const FragmentExplosion = z.object({

@@ -11,7 +11,7 @@
     ],
     "weight": 0.368,
     "renderable": {
-        "default": [{ "imageId": "40mm-gas.round" }],
+        "default": [{ "imageId": "40mm-gas" }],
         "FIRE_MODE": []
     },
     "damage": { "default": 1 },

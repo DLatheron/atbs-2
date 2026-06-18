@@ -8,8 +8,7 @@ import {
     ItemType,
     SightType,
     DamageMap,
-    FireSelector,
-    Actions
+    FireSelector
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
@@ -42,8 +41,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
-        slots: z.partialRecord(SlotType, Slot).optional(),
-        actions: Actions
+        slots: z.partialRecord(SlotType, Slot).optional()
     }),
     z.object({
         id: ItemId,
@@ -58,8 +56,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireSelector: FireSelector,
-        fireModes: FireModes,
-        actions: Actions
+        fireModes: FireModes
     }),
     z.object({
         id: ItemId,
@@ -72,8 +69,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        explosion: Explosion.optional(),
-        actions: Actions
+        explosion: Explosion.optional()
     }),
     z.object({
         id: ItemId,
@@ -88,8 +84,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         explosion: Explosion.optional(),
-        damage: DamageMap,
-        actions: Actions
+        damage: DamageMap
     }),
     z.object({
         id: ItemId,
@@ -102,8 +97,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        explosion: Explosion,
-        actions: Actions
+        explosion: Explosion
     })
 ]);
 export type ItemRecipe = z.infer<typeof ItemRecipe>;
