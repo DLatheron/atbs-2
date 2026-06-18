@@ -1,4 +1,4 @@
-import { FireModeItemSummary, UnitSummary } from "@atbs/shared-data";
+import { FireModeItemSummary, FireSelector, ItemId, UnitSummary } from "@atbs/shared-data";
 import { Button, Container, Grid, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
@@ -23,6 +23,7 @@ export interface FireModePanelProps {
     unitWeapon: FireModeItemSummary | null;
 
     onRotateTo: (orientation: Orientation) => void;
+    onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
     onEndFireMode: () => void;
 
     sx?: SxProps;
@@ -34,6 +35,7 @@ export function FireModePanel({
     unit,
     unitWeapon,
     onRotateTo,
+    onChangeFireSelector,
     onEndFireMode,
     sx
 }: FireModePanelProps) {
@@ -138,7 +140,12 @@ export function FireModePanel({
                     ]}
                     surround
                 />
-                <FireModesComponent sx={{ gridArea: "fire-modes" }} unitWeapon={unitWeapon} />
+                <FireModesComponent
+                    sx={{ gridArea: "fire-modes" }}
+                    actionPoints={unit.attributes.actionPoints.value}
+                    unitWeapon={unitWeapon}
+                    onChangeFireSelector={onChangeFireSelector}
+                />
             </Grid>
             <Button
                 id="end-fire"

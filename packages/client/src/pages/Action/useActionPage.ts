@@ -5,7 +5,9 @@ import {
     ClientMap,
     ErrorType,
     FireModeItemSummary,
+    FireSelector,
     ImageId,
+    ItemId,
     ItemSummary,
     RenderMode,
     SideSummary,
@@ -305,6 +307,22 @@ export function useActionPage() {
         setSidePanelMode("move-mode");
     }, []);
 
+    const onChangeFireSelector = useCallback(
+        (weaponId: ItemId, fireSelector: FireSelector) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:fire:selector",
+                    payload: {
+                        unitId: unit.id,
+                        weaponId,
+                        fireSelector
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
     return {
         map,
         unit,
@@ -318,6 +336,7 @@ export function useActionPage() {
         disabled,
         onMove,
         onRotateTo,
+        onChangeFireSelector,
         onEndMovement,
         onEndTurn,
         onEndError,

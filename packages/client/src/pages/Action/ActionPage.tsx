@@ -31,6 +31,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         disabled,
         onMove,
         onRotateTo,
+        onChangeFireSelector,
         onEndMovement,
         onEndTurn,
         onEndError,
@@ -160,6 +161,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     unit={unit}
                     unitWeapon={unitWeapon}
                     onRotateTo={onRotateTo}
+                    onChangeFireSelector={onChangeFireSelector}
                     onEndFireMode={onEndFireMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />

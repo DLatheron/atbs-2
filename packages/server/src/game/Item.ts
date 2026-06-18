@@ -35,6 +35,7 @@ export class Item extends SceneObject {
 
     private _location: TilePos | null;
     private _quantity;
+    private _fireSelector: FireSelector | null;
 
     constructor(
         recipe: ItemRecipe,
@@ -50,6 +51,7 @@ export class Item extends SceneObject {
 
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._quantity = overrides.quantity ?? recipe.quantity;
+        this._fireSelector = recipe.type === ItemType.enum.gun ? recipe.fireSelector : null;
 
         this._slots = new Map<SlotType, Item>();
         const { slots } = recipe;
@@ -190,6 +192,22 @@ export class Item extends SceneObject {
         return subItem ?? item ?? null;
     }
 
+    get fireSelector(): FireSelector {
+        if (!this._fireSelector) {
+            throw new Error(`Item ${this.id} does not have a fire selector`);
+        }
+
+        return this._fireSelector;
+    }
+
+    set fireSelector(value: FireSelector) {
+        if (!this._fireSelector) {
+            throw new Error(`Item ${this.id} does not have a fire selector`);
+        }
+
+        this._fireSelector = value;
+    }
+
     hasSlot(slot: SlotType): boolean {
         return !!this.findSlotContents(slot);
     }
@@ -212,6 +230,22 @@ export class Item extends SceneObject {
 
     setSlotContents(slot: SlotType, item: Item): void {
         this._slots.set(slot, item);
+    }
+
+    findByItemId(id: ItemId): Item | undefined {
+        if (this.id === id) {
+            return this;
+        }
+
+        return Array.from(this._slots.values()).find((slotItem) => slotItem.id === id);
+    }
+
+    getByItemId(id: ItemId): Item {
+        const item = this.findByItemId(id);
+        if (!item) {
+            throw new Error(`Item ${this.id} did not have a sub-item with id ${id}`);
+        }
+        return item;
     }
 
     hasSlotProps(slot: SlotType): boolean {
@@ -427,6 +461,7 @@ export class Item extends SceneObject {
                     description: weapon.description,
                     capacity: (loadedMagazine ?? weapon).capacity,
                     maxCapacity: (loadedMagazine ?? weapon).maxCapacity,
+                    fireSelector: weapon.fireSelector,
                     fireModes: weapon.getFireModes(unit),
                     loadedRound: loadedRound?.name,
                     uiImage: weapon.getRenderList({

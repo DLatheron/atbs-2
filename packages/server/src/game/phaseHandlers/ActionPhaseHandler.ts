@@ -133,7 +133,34 @@ export class ActionPhaseHandler extends PhaseHandler {
                     type: "server:unit:mode:throw",
                     payload: selectedUnit?.itemInUse?.getItemSummary() ?? null
                 });
-            })
+            }),
+
+            messageManager.registerHandler(
+                "client:unit:fire:selector",
+                ({ game }, { unitId, weaponId, fireSelector }, from) => {
+                    game.verifyFromPlayingClient(from);
+                    const { selectedUnit } = game;
+                    if (unitId !== selectedUnit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
+
+                    const item = selectedUnit.itemInUse;
+                    if (!item) {
+                        throw new Error(`Unit ${unitId} is not using an item`);
+                    }
+
+                    const weaponItem = item.getByItemId(weaponId);
+
+                    weaponItem.fireSelector = fireSelector;
+
+                    // TODO: Could be a delta update...
+                    from.sendMessage({
+                        type: "server:unit:mode:fire",
+                        payload:
+                            selectedUnit?.itemInUse?.getFireModeItemSummary(selectedUnit) ?? null
+                    });
+                }
+            )
         ];
     }
 }

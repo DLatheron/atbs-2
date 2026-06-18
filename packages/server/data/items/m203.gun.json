@@ -18,6 +18,7 @@
         }
     },
     "slots": { "ammo": { "id": "40mm-gas.round", "quantity": 1 } },
+    "fireSelector": "single",
     "fireModes": {
         "single": {
             "ammoUse": 1,

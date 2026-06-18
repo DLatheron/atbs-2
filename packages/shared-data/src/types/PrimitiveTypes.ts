@@ -252,6 +252,10 @@ const fireMode = ["aimed", "snapshot"] as const;
 export const FireMode = z.enum(fireMode);
 export type FireMode = z.infer<typeof FireMode>;
 
+const fireModeEx = [...fireMode, "throw"] as const;
+export const FireModeEx = z.enum(fireModeEx);
+export type FireModeEx = z.infer<typeof FireModeEx>;
+
 export const FireModeDetail = z.object({
     accuracy: z.number().min(0).max(100),
     actionPoints: z.int().positive()
@@ -394,6 +398,7 @@ export const FireModeWeaponSummary = z.object({
     capacity: z.int().nonnegative().optional(),
     maxCapacity: z.int().nonnegative().optional(),
     loadedRound: z.string().optional(),
+    fireSelector: FireSelector,
     fireModes: FireModes,
     uiImage: RenderList
 });
