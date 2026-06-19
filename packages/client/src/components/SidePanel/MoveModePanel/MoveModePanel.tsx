@@ -41,7 +41,6 @@ export function MoveModePanel({
     onRotateTo,
     onEndMovement,
     onFireMode,
-    onThrowMode,
     sx
 }: MoveModePanelProps) {
     const { imageCache } = useImageCache();
@@ -153,7 +152,7 @@ export function MoveModePanel({
                     sx={{
                         display: "grid",
                         gridTemplateAreas: `
-                            'fire-mode throw-mode action-mode inventory'
+                            'fire-mode action-mode - inventory'
                         `,
                         gridTemplateRows: "1fr",
                         gridTemplateColumns: "1fr 1fr 1fr 1fr"
@@ -166,7 +165,7 @@ export function MoveModePanel({
                         disabled={
                             disabled || (!unit.interactions.canFire && !unit.interactions.canThrow)
                         }
-                        sx={{ gridArea: "fire-mode" }}
+                        sx={{ gridArea: "fire-mode", aspectRatio: 1 }}
                         onClick={onFireMode}
                     >
                         <img
@@ -177,26 +176,11 @@ export function MoveModePanel({
                         />
                     </Button>
                     <Button
-                        id="throw-mode"
-                        title="Throw mode"
-                        variant="outlined"
-                        disabled={disabled || !unit.interactions.canThrow}
-                        sx={{ gridArea: "throw-mode" }}
-                        onClick={onThrowMode}
-                    >
-                        <img
-                            src={imageCache.getDataSafe("throw")}
-                            width={40}
-                            height={40}
-                            alt="Throw Mode"
-                        />
-                    </Button>
-                    <Button
                         id="action-mode"
                         title="Action mode"
                         variant="outlined"
                         disabled={disabled || !unit.interactions.canAction}
-                        sx={{ gridArea: "action-mode" }}
+                        sx={{ gridArea: "action-mode", aspectRatio: 1 }}
                     >
                         <img
                             src={imageCache.getDataSafe("action")}
@@ -205,12 +189,27 @@ export function MoveModePanel({
                             alt="Action Mode"
                         />
                     </Button>
+                    {/* <Button
+                        id="throw-mode"
+                        title="Throw mode"
+                        variant="outlined"
+                        disabled={disabled || !unit.interactions.canThrow}
+                        sx={{ gridArea: "throw-mode", aspectRatio: 1 }}
+                        onClick={onThrowMode}
+                    >
+                        <img
+                            src={imageCache.getDataSafe("throw")}
+                            width={40}
+                            height={40}
+                            alt="Throw Mode"
+                        />
+                    </Button> */}
                     <Button
                         id="inventory"
                         title="Inventory"
                         variant="outlined"
                         disabled={disabled || !unit.interactions.canInventory}
-                        sx={{ gridArea: "inventory" }}
+                        sx={{ gridArea: "inventory", aspectRatio: 1 }}
                     >
                         <img
                             src={imageCache.getDataSafe("inventory")}

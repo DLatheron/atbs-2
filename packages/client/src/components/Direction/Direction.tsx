@@ -116,8 +116,7 @@ export function DirectionComponent({
                 sx={{
                     gridArea: "direction",
                     m: "auto",
-                    borderRadius: "10px",
-                    backgroundColor: "white",
+                    borderRadius: "50%",
                     border: disabled ? "2px solid grey" : "2px solid black",
                     width: 96,
                     height: 96,
@@ -160,7 +159,8 @@ export function DirectionComponent({
                     style={{
                         position: "absolute",
                         transformOrigin: "center",
-                        transform: `rotate(${rotateNonViewConePath}deg)`
+                        transform: `rotate(${rotateNonViewConePath}deg)`,
+                        stroke: "black"
                     }}
                 >
                     <path d={nonViewConePath} fill="rgb(240, 74, 99)" />
@@ -172,7 +172,8 @@ export function DirectionComponent({
                     style={{
                         position: "absolute",
                         transformOrigin: "center",
-                        transform: `rotate(${rotateViewConePath}deg)`
+                        transform: `rotate(${rotateViewConePath}deg)`,
+                        stroke: "black"
                     }}
                 >
                     <path d={viewConePath} fill="rgb(30, 201, 104)" />
@@ -219,7 +220,7 @@ export function DirectionComponent({
                         cy="48"
                         rx="10"
                         ry="10"
-                        fill="lightgrey"
+                        fill="yellow"
                         style={{ pointerEvents: "none" }}
                     />
                 </svg>

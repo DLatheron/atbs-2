@@ -1,10 +1,14 @@
-import { UnitSummary } from "@atbs/shared-data";
-import { Box, Stack, SxProps, Typography } from "@mui/material";
+import { Description, RenderList } from "@atbs/shared-data";
+import { Stack, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../Description";
 import { ImageComponent } from "../Image";
 
 export interface UnitDetailsComponentProps {
-    unit: UnitSummary;
+    unit: {
+        name: string;
+        uiImage: RenderList;
+        description: Description;
+    };
     noImages?: boolean;
     noDescription?: boolean;
     sx?: SxProps;
@@ -17,39 +21,27 @@ export function UnitDetailsComponent({
     sx
 }: UnitDetailsComponentProps) {
     return (
-        <Box
+        <Stack
+            spacing={1}
             sx={{
                 borderRadius: 2,
                 border: "1px black solid",
-                display: "grid",
                 backgroundColor: "beige",
-                gridTemplateAreas: `
-                    'name'
-                    'image'
-                    'description'
-                `,
-                gridTemplateRows: "auto minmax(0, auto) minmax(0, auto)",
-                rowGap: 2,
+                rowGap: 1,
                 p: 1,
                 ...sx
             }}
         >
-            {unit && (
-                <>
-                    <Typography variant="h5" sx={{ gridArea: "name", m: "auto" }}>
-                        {unit.name}
-                    </Typography>
-                    {!noImages && (
-                        <ImageComponent images={unit.uiImage} sx={{ gridArea: "image" }} />
-                    )}
-                    {!noDescription && (
-                        <Stack sx={{ gridArea: "description" }} spacing={1}>
-                            <Typography variant="h6">Description:</Typography>
-                            <DescriptionComponent description={unit.description} />
-                        </Stack>
-                    )}
-                </>
+            <Typography variant="h5" sx={{ textAlign: "center", m: "auto" }}>
+                {unit.name}
+            </Typography>
+            {!noImages && <ImageComponent images={unit.uiImage} />}
+            {!noDescription && (
+                <Stack spacing={1}>
+                    <Typography variant="h6">Description:</Typography>
+                    <DescriptionComponent description={unit.description} />
+                </Stack>
             )}
-        </Box>
+        </Stack>
     );
 }

@@ -9,7 +9,6 @@ import { TitleBarComponent } from "../../components/TitleBar";
 import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
 import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
-import { ThrowModePanel } from "../../components/SidePanel/ThrowModePanel/ThrowModePanel";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -22,7 +21,6 @@ export function ActionPage({ visible }: ActionPageProps) {
     const {
         unit,
         unitWeapon,
-        unitItem,
         turn,
         side,
         tileInfo,
@@ -37,8 +35,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         onEndError,
         onFireMode,
         onThrowMode,
-        onEndFireMode,
-        onEndThrowMode
+        onEndFireMode
     } = useActionPage();
 
     const { world } = useWorld();
@@ -163,15 +160,6 @@ export function ActionPage({ visible }: ActionPageProps) {
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
                     onEndFireMode={onEndFireMode}
-                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
-                />
-                <ThrowModePanel
-                    visible={!error && sidePanelMode === "throw-mode"}
-                    disabled={disabled}
-                    unit={unit}
-                    unitItem={unitItem}
-                    onRotateTo={onRotateTo}
-                    onEndThrowMode={onEndThrowMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <ErrorPanel

@@ -66,7 +66,7 @@ export function FireModePanel({
             }}
         >
             <Stack spacing={1} sx={{ gridArea: "panel-info", p: 1, overflowY: "scroll" }}>
-                <UnitDetailsComponent unit={unit} />
+                <UnitDetailsComponent unit={unit} noDescription />
                 <DirectionComponent
                     direction={unit.orientation}
                     viewAngleInDegrees={unit.viewAngleInDegrees}

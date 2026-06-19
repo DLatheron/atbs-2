@@ -25,7 +25,7 @@ export function AttributeComponent({ label, text: textOrElement, value }: Attrib
                 )}
             </Box>
             <Box sx={{ gridColumn: 3, m: "auto 0", textAlign: "right" }}>
-                {hasValue && <Typography variant="body1">{value}</Typography>}
+                {hasValue && <Typography variant="body2">{value}</Typography>}
             </Box>
         </>
     );
