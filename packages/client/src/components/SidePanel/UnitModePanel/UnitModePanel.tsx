@@ -53,7 +53,7 @@ export function UnitModePanel({
             // KeyU: () => onActionMode(!actionMode),
             Escape: () => onEndMovement()
         }),
-        [unit, onMove, onRotateTo, onEndMovement]
+        [unit, onMove, onRotateTo, onFireMode, onEndMovement]
     );
 
     useKeyboard({

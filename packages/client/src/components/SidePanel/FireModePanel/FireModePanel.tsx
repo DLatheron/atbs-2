@@ -12,9 +12,11 @@ import {
     STRENGTH_LEVELS
 } from "../../../helpers/formattingHelpers";
 import { DirectionComponent } from "../../Direction";
-import { Orientation } from "@atbs/maths";
+import { Orientation, rotateOrientation } from "@atbs/maths";
 import { UnitDetailsComponent } from "../../UnitDetails";
 import { FireModesComponent } from "../../FireModes";
+import { useKeyboard } from "../../../hooks";
+import { useMemo } from "react";
 
 export interface FireModePanelProps {
     visible: boolean;
@@ -39,7 +41,19 @@ export function FireModePanel({
     onEndFireMode,
     sx
 }: FireModePanelProps) {
-    // const { imageCache } = useImageCache();
+    const keyMap = useMemo(
+        () => ({
+            KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
+            KeyD: () => unit && onRotateTo(rotateOrientation(unit.orientation, 1)),
+            Escape: () => onEndFireMode()
+        }),
+        [unit, onRotateTo, onEndFireMode]
+    );
+
+    useKeyboard({
+        keyMap,
+        disabled: !visible || disabled
+    });
 
     if (!visible) {
         return null;
