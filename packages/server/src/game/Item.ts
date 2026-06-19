@@ -13,7 +13,8 @@ import {
     RenderList,
     UnitType,
     Weight,
-    RenderMode
+    RenderMode,
+    SightType
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
 import { TilePos } from "@atbs/maths";
@@ -206,6 +207,14 @@ export class Item extends SceneObject {
         }
 
         this._fireSelector = value;
+    }
+
+    get sight(): SightType {
+        if ("sight" in this._recipe) {
+            return this._recipe.sight;
+        } else {
+            return SightType.enum.iron;
+        }
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -461,6 +470,8 @@ export class Item extends SceneObject {
                         description: this.description,
                         capacity: (loadedMagazine ?? this).capacity,
                         maxCapacity: (loadedMagazine ?? this).maxCapacity,
+                        sight: this.sight,
+                        maxRange: loadedRound?.maxRange,
                         fireSelector: this.fireSelector,
                         fireModes: this.getFireModes(unit),
                         loadedRound: loadedRound?.name,
@@ -489,6 +500,7 @@ export class Item extends SceneObject {
                     fireSelector: weapon.fireSelector,
                     fireModes: weapon.getFireModes(unit),
                     loadedRound: loadedRound?.name,
+                    sight: weapon.sight,
                     uiImage: weapon.getRenderList({
                         renderMode: RenderMode.enum.UI_MODE,
                         states: []

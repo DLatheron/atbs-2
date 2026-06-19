@@ -13,7 +13,7 @@
         "default": [{ "imageId": "m4" }],
         "FIRE_MODE": []
     },
-    "sight": "optical",
+    "sight": "laser",
     "slotProps": {
         "ammo": {
             "compatibleIds": ["m16-30.magazine", "m16-20.magazine"]

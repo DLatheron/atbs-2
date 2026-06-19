@@ -110,11 +110,19 @@ export class MapModeHandler extends ModeHandler {
             return;
         }
 
+        super.onMouseMove(event);
+
         this.updateDelta(event, TrackingSpeed.enum.VERY_FAST);
         this.trackTile(event);
     }
 
     onMouseLeave(event: MouseEvent | React.MouseEvent): void {
+        if (!this.world.hasMap) {
+            return;
+        }
+
+        super.onMouseLeave(event);
+
         this.endMapDrag(event);
         this._clearTileInfoQuery();
     }

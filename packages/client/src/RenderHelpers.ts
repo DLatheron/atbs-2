@@ -1,4 +1,4 @@
-import { Vec2 } from "@atbs/maths";
+import { degreesToRadians, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 
 export function DrawLaserSight(
@@ -47,4 +47,121 @@ export function DrawLaserSight(
     });
 
     context.setLineDash([]);
+}
+
+export function DrawRangeSight(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    fromWorldPos: Vec2,
+    toWorldPos: Vec2,
+    maxRange?: number
+): void {
+    if (!toWorldPos) {
+        return;
+    }
+
+    // Limit range...
+    const invVector = fromWorldPos.sub(toWorldPos);
+    const normal = invVector.normalise();
+    let maxDistance = invVector.length;
+    if (maxRange && maxDistance > maxRange) {
+        toWorldPos = fromWorldPos.sub(normal.scale(maxRange));
+        maxDistance = maxRange;
+    }
+
+    const sideNormal = normal.rotate(degreesToRadians(90));
+
+    context.fillStyle = "red";
+    context.lineWidth = 1;
+    context.beginPath();
+
+    let prevPoints = [camera.worldToCanvas(toWorldPos), camera.worldToCanvas(toWorldPos)];
+
+    const from = camera.worldToCanvas(fromWorldPos);
+    const to = camera.worldToCanvas(toWorldPos);
+
+    const gradient = context.createLinearGradient(from.x, from.y, to.x, to.y);
+    gradient.addColorStop(0, "rgba(0, 255, 0, 0");
+    gradient.addColorStop(0.5, "rgba(0, 255, 0, 1");
+    gradient.addColorStop(1, "rgba(0, 255, 0, 0");
+
+    const minWidth = 4;
+    const maxWidth = 12;
+
+    const points = [
+        camera.worldToCanvas(toWorldPos),
+        camera.worldToCanvas(toWorldPos.add(sideNormal.scale(20))),
+        camera.worldToCanvas(fromWorldPos.add(sideNormal.scale(20))),
+        camera.worldToCanvas(fromWorldPos),
+        camera.worldToCanvas(toWorldPos.sub(sideNormal.scale(20))),
+        camera.worldToCanvas(fromWorldPos.sub(sideNormal.scale(20)))
+    ];
+
+    context.beginPath();
+    context.strokeStyle = gradient;
+    context.moveTo(points[0].x, points[0].y);
+    context.bezierCurveTo(
+        points[1].x,
+        points[1].y,
+        points[2].x,
+        points[2].y,
+        points[3].x,
+        points[3].y
+    );
+    context.moveTo(points[0].x, points[0].y);
+    context.bezierCurveTo(
+        points[4].x,
+        points[4].y,
+        points[5].x,
+        points[5].y,
+        points[3].x,
+        points[3].y
+    );
+    context.stroke();
+
+    for (let distance = 0; distance < maxDistance; distance += 10) {
+        const centrePoint = toWorldPos.add(normal.scale(distance));
+        const dist = (maxDistance - distance) / maxDistance;
+        const power = 2;
+        let t;
+        if (dist <= 0.5) {
+            t = 1.0 - Math.pow(1.0 - dist * 2, power);
+        } else {
+            t = 1.0 - Math.pow((dist - 0.5) * 2, power);
+        }
+
+        const width = t * (maxWidth - minWidth) + minWidth;
+        const sidePoints = [
+            camera.worldToCanvas(centrePoint.add(sideNormal.scale(width))),
+            camera.worldToCanvas(centrePoint.sub(sideNormal.scale(width)))
+        ];
+
+        context.beginPath();
+        context.fillStyle = gradient;
+        context.moveTo(prevPoints[0].x, prevPoints[0].y);
+        context.lineTo(prevPoints[1].x, prevPoints[1].y);
+        context.lineTo(sidePoints[1].x, sidePoints[1].y);
+        context.lineTo(sidePoints[0].x, sidePoints[0].y);
+        context.lineTo(prevPoints[0].x, prevPoints[0].y);
+        context.fill();
+
+        prevPoints = sidePoints;
+    }
+
+    const headSideLength = 35;
+    const headAngle = degreesToRadians(60);
+
+    const headPoints = [
+        camera.worldToCanvas(toWorldPos.sub(normal.scale(10))),
+        camera.worldToCanvas(toWorldPos.add(normal.rotate(headAngle).scale(headSideLength))),
+        camera.worldToCanvas(toWorldPos.add(normal.rotate(-headAngle).scale(headSideLength)))
+    ];
+
+    context.beginPath();
+    context.fillStyle = "limegreen";
+    context.moveTo(headPoints[0].x, headPoints[0].y);
+    context.lineTo(headPoints[1].x, headPoints[1].y);
+    context.lineTo(headPoints[2].x, headPoints[2].y);
+    context.lineTo(headPoints[0].x, headPoints[0].y);
+    context.fill();
 }

@@ -1,6 +1,8 @@
 import { TilePos, Vec2 } from "@atbs/maths";
 
 export interface IInteractionHandler {
+    get cursorWorldPos(): Vec2 | null;
+
     initialise: () => void;
     uninitialse: () => void;
 

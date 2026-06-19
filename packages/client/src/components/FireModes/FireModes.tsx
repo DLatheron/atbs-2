@@ -8,6 +8,7 @@ import {
 import { Box, SxProps, Tab, Tabs, Typography } from "@mui/material";
 import { useState } from "react";
 import { FireModeComponent } from "./FireMode.tsx/FireMode";
+import { useWorld } from "../../hooks";
 
 export interface FireModesComponentProps {
     unit: UnitSummary;
@@ -24,6 +25,7 @@ export function FireModesComponent({
     onChangeFireSelector,
     sx
 }: FireModesComponentProps) {
+    const { world } = useWorld();
     const surroundProps = {
         borderRadius: 2,
         border: "1px black solid",
@@ -46,8 +48,8 @@ export function FireModesComponent({
                     <Tabs
                         value={weaponIndex}
                         onChange={(_event, newValue) => {
-                            // setFireSelector(getInitialFireSelector(unitWeapon.weapons[newValue]));
                             setWeaponIndex(newValue);
+                            world.unitWeaponIndex = newValue;
                         }}
                         variant="fullWidth"
                         textColor="primary"

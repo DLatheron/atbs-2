@@ -553,6 +553,7 @@ export class Unit extends SceneObject {
             isDirectional: this.isDirectional,
             orientation: this.orientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
+            collisionRadius: this._recipe.collision.radius,
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,

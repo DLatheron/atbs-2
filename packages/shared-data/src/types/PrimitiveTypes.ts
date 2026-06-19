@@ -376,6 +376,7 @@ export const UnitSummary = z.object({
     location: TilePosRecipe,
     orientation: z.enum(Orientation),
     viewAngleInDegrees: z.int().positive(),
+    collisionRadius: z.number().positive(),
     isDirectional: z.boolean().optional().default(true),
     attributes: z.object({
         actionPoints: Attribute,
@@ -407,6 +408,8 @@ export const FireModeWeaponSummary = z.object({
     capacity: z.int().nonnegative().optional(),
     maxCapacity: z.int().nonnegative().optional(),
     loadedRound: z.string().optional(),
+    sight: SightType,
+    maxRange: z.number().optional(),
     fireSelector: FireSelector,
     fireModes: FireModes,
     uiImage: RenderList

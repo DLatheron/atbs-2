@@ -4,6 +4,7 @@ import {
     FireModeItemSummary,
     RenderList,
     RenderMode,
+    SightType,
     UnitSummary
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
@@ -19,7 +20,7 @@ import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
 import { MapMode } from "./MapMode";
-import { DrawLaserSight } from "./RenderHelpers";
+import { DrawLaserSight, DrawRangeSight } from "./RenderHelpers";
 
 export class World {
     private readonly _camera: Camera2d;
@@ -30,6 +31,7 @@ export class World {
     private _mapMode: MapMode;
     private _unit: UnitSummary | null;
     private _unitWeapon: FireModeItemSummary | null;
+    private _unitWeaponIndex: number;
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
     private _mouseCursor: CSSProperties["cursor"];
@@ -50,6 +52,7 @@ export class World {
         this._map = null;
         this._unit = null;
         this._unitWeapon = null;
+        this._unitWeaponIndex = 0;
 
         this._mapMode = MapMode.enum["map-mode"];
         this._mapModeHandler = new MapModeHandler(this);
@@ -118,6 +121,15 @@ export class World {
 
     set unitWeapon(value: FireModeItemSummary | null) {
         this._unitWeapon = value;
+        this._unitWeaponIndex = 0;
+    }
+
+    get unitWeaponIndex(): number {
+        return this._unitWeaponIndex;
+    }
+
+    set unitWeaponIndex(value: number) {
+        this._unitWeaponIndex = value;
     }
 
     get camera(): Camera2d {
@@ -275,7 +287,7 @@ export class World {
     }
 
     renderWorld({ canvas, context }: CanvasLoopProps) {
-        const { time, frameDelta } = this._timer;
+        const { time, frameDelta } = this._timer.tick();
         const { width, height } = canvas;
 
         context.clearRect(0, 0, width, height);
@@ -311,24 +323,32 @@ export class World {
             return;
         }
 
-        const from = this.unitWorldPos;
-        const to = this.unitWorldPos.add(new Vec2(200, 0)); // TODO: Mouse position...
+        const unitPos = this.unitWorldPos;
+        const to = this._interactionHandler?.cursorWorldPos;
+        const weapon =
+            this.unitWeapon.weapons.length > 0
+                ? this.unitWeapon.weapons[this.unitWeaponIndex]
+                : null;
+        if (weapon && to && !Vec2.IsEqual(unitPos, to)) {
+            const dir = to.sub(unitPos).normalise();
+            const from = unitPos.add(dir.scale(this.unit.collisionRadius));
 
-        // if (this.drawSight) {
-        //     switch (this.drawSight.type) {
-        //         case "laser":
-        //             if (GameWorld.ShouldDrawSight(this.drawSight.from, this.drawSight.to, this.drawSight.viewCone.orientation, this.drawSight.viewCone.angle)) {
-        DrawLaserSight(this.camera, context, from, to, time);
-        //             }
-        //             break;
+            switch (weapon.sight) {
+                case SightType.enum.iron:
+                    break;
 
-        //         case "ranged":
-        //             if (GameWorld.ShouldDrawSight(this.drawSight.from, this.drawSight.to, this.drawSight.viewCone.orientation, this.drawSight.viewCone.angle)) {
-        //                 DrawRangeSight(this.camera, context, this.drawSight.from, this.drawSight.to, this.drawSight.maxRange);
-        //             }
-        //             break;
-        //     }
-        // }
+                case SightType.enum.laser:
+                    DrawLaserSight(this.camera, context, from, to, time);
+                    break;
+
+                case SightType.enum.optical:
+                    break;
+
+                case SightType.enum.ranged:
+                    DrawRangeSight(this.camera, context, from, to, weapon.maxRange);
+                    break;
+            }
+        }
     }
 
     iterateViewportTiles(
