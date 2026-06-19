@@ -34,7 +34,6 @@ export function ActionPage({ visible }: ActionPageProps) {
         onEndTurn,
         onEndError,
         onFireMode,
-        onThrowMode,
         onEndFireMode
     } = useActionPage();
 
@@ -128,7 +127,6 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 sx={{ gridArea: "map " }}
-                // cursor={state.cursor}
                 disabled={disabled}
             ></MapComponent>
             <SidePanel
@@ -149,7 +147,6 @@ export function ActionPage({ visible }: ActionPageProps) {
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
                     onFireMode={onFireMode}
-                    onThrowMode={onThrowMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <FireModePanel

@@ -96,14 +96,6 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.null()
     }),
     z.object({
-        type: z.literal("client:unit:mode:throw"),
-        payload: UnitId
-    }),
-    z.object({
-        type: z.literal("client:unit:mode:throw:end"),
-        payload: z.null()
-    }),
-    z.object({
         type: z.literal("client:unit:fire:selector"),
         payload: z.object({
             unitId: UnitId,

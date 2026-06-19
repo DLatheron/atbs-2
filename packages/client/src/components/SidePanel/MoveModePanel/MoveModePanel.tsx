@@ -15,9 +15,9 @@ import { DirectionComponent } from "../../Direction";
 import { Orientation, rotateOrientation } from "@atbs/maths";
 import { useMemo } from "react";
 import { useKeyboard } from "../../../hooks";
-import { useImageCache } from "../../../hooks/useImageCache";
 import { UnitDetailsComponent } from "../../UnitDetails";
 import { ItemDetailsComponent } from "../../ItemDetails";
+import { ImageComponent } from "../../Image";
 
 export interface MoveModePanelProps {
     visible: boolean;
@@ -28,7 +28,6 @@ export interface MoveModePanelProps {
     onRotateTo: (orientation: Orientation) => void;
     onEndMovement: () => void;
     onFireMode: () => void;
-    onThrowMode: () => void;
 
     sx?: SxProps;
 }
@@ -43,8 +42,6 @@ export function MoveModePanel({
     onFireMode,
     sx
 }: MoveModePanelProps) {
-    const { imageCache } = useImageCache();
-
     const keyMap = useMemo(
         () => ({
             KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
@@ -168,11 +165,14 @@ export function MoveModePanel({
                         sx={{ gridArea: "fire-mode", aspectRatio: 1 }}
                         onClick={onFireMode}
                     >
-                        <img
-                            src={imageCache.getDataSafe("fireMode")}
+                        <ImageComponent
+                            images={[{ imageId: "fireMode" }]}
                             width={40}
                             height={40}
-                            alt="Fire Mode"
+                            disabled={
+                                disabled ||
+                                (!unit.interactions.canFire && !unit.interactions.canThrow)
+                            }
                         />
                     </Button>
                     <Button
@@ -182,11 +182,11 @@ export function MoveModePanel({
                         disabled={disabled || !unit.interactions.canAction}
                         sx={{ gridArea: "action-mode", aspectRatio: 1 }}
                     >
-                        <img
-                            src={imageCache.getDataSafe("action")}
+                        <ImageComponent
+                            images={[{ imageId: "action" }]}
                             width={40}
                             height={40}
-                            alt="Action Mode"
+                            disabled={disabled || !unit.interactions.canAction}
                         />
                     </Button>
                     {/* <Button
@@ -211,11 +211,11 @@ export function MoveModePanel({
                         disabled={disabled || !unit.interactions.canInventory}
                         sx={{ gridArea: "inventory", aspectRatio: 1 }}
                     >
-                        <img
-                            src={imageCache.getDataSafe("inventory")}
+                        <ImageComponent
+                            images={[{ imageId: "inventory" }]}
                             width={40}
                             height={40}
-                            alt="Inventory"
+                            disabled={disabled || !unit.interactions.canInventory}
                         />
                     </Button>
                 </Grid>

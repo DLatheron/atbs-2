@@ -126,15 +126,6 @@ export class ActionPhaseHandler extends PhaseHandler {
                 });
             }),
 
-            messageManager.registerHandler("client:unit:mode:throw", ({ game }, _null, from) => {
-                game.verifyFromPlayingClient(from);
-                const { selectedUnit } = game;
-                from.sendMessage({
-                    type: "server:unit:mode:throw",
-                    payload: selectedUnit?.itemInUse?.getItemSummary() ?? null
-                });
-            }),
-
             messageManager.registerHandler(
                 "client:unit:fire:selector",
                 ({ game }, { unitId, weaponId, fireSelector }, from) => {

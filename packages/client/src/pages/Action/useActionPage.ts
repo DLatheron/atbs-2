@@ -8,7 +8,6 @@ import {
     FireSelector,
     ImageId,
     ItemId,
-    ItemSummary,
     RenderMode,
     SideSummary,
     TileInfo,
@@ -34,7 +33,6 @@ export function useActionPage() {
     const [map, setMap] = useState<ClientMap | null>(null);
     const [unit, setUnit] = useState<UnitSummary | null>(null);
     const [unitWeapon, setUnitWeapon] = useState<FireModeItemSummary | null>(null);
-    const [unitItem, setUnitItem] = useState<ItemSummary | null>(null);
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
@@ -88,8 +86,12 @@ export function useActionPage() {
                 setUnit(payload);
                 if (payload) {
                     setSidePanelMode("move-mode");
+                    world.renderMode = RenderMode.enum.MAP_MODE;
+                    world.popMouseCursor();
                 } else {
                     setSidePanelMode("map-mode");
+                    world.renderMode = RenderMode.enum.MAP_MODE;
+                    world.pushMouseCursor("crosshair");
                 }
             }),
 
@@ -108,25 +110,12 @@ export function useActionPage() {
                 setUnitWeapon(payload);
                 if (payload) {
                     setSidePanelMode("fire-mode");
+                    world.renderMode = RenderMode.enum.FIRE_MODE;
+                    world.pushMouseCursor("crosshair");
                 } else {
                     setSidePanelMode("map-mode");
-                }
-            }),
-
-            messageManager.registerHandler("server:unit:mode:throw", async (_context, payload) => {
-                console.info("$$$ Received unit message $$$", payload?.id);
-
-                if (payload) {
-                    const imageSet = new Set<ImageId>();
-                    ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
-                    await imageCache.waitForImagesToCache(imageSet);
-                }
-
-                setUnitItem(payload);
-                if (payload) {
-                    setSidePanelMode("throw-mode");
-                } else {
-                    setSidePanelMode("map-mode");
+                    world.renderMode = RenderMode.enum.MAP_MODE;
+                    world.popMouseCursor();
                 }
             }),
 
@@ -290,22 +279,11 @@ export function useActionPage() {
         }
     }, [sendMessage, unit?.id]);
 
-    const onThrowMode = useCallback(() => {
-        if (unit?.id) {
-            sendMessage({
-                type: "client:unit:mode:throw",
-                payload: unit.id
-            });
-        }
-    }, [sendMessage, unit?.id]);
-
     const onEndFireMode = useCallback(() => {
         setSidePanelMode("move-mode");
-    }, []);
-
-    const onEndThrowMode = useCallback(() => {
-        setSidePanelMode("move-mode");
-    }, []);
+        world.renderMode = RenderMode.enum.MAP_MODE;
+        world.popMouseCursor();
+    }, [world]);
 
     const onChangeFireSelector = useCallback(
         (weaponId: ItemId, fireSelector: FireSelector) => {
@@ -327,7 +305,6 @@ export function useActionPage() {
         map,
         unit,
         unitWeapon,
-        unitItem,
         turn,
         side,
         tileInfo,
@@ -341,8 +318,6 @@ export function useActionPage() {
         onEndTurn,
         onEndError,
         onFireMode,
-        onThrowMode,
-        onEndFireMode,
-        onEndThrowMode
+        onEndFireMode
     };
 }

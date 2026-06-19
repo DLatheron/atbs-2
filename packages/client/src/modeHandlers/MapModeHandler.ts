@@ -73,6 +73,7 @@ export class MapModeHandler extends ModeHandler {
             movementDelta: Vec2.Zero()
         };
         this.camera.additionalVelocity = null;
+        this.world.pushMouseCursor("grabbing");
     }
 
     endMapDrag(event: MouseEvent | React.MouseEvent): void {
@@ -82,6 +83,7 @@ export class MapModeHandler extends ModeHandler {
             this.camera.additionalVelocity = this._mapDrag.movementDelta;
 
             this._mapDrag = null;
+            this.world.popMouseCursor();
         }
     }
 

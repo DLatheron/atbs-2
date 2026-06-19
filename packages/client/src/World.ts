@@ -10,6 +10,7 @@ import { Timer } from "./Timer";
 import { IInteractionHandler } from "./IInteractionHandler";
 import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
+import { CSSProperties } from "@mui/material";
 
 export class World {
     private readonly _camera: Camera2d;
@@ -19,6 +20,7 @@ export class World {
     private _map: ClientMap | null;
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
+    private _mouseCursorStack: CSSProperties["cursor"][];
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -38,6 +40,7 @@ export class World {
         this._waitForRenderStart = new Promise((resolve) => {
             this._renderStarted = resolve;
         });
+        this._mouseCursorStack = [];
     }
 
     get hasMap(): boolean {
@@ -76,8 +79,20 @@ export class World {
         return this._renderMode;
     }
 
+    set renderMode(value: RenderMode) {
+        this._renderMode = value;
+    }
+
     get imageCache(): ImageCache {
         return this._imageCache;
+    }
+
+    pushMouseCursor(value: CSSProperties["cursor"]) {
+        this._mouseCursorStack.push(value);
+    }
+
+    popMouseCursor() {
+        this._mouseCursorStack.pop();
     }
 
     get sendMessage(): (message: ClientToServerMessage) => void {
@@ -159,6 +174,8 @@ export class World {
         if (!this.hasMap) {
             return;
         }
+
+        canvas.style.cursor = this._mouseCursorStack[0] ?? "default";
 
         this.camera.viewportDimensions = new Vec2(width, height);
 
