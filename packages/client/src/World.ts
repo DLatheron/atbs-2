@@ -11,6 +11,7 @@ import { IInteractionHandler } from "./IInteractionHandler";
 import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
+import { MapMode } from "./MapMode";
 
 export class World {
     private readonly _camera: Camera2d;
@@ -18,9 +19,11 @@ export class World {
     protected readonly _timer: Timer;
     private _renderMode: RenderMode;
     private _map: ClientMap | null;
+    private _mapMode: MapMode;
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
-    private _mouseCursorStack: CSSProperties["cursor"][];
+    private _mouseCursor: CSSProperties["cursor"];
+    private _defaultMouseCursor: CSSProperties["cursor"];
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -32,6 +35,7 @@ export class World {
 
         this._renderMode = RenderMode.enum.MAP_MODE;
         this._map = null;
+        this._mapMode = MapMode.enum["map-mode"];
         this._interactionHandler = new MapModeHandler(this);
         this._sendMessage = () => {
             throw new Error("World:sendMessage function not set");
@@ -40,7 +44,8 @@ export class World {
         this._waitForRenderStart = new Promise((resolve) => {
             this._renderStarted = resolve;
         });
-        this._mouseCursorStack = [];
+        this._mouseCursor = undefined;
+        this._defaultMouseCursor = undefined;
     }
 
     get hasMap(): boolean {
@@ -87,12 +92,53 @@ export class World {
         return this._imageCache;
     }
 
-    pushMouseCursor(value: CSSProperties["cursor"]) {
-        this._mouseCursorStack.push(value);
+    get mapMode(): MapMode {
+        return this._mapMode;
     }
 
-    popMouseCursor() {
-        this._mouseCursorStack.pop();
+    set mapMode(value: MapMode) {
+        let renderMode: RenderMode;
+        let mouseCursor: CSSProperties["cursor"];
+
+        switch (value) {
+            case MapMode.enum["map-mode"]:
+                renderMode = RenderMode.enum.MAP_MODE;
+                mouseCursor = undefined;
+                break;
+
+            case MapMode.enum["move-mode"]:
+                renderMode = RenderMode.enum.MAP_MODE;
+                mouseCursor = undefined;
+                break;
+
+            case MapMode.enum["fire-mode"]:
+                renderMode = RenderMode.enum.FIRE_MODE;
+                mouseCursor = "crosshair";
+                break;
+        }
+
+        if (this.renderMode !== renderMode) {
+            this.renderMode = renderMode;
+        }
+        if (this.mouseCursor !== mouseCursor) {
+            this.mouseCursor = mouseCursor;
+        }
+    }
+
+    get mouseCursor(): CSSProperties["cursor"] {
+        return this._mouseCursor;
+    }
+
+    get defaultMouseCursor(): CSSProperties["cursor"] {
+        return this._defaultMouseCursor;
+    }
+
+    set mouseCursor(value: CSSProperties["cursor"]) {
+        this._mouseCursor = value;
+    }
+
+    set defaultMouseCursor(value: CSSProperties["cursor"]) {
+        this._defaultMouseCursor = value;
     }
 
     get sendMessage(): (message: ClientToServerMessage) => void {
@@ -175,7 +221,7 @@ export class World {
             return;
         }
 
-        canvas.style.cursor = this._mouseCursorStack[0] ?? "default";
+        canvas.style.cursor = this.mouseCursor ?? this.defaultMouseCursor ?? "default";
 
         this.camera.viewportDimensions = new Vec2(width, height);
 

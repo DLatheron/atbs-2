@@ -16,6 +16,7 @@ import {
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
 import { Orientation, TilePos, Vec2 } from "@atbs/maths";
+import { MapMode } from "../../MapMode";
 
 function delay(delayInMs: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, delayInMs));
@@ -25,9 +26,7 @@ export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
     const { imageCache } = useImageCache();
     const { world } = useWorld();
-    const [sidePanelMode, setSidePanelMode] = useState<
-        "map-mode" | "move-mode" | "fire-mode" | "throw-mode"
-    >("map-mode");
+    const [sidePanelMode, setSidePanelMode] = useState<MapMode>(MapMode.enum["map-mode"]);
     const [side, setSide] = useState<SideSummary | null>(null);
     const [turn, setTurn] = useState<number>(0);
     const [map, setMap] = useState<ClientMap | null>(null);
@@ -85,13 +84,11 @@ export function useActionPage() {
 
                 setUnit(payload);
                 if (payload) {
-                    setSidePanelMode("move-mode");
-                    world.renderMode = RenderMode.enum.MAP_MODE;
-                    world.popMouseCursor();
+                    setSidePanelMode(MapMode.enum["move-mode"]);
+                    world.mapMode = MapMode.enum["move-mode"];
                 } else {
-                    setSidePanelMode("map-mode");
-                    world.renderMode = RenderMode.enum.MAP_MODE;
-                    world.pushMouseCursor("crosshair");
+                    setSidePanelMode(MapMode.enum["map-mode"]);
+                    world.mapMode = MapMode.enum["map-mode"];
                 }
             }),
 
@@ -109,13 +106,11 @@ export function useActionPage() {
 
                 setUnitWeapon(payload);
                 if (payload) {
-                    setSidePanelMode("fire-mode");
-                    world.renderMode = RenderMode.enum.FIRE_MODE;
-                    world.pushMouseCursor("crosshair");
+                    setSidePanelMode(MapMode.enum["fire-mode"]);
+                    world.mapMode = MapMode.enum["fire-mode"];
                 } else {
-                    setSidePanelMode("map-mode");
-                    world.renderMode = RenderMode.enum.MAP_MODE;
-                    world.popMouseCursor();
+                    setSidePanelMode(MapMode.enum["map-mode"]);
+                    world.mapMode = MapMode.enum["map-mode"];
                 }
             }),
 
@@ -280,9 +275,8 @@ export function useActionPage() {
     }, [sendMessage, unit?.id]);
 
     const onEndFireMode = useCallback(() => {
-        setSidePanelMode("move-mode");
-        world.renderMode = RenderMode.enum.MAP_MODE;
-        world.popMouseCursor();
+        setSidePanelMode(MapMode.enum["move-mode"]);
+        world.mapMode = MapMode.enum["move-mode"];
     }, [world]);
 
     const onChangeFireSelector = useCallback(
