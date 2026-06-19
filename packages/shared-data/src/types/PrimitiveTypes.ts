@@ -373,6 +373,7 @@ export const UnitSummary = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
     description: Description,
+    location: TilePosRecipe,
     orientation: z.enum(Orientation),
     viewAngleInDegrees: z.int().positive(),
     isDirectional: z.boolean().optional().default(true),

@@ -83,9 +83,10 @@ export function useActionPage() {
                 }
 
                 setUnit(payload);
+                world.unit = payload;
                 if (payload) {
-                    setSidePanelMode(MapMode.enum["move-mode"]);
-                    world.mapMode = MapMode.enum["move-mode"];
+                    setSidePanelMode(MapMode.enum["unit-mode"]);
+                    world.mapMode = MapMode.enum["unit-mode"];
                 } else {
                     setSidePanelMode(MapMode.enum["map-mode"]);
                     world.mapMode = MapMode.enum["map-mode"];
@@ -105,6 +106,7 @@ export function useActionPage() {
                 }
 
                 setUnitWeapon(payload);
+                world.unitWeapon = payload;
                 if (payload) {
                     setSidePanelMode(MapMode.enum["fire-mode"]);
                     world.mapMode = MapMode.enum["fire-mode"];
@@ -196,6 +198,7 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
                 setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
+                world.unit = merge({}, world.unit, payload);
             }),
 
             messageManager.registerHandler("server:error", (_context, error) => {
@@ -275,8 +278,8 @@ export function useActionPage() {
     }, [sendMessage, unit?.id]);
 
     const onEndFireMode = useCallback(() => {
-        setSidePanelMode(MapMode.enum["move-mode"]);
-        world.mapMode = MapMode.enum["move-mode"];
+        setSidePanelMode(MapMode.enum["unit-mode"]);
+        world.mapMode = MapMode.enum["unit-mode"];
     }, [world]);
 
     const onChangeFireSelector = useCallback(

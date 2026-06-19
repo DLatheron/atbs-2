@@ -1,4 +1,11 @@
-import { ClientMap, ClientToServerMessage, RenderList, RenderMode } from "@atbs/shared-data";
+import {
+    ClientMap,
+    ClientToServerMessage,
+    FireModeItemSummary,
+    RenderList,
+    RenderMode,
+    UnitSummary
+} from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
 import { CanvasLoopProps } from "./components/CanvasLoop";
 import { TilePos } from "../../maths/dist/TilePos";
@@ -12,6 +19,7 @@ import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
 import { MapMode } from "./MapMode";
+import { DrawLaserSight } from "./RenderHelpers";
 
 export class World {
     private readonly _camera: Camera2d;
@@ -20,10 +28,15 @@ export class World {
     private _renderMode: RenderMode;
     private _map: ClientMap | null;
     private _mapMode: MapMode;
+    private _unit: UnitSummary | null;
+    private _unitWeapon: FireModeItemSummary | null;
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
     private _mouseCursor: CSSProperties["cursor"];
     private _defaultMouseCursor: CSSProperties["cursor"];
+
+    private _mapModeHandler: MapModeHandler;
+    private _fireModeHandler: MapModeHandler;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -35,8 +48,13 @@ export class World {
 
         this._renderMode = RenderMode.enum.MAP_MODE;
         this._map = null;
+        this._unit = null;
+        this._unitWeapon = null;
+
         this._mapMode = MapMode.enum["map-mode"];
-        this._interactionHandler = new MapModeHandler(this);
+        this._mapModeHandler = new MapModeHandler(this);
+        this._fireModeHandler = new MapModeHandler(this);
+        this._interactionHandler = this._mapModeHandler;
         this._sendMessage = () => {
             throw new Error("World:sendMessage function not set");
         };
@@ -62,6 +80,44 @@ export class World {
 
     set map(value: ClientMap | null) {
         this._map = value;
+    }
+
+    get hasUnit(): boolean {
+        return !!this._unit;
+    }
+
+    get unit(): UnitSummary {
+        if (!this._unit) {
+            throw new Error("Unit should not be null");
+        }
+
+        return this._unit;
+    }
+
+    set unit(value: UnitSummary | null) {
+        this._unit = value;
+    }
+
+    get unitWorldPos(): Vec2 {
+        const { unit } = this;
+
+        return this.tileCenterToWorld(new TilePos(unit.location));
+    }
+
+    get hasUnitWeapon(): boolean {
+        return !!this._unitWeapon;
+    }
+
+    get unitWeapon(): FireModeItemSummary {
+        if (!this._unitWeapon) {
+            throw new Error("Unit weapon should not be null");
+        }
+
+        return this._unitWeapon;
+    }
+
+    set unitWeapon(value: FireModeItemSummary | null) {
+        this._unitWeapon = value;
     }
 
     get camera(): Camera2d {
@@ -99,21 +155,25 @@ export class World {
     set mapMode(value: MapMode) {
         let renderMode: RenderMode;
         let mouseCursor: CSSProperties["cursor"];
+        let interactionHandler: IInteractionHandler;
 
         switch (value) {
             case MapMode.enum["map-mode"]:
                 renderMode = RenderMode.enum.MAP_MODE;
                 mouseCursor = undefined;
+                interactionHandler = this._mapModeHandler;
                 break;
 
-            case MapMode.enum["move-mode"]:
+            case MapMode.enum["unit-mode"]:
                 renderMode = RenderMode.enum.MAP_MODE;
                 mouseCursor = undefined;
+                interactionHandler = this._mapModeHandler;
                 break;
 
             case MapMode.enum["fire-mode"]:
                 renderMode = RenderMode.enum.FIRE_MODE;
                 mouseCursor = "crosshair";
+                interactionHandler = this._fireModeHandler;
                 break;
         }
 
@@ -122,6 +182,9 @@ export class World {
         }
         if (this.mouseCursor !== mouseCursor) {
             this.mouseCursor = mouseCursor;
+        }
+        if (this._interactionHandler !== interactionHandler) {
+            this._interactionHandler = interactionHandler;
         }
     }
 
@@ -232,11 +295,40 @@ export class World {
         const offset = new Vec2(tileSize / 2, tileSize / 2);
 
         this.renderTerrainAndFurniture(context, tileSize, scale, offset);
+        this.renderSight(context, time);
 
         if (this._renderStarted) {
             this._renderStarted();
             this._renderStarted = null;
         }
+    }
+
+    private renderSight(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        time: number
+    ) {
+        if (!this.hasUnitWeapon) {
+            return;
+        }
+
+        const from = this.unitWorldPos;
+        const to = this.unitWorldPos.add(new Vec2(200, 0)); // TODO: Mouse position...
+
+        // if (this.drawSight) {
+        //     switch (this.drawSight.type) {
+        //         case "laser":
+        //             if (GameWorld.ShouldDrawSight(this.drawSight.from, this.drawSight.to, this.drawSight.viewCone.orientation, this.drawSight.viewCone.angle)) {
+        DrawLaserSight(this.camera, context, from, to, time);
+        //             }
+        //             break;
+
+        //         case "ranged":
+        //             if (GameWorld.ShouldDrawSight(this.drawSight.from, this.drawSight.to, this.drawSight.viewCone.orientation, this.drawSight.viewCone.angle)) {
+        //                 DrawRangeSight(this.camera, context, this.drawSight.from, this.drawSight.to, this.drawSight.maxRange);
+        //             }
+        //             break;
+        //     }
+        // }
     }
 
     iterateViewportTiles(

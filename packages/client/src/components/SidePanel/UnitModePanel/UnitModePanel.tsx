@@ -19,7 +19,7 @@ import { UnitDetailsComponent } from "../../UnitDetails";
 import { ItemDetailsComponent } from "../../ItemDetails";
 import { ImageComponent } from "../../Image";
 
-export interface MoveModePanelProps {
+export interface UnitModePanelProps {
     visible: boolean;
     disabled: boolean;
     unit: UnitSummary | null;
@@ -32,7 +32,7 @@ export interface MoveModePanelProps {
     sx?: SxProps;
 }
 
-export function MoveModePanel({
+export function UnitModePanel({
     visible,
     disabled,
     unit,
@@ -41,14 +41,14 @@ export function MoveModePanel({
     onEndMovement,
     onFireMode,
     sx
-}: MoveModePanelProps) {
+}: UnitModePanelProps) {
     const keyMap = useMemo(
         () => ({
             KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
             KeyD: () => unit && onRotateTo(rotateOrientation(unit.orientation, 1)),
             KeyW: () => unit && onMove(Orientation.NORTH),
             KeyS: () => unit && onMove(Orientation.SOUTH),
-            // KeyF: () => onEnterFireMode(),
+            KeyF: () => onFireMode(),
             // KeyI: () => onOpenInventory(),
             // KeyU: () => onActionMode(!actionMode),
             Escape: () => onEndMovement()

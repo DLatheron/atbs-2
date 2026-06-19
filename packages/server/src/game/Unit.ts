@@ -549,6 +549,7 @@ export class Unit extends SceneObject {
             id: this.id,
             name: this.name,
             description: this.description,
+            location: [this.mapLocation.col, this.mapLocation.row],
             isDirectional: this.isDirectional,
             orientation: this.orientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,

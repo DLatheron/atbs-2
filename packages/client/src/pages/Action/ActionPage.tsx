@@ -6,9 +6,10 @@ import { CanvasLoopProps } from "../../components/CanvasLoop";
 import { useActionPage } from "./useActionPage";
 import { MapModePanel, SidePanel } from "../../components/SidePanel";
 import { TitleBarComponent } from "../../components/TitleBar";
-import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
+import { UnitModePanel } from "../../components/SidePanel/UnitModePanel";
 import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
+import { MapMode } from "../../MapMode";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -133,14 +134,14 @@ export function ActionPage({ visible }: ActionPageProps) {
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
                 <MapModePanel
-                    visible={!error && sidePanelMode === "map-mode"}
+                    visible={!error && sidePanelMode === MapMode.enum["map-mode"]}
                     disabled={disabled}
                     tileInfo={tileInfo}
                     onEndTurn={onEndTurn}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
-                <MoveModePanel
-                    visible={!error && sidePanelMode === "move-mode"}
+                <UnitModePanel
+                    visible={!error && sidePanelMode === MapMode.enum["unit-mode"]}
                     disabled={disabled}
                     unit={unit}
                     onMove={onMove}
@@ -150,7 +151,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <FireModePanel
-                    visible={!error && sidePanelMode === "fire-mode"}
+                    visible={!error && sidePanelMode === MapMode.enum["fire-mode"]}
                     disabled={disabled}
                     unit={unit}
                     unitWeapon={unitWeapon}
