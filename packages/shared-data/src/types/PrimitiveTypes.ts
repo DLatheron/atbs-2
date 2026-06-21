@@ -3,6 +3,8 @@ import { Phase } from "./Phase.js";
 import { Maths, Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
+export const MILLISECONDS_IN_A_MINUTE = 60000;
+
 export const ClientId = z.uuid();
 export type ClientId = z.infer<typeof ClientId>;
 
@@ -313,6 +315,136 @@ export const FireModes = z.union([
     z.object({ [FireSelector.enum.auto]: FireModeAuto })
 ]);
 export type FireModes = z.infer<typeof FireModes>;
+
+export function isFireModeSingle(fireMode: unknown): fireMode is FireModeSingle {
+    return FireModeSingle.safeParse(fireMode).success;
+}
+
+export function isFireModeBurst(fireMode: unknown): fireMode is FireModeBurst {
+    return FireModeBurst.safeParse(fireMode).success;
+}
+
+export function isFireModeAuto(fireMode: unknown): fireMode is FireModeAuto {
+    return FireModeAuto.safeParse(fireMode).success;
+}
+
+export function getRpm(fireModes: FireModes, fireSelector: FireSelector): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return 0;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].rpm;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return fireModes[FireSelector.enum.auto].rpm;
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function shotsFired(timeDeltaInMS: number, rpm: number) {
+    return Math.floor((timeDeltaInMS * rpm) / MILLISECONDS_IN_A_MINUTE);
+}
+
+export function calcFireActionPointCost(
+    fireModes: FireModes,
+    fireSelector: FireSelector,
+    fireMode: FireMode,
+    triggerHeldTimeInMs: number = 0
+): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return fireModes[FireSelector.enum.single].fireModeDetails[fireMode].actionPoints;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].fireModeDetails[fireMode].actionPoints;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                const shotsToFire = shotsFired(
+                    triggerHeldTimeInMs,
+                    fireModes[FireSelector.enum.auto].rpm
+                );
+                return (
+                    fireModes[FireSelector.enum.auto].fireModeDetails[fireMode].actionPoints +
+                    shotsToFire *
+                        fireModes[FireSelector.enum.auto].fireModeDetails[fireMode]
+                            .actionPointsPerRound
+                );
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function calcMinimumAmmoUse(fireModes: FireModes, fireSelector: FireSelector): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return 1;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].ammoUse;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return 0;
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function calcAmmoUse(
+    fireModes: FireModes,
+    fireSelector: FireSelector,
+    triggerHeldTimeInMs: number = 0
+): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return 1;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].ammoUse;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return shotsFired(triggerHeldTimeInMs, fireModes[FireSelector.enum.auto].rpm);
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
 
 const action = ["throw"] as const;
 export const Action = z.enum(action);

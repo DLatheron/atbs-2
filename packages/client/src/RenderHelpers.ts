@@ -165,3 +165,62 @@ export function DrawRangeSight(
     context.lineTo(headPoints[0].x, headPoints[0].y);
     context.fill();
 }
+
+export function DrawBulletTrajectory(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    fromWorldPos: Vec2,
+    toWorldPos: Vec2
+) {
+    const fromCanvasPos = camera.worldToCanvas(fromWorldPos);
+    const toCanvasPos = camera.worldToCanvas(toWorldPos);
+
+    const gradient0 = context.createLinearGradient(
+        fromCanvasPos.x,
+        fromCanvasPos.y,
+        toCanvasPos.x,
+        toCanvasPos.y
+    );
+    gradient0.addColorStop(0.0, "rgba(0, 0, 0, 0)");
+    gradient0.addColorStop(0.1, "rgba(0, 0, 0, 0)");
+    gradient0.addColorStop(0.9, "rgba(255, 255, 255, 1)");
+    gradient0.addColorStop(1, "rgba(255, 255, 255, 1)");
+    context.strokeStyle = gradient0;
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(fromCanvasPos.x, fromCanvasPos.y);
+    context.lineTo(toCanvasPos.x, toCanvasPos.y);
+    context.stroke();
+}
+
+export function DrawBulletTrajectories(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    fromWorldPos: Vec2,
+    toWorldPoses: Vec2[]
+) {
+    const range = toWorldPoses[0].sub(fromWorldPos).length;
+
+    for (const toWorldPos of toWorldPoses) {
+        const clippedVector = toWorldPos.sub(fromWorldPos).normalise().scale(range);
+        const toWorldPosClipped = fromWorldPos.add(clippedVector);
+
+        DrawBulletTrajectory(camera, context, fromWorldPos, toWorldPosClipped);
+    }
+}
+
+export function DrawRoundsThatWillBeFired(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    worldPos: Vec2,
+    roundsThatWillBeFired: number
+) {
+    if (roundsThatWillBeFired > 0) {
+        const canvasPos = camera.worldToCanvas(worldPos);
+
+        context.fillStyle = "red";
+        context.font = "32px sans-serif";
+        context.fillText(` x${roundsThatWillBeFired}`, canvasPos.x, canvasPos.y);
+        context.stroke();
+    }
+}

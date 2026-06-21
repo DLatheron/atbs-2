@@ -1,7 +1,9 @@
 import { World } from "../World";
 import { TilePos, Vec2 } from "@atbs/maths";
 import { ModeHandler } from "./ModeHandler";
-import { FireModeEx, FireSelector, TrackingSpeed } from "@atbs/shared-data";
+import { calcMinimumAmmoUse, FireModeEx, FireSelector, TrackingSpeed } from "@atbs/shared-data";
+import { DrawBulletTrajectories, DrawRoundsThatWillBeFired } from "../RenderHelpers";
+import { CanvasLoopProps } from "../components";
 
 const TILE_INFO_QUERY_DEBOUNCE_IN_MS = 500;
 
@@ -19,6 +21,12 @@ export class FireModeHandler extends ModeHandler {
         tilePos: TilePos | null;
         timerId: number;
     };
+    private _fireSpread: {
+        worldPoses: Vec2[];
+        startTime: number;
+        rpm: number;
+        timeBetweenShots: number;
+    } | null;
 
     constructor(world: World) {
         super(world);
@@ -28,6 +36,7 @@ export class FireModeHandler extends ModeHandler {
             tilePos: null,
             timerId: 0
         };
+        this._fireSpread = null;
     }
 
     initialise(): void {}
@@ -37,6 +46,50 @@ export class FireModeHandler extends ModeHandler {
     update() {
         if (this._mapDrag) {
             this._mapDrag.lastCanvasPos = this._mapDrag.currCanvasPos;
+        }
+
+        if (this._fireSpread) {
+            const { frameTime } = this.world;
+            const triggerHeldTimeInMs = frameTime - this._fireSpread.startTime;
+            const shotsThatShouldHaveBeenFired = Math.floor(
+                triggerHeldTimeInMs / this._fireSpread.timeBetweenShots
+            );
+            const ammoUse = calcMinimumAmmoUse(
+                this.world.weapon.fireModes,
+                this.world.fireSelector
+            );
+            const ammoAvailable = this.world.weapon.capacity ?? 0;
+
+            while (this._fireSpread.worldPoses.length < shotsThatShouldHaveBeenFired) {
+                if (
+                    this._fireSpread.worldPoses.length === ammoUse ||
+                    this._fireSpread.worldPoses.length === ammoAvailable
+                ) {
+                    break;
+                }
+
+                const { cursorWorldPos } = this;
+                this._fireSpread.worldPoses.push(
+                    cursorWorldPos ??
+                        this._fireSpread.worldPoses[this._fireSpread.worldPoses.length - 1]
+                );
+            }
+        }
+    }
+
+    render({ context }: CanvasLoopProps) {
+        if (this._fireSpread) {
+            const { camera } = this.world;
+            const { worldPoses } = this._fireSpread;
+
+            DrawBulletTrajectories(camera, context, this.world.unitWorldPos, worldPoses);
+
+            DrawRoundsThatWillBeFired(
+                this.world.camera,
+                context,
+                worldPoses[worldPoses.length - 1],
+                worldPoses.length
+            );
         }
     }
 
@@ -59,6 +112,10 @@ export class FireModeHandler extends ModeHandler {
 
     isMapDrag(event: MouseEvent | React.MouseEvent): boolean {
         return (event.button === 0 && event.altKey) || event.button === 2;
+    }
+
+    isSpreadFire(event: MouseEvent | React.MouseEvent): boolean {
+        return event.button === 0 && !event.altKey;
     }
 
     startMapDrag(event: MouseEvent | React.MouseEvent): void {
@@ -94,6 +151,31 @@ export class FireModeHandler extends ModeHandler {
 
         if (this.isMapDrag(event)) {
             this.startMapDrag(event);
+        } else {
+            if (this.isSpreadFire(event)) {
+                const canvasPos = ModeHandler.EventToCanvasPos(event);
+                const worldPos = this.camera.canvasToWorld(canvasPos);
+
+                switch (this.world.fireSelector) {
+                    case FireSelector.enum.burst:
+                        this._fireSpread = {
+                            worldPoses: [worldPos],
+                            startTime: this.world.frameTime,
+                            rpm: this.world.rpm,
+                            timeBetweenShots: this.world.timeBetweenShots
+                        };
+                        break;
+
+                    case FireSelector.enum.auto:
+                        this._fireSpread = {
+                            worldPoses: [worldPos],
+                            startTime: this.world.frameTime,
+                            rpm: this.world.rpm,
+                            timeBetweenShots: this.world.timeBetweenShots
+                        };
+                        break;
+                }
+            }
         }
     }
 
@@ -103,6 +185,23 @@ export class FireModeHandler extends ModeHandler {
         }
 
         this.endMapDrag(event);
+
+        if (this.isSpreadFire(event) && this._fireSpread) {
+            switch (this.world.fireSelector) {
+                case FireSelector.enum.burst:
+                    this.world.burstFire(this._fireSpread.worldPoses);
+                    break;
+
+                case FireSelector.enum.auto: {
+                    const { frameTime } = this.world;
+                    const triggerHeldForMs = frameTime - this._fireSpread.startTime;
+                    this.world.autoFire(this._fireSpread.worldPoses, triggerHeldForMs);
+                    break;
+                }
+            }
+
+            this._fireSpread = null;
+        }
     }
 
     onMouseMove(event: MouseEvent | React.MouseEvent): void {

@@ -1,4 +1,5 @@
 import { TilePos, Vec2 } from "@atbs/maths";
+import { CanvasLoopProps } from "./components";
 
 export interface IInteractionHandler {
     get cursorWorldPos(): Vec2 | null;
@@ -7,6 +8,7 @@ export interface IInteractionHandler {
     uninitialse: () => void;
 
     update?: ({ time, frameDelta }: { time: number; frameDelta: number }) => void;
+    render?: (canvasLoopProps: CanvasLoopProps) => void;
 
     onMouseEnter?: (event: MouseEvent | React.MouseEvent) => void;
     onMouseLeave?: (event: MouseEvent | React.MouseEvent) => void;

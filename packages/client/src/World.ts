@@ -7,6 +7,8 @@ import {
     FireModeItemSummary,
     FireModeWeaponSummary,
     FireSelector,
+    getRpm,
+    MILLISECONDS_IN_A_MINUTE,
     RenderList,
     RenderMode,
     SightType,
@@ -53,6 +55,7 @@ export class World {
     private _fireCallback: FireCallback;
     private _throwCallback: ThrowCallback;
     private _fireModeEx: FireModeEx;
+    private _frameTime: number;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -89,6 +92,7 @@ export class World {
             throw new Error("World:throwCallback function not set");
         };
         this._fireModeEx = FireModeEx.enum.aimed;
+        this._frameTime = 0;
     }
 
     get hasMap(): boolean {
@@ -279,6 +283,18 @@ export class World {
         return fireModeEx;
     }
 
+    get rpm(): number {
+        return getRpm(this.weapon.fireModes, this.fireSelector);
+    }
+
+    get timeBetweenShots(): number {
+        return Math.floor(MILLISECONDS_IN_A_MINUTE / this.rpm);
+    }
+
+    get frameTime(): number {
+        return this._frameTime;
+    }
+
     throw(worldPos: Vec2) {
         if (!this.unit.itemInUse) {
             throw new Error("Unit has not item in use to throw");
@@ -379,6 +395,8 @@ export class World {
     }
 
     update({ time, frameDelta }: { time: number; frameDelta: number }) {
+        this._frameTime = time;
+
         this.camera.worldBounds = this.worldBounds;
 
         this._interactionHandler?.update?.({ time, frameDelta });
@@ -386,7 +404,8 @@ export class World {
         this.camera.update({ time, frameDelta });
     }
 
-    renderWorld({ canvas, context }: CanvasLoopProps) {
+    renderWorld(canvasLoopProps: CanvasLoopProps) {
+        const { canvas, context } = canvasLoopProps;
         const { time, frameDelta } = this._timer.tick();
         const { width, height } = canvas;
 
@@ -408,6 +427,8 @@ export class World {
 
         this.renderTerrainAndFurniture(context, tileSize, scale, offset);
         this.renderSight(context, time);
+
+        this._interactionHandler?.render?.(canvasLoopProps);
 
         if (this._renderStarted) {
             this._renderStarted();
@@ -448,13 +469,7 @@ export class World {
                         break;
 
                     case SightType.enum.ranged:
-                        DrawRangeSight(
-                            this.camera,
-                            context,
-                            from,
-                            to,
-                            this.weapon.maxRange
-                        );
+                        DrawRangeSight(this.camera, context, from, to, this.weapon.maxRange);
                         break;
                 }
             }
