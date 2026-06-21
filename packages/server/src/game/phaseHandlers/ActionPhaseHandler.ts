@@ -1,7 +1,7 @@
 import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
-import { TilePos } from "@atbs/maths";
+import { TilePos, Vec2 } from "@atbs/maths";
 // import type { ClientMessageManager } from "../Game.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
@@ -151,7 +151,47 @@ export class ActionPhaseHandler extends PhaseHandler {
                             selectedUnit?.itemInUse?.getFireModeItemSummary(selectedUnit) ?? null
                     });
                 }
-            )
+            ),
+
+            messageManager.registerHandler("client:unit:fire", ({ game }, fireDetails, from) => {
+                game.verifyFromPlayingClient(from);
+                const { selectedUnit } = game;
+                if (fireDetails.unitId !== selectedUnit?.id) {
+                    throw new Error(`Unit ${fireDetails.unitId} is not selected`);
+                }
+
+                const weapon = selectedUnit.itemInUse?.findByItemId(fireDetails.weaponId);
+                if (!weapon) {
+                    throw new Error(
+                        `Unit ${selectedUnit.id} does not have weapon ${fireDetails.weaponId} in use`
+                    );
+                }
+
+                selectedUnit.fire(
+                    game,
+                    weapon,
+                    fireDetails.fireSelector,
+                    fireDetails.fireMode,
+                    fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
+                    fireDetails.triggerHeldTimeInMs
+                );
+            }),
+
+            messageManager.registerHandler("client:unit:throw", ({ game }, throwDetails, from) => {
+                game.verifyFromPlayingClient(from);
+                const { selectedUnit } = game;
+                if (throwDetails.unitId !== selectedUnit?.id) {
+                    throw new Error(`Unit ${throwDetails.unitId} is not selected`);
+                }
+
+                if (selectedUnit.itemInUse?.id !== throwDetails.itemId) {
+                    throw new Error(
+                        `Unit ${selectedUnit.id} is not using item ${throwDetails.itemId}`
+                    );
+                }
+
+                selectedUnit.throw(game, new Vec2(throwDetails.worldPos));
+            })
         ];
     }
 }

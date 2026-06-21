@@ -1,7 +1,7 @@
 import { World } from "../World";
 import { TilePos, Vec2 } from "@atbs/maths";
 import { ModeHandler } from "./ModeHandler";
-import { TrackingSpeed } from "@atbs/shared-data";
+import { FireModeEx, FireSelector, TrackingSpeed } from "@atbs/shared-data";
 
 const TILE_INFO_QUERY_DEBOUNCE_IN_MS = 500;
 
@@ -125,6 +125,24 @@ export class FireModeHandler extends ModeHandler {
 
         this.endMapDrag(event);
         this._clearTileInfoQuery();
+    }
+
+    onClick(event: MouseEvent | React.MouseEvent): void {
+        if (!this.world.hasMap) {
+            return;
+        }
+
+        if (this.world.fireModeEx === FireModeEx.enum.throw) {
+            const canvasPos = ModeHandler.EventToCanvasPos(event);
+            const worldPos = this.camera.canvasToWorld(canvasPos);
+
+            this.world.throw(worldPos);
+        } else if (this.world.fireSelector === FireSelector.enum.single) {
+            const canvasPos = ModeHandler.EventToCanvasPos(event);
+            const worldPos = this.camera.canvasToWorld(canvasPos);
+
+            this.world.singleFire(worldPos);
+        }
     }
 
     onDoubleClick(event: MouseEvent | React.MouseEvent): void {

@@ -1,10 +1,16 @@
 import {
     ClientMap,
     ClientToServerMessage,
+    FireDetails,
+    FireMode,
+    FireModeEx,
     FireModeItemSummary,
+    FireModeWeaponSummary,
+    FireSelector,
     RenderList,
     RenderMode,
     SightType,
+    ThrowDetails,
     UnitSummary
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
@@ -21,6 +27,10 @@ import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
 import { MapMode } from "./MapMode";
 import { DrawLaserSight, DrawRangeSight } from "./RenderHelpers";
+import { FireModeHandler } from "./modeHandlers/FireModeHandler";
+
+export type FireCallback = (details: FireDetails) => void;
+export type ThrowCallback = (details: ThrowDetails) => void;
 
 export class World {
     private readonly _camera: Camera2d;
@@ -38,7 +48,11 @@ export class World {
     private _defaultMouseCursor: CSSProperties["cursor"];
 
     private _mapModeHandler: MapModeHandler;
-    private _fireModeHandler: MapModeHandler;
+    private _fireModeHandler: FireModeHandler;
+
+    private _fireCallback: FireCallback;
+    private _throwCallback: ThrowCallback;
+    private _fireModeEx: FireModeEx;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -56,7 +70,7 @@ export class World {
 
         this._mapMode = MapMode.enum["map-mode"];
         this._mapModeHandler = new MapModeHandler(this);
-        this._fireModeHandler = new MapModeHandler(this);
+        this._fireModeHandler = new FireModeHandler(this);
         this._interactionHandler = this._mapModeHandler;
         this._sendMessage = () => {
             throw new Error("World:sendMessage function not set");
@@ -67,6 +81,14 @@ export class World {
         });
         this._mouseCursor = undefined;
         this._defaultMouseCursor = undefined;
+
+        this._fireCallback = () => {
+            throw new Error("World:fireCallback function not set");
+        };
+        this._throwCallback = () => {
+            throw new Error("World:throwCallback function not set");
+        };
+        this._fireModeEx = FireModeEx.enum.aimed;
     }
 
     get hasMap(): boolean {
@@ -224,6 +246,84 @@ export class World {
         this._sendMessage = value;
     }
 
+    set fireCallback(value: FireCallback) {
+        this._fireCallback = value;
+    }
+
+    set throwCallback(value: ThrowCallback) {
+        this._throwCallback = value;
+    }
+
+    get weapon(): FireModeWeaponSummary {
+        return this.unitWeapon.weapons[this.unitWeaponIndex];
+    }
+
+    get fireSelector(): FireSelector {
+        return this.weapon.fireSelector;
+    }
+
+    get fireModeEx(): FireModeEx {
+        return this._fireModeEx;
+    }
+
+    set fireModeEx(value: FireModeEx) {
+        this._fireModeEx = value;
+    }
+
+    get fireMode(): FireMode {
+        const fireModeEx = this.fireModeEx;
+        if (fireModeEx === FireModeEx.enum.throw || fireModeEx === FireModeEx.enum.none) {
+            throw new Error("Cannot get fireMode because the fireModeEx is throw");
+        }
+
+        return fireModeEx;
+    }
+
+    throw(worldPos: Vec2) {
+        if (!this.unit.itemInUse) {
+            throw new Error("Unit has not item in use to throw");
+        }
+
+        this._throwCallback({
+            unitId: this.unit.id,
+            itemId: this.unit.itemInUse.id,
+            worldPos: [worldPos.x, worldPos.y]
+        });
+    }
+
+    singleFire(worldPos: Vec2) {
+        this._fireCallback({
+            unitId: this.unit.id,
+            weaponId: this.weapon.id,
+            fireSelector: this.fireSelector,
+            fireMode: this.fireMode,
+            worldPoses: [[worldPos.x, worldPos.y]],
+            triggerHeldTimeInMs: 0
+        });
+    }
+
+    burstFire(worldPoses: Vec2[]) {
+        this._fireCallback({
+            unitId: this.unit.id,
+            weaponId: this.weapon.id,
+            fireSelector: this.fireSelector,
+            fireMode: this.fireMode,
+            worldPoses: worldPoses.map((worldPos) => [worldPos.x, worldPos.y]),
+            triggerHeldTimeInMs: 0
+        });
+    }
+
+    autoFire(worldPoses: Vec2[], triggerHeldTimeInMs: number) {
+        this._fireCallback({
+            unitId: this.unit.id,
+            weaponId: this.weapon.id,
+            fireSelector: this.fireSelector,
+            fireMode: this.fireMode,
+            worldPoses: worldPoses.map((worldPos) => [worldPos.x, worldPos.y]),
+            triggerHeldTimeInMs
+        });
+    }
+
     getAt(renderMode: RenderMode, tilePos: TilePos): RenderList {
         const { width, height } = this.map;
 
@@ -333,20 +433,30 @@ export class World {
             const dir = to.sub(unitPos).normalise();
             const from = unitPos.add(dir.scale(this.unit.collisionRadius));
 
-            switch (weapon.sight) {
-                case SightType.enum.iron:
-                    break;
+            if (this.fireModeEx === FireModeEx.enum.throw) {
+                DrawRangeSight(this.camera, context, from, to, this.unitWeapon.maxThrowRange);
+            } else {
+                switch (weapon.sight) {
+                    case SightType.enum.iron:
+                        break;
 
-                case SightType.enum.laser:
-                    DrawLaserSight(this.camera, context, from, to, time);
-                    break;
+                    case SightType.enum.laser:
+                        DrawLaserSight(this.camera, context, from, to, time);
+                        break;
 
-                case SightType.enum.optical:
-                    break;
+                    case SightType.enum.optical:
+                        break;
 
-                case SightType.enum.ranged:
-                    DrawRangeSight(this.camera, context, from, to, weapon.maxRange);
-                    break;
+                    case SightType.enum.ranged:
+                        DrawRangeSight(
+                            this.camera,
+                            context,
+                            from,
+                            to,
+                            this.weapon.maxRange
+                        );
+                        break;
+                }
             }
         }
     }

@@ -20,7 +20,7 @@
         }
     },
     "slots": { "ammo": { "id": "m16-30.magazine" } },
-    "fireSelector": "burst",
+    "fireSelector": "single",
     "fireModes": {
         "single": {
             "ammoUse": 1,

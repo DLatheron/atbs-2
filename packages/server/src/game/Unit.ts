@@ -5,6 +5,8 @@ import {
     AttributeDef,
     Description,
     ErrorType,
+    FireMode,
+    FireSelector,
     RenderList,
     RenderMode,
     TrackingSpeed,
@@ -20,7 +22,8 @@ import {
     relativeDirection,
     rotateOrientation,
     TilePos,
-    TilePosRecipe
+    TilePosRecipe,
+    Vec2
 } from "@atbs/maths";
 import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
@@ -228,6 +231,10 @@ export class Unit extends SceneObject {
         return this._attributes.constitution.value;
     }
 
+    get strength(): number {
+        return this._attributes.strength.value;
+    }
+
     get canFire(): boolean {
         return !!this.itemInUse?.canFire;
     }
@@ -412,7 +419,7 @@ export class Unit extends SceneObject {
         }
     }
 
-    move(game: Game, orientation: Orientation, messageRouter: MessageRouter) {
+    move(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
         const { map } = game;
 
         const direction = this.isDirectional
@@ -530,8 +537,28 @@ export class Unit extends SceneObject {
         //     Event.UnitsChangeEvent(this),
         //     Event.VisibilityChangeEvent(visibilityManager.allForUI())
         // );
+    }
 
-        return true;
+    fire(
+        game: Game,
+        weapon: Item,
+        fireSelector: FireSelector,
+        fireMode: FireMode,
+        worldPoses: Vec2[],
+        triggerHeldTimeInMs: number
+    ): void {
+        console.info("Fire", {
+            gameId: game.id,
+            weaponId: weapon.id,
+            fireSelector,
+            fireMode,
+            worldPoses,
+            triggerHeldTimeInMs
+        });
+    }
+
+    throw(game: Game, worldPos: Vec2): void {
+        console.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
@@ -542,6 +569,11 @@ export class Unit extends SceneObject {
     calcThrowAccuracy(baseAccuracy: number): number {
         return Clamp(baseAccuracy, 0, 100);
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
+    }
+
+    calcThrowMaxRange(item: Item) {
+        // TODO: Validate that this is good enough...
+        return Math.floor(this.strength / Math.pow(item.weight, 2)) * 400;
     }
 
     toSummary(): UnitSummary {
@@ -574,7 +606,7 @@ export class Unit extends SceneObject {
                 canAction: false,
                 canInventory: false
             },
-            itemInUse: this.itemInUse?.getItemSummary() ?? null,
+            itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
             actions: this.getActions()
         };
     }

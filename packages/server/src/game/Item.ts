@@ -440,7 +440,7 @@ export class Item extends SceneObject {
         return fireModes;
     }
 
-    getItemSummary(): ItemSummary {
+    getItemSummary(unit: Unit): ItemSummary {
         return {
             id: this.id,
             name: this.name,
@@ -448,6 +448,7 @@ export class Item extends SceneObject {
             description: this.description,
             quantity: this.quantity,
             weight: this.weight,
+            maxThrowRange: unit.calcThrowMaxRange(this),
             uiImage: this.getRenderList({
                 renderMode: RenderMode.enum.UI_MODE,
                 states: []
@@ -461,7 +462,7 @@ export class Item extends SceneObject {
             const { loadedRound } = this;
 
             return {
-                ...this.getItemSummary(),
+                ...this.getItemSummary(unit),
                 weapons: [
                     {
                         id: this.id,
@@ -485,7 +486,7 @@ export class Item extends SceneObject {
         }
 
         return {
-            ...this.getItemSummary(),
+            ...this.getItemSummary(unit),
             weapons: this.getWeapons().map((weapon) => {
                 const { loadedMagazine } = weapon;
                 const { loadedRound } = weapon;

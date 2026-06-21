@@ -1,5 +1,14 @@
 import z from "zod";
-import { ClientId, FireSelector, ItemId, ScenarioId, SideId, UnitId } from "./PrimitiveTypes.js";
+import {
+    ClientId,
+    FireDetails,
+    FireSelector,
+    ItemId,
+    ScenarioId,
+    SideId,
+    ThrowDetails,
+    UnitId
+} from "./PrimitiveTypes.js";
 import { Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
@@ -102,6 +111,14 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
             weaponId: ItemId,
             fireSelector: FireSelector
         })
+    }),
+    z.object({
+        type: z.literal("client:unit:fire"),
+        payload: FireDetails
+    }),
+    z.object({
+        type: z.literal("client:unit:throw"),
+        payload: ThrowDetails
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

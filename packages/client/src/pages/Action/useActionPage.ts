@@ -4,12 +4,14 @@ import { useServerMessageManager, useWorld } from "../../hooks";
 import {
     ClientMap,
     ErrorType,
+    FireDetails,
     FireModeItemSummary,
     FireSelector,
     ImageId,
     ItemId,
     RenderMode,
     SideSummary,
+    ThrowDetails,
     TileInfo,
     UnitSummary
 } from "@atbs/shared-data";
@@ -297,6 +299,38 @@ export function useActionPage() {
         },
         [sendMessage, unit?.id]
     );
+
+    const onFire = useCallback(
+        (details: FireDetails) => {
+            setDisabled(true);
+
+            sendMessage({
+                type: "client:unit:fire",
+                payload: details
+            });
+        },
+        [sendMessage]
+    );
+
+    useEffect(() => {
+        world.fireCallback = onFire;
+    }, [world, onFire]);
+
+    const onThrow = useCallback(
+        (details: ThrowDetails) => {
+            setDisabled(true);
+
+            sendMessage({
+                type: "client:unit:throw",
+                payload: details
+            });
+        },
+        [sendMessage]
+    );
+
+    useEffect(() => {
+        world.throwCallback = onThrow;
+    }, [world, onThrow]);
 
     return {
         map,

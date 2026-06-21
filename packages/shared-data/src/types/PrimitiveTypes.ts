@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { Maths, Orientation, TilePosRecipe } from "@atbs/maths";
+import { Maths, Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const ClientId = z.uuid();
@@ -252,7 +252,7 @@ const fireMode = ["aimed", "snapshot"] as const;
 export const FireMode = z.enum(fireMode);
 export type FireMode = z.infer<typeof FireMode>;
 
-const fireModeEx = [...fireMode, "throw"] as const;
+const fireModeEx = ["none", ...fireMode, "throw"] as const;
 export const FireModeEx = z.enum(fireModeEx);
 export type FireModeEx = z.infer<typeof FireModeEx>;
 
@@ -365,6 +365,7 @@ export const ItemSummary = z.object({
     description: Description,
     quantity: Quantity,
     weight: Weight,
+    maxThrowRange: z.number().nonnegative(),
     uiImage: RenderList
 });
 export type ItemSummary = z.infer<typeof ItemSummary>;
@@ -426,3 +427,20 @@ export const InventorySummary = z.object({
     items: ItemSummary
 });
 export type InventorySummary = z.infer<typeof InventorySummary>;
+
+export const FireDetails = z.object({
+    unitId: UnitId,
+    weaponId: ItemId,
+    fireSelector: FireSelector,
+    fireMode: FireMode,
+    worldPoses: z.array(Vec2Recipe),
+    triggerHeldTimeInMs: z.number().nonnegative()
+});
+export type FireDetails = z.infer<typeof FireDetails>;
+
+export const ThrowDetails = z.object({
+    unitId: UnitId,
+    itemId: ItemId,
+    worldPos: Vec2Recipe
+});
+export type ThrowDetails = z.infer<typeof ThrowDetails>;
