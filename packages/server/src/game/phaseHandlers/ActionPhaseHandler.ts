@@ -173,7 +173,8 @@ export class ActionPhaseHandler extends PhaseHandler {
                     fireDetails.fireSelector,
                     fireDetails.fireMode,
                     fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
-                    fireDetails.triggerHeldTimeInMs
+                    fireDetails.triggerHeldTimeInMs,
+                    this.messageRouter
                 );
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             }),
@@ -191,7 +192,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     );
                 }
 
-                selectedUnit.throw(game, new Vec2(throwDetails.worldPos));
+                selectedUnit.throw(game, new Vec2(throwDetails.worldPos), this.messageRouter);
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             })
         ];

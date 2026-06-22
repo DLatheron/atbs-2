@@ -3,12 +3,17 @@ import {
     Actions,
     Attribute,
     AttributeDef,
+    calcFireActionPointCost,
     Description,
     ErrorType,
     FireMode,
     FireSelector,
+    FireType,
+    getAccuracy,
+    getRpm,
     RenderList,
     RenderMode,
+    shotsFired,
     TrackingSpeed,
     UnitId,
     UnitSummary,
@@ -33,6 +38,7 @@ import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
+import { assert } from "node:console";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -277,10 +283,7 @@ export class Unit extends SceneObject {
         }
 
         messageRouter.send(
-            {
-                type: "server:error",
-                payload: ErrorType.enum.INSUFFICIENT_ACTION_POINTS
-            },
+            { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_ACTION_POINTS },
             this.side.id
         );
         return false;
@@ -539,14 +542,42 @@ export class Unit extends SceneObject {
         // );
     }
 
+    // calcShotCost(shotNum: number, fireSelector: FireSelector, fireMode: FireMode.AIMED | FireMode.SNAPSHOT) {
+    //     if (fireSelector === FireSelector.AUTO && this.fireSelectors[FireSelector.AUTO]) {
+    //         const fireModeDetails = this.fireSelectors[FireSelector.AUTO].fireModes[fireMode];
+    //         if (shotNum === 0) {
+    //             return fireMWodeDetails.actionPoints;
+    //         } else {
+    //             return fireModeDetails.actionPointsPerRound;
+    //         }
+    //     }
+
+    //     const fireSelectorDetails = this.fireSelectors[fireSelector];
+    //     if (!fireSelectorDetails) {
+    //         throw new Error(`Weapon "${this.name} cannot calculate shot cost for ${shotNum}, ${fireSelector}, ${fireMode} because it is undefined`);
+    //     }
+
+    //     return fireSelectorDetails.fireModes[fireMode].actionPoints;
+    // }
+
     fire(
         game: Game,
         weapon: Item,
         fireSelector: FireSelector,
         fireMode: FireMode,
         worldPoses: Vec2[],
-        triggerHeldTimeInMs: number
+        triggerHeldTimeInMs: number,
+        messageRouter: MessageRouter
     ): void {
+        if (!this.itemInUse) {
+            throw new Error("No item in use - but on was expected");
+        }
+        if (this.itemInUse.findByItemId(weapon.id) !== weapon) {
+            throw new Error(`Weapon ${weapon.id} is not part of item in use ${this.itemInUse?.id}`);
+        }
+
+        const { map } = game;
+
         console.info("Fire", {
             gameId: game.id,
             weaponId: weapon.id,
@@ -555,9 +586,223 @@ export class Unit extends SceneObject {
             worldPoses,
             triggerHeldTimeInMs
         });
+
+        const fireModes = weapon.getFireModes(this);
+        const baseAccuracy = getAccuracy(fireModes, fireSelector, fireMode);
+        const firstShotAccuracy = this.calcWeaponAccuracy(baseAccuracy);
+        console.dir({ firstShotAccuracy });
+
+        const rpm = getRpm(fireModes, fireSelector);
+        const numShots = shotsFired(triggerHeldTimeInMs, rpm);
+        console.dir({ numShotsFired: numShots });
+
+        // Generate world poses - we have a 1:1 correspondence with the number of shots fired.
+        assert(
+            numShots !== worldPoses.length,
+            "Number of shots should equal the number of worldPoses we have been sent"
+        );
+        const targetWorldPoses = worldPoses.map(
+            (worldPos) => worldPos.add({ x: 0.5, y: 0.5 }) // Move to the center of the pixel for accuracy.
+        );
+        console.dir({ targetWorldPoses });
+
+        const maxRange = weapon.loadedRound?.maxRange ?? 0;
+        console.dir({ maxRange });
+
+        const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
+        const collisionRadius = this._recipe.collision.radius;
+
+        for (const [index, toWorldPos] of targetWorldPoses.entries()) {
+            const dir = toWorldPos.sub(unitWorldPos).normalise();
+            const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
+
+            console.dir({ index, srcWorldPos: fromWorldPos, tgtWorldPos: toWorldPos });
+
+            const range =
+                weapon.fireType === FireType.enum.indirect
+                    ? maxRange
+                    : toWorldPos.sub(fromWorldPos).length;
+            console.dir({ range });
+
+            // TODO: Perturb the range based on the accuracy of this shot.
+            const perturbedRange = range * 1.0;
+            console.dir({ perturbedRange });
+
+            // Calculate the direction of the shot.
+            const dirVector = toWorldPos.sub(fromWorldPos).normalise();
+            console.dir({ dirVector });
+
+            // TODO: Perturn the direction based on the accuracy of this shot.
+            const perturbedDirVector = dirVector;
+            const onTarget = true;
+            console.dir({ perturbedDirVector, onTarget });
+
+            // TODO: HERE...
+            // const aptCost = calcShotCost
+            const aptCost = calcFireActionPointCost(
+                fireModes,
+                fireSelector,
+                fireMode,
+                triggerHeldTimeInMs
+            );
+            console.dir({ aptCost });
+            if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+                return;
+            }
+
+            if (weapon.isEmpty) {
+                messageRouter.send(
+                    { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_AMMO },
+                    this.side.id
+                );
+            }
+
+            if (!this._useActionPoints(game, aptCost, messageRouter)) {
+                return;
+            }
+
+            const round = weapon.fire();
+            console.dir({ round });
+
+            messageRouter.send(
+                {
+                    type: "server:unit:weapon:update",
+                    payload: this.itemInUse.getFireModeItemSummary(this)
+                },
+                this.side.id
+            );
+        }
+
+        /**
+        for (let shot = 0; shot < numShots; ++shot) {
+            // const targetWorldPos = targetWorldPoses[shot];
+
+            // // Calculate the range of this shot.
+            // const range = weapon.isDirectFire ? maxRange : targetWorldPos.sub(unitPos).length;
+            // console.info({ shot, range });
+
+            // // Perturb the range of this shot based on accuracy.
+            // const perturbedRange = Weapon.PerturbRange(range);
+            // console.info({ shot, actualRange: perturbedRange });
+
+            // // Calculate the direction of this shot.
+            // const dirVector = targetWorldPos.sub(unitPos).normalise();
+            // console.info({ dirVector });
+
+            // // Perturb the direction of this shot based on accuracy.
+            // const [perturbedDirVector, accuracy, onTarget] = Weapon.PerturbAccuracy(dirVector, firstShotAccuracy, this.weaponInaccuracyAngle);
+            // console.info({
+            //     perturbedDirVector,
+            //     targeting: onTarget ? "OnTarget" : `OffTarget(${accuracy}%)`
+            // });
+
+            // // Calculate firing position.
+            // const firerPos = unitPos.add(perturbedDirVector.scale(this.collisionRadius)).add({ x: 0.5, y: 0.5 }); // Move into the centre of the pixel for accuracy.
+            // console.info({ firerPos });
+
+            // // Calculate the action point cost.
+            // const aptCost = weapon.calcShotCost(shot, fireSelector, fireMode);
+            // console.info({ aptCost });
+
+            // if (!this._hasSufficientActionPoints(aptCost)) {
+            //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.INSUFFICIENT_ACTION_POINTS));
+            //     break;
+            // }
+
+            // // Do we have enough ammo to make this shot?
+            // if (weapon.isEmpty) {
+            //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.NO_AMMUNITION));
+            //     break;
+            // }
+
+            // // Charge the unit.
+            // if (!this._useActionPoints(game, aptCost, eventList)) {
+            //     return false;
+            // }
+
+            // // Update the unit to show loss of action points.
+            // eventList.addEvents({ relativeToStartOfLastEvent: 0 }, [this.sideId], Event.UnitsChangeEvent(this));
+
+            // // Generate the projectiles and trace them through the world (fastest first!).
+            // // Build the projectiles associated with this shot.
+            // const round = weapon.fire();
+            // if (!round) {
+            //     throw new Error(`No round in weapon ${weapon.id}, which is unexpected because weapon is not empty`);
+            // }
+            // console.info({ round });
+
+            // Handle multiple projectile spread.
+            const { numProjectiles } = round;
+            const spreadAngleInRadians = weapon.spreadAngleInRadians;
+            const startOfSpread = -spreadAngleInRadians / 2;
+            const angleScaler = round.numProjectiles > 1 ? spreadAngleInRadians / (round.numProjectiles - 1) : 0;
+
+            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
+                const perturbedAngle = startOfSpread + angleScaler * index;
+                const directionVector = perturbedDirVector.rotate(perturbedAngle);
+
+                return new Projectile(
+                    {
+                        game,
+                        firer: this,
+                        firerPos,
+                        directionVector,
+                        maxRange: perturbedRange,
+                        velocity: round.resolveVelocity,
+                        penetration: round.penetration,
+                        damage: round.damage
+                    },
+                    eventList
+                );
+            });
+
+            // Sort so that fastest projectiles are first.
+            projectiles.sort((a, b) => b.velocity - a.velocity);
+
+            // Set a checkpoint so everything is relative to the start of the checkpoint.
+            eventList.setCheckpoint({ relativeToEndOfLastEvent: 0 });
+            projectiles.forEach((projectile) => projectile.trace());
+
+            const maxProjectileTravelTime = projectiles.reduce((max, projectile) => Math.max(max, projectile.totalRangeTravelled), 0);
+            eventList.addEvents(
+                {
+                    relativeToCheckpointTime: 0,
+                    duration: maxProjectileTravelTime
+                },
+                eventList.allSideIds,
+                Event.TraceEvent(
+                    projectiles.map((projectile) => ({
+                        srcPos: projectile.srcPos,
+                        dstPos: projectile.finalPos,
+                        distanceTravelled: projectile.distanceTravelled,
+                        maxRange: projectile.maxRange,
+                        length: round.resolveLength,
+                        velocity: projectile.velocity,
+                        intensity: round.resolveIntensity,
+                        rangeFallOff: round.resolveRangeFallOff
+                    })),
+                    onTarget
+                ),
+                Event.UnitsChangeEvent(this)
+            );
+            eventList.addEvents(
+                {
+                    relativeToEndOfLastEvent: FIRE_ADDITIONAL_SIMULATION_TIME,
+                    duration: 1000
+                },
+                [this.sideId],
+                Event.CameraEvent(worldPoses[0])
+            );
+
+            projectiles.forEach((projectile) => {
+                round.explosion?.explode(game, projectile.finalPos, projectile.dirVec, eventList);
+            });
+        }T
+         */
     }
 
-    throw(game: Game, worldPos: Vec2): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    throw(game: Game, worldPos: Vec2, _messageRouter: MessageRouter): void {
         console.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
     }
 

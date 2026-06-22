@@ -7,6 +7,7 @@
     "weight": 1.36,
     "renderable": { "default": [] },
     "sight": "ranged",
+    "fireType": "indirect",
     "slotProps": {
         "ammo": {
             "compatibleIds": [

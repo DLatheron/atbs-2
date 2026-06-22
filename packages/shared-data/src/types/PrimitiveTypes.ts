@@ -178,7 +178,11 @@ export const WaitingFor = z.object({
 });
 export type WaitingFor = z.infer<typeof WaitingFor>;
 
-const errorType = ["INSUFFICIENT_ACTION_POINTS", "UNABLE_TO_MOVE_THERE"] as const;
+const errorType = [
+    "INSUFFICIENT_ACTION_POINTS",
+    "INSUFFICIENT_AMMO",
+    "UNABLE_TO_MOVE_THERE"
+] as const;
 
 export const ErrorType = z.enum(errorType);
 export type ErrorType = z.infer<typeof ErrorType>;
@@ -352,6 +356,34 @@ export function getRpm(fireModes: FireModes, fireSelector: FireSelector): number
     throw new Error(`${fireSelector} not supported by ${fireModes}`);
 }
 
+export function getAccuracy(
+    fireModes: FireModes,
+    fireSelector: FireSelector,
+    fireMode: FireMode
+): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return fireModes[fireSelector].fireModeDetails[fireMode].accuracy;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[fireSelector].fireModeDetails[fireMode].accuracy;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return fireModes[fireSelector].fireModeDetails[fireMode].accuracy;
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
 export function shotsFired(timeDeltaInMS: number, rpm: number) {
     return Math.floor((timeDeltaInMS * rpm) / MILLISECONDS_IN_A_MINUTE);
 }
@@ -379,6 +411,7 @@ export function getAutoFireMode(fireModes: FireModes): FireModeAuto {
 
     return fireModes[FireSelector.enum.auto];
 }
+
 export function calcFireActionPointCost(
     fireModes: FireModes,
     fireSelector: FireSelector,
@@ -561,8 +594,8 @@ export const FireModeWeaponSummary = z.object({
     name: z.string(),
     shortName: z.string(),
     description: Description,
-    capacity: z.int().nonnegative().optional(),
-    maxCapacity: z.int().nonnegative().optional(),
+    capacity: z.int().nonnegative(),
+    maxCapacity: z.int().nonnegative(),
     loadedRound: z.string().optional(),
     sight: SightType,
     maxRange: z.number().optional(),

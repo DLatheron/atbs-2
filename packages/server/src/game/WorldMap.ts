@@ -82,6 +82,34 @@ export class WorldMap {
         );
     }
 
+    worldToTile(worldPos: Vec2): TilePos {
+        const { tileSize } = this;
+
+        return new TilePos(Math.floor(worldPos.x / tileSize), Math.floor(worldPos.y / tileSize));
+    }
+
+    worldToTileUpper(worldPos: Vec2): TilePos {
+        const { tileSize } = this;
+
+        return new TilePos(Math.ceil(worldPos.x / tileSize), Math.ceil(worldPos.y / tileSize));
+    }
+
+    tileToWorld(tilePos: TilePos): Vec2 {
+        const { tileSize } = this;
+
+        return new Vec2(tilePos.col * tileSize, tilePos.row * tileSize);
+    }
+
+    tileCenterToWorld(tilePos: TilePos): Vec2 {
+        const { tileSize } = this;
+        const halfTileSize = tileSize / 2;
+
+        return new Vec2(
+            tilePos.col * tileSize + halfTileSize,
+            tilePos.row * tileSize + halfTileSize
+        );
+    }
+
     getTile(tilePos: TilePos): Tile {
         if (this.isOutside(tilePos)) {
             throw new Error(`Sample at ${tilePos} is outside the map boundaries`);

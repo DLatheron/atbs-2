@@ -203,6 +203,13 @@ export function useActionPage() {
                 world.unit = merge({}, world.unit, payload);
             }),
 
+            messageManager.registerHandler("server:unit:weapon:update", (_context, payload) => {
+                setUnitWeapon((weap: FireModeItemSummary | null) =>
+                    weap ? merge({}, weap, payload) : null
+                );
+                world.unitWeapon = merge({}, world.unitWeapon, payload);
+            }),
+
             messageManager.registerHandler("server:error", (_context, error) => {
                 setError(error);
             }),

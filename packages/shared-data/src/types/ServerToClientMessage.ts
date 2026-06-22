@@ -107,8 +107,16 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: UnitSummary.nullable()
     }),
     z.object({
+        type: z.literal("server:unit:selected:update"),
+        payload: zodDeepPartial(UnitSummary)
+    }),
+    z.object({
         type: z.literal("server:unit:mode:fire"),
         payload: FireModeItemSummary.nullable()
+    }),
+    z.object({
+        type: z.literal("server:unit:weapon:update"),
+        payload: zodDeepPartial(FireModeItemSummary)
     }),
     z.object({
         type: z.literal("server:unit:mode:throw"),
@@ -152,10 +160,6 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:wait:time"),
         payload: z.number().positive()
-    }),
-    z.object({
-        type: z.literal("server:unit:selected:update"),
-        payload: zodDeepPartial(UnitSummary)
     }),
     z.object({
         type: z.literal("server:map:update"),

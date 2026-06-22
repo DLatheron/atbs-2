@@ -13,9 +13,9 @@ interface Attribute {
 
 export const ERROR_MESSAGES: Record<ErrorType, string> = {
     [ErrorType.enum.INSUFFICIENT_ACTION_POINTS]: "Insufficient Action Points",
-    [ErrorType.enum.UNABLE_TO_MOVE_THERE]: "Cannot move there"
-    // [ErrorType.NO_AMMUNITION]: "No ammunition loaded",
-    // [ErrorType.INSUFFICIENT_BUDGET]: "Insufficient budget"
+    [ErrorType.enum.UNABLE_TO_MOVE_THERE]: "Cannot move there",
+    [ErrorType.enum.INSUFFICIENT_AMMO]: "Insufficient Ammunition"
+    // [ErrorType.enum.INSUFFICIENT_BUDGET]: "Insufficient budget"
 };
 
 export const CONSTITUTION_LEVELS: LevelThreshold[] = [

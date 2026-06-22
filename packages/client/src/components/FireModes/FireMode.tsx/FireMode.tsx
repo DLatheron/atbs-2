@@ -276,7 +276,10 @@ export function FireModeComponent({
                             id={FireModeEx.enum.throw}
                             title={startCase(FireModeEx.enum.throw)}
                             value={FireModeEx.enum.throw}
-                            disabled={disabled || actionPoints < unit.actions[Action.enum.throw].actionPoints}
+                            disabled={
+                                disabled ||
+                                actionPoints < unit.actions[Action.enum.throw].actionPoints
+                            }
                         >
                             {startCase(FireModeEx.enum.throw)}
                         </ToggleButton>

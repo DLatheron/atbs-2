@@ -8,7 +8,8 @@ import {
     ItemType,
     SightType,
     DamageMap,
-    FireSelector
+    FireSelector,
+    FireType
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
@@ -56,7 +57,8 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireSelector: FireSelector,
-        fireModes: FireModes
+        fireModes: FireModes,
+        fireType: FireType
     }),
     z.object({
         id: ItemId,

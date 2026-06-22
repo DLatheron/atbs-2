@@ -14,7 +14,8 @@ import {
     UnitType,
     Weight,
     RenderMode,
-    SightType
+    SightType,
+    FireType
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
 import { TilePos } from "@atbs/maths";
@@ -168,12 +169,12 @@ export class Item extends SceneObject {
         return "maxRange" in this._recipe ? this._recipe.maxRange : 0;
     }
 
-    get capacity(): number | undefined {
-        return this.findSlotContents(SlotType.enum.ammo)?.quantity;
+    get capacity(): number {
+        return this.findSlotContents(SlotType.enum.ammo)?.quantity ?? 0;
     }
 
-    get maxCapacity(): number | undefined {
-        return this.findSlotProps(SlotType.enum.ammo)?.maxQuantity;
+    get maxCapacity(): number {
+        return this.findSlotProps(SlotType.enum.ammo)?.maxQuantity ?? 0;
     }
 
     get canCollapse(): boolean {
@@ -215,6 +216,18 @@ export class Item extends SceneObject {
         } else {
             return SightType.enum.iron;
         }
+    }
+
+    get fireType(): FireType {
+        if (!("fireType" in this._recipe)) {
+            throw new Error(`Item ${this.id} does not have a fire type`);
+        }
+
+        return this._recipe.fireType;
+    }
+
+    get isEmpty(): boolean {
+        return this.capacity === 0;
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -438,6 +451,25 @@ export class Item extends SceneObject {
         console.info({ id: this.id, fireModes: this._recipe.fireModes });
 
         return fireModes;
+    }
+
+    fire(): Item | undefined {
+        if (this.type !== ItemType.enum.gun) {
+            throw new Error(`Item ${this.id} cannot be fired, because its it not a gun`);
+        }
+
+        const { loadedRound } = this;
+        if (!loadedRound) {
+            throw new Error(`Item ${this.id} does not have a loaded round to fire`);
+        }
+
+        --loadedRound.quantity;
+
+        if (loadedRound.quantity === 0) {
+            (this.loadedMagazine ?? this).emptySlot(SlotType.enum.ammo);
+        }
+
+        return loadedRound;
     }
 
     getItemSummary(unit: Unit): ItemSummary {
