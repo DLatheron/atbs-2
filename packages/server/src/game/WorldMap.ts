@@ -3,6 +3,8 @@ import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
+import { HandleMaterialPenetration, XYAxis } from "./Ray.js";
+import { ImageManager } from "./ImageManager.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -94,6 +96,15 @@ export class WorldMap {
         return new TilePos(Math.ceil(worldPos.x / tileSize), Math.ceil(worldPos.y / tileSize));
     }
 
+    worldToSubTile(tilePos: TilePos, worldPos: Vec2) {
+        const tileTopLeft = tilePos.scale(this.tileSize);
+
+        return new Vec2(worldPos).sub(tileTopLeft).clamp({
+            min: { x: 0, y: 0 },
+            max: { x: this.tileSize, y: this.tileSize }
+        });
+    }
+
     tileToWorld(tilePos: TilePos): Vec2 {
         const { tileSize } = this;
 
@@ -135,6 +146,20 @@ export class WorldMap {
         return this._tiles[tilePos.row][tilePos.col];
     }
 
+    tileTopLeft(tilePos: TilePos) {
+        return this.tileOffsetToWorld(tilePos, new Vec2({ x: 0, y: 0 }));
+    }
+
+    tileOffsetToWorld(
+        tilePos: TilePos,
+        tileOffset: Vec2 = new Vec2(this.tileSize / 2, this.tileSize / 2)
+    ) {
+        return new Vec2(
+            tilePos.col * this.tileSize + tileOffset.x,
+            tilePos.row * this.tileSize + tileOffset.y
+        );
+    }
+
     renderClientMap(): ClientMap {
         const mapModeTiles = this._tiles.map((rowOfTiles) =>
             rowOfTiles.map((tile) =>
@@ -171,5 +196,81 @@ export class WorldMap {
 
         const tile = this.getTile(unit.location);
         tile.addUnit(unit);
+    }
+
+    rayCastTile(
+        tile: Tile,
+        entryWorldPos: Vec2,
+        exitWorldPos: Vec2,
+        handleMaterialPenetration: HandleMaterialPenetration
+    ): Vec2 | undefined {
+        if (!tile.anythingCollidable) {
+            return;
+        }
+
+        const entrySubTile = this.worldToSubTile(tile.location, entryWorldPos);
+        const exitSubTile = this.worldToSubTile(tile.location, exitWorldPos);
+
+        const collisionImages = tile.getTileForCollision(ImageManager.GetSingleton);
+        const deltaChange = exitSubTile.sub(entrySubTile);
+        const xMajorAxis = Math.abs(deltaChange.x) >= Math.abs(deltaChange.y);
+        let xyAxis: XYAxis;
+        let calcMajorAxisStep: (majorAxisStep: number) => Vec2;
+        if (xMajorAxis) {
+            xyAxis = { major: "x", minor: "y" };
+
+            const dx = Math.sign(deltaChange.x);
+            const dy = deltaChange.y / deltaChange.x;
+
+            calcMajorAxisStep = (majorAxisStep) => {
+                const x = majorAxisStep * dx;
+                const y = x * dy;
+
+                return entrySubTile.add({ x, y });
+            };
+        } else {
+            xyAxis = { major: "y", minor: "x" };
+
+            const dx = deltaChange.x / deltaChange.y;
+            const dy = Math.sign(deltaChange.y);
+
+            calcMajorAxisStep = (majorAxisStep) => {
+                const y = majorAxisStep * dy;
+                const x = y * dx;
+
+                return entrySubTile.add({ x, y });
+            };
+        }
+
+        const totalSteps = Math.abs(deltaChange[xyAxis.major]);
+        const tileTopLeft = this.tileTopLeft(tile.location);
+        let trackingWorldPos;
+
+        for (let step = 0; step < totalSteps; ++step) {
+            const samplePos = calcMajorAxisStep(step);
+
+            trackingWorldPos = tileTopLeft.add(samplePos);
+
+            let hitMaterial = false;
+
+            for (const { owner, image, orientation, materials } of collisionImages) {
+                const materialColour = image.getColour(samplePos, orientation);
+                if (materialColour.a > 0.0) {
+                    const [material] = Material.DetermineMaterial(materialColour, materials);
+
+                    if (handleMaterialPenetration(trackingWorldPos, owner, material)) {
+                        // Record the final position of the trace.
+                        return trackingWorldPos;
+                    }
+
+                    hitMaterial = true;
+                    break; // NOTE: Only consider the first material that we strike!
+                }
+            }
+
+            if (!hitMaterial) {
+                handleMaterialPenetration(trackingWorldPos);
+            }
+        }
     }
 }

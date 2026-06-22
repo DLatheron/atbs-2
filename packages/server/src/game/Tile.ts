@@ -6,19 +6,20 @@ import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
 import { RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
+import { Furniture } from "./Furniture.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
         id: z.string(),
         orientation: z.enum(Orientation).optional()
-    })
-    // furniture: z
-    //     .object({
-    //         id: z.string(),
-    //         orientation: z.nativeEnum(Orientation).optional(),
-    //         state: z.string().optional()
-    //     })
-    //     .optional(),
+    }),
+    furniture: z
+        .object({
+            id: z.string(),
+            orientation: z.enum(Orientation).optional(),
+            state: z.string().optional()
+        })
+        .optional()
     // items: z
     //     .array(
     //         z.object({
@@ -49,16 +50,22 @@ export type TileRecipe = z.infer<typeof TileRecipe>;
 export class Tile implements IRenderableEntity {
     protected _location: TilePos;
     protected readonly _terrain: Terrain;
+    protected readonly _furniture?: Furniture;
     protected _units: Unit[];
 
     constructor(location: TilePos, recipe: Readonly<TileRecipe>) {
         this._location = location;
         this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
+        this._furniture = undefined;
         this._units = [];
     }
 
     get terrain(): Terrain {
         return this._terrain;
+    }
+
+    get furniture(): Furniture | undefined {
+        return this._furniture;
     }
 
     get units(): Unit[] {
@@ -140,5 +147,9 @@ export class Tile implements IRenderableEntity {
                 }
             })
         };
+    }
+
+    get anythingCollidable() {
+        return this.furniture || this.units.length > 0; // || this.vfx.length > 0;
     }
 }

@@ -17,14 +17,14 @@
             "velocity": 1000,
             "length": 50,
             "rangeFallOff": 10
+        },
+        "damage": {
+            "human": 18,
+            "default": 20
         }
     },
     "renderable": {
         "default": [{ "imageId": "5.56mm-nato" }],
         "FIRE_MODE": []
-    },
-    "damage": {
-        "human": 18,
-        "default": 20
     }
 }

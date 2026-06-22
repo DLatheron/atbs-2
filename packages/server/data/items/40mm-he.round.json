@@ -17,17 +17,17 @@
             "velocity": 400,
             "length": 10,
             "rangeFallOff": 10
+        },
+        "damage": { "default": 1 },
+        "explosion": {
+            "type": "fragment",
+            "maxRange": { "min": 150, "max": 300 },
+            "numFragments": 200,
+            "damage": { "default": 10 }
         }
     },
     "renderable": {
         "default": [{ "imageId": "40mm-he" }],
         "FIRE_MODE": []
-    },
-    "damage": { "default": 1 },
-    "explosion": {
-        "type": "fragment",
-        "maxRange": { "min": 150, "max": 300 },
-        "numFragments": 200,
-        "damage": { "default": 10 }
     }
 }

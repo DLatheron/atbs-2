@@ -17,15 +17,15 @@
             "velocity": 400,
             "length": 10,
             "rangeFallOff": 10
+        },
+        "damage": { "default": 1 },
+        "explosion": {
+            "type": "smoke",
+            "particles": [12, 8, 4]
         }
     },
     "renderable": {
         "default": [{ "imageId": "40mm-smoke" }],
         "FIRE_MODE": []
-    },
-    "damage": { "default": 1 },
-    "explosion": {
-        "type": "smoke",
-        "particles": [12, 8, 4]
     }
 }

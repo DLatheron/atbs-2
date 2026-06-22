@@ -654,7 +654,8 @@ export class Unit extends SceneObject {
                 this.side.id
             );
 
-            const { numProjectiles } = round.projectileRecipe;
+            const { projectileRecipe } = round;
+            const { numProjectiles } = projectileRecipe;
             const spreadAngleInRadians = weapon.spreadAngleInRadians;
             const startOfSpread = -spreadAngleInRadians / 2;
             const angleScaler =
@@ -664,22 +665,29 @@ export class Unit extends SceneObject {
 
             const projectiles = [...Array(numProjectiles).keys()].map((index) => {
                 const perturbedAngle = startOfSpread + angleScaler * index;
-                const projectileDirVector = perturbedDirVector.rotate(perturbedAngle);
+                const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
-                console.dir({ perturbedAngle, projectileDirVector });
+                console.dir({ perturbedAngle, directionVector });
 
-                return new Projectile();
+                return new Projectile({
+                    game,
+                    firingUnit: this,
+                    firingWeapon: weapon,
+                    index,
+                    srcPos: fromWorldPos,
+                    directionVector,
+                    projectileRecipe
+                });
             });
+
+            // Sort so that fastest projectiles are first.
+            projectiles.sort((a, b) => b.velocity - a.velocity);
             console.dir({ projectiles });
+
+            // TODO: Move the projectiles forward in time...
         }
 
         /**
-            // Handle multiple projectile spread.
-            const { numProjectiles } = round;
-            const spreadAngleInRadians = weapon.spreadAngleInRadians;
-            const startOfSpread = -spreadAngleInRadians / 2;
-            const angleScaler = round.numProjectiles > 1 ? spreadAngleInRadians / (round.numProjectiles - 1) : 0;
-
             const projectiles = [...Array(numProjectiles).keys()].map((index) => {
                 const perturbedAngle = startOfSpread + angleScaler * index;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);

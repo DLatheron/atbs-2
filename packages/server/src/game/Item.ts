@@ -387,13 +387,13 @@ export class Item extends SceneObject {
     }
 
     calcDamage(unitType: UnitType): number {
-        if (!("damage" in this._recipe)) {
+        if (!("projectile" in this._recipe)) {
             return 0;
         }
 
-        return unitType in this._recipe.damage
-            ? this._recipe.damage[unitType]
-            : this._recipe.damage.default;
+        const { damage } = this._recipe.projectile;
+
+        return unitType in damage ? damage[unitType] : damage.default;
     }
 
     getRenderList(context: SceneContext): RenderList {
