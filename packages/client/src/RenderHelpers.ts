@@ -182,9 +182,8 @@ export function DrawBulletTrajectory(
         toCanvasPos.y
     );
     gradient0.addColorStop(0.0, "rgba(0, 0, 0, 0)");
-    gradient0.addColorStop(0.1, "rgba(0, 0, 0, 0)");
     gradient0.addColorStop(0.9, "rgba(255, 255, 255, 1)");
-    gradient0.addColorStop(1, "rgba(255, 255, 255, 1)");
+    gradient0.addColorStop(1.0, "rgba(255, 255, 255, 1)");
     context.strokeStyle = gradient0;
     context.lineWidth = 1;
     context.beginPath();

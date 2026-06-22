@@ -38,7 +38,7 @@
     },
     "collision": {
         "shape": "circle",
-        "radius": 25
+        "radius": 24
     },
     "renderable": {
         "UI_MODE": {

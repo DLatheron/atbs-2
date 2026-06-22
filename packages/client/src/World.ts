@@ -8,7 +8,6 @@ import {
     FireModeWeaponSummary,
     FireSelector,
     getRpm,
-    MILLISECONDS_IN_A_MINUTE,
     RenderList,
     RenderMode,
     SightType,
@@ -287,10 +286,6 @@ export class World {
         return getRpm(this.weapon.fireModes, this.fireSelector);
     }
 
-    get timeBetweenShots(): number {
-        return Math.floor(MILLISECONDS_IN_A_MINUTE / this.rpm);
-    }
-
     get frameTime(): number {
         return this._frameTime;
     }
@@ -436,6 +431,16 @@ export class World {
         }
     }
 
+    calcUnitPosOutsideCollision(to: Vec2): Vec2 {
+        const { unitWorldPos } = this;
+        if (Vec2.IsEqual(unitWorldPos, to)) {
+            return to;
+        }
+
+        const dir = to.sub(unitWorldPos).normalise();
+        return unitWorldPos.add(dir.scale(this.unit.collisionRadius));
+    }
+
     private renderSight(
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         time: number
@@ -444,15 +449,13 @@ export class World {
             return;
         }
 
-        const unitPos = this.unitWorldPos;
         const to = this._interactionHandler?.cursorWorldPos;
         const weapon =
             this.unitWeapon.weapons.length > 0
                 ? this.unitWeapon.weapons[this.unitWeaponIndex]
                 : null;
-        if (weapon && to && !Vec2.IsEqual(unitPos, to)) {
-            const dir = to.sub(unitPos).normalise();
-            const from = unitPos.add(dir.scale(this.unit.collisionRadius));
+        if (weapon && to) {
+            const from = this.calcUnitPosOutsideCollision(to);
 
             if (this.fireModeEx === FireModeEx.enum.throw) {
                 DrawRangeSight(this.camera, context, from, to, this.unitWeapon.maxThrowRange);

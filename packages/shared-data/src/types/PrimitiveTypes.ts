@@ -356,6 +356,29 @@ export function shotsFired(timeDeltaInMS: number, rpm: number) {
     return Math.floor((timeDeltaInMS * rpm) / MILLISECONDS_IN_A_MINUTE);
 }
 
+export function getSingleFireMode(fireModes: FireModes): FireModeSingle {
+    if (!(FireSelector.enum.single in fireModes)) {
+        throw new Error(`Single mode is not supported, only: ${Object.keys(fireModes).join("|")}`);
+    }
+
+    return fireModes[FireSelector.enum.single];
+}
+
+export function getBurstFireMode(fireModes: FireModes): FireModeBurst {
+    if (!(FireSelector.enum.burst in fireModes)) {
+        throw new Error(`Burst mode is not supported, only: ${Object.keys(fireModes).join("|")}`);
+    }
+
+    return fireModes[FireSelector.enum.burst];
+}
+
+export function getAutoFireMode(fireModes: FireModes): FireModeAuto {
+    if (!(FireSelector.enum.auto in fireModes)) {
+        throw new Error(`Auto mode is not supported, only: ${Object.keys(fireModes).join("|")}`);
+    }
+
+    return fireModes[FireSelector.enum.auto];
+}
 export function calcFireActionPointCost(
     fireModes: FireModes,
     fireSelector: FireSelector,
