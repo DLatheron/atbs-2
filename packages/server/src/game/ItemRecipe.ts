@@ -31,6 +31,19 @@ export const SlotProps = z.object({
 });
 export type SlotProps = z.infer<typeof SlotProps>;
 
+export const ProjectileRecipe = z.object({
+    numProjectiles: z.number().positive().default(1),
+    maxRange: z.number().positive(),
+    penetration: z.number().nonnegative(),
+    visual: z.object({
+        intensity: z.number().min(0).max(1).default(1),
+        velocity: z.number().positive(),
+        length: z.number().positive(),
+        rangeFallOff: z.number().positive()
+    })
+});
+export type ProjectileRecipe = z.infer<typeof ProjectileRecipe>;
+
 export const ItemRecipe = z.discriminatedUnion("type", [
     z.object({
         id: ItemId,
@@ -58,7 +71,8 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireSelector: FireSelector,
         fireModes: FireModes,
-        fireType: FireType
+        fireType: FireType,
+        spreadAngle: z.number().nonnegative().default(0)
     }),
     z.object({
         id: ItemId,
@@ -82,7 +96,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         quantity: Quantity.default(1),
         weight: Weight,
         renderable: SceneNode,
-        maxRange: z.number().positive(),
+        projectile: ProjectileRecipe,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         explosion: Explosion.optional(),

@@ -3,13 +3,22 @@
     "type": "round",
     "name": "40mm HE Grenade",
     "shortName": "40mm HE",
-    "maxRange": 3000,
     "description": [
         {
             "text": "40mm High-Explosive Grenade suitable for the M203 underslung grenade launcher. The grenade has a kill-radius of 5 metres and causes casualities outside the range."
         }
     ],
     "weight": 0.368,
+    "projectile": {
+        "maxRange": 3000,
+        "penetration": 0,
+        "visual": {
+            "intensity": 1,
+            "velocity": 400,
+            "length": 10,
+            "rangeFallOff": 10
+        }
+    },
     "renderable": {
         "default": [{ "imageId": "40mm-he" }],
         "FIRE_MODE": []

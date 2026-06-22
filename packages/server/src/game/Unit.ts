@@ -39,6 +39,7 @@ import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
+import { Projectile } from "./Projectile.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = false;
@@ -542,24 +543,6 @@ export class Unit extends SceneObject {
         // );
     }
 
-    // calcShotCost(shotNum: number, fireSelector: FireSelector, fireMode: FireMode.AIMED | FireMode.SNAPSHOT) {
-    //     if (fireSelector === FireSelector.AUTO && this.fireSelectors[FireSelector.AUTO]) {
-    //         const fireModeDetails = this.fireSelectors[FireSelector.AUTO].fireModes[fireMode];
-    //         if (shotNum === 0) {
-    //             return fireMWodeDetails.actionPoints;
-    //         } else {
-    //             return fireModeDetails.actionPointsPerRound;
-    //         }
-    //     }
-
-    //     const fireSelectorDetails = this.fireSelectors[fireSelector];
-    //     if (!fireSelectorDetails) {
-    //         throw new Error(`Weapon "${this.name} cannot calculate shot cost for ${shotNum}, ${fireSelector}, ${fireMode} because it is undefined`);
-    //     }
-
-    //     return fireSelectorDetails.fireModes[fireMode].actionPoints;
-    // }
-
     fire(
         game: Game,
         weapon: Item,
@@ -612,11 +595,11 @@ export class Unit extends SceneObject {
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
         const collisionRadius = this._recipe.collision.radius;
 
-        for (const [index, toWorldPos] of targetWorldPoses.entries()) {
+        for (const [shot, toWorldPos] of targetWorldPoses.entries()) {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
             const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
 
-            console.dir({ index, srcWorldPos: fromWorldPos, tgtWorldPos: toWorldPos });
+            console.dir({ shot, srcWorldPos: fromWorldPos, tgtWorldPos: toWorldPos });
 
             const range =
                 weapon.fireType === FireType.enum.indirect
@@ -637,15 +620,14 @@ export class Unit extends SceneObject {
             const onTarget = true;
             console.dir({ perturbedDirVector, onTarget });
 
-            // TODO: HERE...
-            // const aptCost = calcShotCost
-            const aptCost = calcFireActionPointCost(
+            const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
                 fireModes,
                 fireSelector,
-                fireMode,
-                triggerHeldTimeInMs
+                fireMode
             );
-            console.dir({ aptCost });
+            const aptCost = shot === 0 ? initialAptCost : perShotAptCost;
+            console.dir({ shot, aptCost, initialAptCost, perShotAptCost });
+
             if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
                 return;
             }
@@ -671,66 +653,27 @@ export class Unit extends SceneObject {
                 },
                 this.side.id
             );
+
+            const { numProjectiles } = round.projectileRecipe;
+            const spreadAngleInRadians = weapon.spreadAngleInRadians;
+            const startOfSpread = -spreadAngleInRadians / 2;
+            const angleScaler =
+                numProjectiles > 1 ? spreadAngleInRadians / (numProjectiles - 1) : 0;
+
+            console.dir({ numProjectiles });
+
+            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
+                const perturbedAngle = startOfSpread + angleScaler * index;
+                const projectileDirVector = perturbedDirVector.rotate(perturbedAngle);
+
+                console.dir({ perturbedAngle, projectileDirVector });
+
+                return new Projectile();
+            });
+            console.dir({ projectiles });
         }
 
         /**
-        for (let shot = 0; shot < numShots; ++shot) {
-            // const targetWorldPos = targetWorldPoses[shot];
-
-            // // Calculate the range of this shot.
-            // const range = weapon.isDirectFire ? maxRange : targetWorldPos.sub(unitPos).length;
-            // console.info({ shot, range });
-
-            // // Perturb the range of this shot based on accuracy.
-            // const perturbedRange = Weapon.PerturbRange(range);
-            // console.info({ shot, actualRange: perturbedRange });
-
-            // // Calculate the direction of this shot.
-            // const dirVector = targetWorldPos.sub(unitPos).normalise();
-            // console.info({ dirVector });
-
-            // // Perturb the direction of this shot based on accuracy.
-            // const [perturbedDirVector, accuracy, onTarget] = Weapon.PerturbAccuracy(dirVector, firstShotAccuracy, this.weaponInaccuracyAngle);
-            // console.info({
-            //     perturbedDirVector,
-            //     targeting: onTarget ? "OnTarget" : `OffTarget(${accuracy}%)`
-            // });
-
-            // // Calculate firing position.
-            // const firerPos = unitPos.add(perturbedDirVector.scale(this.collisionRadius)).add({ x: 0.5, y: 0.5 }); // Move into the centre of the pixel for accuracy.
-            // console.info({ firerPos });
-
-            // // Calculate the action point cost.
-            // const aptCost = weapon.calcShotCost(shot, fireSelector, fireMode);
-            // console.info({ aptCost });
-
-            // if (!this._hasSufficientActionPoints(aptCost)) {
-            //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.INSUFFICIENT_ACTION_POINTS));
-            //     break;
-            // }
-
-            // // Do we have enough ammo to make this shot?
-            // if (weapon.isEmpty) {
-            //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.NO_AMMUNITION));
-            //     break;
-            // }
-
-            // // Charge the unit.
-            // if (!this._useActionPoints(game, aptCost, eventList)) {
-            //     return false;
-            // }
-
-            // // Update the unit to show loss of action points.
-            // eventList.addEvents({ relativeToStartOfLastEvent: 0 }, [this.sideId], Event.UnitsChangeEvent(this));
-
-            // // Generate the projectiles and trace them through the world (fastest first!).
-            // // Build the projectiles associated with this shot.
-            // const round = weapon.fire();
-            // if (!round) {
-            //     throw new Error(`No round in weapon ${weapon.id}, which is unexpected because weapon is not empty`);
-            // }
-            // console.info({ round });
-
             // Handle multiple projectile spread.
             const { numProjectiles } = round;
             const spreadAngleInRadians = weapon.spreadAngleInRadians;

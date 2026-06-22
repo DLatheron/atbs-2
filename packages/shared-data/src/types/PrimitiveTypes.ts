@@ -415,34 +415,38 @@ export function getAutoFireMode(fireModes: FireModes): FireModeAuto {
 export function calcFireActionPointCost(
     fireModes: FireModes,
     fireSelector: FireSelector,
-    fireMode: FireMode,
-    triggerHeldTimeInMs: number = 0
-): number {
+    fireMode: FireMode
+): { initialAptCost: number; perShotAptCost: number } {
     switch (fireSelector) {
         case FireSelector.enum.single:
             if (FireSelector.enum.single in fireModes) {
-                return fireModes[FireSelector.enum.single].fireModeDetails[fireMode].actionPoints;
+                return {
+                    initialAptCost:
+                        fireModes[FireSelector.enum.single].fireModeDetails[fireMode].actionPoints,
+                    perShotAptCost: 0
+                };
             }
             break;
 
         case FireSelector.enum.burst:
             if (FireSelector.enum.burst in fireModes) {
-                return fireModes[FireSelector.enum.burst].fireModeDetails[fireMode].actionPoints;
+                return {
+                    initialAptCost:
+                        fireModes[FireSelector.enum.burst].fireModeDetails[fireMode].actionPoints,
+                    perShotAptCost: 0
+                };
             }
             break;
 
         case FireSelector.enum.auto:
             if (FireSelector.enum.auto in fireModes) {
-                const shotsToFire = shotsFired(
-                    triggerHeldTimeInMs,
-                    fireModes[FireSelector.enum.auto].rpm
-                );
-                return (
-                    fireModes[FireSelector.enum.auto].fireModeDetails[fireMode].actionPoints +
-                    shotsToFire *
+                return {
+                    initialAptCost:
+                        fireModes[FireSelector.enum.auto].fireModeDetails[fireMode].actionPoints,
+                    perShotAptCost:
                         fireModes[FireSelector.enum.auto].fireModeDetails[fireMode]
                             .actionPointsPerRound
-                );
+                };
             }
             break;
     }

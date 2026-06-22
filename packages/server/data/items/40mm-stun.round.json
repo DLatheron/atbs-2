@@ -3,13 +3,22 @@
     "type": "round",
     "name": "40mm Stun Grenade",
     "shortName": "40mm Stun",
-    "maxRange": 3000,
     "description": [
         {
             "text": "40mm Stun grenade."
         }
     ],
     "weight": 0.368,
+    "projectile": {
+        "maxRange": 3000,
+        "penetration": 0,
+        "visual": {
+            "intensity": 1,
+            "velocity": 400,
+            "length": 10,
+            "rangeFallOff": 10
+        }
+    },
     "renderable": {
         "default": [{ "imageId": "40mm-stun" }],
         "FIRE_MODE": []

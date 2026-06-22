@@ -18,10 +18,10 @@ import {
     FireType
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
-import { TilePos } from "@atbs/maths";
+import { degreesToRadians, TilePos } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";
-import { SlotProps, ItemOverrides, ItemRecipe, SlotType } from "./ItemRecipe.js";
+import { SlotProps, ItemOverrides, ItemRecipe, SlotType, ProjectileRecipe } from "./ItemRecipe.js";
 import type { Unit } from "./Unit.js";
 import cloneDeep from "lodash/cloneDeep.js";
 
@@ -166,7 +166,11 @@ export class Item extends SceneObject {
     }
 
     get maxRange(): number {
-        return "maxRange" in this._recipe ? this._recipe.maxRange : 0;
+        return "projectile" in this._recipe ? this._recipe.projectile.maxRange : 0;
+    }
+
+    get spreadAngleInRadians(): number {
+        return "spreadAngle" in this._recipe ? degreesToRadians(this._recipe.spreadAngle) : 0;
     }
 
     get capacity(): number {
@@ -228,6 +232,14 @@ export class Item extends SceneObject {
 
     get isEmpty(): boolean {
         return this.capacity === 0;
+    }
+
+    get projectileRecipe(): ProjectileRecipe {
+        if (!("projectile" in this._recipe)) {
+            throw new Error(`Item ${this.id} is does not have a projectile`);
+        }
+
+        return this._recipe.projectile;
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -453,7 +465,7 @@ export class Item extends SceneObject {
         return fireModes;
     }
 
-    fire(): Item | undefined {
+    fire(): Item {
         if (this.type !== ItemType.enum.gun) {
             throw new Error(`Item ${this.id} cannot be fired, because its it not a gun`);
         }
