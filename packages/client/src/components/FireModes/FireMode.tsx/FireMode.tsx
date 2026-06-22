@@ -35,6 +35,7 @@ export interface FireModeComponentProps {
     unit: UnitSummary;
     unitWeapon: FireModeItemSummary;
     weapon: FireModeWeaponSummary | null;
+    disabled: boolean;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
 }
 
@@ -128,6 +129,7 @@ export function FireModeComponent({
     unit,
     unitWeapon,
     weapon,
+    disabled,
     onChangeFireSelector
 }: FireModeComponentProps) {
     const { value: actionPoints } = unit.attributes.actionPoints;
@@ -176,39 +178,39 @@ export function FireModeComponent({
                             id="single-shot"
                             title="Single shot"
                             value={FireSelector.enum.single}
-                            disabled={!("single" in weapon.fireModes)}
+                            disabled={disabled || !("single" in weapon.fireModes)}
                         >
                             <ImageComponent
                                 images={[{ imageId: "fireSingle" }]}
                                 width={40}
                                 height={40}
-                                disabled={!("single" in weapon.fireModes)}
+                                disabled={disabled || !("single" in weapon.fireModes)}
                             />
                         </ToggleButton>
                         <ToggleButton
                             id="burst-fire"
                             title="Burst fire"
                             value={FireSelector.enum.burst}
-                            disabled={!("burst" in weapon.fireModes)}
+                            disabled={disabled || !("burst" in weapon.fireModes)}
                         >
                             <ImageComponent
                                 images={[{ imageId: "fireBurst" }]}
                                 width={40}
                                 height={40}
-                                disabled={!("burst" in weapon.fireModes)}
+                                disabled={disabled || !("burst" in weapon.fireModes)}
                             />
                         </ToggleButton>
                         <ToggleButton
                             id="full-auto"
                             title="Fulauto"
                             value={FireSelector.enum.auto}
-                            disabled={!("auto" in weapon.fireModes)}
+                            disabled={disabled || !("auto" in weapon.fireModes)}
                         >
                             <ImageComponent
                                 images={[{ imageId: "fireAuto" }]}
                                 width={40}
                                 height={40}
-                                disabled={!("auto" in weapon.fireModes)}
+                                disabled={disabled || !("auto" in weapon.fireModes)}
                             />
                         </ToggleButton>
                     </ToggleButtonGroup>
@@ -247,7 +249,7 @@ export function FireModeComponent({
                                     id={fireMode}
                                     title={startCase(fireMode)}
                                     value={fireMode}
-                                    disabled={actionPoints < actionPointCost}
+                                    disabled={disabled || actionPoints < actionPointCost}
                                 >
                                     {startCase(fireMode)}
                                 </ToggleButton>
@@ -274,7 +276,7 @@ export function FireModeComponent({
                             id={FireModeEx.enum.throw}
                             title={startCase(FireModeEx.enum.throw)}
                             value={FireModeEx.enum.throw}
-                            disabled={actionPoints < unit.actions[Action.enum.throw].actionPoints}
+                            disabled={disabled || actionPoints < unit.actions[Action.enum.throw].actionPoints}
                         >
                             {startCase(FireModeEx.enum.throw)}
                         </ToggleButton>

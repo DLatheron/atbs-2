@@ -13,6 +13,7 @@ import { useWorld } from "../../hooks";
 export interface FireModesComponentProps {
     unit: UnitSummary;
     unitWeapon: FireModeItemSummary;
+    disabled: boolean;
 
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
 
@@ -22,6 +23,7 @@ export interface FireModesComponentProps {
 export function FireModesComponent({
     unit,
     unitWeapon,
+    disabled,
     onChangeFireSelector,
     sx
 }: FireModesComponentProps) {
@@ -71,6 +73,7 @@ export function FireModesComponent({
                                         unit={unit}
                                         unitWeapon={unitWeapon}
                                         weapon={weapon}
+                                        disabled={disabled}
                                         onChangeFireSelector={onChangeFireSelector}
                                     />
                                 )
@@ -84,6 +87,7 @@ export function FireModesComponent({
                         unit={unit}
                         unitWeapon={unitWeapon}
                         weapon={null}
+                        disabled={disabled}
                         onChangeFireSelector={onChangeFireSelector}
                     />
                 </Box>

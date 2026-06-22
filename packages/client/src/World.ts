@@ -464,9 +464,13 @@ export class World {
                     case SightType.enum.iron:
                         break;
 
-                    case SightType.enum.laser:
-                        DrawLaserSight(this.camera, context, from, to, time);
+                    case SightType.enum.laser: {
+                        const rayLength = this.unitWorldPos.sub(to).length;
+                        if (rayLength > this.unit.collisionRadius) {
+                            DrawLaserSight(this.camera, context, from, to, time);
+                        }
                         break;
+                    }
 
                     case SightType.enum.optical:
                         break;

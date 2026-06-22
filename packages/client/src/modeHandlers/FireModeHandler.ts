@@ -244,8 +244,15 @@ export class FireModeHandler extends ModeHandler {
         if (this.isStartMapDrag(event)) {
             this.startMapDrag(event);
         } else if (this.isStartTrackFire(event)) {
-            if (this.world.fireSelector === FireSelector.enum.auto) {
-                this.startTrackFire(event, this.world.fireSelector);
+            switch (this.world.fireSelector) {
+                case FireSelector.enum.single:
+                    // Not started by onMouseDown, see onClick.
+                    break;
+
+                case FireSelector.enum.burst:
+                case FireSelector.enum.auto:
+                    this.startTrackFire(event, this.world.fireSelector);
+                    break;
             }
         }
     }
@@ -307,11 +314,8 @@ export class FireModeHandler extends ModeHandler {
                 }
 
                 case FireSelector.enum.burst:
-                    this.startTrackFire(event, FireSelector.enum.burst);
-                    break;
-
                 case FireSelector.enum.auto:
-                    // Not started by onClick, onMouseDown.
+                    // Not started by onClick, see onMouseDown.
                     break;
             }
         }

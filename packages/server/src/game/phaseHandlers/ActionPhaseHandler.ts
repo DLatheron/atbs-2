@@ -175,6 +175,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
                     fireDetails.triggerHeldTimeInMs
                 );
+                from.sendMessage({ type: "server:ui:disabled", payload: false });
             }),
 
             messageManager.registerHandler("client:unit:throw", ({ game }, throwDetails, from) => {
@@ -191,6 +192,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
 
                 selectedUnit.throw(game, new Vec2(throwDetails.worldPos));
+                from.sendMessage({ type: "server:ui:disabled", payload: false });
             })
         ];
     }

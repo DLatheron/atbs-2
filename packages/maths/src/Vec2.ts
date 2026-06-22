@@ -48,6 +48,14 @@ export class Vec2 implements IVec2 {
         return this.divide(this.length);
     }
 
+    safeNormalise(): Vec2 {
+        const { length } = this;
+        if (length === 0.0) {
+            return Vec2.Zero();
+        }
+        return this.divide(length);
+    }
+
     get length(): number {
         return Math.sqrt(this.x * this.x + this.y * this.y);
     }

@@ -139,6 +139,7 @@ export function FireModePanel({
                 <FireModesComponent
                     unit={unit}
                     unitWeapon={unitWeapon}
+                    disabled={disabled}
                     onChangeFireSelector={onChangeFireSelector}
                 />
             </Stack>
