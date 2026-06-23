@@ -190,6 +190,10 @@ export class Vec2 implements IVec2 {
         return `(${this.x}, ${this.y})`;
     }
 
+    toRecipe(): Vec2Recipe {
+        return [this.x, this.y];
+    }
+
     static IsEqual(a?: IVec2, b?: IVec2, threshold = 0.00001) {
         if (!a) {
             if (!b) {

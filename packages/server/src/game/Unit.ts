@@ -11,6 +11,7 @@ import {
     FireType,
     getAccuracy,
     getRpm,
+    OnTarget,
     RenderList,
     RenderMode,
     shotsFired,
@@ -42,7 +43,7 @@ import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 
 const ROTATION_APT_COST = 1;
-const INFINITE_ACTION_POINTS = false;
+const INFINITE_ACTION_POINTS = true;
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
@@ -603,6 +604,9 @@ export class Unit extends SceneObject {
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
         const collisionRadius = this._recipe.collision.radius;
 
+        let projectiles: Projectile[] = [];
+        let onTarget: boolean = false;
+
         for (const [shot, toWorldPos] of targetWorldPoses.entries()) {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
             const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
@@ -625,7 +629,7 @@ export class Unit extends SceneObject {
 
             // TODO: Perturn the direction based on the accuracy of this shot.
             const perturbedDirVector = dirVector;
-            const onTarget = true;
+            onTarget = Math.random() < 0.5;
             console.dir({ perturbedDirVector, onTarget });
 
             const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
@@ -671,7 +675,7 @@ export class Unit extends SceneObject {
 
             console.dir({ numProjectiles });
 
-            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
+            projectiles = [...Array(numProjectiles).keys()].map((index) => {
                 const perturbedAngle = startOfSpread + angleScaler * index;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
@@ -694,6 +698,17 @@ export class Unit extends SceneObject {
 
             // TODO: Move the projectiles forward in time...
         }
+
+        // TODO: Psuedo tracers - how do we determine visibility?
+        messageRouter.send([
+            {
+                type: "server:fire:trace",
+                payload: {
+                    tracers: projectiles.map((projectile) => projectile.getTracer()),
+                    isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                }
+            }
+        ]);
 
         /**
             const projectiles = [...Array(numProjectiles).keys()].map((index) => {

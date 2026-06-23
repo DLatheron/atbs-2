@@ -6,11 +6,13 @@ import {
     ErrorType,
     FireModeItemSummary,
     ItemSummary,
+    OnTarget,
     RenderList,
     ScenarioId,
     ScenarioSummary,
     SideSummary,
     TileInfo,
+    Tracer,
     UnitSummary,
     WaitingFor
 } from "./PrimitiveTypes.js";
@@ -176,6 +178,13 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:ui:disabled"),
         payload: z.boolean()
+    }),
+    z.object({
+        type: z.literal("server:fire:trace"),
+        payload: z.object({
+            tracers: z.array(Tracer),
+            isOnTarget: OnTarget
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

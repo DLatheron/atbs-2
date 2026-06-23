@@ -1,5 +1,11 @@
-import { FireModeItemSummary, FireSelector, ItemId, UnitSummary } from "@atbs/shared-data";
-import { Button, Container, Stack, SxProps } from "@mui/material";
+import {
+    FireModeItemSummary,
+    FireSelector,
+    ItemId,
+    OnTarget,
+    UnitSummary
+} from "@atbs/shared-data";
+import { Box, Button, Container, Stack, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -17,16 +23,19 @@ import { UnitDetailsComponent } from "../../UnitDetails";
 import { FireModesComponent } from "../../FireModes";
 import { useKeyboard } from "../../../hooks";
 import { useMemo } from "react";
+import { OnTargetComponent } from "../../OnTarget";
 
 export interface FireModePanelProps {
     visible: boolean;
     disabled: boolean;
     unit: UnitSummary | null;
     unitWeapon: FireModeItemSummary | null;
+    isOnTarget: OnTarget;
 
     onRotateTo: (orientation: Orientation) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
     onEndFireMode: () => void;
+    setIsOnTarget: (onTarget: OnTarget) => void;
 
     sx?: SxProps;
 }
@@ -36,9 +45,11 @@ export function FireModePanel({
     disabled,
     unit,
     unitWeapon,
+    isOnTarget,
     onRotateTo,
     onChangeFireSelector,
     onEndFireMode,
+    setIsOnTarget,
     sx
 }: FireModePanelProps) {
     const keyMap = useMemo(
@@ -86,56 +97,66 @@ export function FireModePanel({
                     viewAngleInDegrees={unit.viewAngleInDegrees}
                     onDirectionChange={onRotateTo}
                 />
-                <AttributesComponent
-                    title="Attributes"
-                    attributes={[
-                        {
-                            id: "action-points",
-                            label: "Action Points",
-                            value: getAttributeValue(unit.attributes.actionPoints)
-                        },
-                        {
-                            id: "constitution",
-                            label: "Constitution",
-                            text: getAttributeString(
-                                unit.attributes.constitution,
-                                CONSTITUTION_LEVELS
-                            ),
-                            value: getAttributeValue(unit.attributes.constitution)
-                        },
-                        {
-                            id: "fitness",
-                            label: "Fitness",
-                            text: getAttributeString(unit.attributes.constitution, FITNESS_LEVELS),
-                            value: getAttributeValue(unit.attributes.fitness)
-                        },
-                        {
-                            id: "strength",
-                            label: "Strength",
-                            text: getAttributeString(unit.attributes.strength, STRENGTH_LEVELS),
-                            value: getAttributeValue(unit.attributes.strength)
-                        },
-                        {
-                            id: "speed",
-                            label: "Speed",
-                            text: getAttributeString(unit.attributes.speed, SPEED_LEVELS),
-                            value: getAttributeValue(unit.attributes.speed)
-                        },
-                        {
-                            id: "stamina",
-                            label: "Stamina",
-                            text: getAttributeString(unit.attributes.stamina, STAMINA_LEVELS),
-                            value: getAttributeValue(unit.attributes.stamina)
-                        },
-                        {
-                            id: "morale",
-                            label: "Morale",
-                            text: getAttributeString(unit.attributes.morale, MORALE_LEVELS),
-                            value: getAttributeValue(unit.attributes.morale)
-                        }
-                    ]}
-                    surround
-                />
+                <Box>
+                    <OnTargetComponent
+                        isOnTarget={isOnTarget}
+                        setIsOnTarget={setIsOnTarget}
+                        sx={{ mb: 1 }}
+                    />
+                    <AttributesComponent
+                        title="Attributes"
+                        attributes={[
+                            {
+                                id: "action-points",
+                                label: "Action Points",
+                                value: getAttributeValue(unit.attributes.actionPoints)
+                            },
+                            {
+                                id: "constitution",
+                                label: "Constitution",
+                                text: getAttributeString(
+                                    unit.attributes.constitution,
+                                    CONSTITUTION_LEVELS
+                                ),
+                                value: getAttributeValue(unit.attributes.constitution)
+                            },
+                            {
+                                id: "fitness",
+                                label: "Fitness",
+                                text: getAttributeString(
+                                    unit.attributes.constitution,
+                                    FITNESS_LEVELS
+                                ),
+                                value: getAttributeValue(unit.attributes.fitness)
+                            },
+                            {
+                                id: "strength",
+                                label: "Strength",
+                                text: getAttributeString(unit.attributes.strength, STRENGTH_LEVELS),
+                                value: getAttributeValue(unit.attributes.strength)
+                            },
+                            {
+                                id: "speed",
+                                label: "Speed",
+                                text: getAttributeString(unit.attributes.speed, SPEED_LEVELS),
+                                value: getAttributeValue(unit.attributes.speed)
+                            },
+                            {
+                                id: "stamina",
+                                label: "Stamina",
+                                text: getAttributeString(unit.attributes.stamina, STAMINA_LEVELS),
+                                value: getAttributeValue(unit.attributes.stamina)
+                            },
+                            {
+                                id: "morale",
+                                label: "Morale",
+                                text: getAttributeString(unit.attributes.morale, MORALE_LEVELS),
+                                value: getAttributeValue(unit.attributes.morale)
+                            }
+                        ]}
+                        surround
+                    />
+                </Box>
                 <FireModesComponent
                     unit={unit}
                     unitWeapon={unitWeapon}

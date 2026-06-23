@@ -9,7 +9,8 @@ import {
     SightType,
     DamageMap,
     FireSelector,
-    FireType
+    FireType,
+    ProjectileVisual
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
@@ -30,14 +31,6 @@ export const SlotProps = z.object({
     maxQuantity: Quantity.optional().default(1)
 });
 export type SlotProps = z.infer<typeof SlotProps>;
-
-export const ProjectileVisual = z.object({
-    intensity: z.number().min(0).max(1).default(1),
-    velocity: z.number().positive(),
-    length: z.number().positive(),
-    rangeFallOff: z.number().positive()
-});
-export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
 
 export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),

@@ -4,6 +4,7 @@ import { Item } from "./Item.js";
 import { Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
+import { Tracer } from "@atbs/shared-data";
 
 export interface ProjectileProps {
     game: Game;
@@ -89,5 +90,14 @@ export class Projectile {
           }
         | undefined {
         return this._impact;
+    }
+
+    getTracer(): Tracer {
+        return {
+            srcPos: this.srcPos.toRecipe(),
+            dstPos: this.dstPos.toRecipe(),
+            flightTimeInMs: (this.maxRange / this.velocity) * 1000,
+            visual: this._props.projectileRecipe.visual
+        };
     }
 }

@@ -12,6 +12,7 @@ import {
     RenderMode,
     SightType,
     ThrowDetails,
+    Tracer,
     UnitSummary
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
@@ -55,6 +56,7 @@ export class World {
     private _throwCallback: ThrowCallback;
     private _fireModeEx: FireModeEx;
     private _frameTime: number;
+    private _tracers?: Tracer[];
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -92,6 +94,7 @@ export class World {
         };
         this._fireModeEx = FireModeEx.enum.aimed;
         this._frameTime = 0;
+        this._tracers = undefined;
     }
 
     get hasMap(): boolean {
@@ -290,6 +293,17 @@ export class World {
         return this._frameTime;
     }
 
+    setTracers(tracers: Tracer[]): void {
+        // TODO: Reset the simulation time.
+
+        this._tracers = tracers;
+
+        console.info(this._tracers);
+
+        // TODO: Trigger the simulation time...
+        // TODO: Should be do a renderer plugin thing here???
+    }
+
     throw(worldPos: Vec2) {
         if (!this.unit.itemInUse) {
             throw new Error("Unit has not item in use to throw");
@@ -397,6 +411,8 @@ export class World {
         this._interactionHandler?.update?.({ time, frameDelta });
 
         this.camera.update({ time, frameDelta });
+
+        // TODO: Update tracers...
     }
 
     renderWorld(canvasLoopProps: CanvasLoopProps) {
@@ -422,6 +438,8 @@ export class World {
 
         this.renderTerrainAndFurniture(context, tileSize, scale, offset);
         this.renderSight(context, time);
+
+        // TODO: Render tracers...
 
         this._interactionHandler?.render?.(canvasLoopProps);
 

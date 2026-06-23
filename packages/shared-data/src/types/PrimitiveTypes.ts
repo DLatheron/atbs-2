@@ -5,6 +5,10 @@ import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
 
+const onTarget = ["none", "onTarget", "offTarget"] as const;
+export const OnTarget = z.enum(onTarget);
+export type OnTarget = z.infer<typeof OnTarget>;
+
 const unitType = ["human"] as const;
 export const UnitType = z.enum(unitType);
 export type UnitType = z.infer<typeof UnitType>;
@@ -694,3 +698,20 @@ export const ThrowDetails = z.object({
     worldPos: Vec2Recipe
 });
 export type ThrowDetails = z.infer<typeof ThrowDetails>;
+
+export const ProjectileVisual = z.object({
+    intensity: z.number().min(0).max(1).default(1),
+    velocity: z.number().positive(),
+    length: z.number().positive(),
+    rangeFallOff: z.number().positive()
+});
+export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
+
+export const Tracer = z.object({
+    srcPos: Vec2Recipe,
+    dstPos: Vec2Recipe,
+    flightTimeInMs: z.number().nonnegative(),
+
+    visual: ProjectileVisual
+});
+export type Tracer = z.infer<typeof Tracer>;

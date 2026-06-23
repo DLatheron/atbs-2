@@ -1,31 +1,77 @@
 import { useEffect, useState } from "react";
-import { Container, SxProps, Typography } from "@mui/material";
+import { Box, Collapse, SxProps, Typography } from "@mui/material";
+import { OnTarget } from "@atbs/shared-data";
+import { useInterval } from "../../hooks";
 
 export interface OnTargetComponentProps {
-    onTarget: boolean;
-    show: boolean;
-    sx: SxProps;
+    isOnTarget: OnTarget;
+    setIsOnTarget: (onTarget: OnTarget) => void;
+    timeout?: number;
+    sx?: SxProps;
 }
 
-export function OnTargetComponent({ onTarget, show, sx }: OnTargetComponentProps) {
-    const [isOnTarget, setIsOnTarget] = useState(onTarget);
-    const [transition, setTransition] = useState("on-target-component--hidden");
+export function OnTargetComponent({
+    isOnTarget,
+    setIsOnTarget,
+    timeout = 3000,
+    sx
+}: OnTargetComponentProps) {
+    const [localOnTarget, setLocalOnTarget] = useState<
+        typeof OnTarget.enum.onTarget | typeof OnTarget.enum.offTarget
+    >();
+    const [counter, setCounter] = useState<number>(0);
 
     useEffect(() => {
-        setIsOnTarget(onTarget);
-    }, [onTarget]);
-
-    useEffect(() => {
-        if (transition === "on-target-component--visible" && !show) {
-            setTransition("on-target-component--hidden");
-        } else if (transition === "on-target-component--hidden" && show) {
-            setTransition("on-target-component--visible");
+        if (isOnTarget !== OnTarget.enum.none) {
+            setLocalOnTarget(isOnTarget);
         }
-    }, [show, transition]);
+    }, [isOnTarget]);
+
+    useEffect(() => {
+        if (isOnTarget === OnTarget.enum.none) {
+            return;
+        }
+
+        setCounter(timeout / 1000 - 1);
+    }, [isOnTarget, timeout]);
+
+    useInterval(
+        () => {
+            if (isOnTarget === OnTarget.enum.none) {
+                return;
+            }
+
+            setCounter(counter - 1);
+            if (counter <= 0) {
+                setIsOnTarget(OnTarget.enum.none);
+            }
+        },
+        isOnTarget !== OnTarget.enum.none ? 1000 : undefined
+    );
 
     return (
-        <Container data-testid="on-target-component" className={transition} sx={sx}>
-            <Typography variant="h1">{isOnTarget ? "🎯 On Target" : "◎ Off Target"}</Typography>
-        </Container>
+        <Box>
+            <Collapse in={isOnTarget !== OnTarget.enum.none}>
+                <Box
+                    sx={{
+                        borderRadius: 2,
+                        border: "1px black solid",
+                        backgroundColor:
+                            localOnTarget === OnTarget.enum.onTarget ? "limegreen" : "red",
+                        color: localOnTarget === OnTarget.enum.onTarget ? "black" : "white",
+                        rowGap: 1,
+                        p: 1,
+                        textAlign: "center",
+                        ...sx
+                    }}
+                >
+                    <Typography variant="h5">
+                        {localOnTarget === OnTarget.enum.onTarget
+                            ? "🎯 On Target"
+                            : "❌ Off Target"}
+                    </Typography>
+                </Box>
+            </Collapse>
+        </Box>
     );
 }

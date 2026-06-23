@@ -9,6 +9,7 @@ import {
     FireSelector,
     ImageId,
     ItemId,
+    OnTarget,
     RenderMode,
     SideSummary,
     ThrowDetails,
@@ -37,14 +38,7 @@ export function useActionPage() {
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
-
-    // // Temporary hack to reload the world if necessary...
-    // useEffect(() => {
-    //     sendMessage({
-    //         type: "client:game:refresh",
-    //         payload: null
-    //     });
-    // }, [sendMessage, world.hasMap]);
+    const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -216,6 +210,11 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:ui:disabled", (_context, disabled) => {
                 setDisabled(disabled);
+            }),
+
+            messageManager.registerHandler("server:fire:trace", (_context, payload) => {
+                setIsOnTarget(payload.isOnTarget);
+                world.setTracers(payload.tracers);
             })
         ];
 
@@ -349,6 +348,7 @@ export function useActionPage() {
         sidePanelMode,
         error,
         disabled,
+        isOnTarget,
         onMove,
         onRotateTo,
         onChangeFireSelector,
@@ -356,6 +356,7 @@ export function useActionPage() {
         onEndTurn,
         onEndError,
         onFireMode,
-        onEndFireMode
+        onEndFireMode,
+        setIsOnTarget
     };
 }

@@ -28,6 +28,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         sidePanelMode,
         error,
         disabled,
+        isOnTarget,
         onMove,
         onRotateTo,
         onChangeFireSelector,
@@ -35,7 +36,8 @@ export function ActionPage({ visible }: ActionPageProps) {
         onEndTurn,
         onEndError,
         onFireMode,
-        onEndFireMode
+        onEndFireMode,
+        setIsOnTarget
     } = useActionPage();
 
     const { world } = useWorld();
@@ -155,6 +157,8 @@ export function ActionPage({ visible }: ActionPageProps) {
                     disabled={disabled}
                     unit={unit}
                     unitWeapon={unitWeapon}
+                    isOnTarget={isOnTarget}
+                    setIsOnTarget={setIsOnTarget}
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
                     onEndFireMode={onEndFireMode}
