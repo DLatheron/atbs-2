@@ -72,9 +72,9 @@ const DIRECTIONAL_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
 };
 
 export const UnitRecipe = z.object({
-    id: z.string().min(1),
+    id: UnitId,
     type: UnitType.default(UnitType.enum.human),
-    name: z.string().min(1),
+    name: z.string().nonempty(),
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),

@@ -3,12 +3,11 @@ import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
-import { HandleMaterialPenetration, XYAxis } from "./Ray.js";
-import { ImageManager } from "./ImageManager.js";
+import { HandleMaterialPenetration } from "./Ray.js";
 
 export const MapRecipe = z.object({
     id: MapId,
-    name: z.string().min(1),
+    name: z.string().nonempty(),
     width: z.number().min(1).max(256),
     height: z.number().min(1).max(256),
     tileSize: z.number().min(50).max(200),
@@ -200,77 +199,80 @@ export class WorldMap {
 
     rayCastTile(
         tile: Tile,
-        entryWorldPos: Vec2,
-        exitWorldPos: Vec2,
-        handleMaterialPenetration: HandleMaterialPenetration
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _entryWorldPos: Vec2,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _exitWorldPos: Vec2,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        _handleMaterialPenetration: HandleMaterialPenetration
     ): Vec2 | undefined {
         if (!tile.anythingCollidable) {
             return;
         }
 
-        const entrySubTile = this.worldToSubTile(tile.location, entryWorldPos);
-        const exitSubTile = this.worldToSubTile(tile.location, exitWorldPos);
+        // const entrySubTile = this.worldToSubTile(tile.location, entryWorldPos);
+        // const exitSubTile = this.worldToSubTile(tile.location, exitWorldPos);
 
-        const collisionImages = tile.getTileForCollision(ImageManager.GetSingleton);
-        const deltaChange = exitSubTile.sub(entrySubTile);
-        const xMajorAxis = Math.abs(deltaChange.x) >= Math.abs(deltaChange.y);
-        let xyAxis: XYAxis;
-        let calcMajorAxisStep: (majorAxisStep: number) => Vec2;
-        if (xMajorAxis) {
-            xyAxis = { major: "x", minor: "y" };
+        // const collisionImages = tile.getTileForCollision(ImageManager.GetSingleton);
+        // const deltaChange = exitSubTile.sub(entrySubTile);
+        // const xMajorAxis = Math.abs(deltaChange.x) >= Math.abs(deltaChange.y);
+        // let xyAxis: XYAxis;
+        // let calcMajorAxisStep: (majorAxisStep: number) => Vec2;
+        // if (xMajorAxis) {
+        //     xyAxis = { major: "x", minor: "y" };
 
-            const dx = Math.sign(deltaChange.x);
-            const dy = deltaChange.y / deltaChange.x;
+        //     const dx = Math.sign(deltaChange.x);
+        //     const dy = deltaChange.y / deltaChange.x;
 
-            calcMajorAxisStep = (majorAxisStep) => {
-                const x = majorAxisStep * dx;
-                const y = x * dy;
+        //     calcMajorAxisStep = (majorAxisStep) => {
+        //         const x = majorAxisStep * dx;
+        //         const y = x * dy;
 
-                return entrySubTile.add({ x, y });
-            };
-        } else {
-            xyAxis = { major: "y", minor: "x" };
+        //         return entrySubTile.add({ x, y });
+        //     };
+        // } else {
+        //     xyAxis = { major: "y", minor: "x" };
 
-            const dx = deltaChange.x / deltaChange.y;
-            const dy = Math.sign(deltaChange.y);
+        //     const dx = deltaChange.x / deltaChange.y;
+        //     const dy = Math.sign(deltaChange.y);
 
-            calcMajorAxisStep = (majorAxisStep) => {
-                const y = majorAxisStep * dy;
-                const x = y * dx;
+        //     calcMajorAxisStep = (majorAxisStep) => {
+        //         const y = majorAxisStep * dy;
+        //         const x = y * dx;
 
-                return entrySubTile.add({ x, y });
-            };
-        }
+        //         return entrySubTile.add({ x, y });
+        //     };
+        // }
 
-        const totalSteps = Math.abs(deltaChange[xyAxis.major]);
-        const tileTopLeft = this.tileTopLeft(tile.location);
-        let trackingWorldPos;
+        // const totalSteps = Math.abs(deltaChange[xyAxis.major]);
+        // const tileTopLeft = this.tileTopLeft(tile.location);
+        // let trackingWorldPos;
 
-        for (let step = 0; step < totalSteps; ++step) {
-            const samplePos = calcMajorAxisStep(step);
+        // for (let step = 0; step < totalSteps; ++step) {
+        //     const samplePos = calcMajorAxisStep(step);
 
-            trackingWorldPos = tileTopLeft.add(samplePos);
+        //     trackingWorldPos = tileTopLeft.add(samplePos);
 
-            let hitMaterial = false;
+        //     let hitMaterial = false;
 
-            for (const { owner, image, orientation, materials } of collisionImages) {
-                const materialColour = image.getColour(samplePos, orientation);
-                if (materialColour.a > 0.0) {
-                    const [material] = Material.DetermineMaterial(materialColour, materials);
+        //     for (const { owner, image, orientation, materials } of collisionImages) {
+        //         const materialColour = image.getColour(samplePos, orientation);
+        //         if (materialColour.a > 0.0) {
+        //             const [material] = Material.DetermineMaterial(materialColour, materials);
 
-                    if (handleMaterialPenetration(trackingWorldPos, owner, material)) {
-                        // Record the final position of the trace.
-                        return trackingWorldPos;
-                    }
+        //             if (handleMaterialPenetration(trackingWorldPos, owner, material)) {
+        //                 // Record the final position of the trace.
+        //                 return trackingWorldPos;
+        //             }
 
-                    hitMaterial = true;
-                    break; // NOTE: Only consider the first material that we strike!
-                }
-            }
+        //             hitMaterial = true;
+        //             break; // NOTE: Only consider the first material that we strike!
+        //         }
+        //     }
 
-            if (!hitMaterial) {
-                handleMaterialPenetration(trackingWorldPos);
-            }
-        }
+        //     if (!hitMaterial) {
+        //         handleMaterialPenetration(trackingWorldPos);
+        //     }
+        // }
     }
 }

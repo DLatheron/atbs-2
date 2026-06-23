@@ -11,31 +11,37 @@ export type ClientId = z.infer<typeof ClientId>;
 export const GameId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
 export type GameId = z.infer<typeof GameId>;
 
-export const ScenarioId = z.string().min(1);
+export const ScenarioId = z.string().nonempty();
 export type ScenarioId = z.infer<typeof ScenarioId>;
 
-export const SideId = z.string().min(1);
+export const SideId = z.string().nonempty();
 export type SideId = z.infer<typeof SideId>;
 
-export const MapId = z.string().min(1);
+export const MapId = z.string().nonempty();
 export type MapId = z.infer<typeof MapId>;
 
-export const TerrainId = z.string().min(1);
+export const TerrainId = z.string().nonempty();
 export type TerrainId = z.infer<typeof TerrainId>;
 
-export const ObjectId = z.string().min(1);
+export const FurnitureId = z.string().nonempty();
+export type FurnitureId = z.infer<typeof FurnitureId>;
+
+export const MaterialId = z.string().nonempty();
+export type MaterialId = z.infer<typeof MaterialId>;
+
+export const ObjectId = z.string().nonempty();
 export type ObjectId = z.infer<typeof ObjectId>;
 
-export const UnitId = z.string().min(1);
+export const UnitId = z.string().nonempty();
 export type UnitId = z.infer<typeof UnitId>;
 
-export const ItemId = z.string().min(1);
+export const ItemId = z.string().nonempty();
 export type ItemId = z.infer<typeof ItemId>;
 
-export const InstanceId = z.string().min(1);
+export const InstanceId = z.string().nonempty();
 export type InstanceId = z.infer<typeof InstanceId>;
 
-export const ImageId = z.string().min(1);
+export const ImageId = z.string().nonempty();
 export type ImageId = z.infer<typeof ImageId>;
 
 export const Weight = z.number().nonnegative();
@@ -58,6 +64,46 @@ export type DescriptionText = z.infer<typeof DescriptionText>;
 
 export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
+
+export const furnitureState = ["default", "destroyed", "open", "closed", "locked"] as const;
+export const FurnitureState = z.enum(furnitureState);
+export type FurnitureState = z.infer<typeof FurnitureState>;
+
+export const RGBColor = z.object({
+    r: z.number().min(0).max(255),
+    g: z.number().min(0).max(255),
+    b: z.number().min(0).max(255)
+});
+export type RGBColor = z.infer<typeof RGBColor>;
+
+export const HSLColor = z.object({
+    h: z.number().min(0).max(255),
+    s: z.number().min(0).max(255),
+    l: z.number().min(0).max(255)
+});
+export type HSLColor = z.infer<typeof HSLColor>;
+
+export const FurnitureStateMap = z.union([
+    z.record(FurnitureState, z.number().positive()),
+    z.object({
+        type: FurnitureState.default(FurnitureState.enum.default),
+        default: z.number().positive()
+    })
+]);
+
+export const materialTransition = ["enter", "exit", "transition"] as const;
+export const MaterialTransition = z.enum(materialTransition);
+export type MaterialTransition = z.infer<typeof MaterialTransition>;
+
+export const materialDensityType = ["eyeball", "projectile"] as const;
+export const MaterialDensityType = z.enum(materialDensityType);
+export type MaterialDensityType = z.infer<typeof MaterialDensityType>;
+
+export const MaterialDensityMap = z.intersection(
+    z.record(MaterialDensityType, z.number().positive()),
+    z.object({ default: z.number().positive() })
+);
+export type MaterialDensityMap = z.infer<typeof MaterialDensityMap>;
 
 export const AttributeDef = z.object({
     max: z.int().nonnegative(),
@@ -142,18 +188,25 @@ export const ClientSummary = z.object({
 export type ClientSummary = z.infer<typeof ClientSummary>;
 
 export const ScenarioSummary = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
+    id: ScenarioId,
+    name: z.string().nonempty(),
     description: Description,
     sides: z.array(
         z.object({
             id: SideId,
-            name: z.string().min(1),
+            name: z.string().nonempty(),
             description: Description
         })
     )
 });
 export type ScenarioSummary = z.infer<typeof ScenarioSummary>;
+
+export const FurnitureSummary = z.object({
+    id: FurnitureId,
+    name: z.string().nonempty(),
+    description: Description
+});
+export type FurnitureSummary = z.infer<typeof FurnitureSummary>;
 
 export const TileInfo = z.object({
     tilePos: TilePosRecipe,
@@ -563,8 +616,8 @@ export const ItemSummary = z.object({
 export type ItemSummary = z.infer<typeof ItemSummary>;
 
 export const UnitSummary = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
+    id: UnitId,
+    name: z.string().nonempty(),
     description: Description,
     location: TilePosRecipe,
     orientation: z.enum(Orientation),

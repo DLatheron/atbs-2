@@ -14,7 +14,7 @@ import { Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
 
-export const ClientRenamePayload = z.object({ name: z.string().min(1) });
+export const ClientRenamePayload = z.object({ name: z.string().nonempty() });
 export type ClientRenamePayload = z.infer<typeof ClientRenamePayload>;
 
 export const ClientToServerMessage = z.discriminatedUnion("type", [

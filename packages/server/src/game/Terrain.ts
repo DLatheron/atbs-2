@@ -6,8 +6,8 @@ import { SceneNode, SceneObject } from "./SceneObject.js";
 
 export const TerrainRecipe = z.object({
     id: z.string(),
-    name: z.string().min(1),
-    category: z.string().min(1),
+    name: z.string().nonempty(),
+    category: z.string().nonempty(),
     description: Description,
     orientation: z.enum(Orientation).optional(),
     renderable: SceneNode

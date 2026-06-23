@@ -1,4 +1,4 @@
-import { Description, ScenarioSummary, SideId, MapId } from "@atbs/shared-data";
+import { Description, ScenarioSummary, SideId, MapId, ScenarioId } from "@atbs/shared-data";
 import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
 import { MapRecipeManager } from "./MapRecipeManager.js";
@@ -6,8 +6,8 @@ import { WorldMap } from "./WorldMap.js";
 import { ItemManager } from "./ItemManager.js";
 
 export const ScenarioRecipe = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
+    id: ScenarioId,
+    name: z.string().nonempty(),
     description: Description,
     worldMapId: MapId,
     sides: z.array(SideRecipe)

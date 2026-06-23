@@ -7,7 +7,7 @@ export const LobbyState = z.object({
     clients: z.array(
         z.object({
             id: ClientId,
-            name: z.string().min(1),
+            name: z.string().nonempty(),
 
             sideId: SideId.nullable(),
             ready: z.boolean().default(false)

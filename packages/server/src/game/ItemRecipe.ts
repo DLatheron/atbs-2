@@ -16,7 +16,7 @@ import { SceneNode } from "./SceneObject.js";
 import { TilePosRecipe } from "@atbs/maths";
 
 export const Slot = z.object({
-    id: z.string().min(1),
+    id: ItemId,
     quantity: Quantity.optional().default(1)
 });
 export type Slot = z.infer<typeof Slot>;

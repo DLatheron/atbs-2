@@ -81,4 +81,13 @@ export class Projectile {
     get maxPenetration(): number {
         return this._props.projectileRecipe.penetration;
     }
+
+    get impact():
+        | {
+              time: number;
+              position: Vec2;
+          }
+        | undefined {
+        return this._impact;
+    }
 }
