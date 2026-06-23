@@ -59,7 +59,7 @@ export class Item extends SceneObject {
         const { slots } = recipe;
         if (slots) {
             for (const [slotType, { id, quantity }] of unsafeEntries(slots)) {
-                const slotItem = itemManager.createItem(id, { quantity });
+                const slotItem = itemManager.newItem(id, { quantity });
 
                 this._slots.set(slotType, slotItem);
             }
@@ -351,7 +351,7 @@ export class Item extends SceneObject {
 
                 spaceForRounds = maxQuantity - itemsRounds.quantity;
             } else {
-                itemsRounds = this._itemManager.createItem(ammo.recipeId, { quantity: 0 });
+                itemsRounds = this._itemManager.newItem(ammo.recipeId, { quantity: 0 });
                 spaceForRounds = maxQuantity;
             }
             if (spaceForRounds <= 0) {

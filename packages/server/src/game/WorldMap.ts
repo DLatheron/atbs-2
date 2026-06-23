@@ -4,6 +4,8 @@ import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { HandleMaterialPenetration } from "./Ray.js";
+import { FurnitureManager } from "./FurnitureManager.js";
+import { ItemManager } from "./ItemManager.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -23,7 +25,11 @@ export class WorldMap {
     private readonly _tileSize: number;
     private readonly _tiles: Tile[][];
 
-    constructor(recipe: Readonly<MapRecipe>) {
+    constructor(
+        recipe: Readonly<MapRecipe>,
+        _itemManager: ItemManager,
+        furnitureManager: FurnitureManager
+    ) {
         this._id = recipe.id;
         this._name = recipe.name;
         this._width = recipe.width;
@@ -31,7 +37,9 @@ export class WorldMap {
         this._tileSize = recipe.tileSize;
 
         this._tiles = recipe.tiles.map((tileRow, row) =>
-            tileRow.map((tileRecipe, col) => new Tile(new TilePos(col, row), tileRecipe))
+            tileRow.map(
+                (tileRecipe, col) => new Tile(new TilePos(col, row), tileRecipe, furnitureManager)
+            )
         );
     }
 

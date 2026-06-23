@@ -4,9 +4,10 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
-import { RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
+import { FurnitureState, RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
+import { FurnitureManager } from "./FurnitureManager.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -17,7 +18,7 @@ export const TileRecipe = z.object({
         .object({
             id: z.string(),
             orientation: z.enum(Orientation).optional(),
-            state: z.string().optional()
+            state: FurnitureState.optional()
         })
         .optional()
     // items: z
@@ -53,10 +54,20 @@ export class Tile implements IRenderableEntity {
     protected readonly _furniture?: Furniture;
     protected _units: Unit[];
 
-    constructor(location: TilePos, recipe: Readonly<TileRecipe>) {
+    constructor(
+        location: TilePos,
+        recipe: Readonly<TileRecipe>,
+        furnitureManager: FurnitureManager
+    ) {
         this._location = location;
         this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
-        this._furniture = undefined;
+        this._furniture = recipe.furniture
+            ? furnitureManager.newFurniture(recipe.furniture.id, {
+                  location,
+                  orientation: recipe.furniture.orientation,
+                  state: recipe.furniture.state
+              })
+            : undefined;
         this._units = [];
     }
 
