@@ -391,9 +391,9 @@ export class Item extends SceneObject {
             return 0;
         }
 
-        const { damage } = this._recipe.projectile;
-
-        return unitType in damage ? damage[unitType] : damage.default;
+        const { damage: damageMap } = this._recipe.projectile;
+        const damage = unitType in damageMap ? damageMap[unitType] : undefined;
+        return damage ?? damageMap.default;
     }
 
     getRenderList(context: SceneContext): RenderList {

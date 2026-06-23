@@ -5,6 +5,10 @@ import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
 
+const unitType = ["human"] as const;
+export const UnitType = z.enum(unitType);
+export type UnitType = z.infer<typeof UnitType>;
+
 export const ClientId = z.uuid();
 export type ClientId = z.infer<typeof ClientId>;
 
@@ -83,13 +87,17 @@ export const HSLColor = z.object({
 });
 export type HSLColor = z.infer<typeof HSLColor>;
 
-export const FurnitureStateMap = z.union([
-    z.record(FurnitureState, z.number().positive()),
-    z.object({
-        type: FurnitureState.default(FurnitureState.enum.default),
-        default: z.number().positive()
-    })
-]);
+export const MovementObstruction = z
+    .partialRecord(UnitType.or(z.literal("default")), z.number().nonnegative())
+    .and(z.object({ default: z.number().nonnegative() }));
+export type MovementObstruction = z.infer<typeof MovementObstruction>;
+
+export const FurnitureStateMovementObstructionMap = z
+    .partialRecord(FurnitureState, MovementObstruction)
+    .and(z.object({ default: MovementObstruction }));
+export type FurnitureStateMovementObstructionMap = z.infer<
+    typeof FurnitureStateMovementObstructionMap
+>;
 
 export const materialTransition = ["enter", "exit", "transition"] as const;
 export const MaterialTransition = z.enum(materialTransition);
@@ -99,10 +107,9 @@ export const materialDensityType = ["eyeball", "projectile"] as const;
 export const MaterialDensityType = z.enum(materialDensityType);
 export type MaterialDensityType = z.infer<typeof MaterialDensityType>;
 
-export const MaterialDensityMap = z.intersection(
-    z.record(MaterialDensityType, z.number().positive()),
-    z.object({ default: z.number().positive() })
-);
+export const MaterialDensityMap = z
+    .partialRecord(MaterialDensityType.or(z.literal("default")), z.number().positive())
+    .and(z.object({ default: z.number().positive() }));
 export type MaterialDensityMap = z.infer<typeof MaterialDensityMap>;
 
 export const AttributeDef = z.object({
@@ -271,21 +278,19 @@ export function resolveJitteredValue(value: JitteredValue) {
     }
 }
 
-const unitType = ["human"] as const;
-export const UnitType = z.enum(unitType);
-export type UnitType = z.infer<typeof UnitType>;
-
 const damageType = ["default", "disorientation"] as const;
 export const DamageType = z.enum(damageType);
 export type DamageType = z.infer<typeof DamageType>;
 
-export const DamageMap = z.union([
-    z.record(UnitType, z.number().positive()),
-    z.object({
-        type: DamageType.default(DamageType.enum.default),
-        default: z.number().positive()
-    })
-]);
+export const DamageMap = z
+    .partialRecord(UnitType.or(z.literal("default")), z.number().nonnegative())
+    .and(
+        z.object({
+            type: DamageType.default(DamageType.enum.default),
+            default: z.number().nonnegative()
+        })
+    );
+export type DamageMap = z.infer<typeof DamageMap>;
 
 const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
 export const ItemType = z.enum(itemType);

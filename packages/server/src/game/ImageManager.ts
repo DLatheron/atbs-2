@@ -6,7 +6,13 @@ import { Colour, Orientation } from "@atbs/maths";
 
 import { Image } from "./Image.js";
 
-const ImageDirectories = ["./data/terrain", "./data/units", "./data/items", "./data/icons"];
+const ImageDirectories = [
+    "./data/terrain",
+    "./data/units",
+    "./data/items",
+    "./data/icons",
+    "./data/furniture"
+];
 
 const compoundIdRegex =
     /^([a-z0-9-]+)\[([0246])\]_([a-z0-9-]+)\[([0246])\]_([a-z0-9-]+)\[([0246])\].terrain/;

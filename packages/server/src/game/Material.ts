@@ -112,7 +112,9 @@ export class Material {
         if (type === undefined) {
             return densityMap.default;
         }
-        return type in densityMap ? densityMap[type] : densityMap.default;
+
+        const denstity = type in densityMap ? densityMap[type] : undefined;
+        return denstity ?? densityMap.default;
     }
 
     static DetermineMaterial(

@@ -69,9 +69,7 @@ function getModeHelper(unit: UnitSummary, weapon: FireModeWeaponSummary | null):
         } else if (actionPoints >= fireModeDetails[FireMode.enum.snapshot].actionPoints) {
             return FireModeEx.enum.snapshot;
         }
-    }
-
-    if (actionPoints >= unit.actions[Action.enum.throw].actionPoints) {
+    } else if (actionPoints >= unit.actions[Action.enum.throw].actionPoints) {
         return FireModeEx.enum.throw;
     }
 

@@ -36,6 +36,7 @@ export class TerrainManager {
                 this.add(terrain);
             } catch (error) {
                 console.error(`ERROR Loading Terrain: ${file}`, error);
+                throw error;
             }
         }
     }

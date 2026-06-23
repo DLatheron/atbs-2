@@ -445,7 +445,7 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         time: number
     ) {
-        if (!this.hasUnitWeapon) {
+        if (!this.hasUnitWeapon || this.renderMode !== RenderMode.enum.FIRE_MODE) {
             return;
         }
 

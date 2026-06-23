@@ -494,6 +494,14 @@ export class Unit extends SceneObject {
         );
 
         this.location = dstTile.location;
+        messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: { location: [this.location.col, this.location.row] }
+            },
+            this.side.id
+        );
+
         dstTile.addUnit(this);
         messageRouter.sendIfVisible(
             [

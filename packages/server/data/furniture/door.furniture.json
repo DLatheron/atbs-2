@@ -1,0 +1,76 @@
+{
+    "id": "door.furniture",
+    "name": "Door",
+    "description": [{ "text": "A heavy set front door" }],
+    "renderable": {
+        "default": {
+            "default": [{ "imageId": "doorway" }, { "imageId": "door" }],
+            "open": [{ "imageId": "doorway" }],
+            "destroyed": [{ "imageId": "doorway" }]
+        },
+        "FIRE_MODE": {
+            "default": [{ "imageId": "doorway-cl" }, { "imageId": "door-cl" }],
+            "open": [{ "imageId": "doorway-cl" }],
+            "destroyed": [{ "imageId": "doorway-cl" }]
+        }
+    },
+    "state": "closed",
+    "materials": [
+        {
+            "id": "door",
+            "category": "furniture",
+            "rgb": {
+                "r": 0,
+                "g": 212,
+                "b": 255
+            },
+            "densityMap": {
+                "default": 3,
+                "eyeball": 100
+            }
+        }
+    ],
+    "hitPoints": { "max": 50 },
+    "movementObstruction": {
+        "default": { "default": 100 },
+        "open": { "default": 0 },
+        "destroyed": { "default": 0 }
+    },
+    "actions": {
+        "closed": {
+            "openDoor": {
+                "state": "open",
+                "speedScaler": 0.5,
+                "aptCost": 10
+            },
+            "lock": {
+                "state": "locked",
+                "itemsToUse": ["front-door-key.item"],
+                "aptCost": 10
+            },
+            "breach": {
+                "state": "open",
+                "speedScaler": 1.3,
+                "aptCost": 12
+            }
+        },
+        "open": {
+            "closeDoor": {
+                "state": "closed",
+                "aptCost": 10
+            }
+        },
+        "locked": {
+            "unlock": {
+                "state": "closed",
+                "itemsToUse": ["front-door-key.item"],
+                "aptCost": 10
+            },
+            "breach": {
+                "state": "destroyed",
+                "speedScaler": 1.5,
+                "aptCost": 20
+            }
+        }
+    }
+}

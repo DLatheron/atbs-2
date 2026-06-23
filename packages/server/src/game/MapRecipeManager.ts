@@ -35,6 +35,7 @@ export class MapRecipeManager {
                 this.add(mapRecipe);
             } catch (error) {
                 console.error(`ERROR Loading Map recipe: ${file}`, error);
+                throw error;
             }
         }
     }

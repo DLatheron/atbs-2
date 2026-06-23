@@ -35,6 +35,7 @@ export class ItemRecipeManager {
                 this.addRecipe(recipe);
             } catch (error) {
                 console.error(`ERROR Loading Item recipe: ${file}`, error);
+                throw error;
             }
         }
     }

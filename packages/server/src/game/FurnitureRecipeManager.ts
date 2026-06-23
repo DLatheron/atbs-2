@@ -35,6 +35,7 @@ export class FurnitureRecipeManager {
                 this.addRecipe(recipe);
             } catch (error) {
                 console.error(`ERROR Loading Furniture recipe: ${file}`, error);
+                throw error;
             }
         }
     }

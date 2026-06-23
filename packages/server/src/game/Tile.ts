@@ -130,6 +130,7 @@ export class Tile implements IRenderableEntity {
 
         return [
             ...this.terrain.getRenderList(context),
+            ...(this.furniture?.getRenderList(context) ?? []),
             ...this.units.map((unit) => unit.getRenderList(context)).flat()
         ];
     }

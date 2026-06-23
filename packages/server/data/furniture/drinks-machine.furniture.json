@@ -1,7 +1,11 @@
 {
     "id": "drinks-machine.furniture",
     "name": "Drinks Machine",
-    "description": "A drinks machine, that seems to dispense every kind of drink, so long as its coffee...",
+    "description": [
+        {
+            "text": "A drinks machine, that seems to dispense every kind of drink, so long as its coffee..."
+        }
+    ],
     "renderable": {
         "default": {
             "default": [{ "imageId": "drinks-machine" }],
@@ -14,21 +18,16 @@
     },
     "materials": [
         {
-            "$ref": {
-                "type": "Material",
-                "instance": {
-                    "id": "metal-skin",
-                    "category": "furniture",
-                    "rgb": {
-                        "r": 0,
-                        "g": 212,
-                        "b": 255
-                    },
-                    "densityMap": {
-                        "default": 3,
-                        "eyeball": 100
-                    }
-                }
+            "id": "metal-skin",
+            "category": "furniture",
+            "rgb": {
+                "r": 0,
+                "g": 212,
+                "b": 255
+            },
+            "densityMap": {
+                "default": 3,
+                "eyeball": 100
             }
         }
     ],
