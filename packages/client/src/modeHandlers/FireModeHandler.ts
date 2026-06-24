@@ -15,6 +15,7 @@ import { DrawBulletTrajectory, DrawRoundsThatWillBeFired } from "../RenderHelper
 import { CanvasLoopProps } from "../components";
 
 const TILE_INFO_QUERY_DEBOUNCE_IN_MS = 500;
+const FIRE_MODE_LINGER_TIME_IN_MS = 500;
 
 type HandlerFireMode = typeof FireSelector.enum.burst | typeof FireSelector.enum.auto;
 
@@ -78,6 +79,19 @@ export class FireModeHandler extends ModeHandler {
             if (this._trackFire.lingerInMs > 0) {
                 this._trackFire.lingerInMs = Math.max(this._trackFire.lingerInMs - frameDelta, 0);
                 if (this._trackFire.lingerInMs === 0) {
+                    switch (this.world.fireSelector) {
+                        case FireSelector.enum.burst:
+                            this.world.burstFire(this._trackFire.worldPoses);
+                            break;
+
+                        case FireSelector.enum.auto: {
+                            const { frameTime } = this.world;
+                            const triggerHeldForMs = frameTime - this._trackFire.startTime;
+                            this.world.autoFire(this._trackFire.worldPoses, triggerHeldForMs);
+                            break;
+                        }
+                    }
+
                     this._trackFire = null;
                 }
             } else {
@@ -234,20 +248,7 @@ export class FireModeHandler extends ModeHandler {
 
     endTrackFire(): void {
         if (this._trackFire) {
-            switch (this.world.fireSelector) {
-                case FireSelector.enum.burst:
-                    this.world.burstFire(this._trackFire.worldPoses);
-                    break;
-
-                case FireSelector.enum.auto: {
-                    const { frameTime } = this.world;
-                    const triggerHeldForMs = frameTime - this._trackFire.startTime;
-                    this.world.autoFire(this._trackFire.worldPoses, triggerHeldForMs);
-                    break;
-                }
-            }
-
-            this._trackFire.lingerInMs = 2000;
+            this._trackFire.lingerInMs = FIRE_MODE_LINGER_TIME_IN_MS;
         }
     }
 

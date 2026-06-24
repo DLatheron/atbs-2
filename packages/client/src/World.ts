@@ -80,6 +80,7 @@ export class World {
     private _frameTime: number;
     private _tracers?: Tracer[];
     private _renderPlugins: RenderPlugin[];
+    private _drawSights: boolean;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -119,6 +120,7 @@ export class World {
         this._frameTime = 0;
         this._tracers = undefined;
         this._renderPlugins = [];
+        this._drawSights = false;
     }
 
     get hasMap(): boolean {
@@ -205,6 +207,17 @@ export class World {
     }
 
     set renderMode(value: RenderMode) {
+        switch (value) {
+            case RenderMode.enum.FIRE_MODE:
+                this._drawSights = true;
+                break;
+
+            case RenderMode.enum.MAP_MODE:
+            case RenderMode.enum.UI_MODE:
+                this._drawSights = false;
+                break;
+        }
+
         this._renderMode = value;
     }
 
@@ -331,6 +344,13 @@ export class World {
         // TODO: Trigger the simulation time...
         // TODO: Should be do a renderer plugin thing here???
 
+        this._drawSights = false;
+
+        const completionCallback = () => {
+            completeCallback();
+            this._drawSights = true;
+        };
+
         this.addRenderPlugin({
             get name() {
                 return "Tracers";
@@ -373,8 +393,7 @@ export class World {
                         DrawProjectile(camera, context, headPos, tailPos, intensity);
                     }
                 } else {
-                    // this.gameStateManager.onTarget = undefined;
-                    completeCallback();
+                    completionCallback();
                     return true;
                 }
 
@@ -588,7 +607,7 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         time: number
     ) {
-        if (!this.hasUnitWeapon || this.renderMode !== RenderMode.enum.FIRE_MODE) {
+        if (!this.hasUnitWeapon || !this._drawSights) {
             return;
         }
 
