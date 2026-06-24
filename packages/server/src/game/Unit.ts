@@ -23,12 +23,12 @@ import {
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
+    ITilePos,
     Maths,
     Orientation,
     relativeDirection,
     rotateOrientation,
     TilePos,
-    TilePosRecipe,
     Vec2
 } from "@atbs/maths";
 import type { Side } from "./Side.js";
@@ -101,7 +101,7 @@ export type UnitRecipe = z.infer<typeof UnitRecipe>;
 
 export const UnitOverrides = z
     .object({
-        location: TilePosRecipe,
+        location: ITilePos,
         orientation: z.enum(Orientation).optional().default(Orientation.CENTER)
     })
     .partial();
@@ -151,7 +151,7 @@ export class Unit extends SceneObject {
             strength: setDefaultAttribute(recipe.attributes.strength)
         };
         this._inventory = new Inventory(this._recipe.inventory, itemManager);
-        this._location = overrides.location ? new TilePos(overrides.location) : null;
+        this._location = overrides.location ? TilePos.parse(overrides.location) : null;
         this._orientation = recipe.isDirectional
             ? (overrides.orientation ?? Orientation.NORTH)
             : (overrides.orientation ?? Orientation.CENTER);
@@ -368,7 +368,7 @@ export class Unit extends SceneObject {
                 type: "server:camera:move:to",
                 payload: {
                     target: "tile",
-                    tilePos: [mapLocation.col, mapLocation.row],
+                    tilePos: mapLocation,
                     trackingSpeed: TrackingSpeed.enum.MEDIUM
                 }
             },
@@ -402,7 +402,7 @@ export class Unit extends SceneObject {
                         type: "server:map:update",
                         payload: [
                             {
-                                tilePos: [mapLocation.col, mapLocation.row],
+                                tilePos: mapLocation,
                                 tileByRenderMode: {
                                     [RenderMode.enum.MAP_MODE]: tile.getRenderList({
                                         renderMode: RenderMode.enum.MAP_MODE,
@@ -476,7 +476,7 @@ export class Unit extends SceneObject {
                     type: "server:map:update",
                     payload: [
                         {
-                            tilePos: [srcPos.col, srcPos.row],
+                            tilePos: srcPos,
                             tileByRenderMode: {
                                 [RenderMode.enum.MAP_MODE]: srcTile.getRenderList({
                                     renderMode: RenderMode.enum.MAP_MODE,
@@ -498,7 +498,7 @@ export class Unit extends SceneObject {
         messageRouter.send(
             {
                 type: "server:unit:selected:update",
-                payload: { location: [this.location.col, this.location.row] }
+                payload: { location: this.location }
             },
             this.side.id
         );
@@ -510,7 +510,7 @@ export class Unit extends SceneObject {
                     type: "server:map:update",
                     payload: [
                         {
-                            tilePos: [dstPos.col, dstPos.row],
+                            tilePos: dstPos,
                             tileByRenderMode: {
                                 [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
                                     renderMode: RenderMode.enum.MAP_MODE,
@@ -528,7 +528,7 @@ export class Unit extends SceneObject {
                     type: "server:camera:move:to",
                     payload: {
                         target: "tile",
-                        tilePos: [dstPos.col, dstPos.row],
+                        tilePos: dstPos,
                         trackingSpeed: TrackingSpeed.enum.MEDIUM
                     }
                 }
@@ -796,7 +796,7 @@ export class Unit extends SceneObject {
             id: this.id,
             name: this.name,
             description: this.description,
-            location: [this.mapLocation.col, this.mapLocation.row],
+            location: this.mapLocation,
             isDirectional: this.isDirectional,
             orientation: this.orientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,

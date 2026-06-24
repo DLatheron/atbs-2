@@ -135,8 +135,8 @@ export class MapModeHandler extends ModeHandler {
         this.world.sendMessage({
             type: "client:game:tile:click",
             payload: {
-                tilePos: [tilePos.col, tilePos.row],
-                worldPos: [worldPos.x, worldPos.y]
+                tilePos,
+                worldPos
             }
         });
     }
@@ -151,7 +151,7 @@ export class MapModeHandler extends ModeHandler {
         this._tileInfoQuery.timerId = window.setTimeout(() => {
             this.world.sendMessage({
                 type: "client:game:tile:info",
-                payload: { tilePos: [tilePos.col, tilePos.row] }
+                payload: { tilePos }
             });
         }, TILE_INFO_QUERY_DEBOUNCE_IN_MS);
     }

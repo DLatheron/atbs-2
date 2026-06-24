@@ -121,6 +121,9 @@ importers:
       zod:
         specifier: ^4.4.3
         version: 4.4.3
+      zod-class:
+        specifier: ^0.0.18
+        version: 0.0.18(zod@4.4.3)
 
   packages/misc:
     dependencies:
@@ -2136,6 +2139,10 @@ packages:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
 
+  type-fest@4.41.0:
+    resolution: {integrity: sha512-TeTSQ6H5YHvpqVwBRcnLDCBnDOHWYu7IvGbHT6N8AOymcr9PJGjc1GTtiWZTYg0NCgYwvnYWEkVChQAr9bjfwA==}
+    engines: {node: '>=16'}
+
   type-is@2.1.0:
     resolution: {integrity: sha512-faYHw0anBbc/kWF3zFTEnxSFOAGUX9GFbOBthvDdLsIlEoWOFOtS0zgCiQYwIskL9iGXZL3kAXD8OoZ4GmMATA==}
     engines: {node: '>= 18'}
@@ -2307,6 +2314,11 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  zod-class@0.0.18:
+    resolution: {integrity: sha512-wWWa6u56ualID4zf0DGgDhdDjYI7lP3XphIFBam+sgodMZOrad8lxAFchqBGq1uuGPAel/hIjHITLc5D+TowXg==}
+    peerDependencies:
+      zod: ^3
 
   zod-deep-partial@1.4.4:
     resolution: {integrity: sha512-aWkPl7hVStgE01WzbbSxCgX4O+sSpgt8JOjvFUtMTF75VgL6MhWQbiZi+AWGN85SfSTtI9gsOtL1vInoqfDVaA==}
@@ -4205,6 +4217,8 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
 
+  type-fest@4.41.0: {}
+
   type-is@2.1.0:
     dependencies:
       content-type: 2.0.0
@@ -4359,6 +4373,11 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zod-class@0.0.18(zod@4.4.3):
+    dependencies:
+      type-fest: 4.41.0
+      zod: 4.4.3
 
   zod-deep-partial@1.4.4(zod@4.4.3):
     dependencies:

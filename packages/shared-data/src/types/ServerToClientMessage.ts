@@ -18,8 +18,8 @@ import {
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
-import { TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
+import { IVec2, ITilePos } from "@atbs/maths";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -149,12 +149,12 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.discriminatedUnion("target", [
             z.object({
                 target: z.literal("world"),
-                worldPos: Vec2Recipe,
+                worldPos: IVec2,
                 trackingSpeed: z.number()
             }),
             z.object({
                 target: z.literal("tile"),
-                tilePos: TilePosRecipe,
+                tilePos: ITilePos,
                 trackingSpeed: z.number()
             })
         ])
@@ -167,7 +167,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         type: z.literal("server:map:update"),
         payload: z.array(
             z.object({
-                tilePos: TilePosRecipe,
+                tilePos: ITilePos,
                 tileByRenderMode: z.object({
                     [RenderMode.enum.MAP_MODE]: RenderList,
                     [RenderMode.enum.FIRE_MODE]: RenderList

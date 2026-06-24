@@ -14,7 +14,7 @@ import {
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
-import { TilePosRecipe } from "@atbs/maths";
+import { TilePos } from "@atbs/maths";
 
 export const Slot = z.object({
     id: ItemId,
@@ -115,7 +115,7 @@ export type ItemRecipe = z.infer<typeof ItemRecipe>;
 
 export const ItemOverrides = z
     .object({
-        location: TilePosRecipe,
+        location: TilePos,
         quantity: Quantity
     })
     .partial();

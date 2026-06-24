@@ -94,8 +94,8 @@ export class Projectile {
 
     getTracer(): Tracer {
         return {
-            srcPos: this.srcPos.toRecipe(),
-            dstPos: this.dstPos.toRecipe(),
+            srcPos: this.srcPos,
+            dstPos: this.dstPos,
             flightTimeInMs: (this.maxRange / this.velocity) * 1000,
             maxRange: this.maxRange,
             visual: this._props.projectileRecipe.visual

@@ -1,14 +1,8 @@
 import { z } from "zod";
+import { Z } from "zod-class";
 import { Clamp, Lerp } from "./Maths.js";
 import { Orientation } from "./Orientation.js";
 import { TilePos } from "./TilePos.js";
-
-export const Vec2Recipe = z.tuple([z.number(), z.number()]);
-export type Vec2Recipe = z.infer<typeof Vec2Recipe>;
-
-export function isVec2Recipe(arg: unknown): arg is Vec2Recipe {
-    return arg !== null && arg !== undefined && Array.isArray(arg) && arg.length === 2;
-}
 
 export const IVec2 = z.object({
     x: z.number(),
@@ -20,28 +14,45 @@ export function isIVec2(arg: unknown): arg is IVec2 {
     return arg !== null && arg !== undefined && typeof arg === "object" && "x" in arg && "y" in arg;
 }
 
-export class Vec2 implements IVec2 {
-    public x: number;
-    public y: number;
-
+export class Vec2
+    extends Z.class({
+        x: z.number(),
+        y: z.number()
+    })
+    implements IVec2
+{
     constructor();
+    constructor(vecObject: IVec2);
+    constructor(vecArray: [number, number]);
     constructor(x: number, y: number);
-    constructor(recipe: Readonly<Vec2Recipe>);
-    constructor(vec: IVec2);
     constructor(...args: unknown[]) {
-        if (isVec2Recipe(args[0])) {
-            this.x = args[0][0];
-            this.y = args[0][1];
-            return;
-        }
-        if (isIVec2(args[0])) {
-            this.x = args[0].x;
-            this.y = args[0].y;
-            return;
-        }
+        switch (args.length) {
+            case 0:
+                super({ x: 0, y: 0 });
+                break;
 
-        this.x = typeof args[0] === "number" ? args[0] : 0;
-        this.y = typeof args[1] === "number" ? args[1] : 0;
+            case 1:
+                if (Array.isArray(args[0]) && args[0].length === 2) {
+                    if (typeof args[0][0] === "number" && typeof args[0][1] === "number") {
+                        super({ x: args[0][0], y: args[0][1] });
+                    }
+                } else {
+                    if (isIVec2(args[0])) {
+                        super(args[0]);
+                    }
+                }
+                break;
+
+            case 2:
+                if (typeof args[0] === "number" && typeof args[1] === "number") {
+                    super({ x: args[0], y: args[1] });
+                }
+                break;
+
+            default:
+                throw new Error(`Invalid arguments to Vec2: ${JSON.stringify(args)}`);
+                break;
+        }
     }
 
     normalise(): Vec2 {
@@ -81,6 +92,9 @@ export class Vec2 implements IVec2 {
     }
 
     divide(length: number): Vec2 {
+        if (length === 0) {
+            throw new Error("Divide by zero");
+        }
         return new Vec2(this.x / length, this.y / length);
     }
 
@@ -121,7 +135,7 @@ export class Vec2 implements IVec2 {
         return new Vec2(Math.floor(this.x), Math.floor(this.y));
     }
 
-    toTilePos(tileSize: number) {
+    toTilePos(tileSize: number): TilePos {
         return new TilePos({
             col: Math.floor(this.x * tileSize),
             row: Math.floor(this.y * tileSize)
@@ -188,10 +202,6 @@ export class Vec2 implements IVec2 {
 
     toString(): string {
         return `(${this.x}, ${this.y})`;
-    }
-
-    toRecipe(): Vec2Recipe {
-        return [this.x, this.y];
     }
 
     static IsEqual(a?: IVec2, b?: IVec2, threshold = 0.00001) {
@@ -286,32 +296,6 @@ export class Vec2 implements IVec2 {
     static StepUpLeft(): Vec2 {
         return new Vec2(-1, -1);
     }
-
-    // Overridding this serialization breaks too much stuff...
-    // /**
-    //  * Makes a class not derived from Serializable suitable for passing
-    //  * over the wire in a similar way.
-    //  * @returns {Object} to serialize to JSON instead of the default.
-    //  */
-    // toJSON(): { $ref: { type: string, instance: unknown} } {
-    //     return {
-    //         $ref: {
-    //             type: "Vec2",
-    //             instance: { x: this.x, y: this.y }
-    //         }
-    //     };
-    // }
-
-    // static Vec2FromRecipe(recipe: Vec2Recipe, factory: RecipeFactory): Vec2 {
-    //     return new Vec2(Vec2.Vec2RecipeToProps(recipe, factory));
-    // }
-
-    // static Vec2RecipeToProps(recipe: Vec2Recipe, _factory: RecipeFactory): IVec2 {
-    //     return {
-    //         x: recipe[0],
-    //         y: recipe[1]
-    //     };
-    // }
 
     static OrientationToDirectionVector(orientation: Orientation): Vec2 {
         switch (orientation) {

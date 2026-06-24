@@ -423,7 +423,7 @@ export class World {
         this._throwCallback({
             unitId: this.unit.id,
             itemId: this.unit.itemInUse.id,
-            worldPos: [worldPos.x, worldPos.y]
+            worldPos
         });
     }
 
@@ -433,7 +433,7 @@ export class World {
             weaponId: this.weapon.id,
             fireSelector: this.fireSelector,
             fireMode: this.fireMode,
-            worldPoses: [[worldPos.x, worldPos.y]],
+            worldPoses: [worldPos],
             triggerHeldTimeInMs: 0
         });
     }
@@ -444,7 +444,7 @@ export class World {
             weaponId: this.weapon.id,
             fireSelector: this.fireSelector,
             fireMode: this.fireMode,
-            worldPoses: worldPoses.map((worldPos) => [worldPos.x, worldPos.y]),
+            worldPoses: worldPoses.map((worldPos) => worldPos),
             triggerHeldTimeInMs: 0
         });
     }
@@ -455,7 +455,7 @@ export class World {
             weaponId: this.weapon.id,
             fireSelector: this.fireSelector,
             fireMode: this.fireMode,
-            worldPoses: worldPoses.map((worldPos) => [worldPos.x, worldPos.y]),
+            worldPoses: worldPoses.map((worldPos) => worldPos),
             triggerHeldTimeInMs
         });
     }

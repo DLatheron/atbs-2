@@ -139,7 +139,7 @@ export class Tile implements IRenderableEntity {
         const { terrain, topmostUnit } = this;
 
         return {
-            tilePos: [this._location.col, this._location.row],
+            tilePos: this._location,
             terrain: {
                 name: terrain.name,
                 uiImage: terrain.getRenderList({
