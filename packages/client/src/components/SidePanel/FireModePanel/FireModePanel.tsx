@@ -35,7 +35,6 @@ export interface FireModePanelProps {
     onRotateTo: (orientation: Orientation) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
     onEndFireMode: () => void;
-    setIsOnTarget: (onTarget: OnTarget) => void;
 
     sx?: SxProps;
 }
@@ -49,7 +48,6 @@ export function FireModePanel({
     onRotateTo,
     onChangeFireSelector,
     onEndFireMode,
-    setIsOnTarget,
     sx
 }: FireModePanelProps) {
     const keyMap = useMemo(
@@ -98,11 +96,7 @@ export function FireModePanel({
                     onDirectionChange={onRotateTo}
                 />
                 <Box>
-                    <OnTargetComponent
-                        isOnTarget={isOnTarget}
-                        setIsOnTarget={setIsOnTarget}
-                        sx={{ mb: 1 }}
-                    />
+                    <OnTargetComponent isOnTarget={isOnTarget} sx={{ mb: 1 }} />
                     <AttributesComponent
                         title="Attributes"
                         attributes={[

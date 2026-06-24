@@ -36,8 +36,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         onEndTurn,
         onEndError,
         onFireMode,
-        onEndFireMode,
-        setIsOnTarget
+        onEndFireMode
     } = useActionPage();
 
     const { world } = useWorld();
@@ -158,7 +157,6 @@ export function ActionPage({ visible }: ActionPageProps) {
                     unit={unit}
                     unitWeapon={unitWeapon}
                     isOnTarget={isOnTarget}
-                    setIsOnTarget={setIsOnTarget}
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
                     onEndFireMode={onEndFireMode}

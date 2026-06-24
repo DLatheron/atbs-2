@@ -28,11 +28,33 @@ import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
 import { MapMode } from "./MapMode";
-import { DrawLaserSight, DrawRangeSight } from "./RenderHelpers";
+import { DrawLaserSight, DrawProjectile, DrawRangeSight } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
+import { VisualTracer } from "./Tracer";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
+
+export interface RenderPluginUpdateProps {
+    time: number;
+    frameDelta: number;
+    simulationTime: number;
+}
+
+export interface RenderPluginRenderProps {
+    time: number;
+    frameDelta: number;
+    simulationTime: number;
+    camera: Camera2d;
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+}
+
+export interface RenderPlugin {
+    get name(): string;
+
+    update?: (props: RenderPluginUpdateProps) => boolean;
+    render?: (props: RenderPluginRenderProps) => boolean;
+}
 
 export class World {
     private readonly _camera: Camera2d;
@@ -57,6 +79,7 @@ export class World {
     private _fireModeEx: FireModeEx;
     private _frameTime: number;
     private _tracers?: Tracer[];
+    private _renderPlugins: RenderPlugin[];
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -95,6 +118,7 @@ export class World {
         this._fireModeEx = FireModeEx.enum.aimed;
         this._frameTime = 0;
         this._tracers = undefined;
+        this._renderPlugins = [];
     }
 
     get hasMap(): boolean {
@@ -293,15 +317,102 @@ export class World {
         return this._frameTime;
     }
 
-    setTracers(tracers: Tracer[]): void {
+    setTracers(tracers: Tracer[], completeCallback: () => void): void {
         // TODO: Reset the simulation time.
 
         this._tracers = tracers;
 
-        console.info(this._tracers);
+        const visualTracers = this._tracers.map(
+            (trace) => new VisualTracer(this._timer.time, trace)
+        );
+
+        this._timer.resume();
 
         // TODO: Trigger the simulation time...
         // TODO: Should be do a renderer plugin thing here???
+
+        this.addRenderPlugin({
+            get name() {
+                return "Tracers";
+            },
+
+            update({ time }: RenderPluginUpdateProps) {
+                if (visualTracers) {
+                    // Work backwards through the list so we can delete them safely whilst iterating.
+                    for (let i = visualTracers.length - 1; i >= 0; i--) {
+                        const projectile = visualTracers[i];
+
+                        const projectileAlive = projectile.update({
+                            simulationTime: time
+                        });
+
+                        if (!projectileAlive) {
+                            visualTracers.splice(i, 1);
+                        }
+                    }
+                }
+
+                // // Only track the average position of the projectiles if it is the initial tracked trace event.
+                // if (projectiles.length && onTarget !== undefined) {
+                //     const averagePos = projectiles
+                //         .reduce((cumulativePos, projectile) => {
+                //             cumulativePos = cumulativePos.add(projectile.headPos);
+                //             return cumulativePos;
+                //         }, Vec2.Zero())
+                //         .divide(projectiles.length);
+
+                //     gameWorld.camera.interpolateToWorldPos(averagePos);
+                // }
+
+                return false;
+            },
+
+            render({ camera, context }: RenderPluginRenderProps) {
+                if (visualTracers.length > 0) {
+                    for (const { headPos, tailPos, intensity } of visualTracers) {
+                        DrawProjectile(camera, context, headPos, tailPos, intensity);
+                    }
+                } else {
+                    // this.gameStateManager.onTarget = undefined;
+                    completeCallback();
+                    return true;
+                }
+
+                return false;
+            }
+        });
+    }
+
+    addRenderPlugin(renderPlugin: RenderPlugin) {
+        this._renderPlugins.push(renderPlugin);
+    }
+
+    removeRenderPlugin(renderPlugin: RenderPlugin) {
+        this._renderPlugins = this._renderPlugins.filter((plugin) => plugin !== renderPlugin);
+    }
+
+    private _updateRenderPlugins(props: RenderPluginUpdateProps) {
+        const renderPlugins = [...this._renderPlugins];
+
+        renderPlugins.forEach((plugin) => {
+            // console.info("Updating render plugin", plugin.name);
+            if (plugin.update?.(props)) {
+                // console.info("Removing render plugin after update", plugin.name);
+                this.removeRenderPlugin(plugin);
+            }
+        });
+    }
+
+    private _renderRenderPlugins(props: RenderPluginRenderProps) {
+        const renderPlugins = [...this._renderPlugins];
+
+        renderPlugins.forEach((plugin) => {
+            // console.info("Rendering render plugin", plugin.name);
+            if (plugin.render?.(props)) {
+                // console.info("Removing render plugin after render", plugin.name);
+                this.removeRenderPlugin(plugin);
+            }
+        });
     }
 
     throw(worldPos: Vec2) {
@@ -412,7 +523,12 @@ export class World {
 
         this.camera.update({ time, frameDelta });
 
-        // TODO: Update tracers...
+        const updateProps: RenderPluginUpdateProps = {
+            time,
+            simulationTime: this._timer.simulationTime,
+            frameDelta
+        };
+        this._updateRenderPlugins(updateProps);
     }
 
     renderWorld(canvasLoopProps: CanvasLoopProps) {
@@ -440,6 +556,15 @@ export class World {
         this.renderSight(context, time);
 
         // TODO: Render tracers...
+        const renderProps: RenderPluginRenderProps = {
+            time,
+            frameDelta,
+            simulationTime: this._timer.simulationTime,
+            camera: this.camera,
+            context: context // offscreenContexts[0],
+        };
+
+        this._renderRenderPlugins(renderProps);
 
         this._interactionHandler?.render?.(canvasLoopProps);
 

@@ -604,9 +604,6 @@ export class Unit extends SceneObject {
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
         const collisionRadius = this._recipe.collision.radius;
 
-        let projectiles: Projectile[] = [];
-        let onTarget: boolean = false;
-
         for (const [shot, toWorldPos] of targetWorldPoses.entries()) {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
             const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
@@ -629,7 +626,7 @@ export class Unit extends SceneObject {
 
             // TODO: Perturn the direction based on the accuracy of this shot.
             const perturbedDirVector = dirVector;
-            onTarget = Math.random() < 0.5;
+            const onTarget = Math.random() < 0.5;
             console.dir({ perturbedDirVector, onTarget });
 
             const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
@@ -675,11 +672,11 @@ export class Unit extends SceneObject {
 
             console.dir({ numProjectiles });
 
-            projectiles = [...Array(numProjectiles).keys()].map((index) => {
+            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
                 const perturbedAngle = startOfSpread + angleScaler * index;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
-                console.dir({ perturbedAngle, directionVector });
+                console.dir({ perturbedAngle, directionVector, fromWorldPos });
 
                 return new Projectile({
                     game,
@@ -697,18 +694,17 @@ export class Unit extends SceneObject {
             console.dir({ projectiles });
 
             // TODO: Move the projectiles forward in time...
-        }
-
-        // TODO: Psuedo tracers - how do we determine visibility?
-        messageRouter.send([
-            {
-                type: "server:fire:trace",
-                payload: {
-                    tracers: projectiles.map((projectile) => projectile.getTracer()),
-                    isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+            // TODO: Psuedo tracers - how do we determine visibility?
+            messageRouter.send([
+                {
+                    type: "server:fire:trace",
+                    payload: {
+                        tracers: projectiles.map((projectile) => projectile.getTracer()),
+                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                    }
                 }
-            }
-        ]);
+            ]);
+        }
 
         /**
             const projectiles = [...Array(numProjectiles).keys()].map((index) => {

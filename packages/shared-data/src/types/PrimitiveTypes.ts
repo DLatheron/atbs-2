@@ -711,6 +711,7 @@ export const Tracer = z.object({
     srcPos: Vec2Recipe,
     dstPos: Vec2Recipe,
     flightTimeInMs: z.number().nonnegative(),
+    maxRange: z.number().nonnegative(),
 
     visual: ProjectileVisual
 });

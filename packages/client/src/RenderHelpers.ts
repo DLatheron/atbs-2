@@ -1,6 +1,48 @@
 import { degreesToRadians, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 
+export function DrawProjectile(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    headPos: Vec2,
+    tailPos: Vec2,
+    intensity: number
+): void {
+    const headRadius = 2;
+    const trailWidth = 2;
+
+    const headCanvasPos = camera.worldToCanvas(headPos);
+    const tailCanvasPos = camera.worldToCanvas(tailPos);
+
+    const hex = Math.floor(255 * intensity);
+    const color = `rgba(${hex}, ${hex}, ${hex}, ${intensity})`;
+    const gradient = context.createLinearGradient(
+        tailCanvasPos.x,
+        tailCanvasPos.y,
+        headCanvasPos.x,
+        headCanvasPos.y
+    );
+    gradient.addColorStop(0, `rgba(${hex}, ${hex}, ${hex}, 0)`);
+    gradient.addColorStop(0.9, color);
+    gradient.addColorStop(1.0, color);
+
+    const bronze = `rgba(134, 125, 56, ${intensity})`;
+    context.fillStyle = bronze;
+    context.strokeStyle = gradient;
+    context.lineWidth = trailWidth;
+
+    context.beginPath();
+    context.moveTo(headCanvasPos.x, headCanvasPos.y);
+    context.lineTo(tailCanvasPos.x, tailCanvasPos.y);
+    context.stroke();
+
+    context.lineWidth = 1;
+
+    context.beginPath();
+    context.arc(headCanvasPos.x, headCanvasPos.y, headRadius, 0, 2 * Math.PI);
+    context.fill();
+}
+
 export function DrawLaserSight(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,

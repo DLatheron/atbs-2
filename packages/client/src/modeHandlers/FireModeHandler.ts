@@ -26,6 +26,7 @@ type TrackFire =
           startTime: number;
           rpm: number;
           trackXShots: number;
+          lingerInMs: number;
       }
     | {
           fireSelector: typeof FireSelector.enum.auto;
@@ -34,6 +35,7 @@ type TrackFire =
           startTime: number;
           rpm: number;
           trackXShots: number;
+          lingerInMs: number;
       };
 
 export class FireModeHandler extends ModeHandler {
@@ -67,13 +69,20 @@ export class FireModeHandler extends ModeHandler {
 
     uninitialse(): void {}
 
-    update() {
+    update({ frameDelta }: { frameDelta: number }) {
         if (this._mapDrag) {
             this._mapDrag.lastCanvasPos = this._mapDrag.currCanvasPos;
         }
 
         if (this._trackFire) {
-            this.trackFire(this._trackFire);
+            if (this._trackFire.lingerInMs > 0) {
+                this._trackFire.lingerInMs = Math.max(this._trackFire.lingerInMs - frameDelta, 0);
+                if (this._trackFire.lingerInMs === 0) {
+                    this._trackFire = null;
+                }
+            } else {
+                this.trackFire(this._trackFire);
+            }
         }
     }
 
@@ -153,7 +162,11 @@ export class FireModeHandler extends ModeHandler {
     }
 
     isEndTrackFire(event: MouseEvent | React.MouseEvent): boolean {
-        return event.button === 0 && !event.altKey;
+        return (
+            event.button === 0 &&
+            !event.altKey &&
+            this.world.fireSelector === FireSelector.enum.auto
+        );
     }
 
     startTrackFire(event: MouseEvent | React.MouseEvent, fireSelector: HandlerFireMode): void {
@@ -170,7 +183,8 @@ export class FireModeHandler extends ModeHandler {
                     worldPoses: [worldPos],
                     startTime: this.world.frameTime,
                     rpm: burstFireMode.rpm,
-                    trackXShots: burstFireMode.ammoUse
+                    trackXShots: burstFireMode.ammoUse,
+                    lingerInMs: 0
                 };
                 break;
             }
@@ -184,7 +198,8 @@ export class FireModeHandler extends ModeHandler {
                     worldPoses: [worldPos],
                     startTime: this.world.frameTime,
                     rpm: autoFireMode.rpm,
-                    trackXShots: this.world.weapon.capacity ?? 1
+                    trackXShots: this.world.weapon.capacity ?? 1,
+                    lingerInMs: 0
                 };
                 break;
             }
@@ -232,7 +247,7 @@ export class FireModeHandler extends ModeHandler {
                 }
             }
 
-            this._trackFire = null;
+            this._trackFire.lingerInMs = 2000;
         }
     }
 

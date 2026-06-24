@@ -32,7 +32,7 @@ export class Projectile {
     constructor(props: ProjectileProps) {
         this._props = props;
 
-        this._srcPos = new Vec2(this.srcPos);
+        this._srcPos = new Vec2(props.srcPos);
         this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
         this._velocity = props.projectileRecipe.visual.velocity;
 
@@ -97,6 +97,7 @@ export class Projectile {
             srcPos: this.srcPos.toRecipe(),
             dstPos: this.dstPos.toRecipe(),
             flightTimeInMs: (this.maxRange / this.velocity) * 1000,
+            maxRange: this.maxRange,
             visual: this._props.projectileRecipe.visual
         };
     }

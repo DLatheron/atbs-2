@@ -212,9 +212,19 @@ export function useActionPage() {
                 setDisabled(disabled);
             }),
 
-            messageManager.registerHandler("server:fire:trace", (_context, payload) => {
+            messageManager.registerHandler("server:fire:trace", async (_context, payload) => {
+                let resolver: (value: unknown) => void;
+                const block = new Promise((resolve) => (resolver = resolve));
+
                 setIsOnTarget(payload.isOnTarget);
-                world.setTracers(payload.tracers);
+                world.setTracers(payload.tracers, () => {
+                    setIsOnTarget(OnTarget.enum.none);
+                    resolver(undefined);
+                });
+
+                console.info("!!! Queue blocked");
+                await block;
+                console.info(">>> Queue unblocked");
             })
         ];
 
