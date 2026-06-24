@@ -31,3 +31,11 @@ export function CalcFallOff(
         return amount * rangeFalloff;
     }
 }
+
+export function roundToScaleMidpoint(value: number, scale: number): number {
+    return (Math.floor(value / scale) + 0.5) * scale;
+}
+
+export function roundToScale(value: number, scale: number): number {
+    return Math.floor(value / scale) * scale;
+}

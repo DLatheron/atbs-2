@@ -186,7 +186,7 @@ export class Aabb {
     //     return tmax >= 0 && tmax >= tmin;
     // }
 
-    intersectRay(pos: Vec2, delta: Vec2) {
+    intersectRay(pos: Vec2, delta: Vec2): Vec2 | undefined {
         // Lifted directly from:
         //   https://dirask.com/posts/JavaScript-calculate-intersection-point-of-two-lines-for-given-4-points-VjvnAj
         // No significant changes made.
@@ -237,7 +237,10 @@ export class Aabb {
         if (intersection) {
             return intersection;
         }
-        return calculateIntersection(pos, delta, bottomLeft, topLeft);
+        intersection = calculateIntersection(pos, delta, bottomLeft, topLeft);
+        if (intersection) {
+            return intersection;
+        }
     }
 
     static IsEqual(a?: Aabb, b?: Aabb, threshold = 0.00001) {

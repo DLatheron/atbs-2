@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { ITilePos, IVec2, Maths, Orientation, TilePos } from "@atbs/maths";
+import { ITilePos, IVec2, Maths, Orientation } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
