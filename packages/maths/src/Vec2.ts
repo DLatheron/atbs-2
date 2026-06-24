@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Clamp, Lerp } from "./Maths.js";
 import { Orientation } from "./Orientation.js";
 import { TilePos } from "./TilePos.js";
+import { Z } from "zod-class";
 
 export const Vec2Recipe = z.tuple([z.number(), z.number()]);
 export type Vec2Recipe = z.infer<typeof Vec2Recipe>;
@@ -20,28 +21,36 @@ export function isIVec2(arg: unknown): arg is IVec2 {
     return arg !== null && arg !== undefined && typeof arg === "object" && "x" in arg && "y" in arg;
 }
 
-export class Vec2 implements IVec2 {
-    public x: number;
-    public y: number;
-
+export class Vec2 extends Z.class({
+    x: z.number(),
+    y: z.number()
+}) {
     constructor();
     constructor(x: number, y: number);
-    constructor(recipe: Readonly<Vec2Recipe>);
-    constructor(vec: IVec2);
+    constructor(vecObject: { x: number; y: number });
+    constructor(vecArray: [number, number]);
     constructor(...args: unknown[]) {
-        if (isVec2Recipe(args[0])) {
-            this.x = args[0][0];
-            this.y = args[0][1];
-            return;
-        }
-        if (isIVec2(args[0])) {
-            this.x = args[0].x;
-            this.y = args[0].y;
-            return;
-        }
+        switch (args.length) {
+            case 0:
+                super({ x: 0, y: 0 });
+                break;
 
-        this.x = typeof args[0] === "number" ? args[0] : 0;
-        this.y = typeof args[1] === "number" ? args[1] : 0;
+            case 1:
+                if (Array.isArray(args[0]) && args[0].length === 2) {
+                    super({ x: args[0][0] as number, y: args[0][1] as number });
+                } else {
+                    super(args[0] as z.infer<typeof Vec2>);
+                }
+                break;
+
+            case 2:
+                super({ x: args[0] as number, y: args[1] as number });
+                break;
+
+            default:
+                throw new Error(`Invalid arguments to Vec2: ${JSON.stringify(args)}`);
+                break;
+        }
     }
 
     normalise(): Vec2 {
@@ -81,6 +90,9 @@ export class Vec2 implements IVec2 {
     }
 
     divide(length: number): Vec2 {
+        if (length === 0) {
+            throw new Error("Divide by zero");
+        }
         return new Vec2(this.x / length, this.y / length);
     }
 
