@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { Maths, Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
+import { ITilePos, IVec2, Maths, Orientation } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
@@ -220,7 +220,7 @@ export const FurnitureSummary = z.object({
 export type FurnitureSummary = z.infer<typeof FurnitureSummary>;
 
 export const TileInfo = z.object({
-    tilePos: TilePosRecipe,
+    tilePos: ITilePos,
     terrain: z.object({
         name: z.string(),
         uiImage: RenderList,
@@ -628,7 +628,7 @@ export const UnitSummary = z.object({
     id: UnitId,
     name: z.string().nonempty(),
     description: Description,
-    location: TilePosRecipe,
+    location: ITilePos,
     orientation: z.enum(Orientation),
     viewAngleInDegrees: z.int().positive(),
     collisionRadius: z.number().positive(),
@@ -687,7 +687,7 @@ export const FireDetails = z.object({
     weaponId: ItemId,
     fireSelector: FireSelector,
     fireMode: FireMode,
-    worldPoses: z.array(Vec2Recipe),
+    worldPoses: z.array(IVec2),
     triggerHeldTimeInMs: z.number().nonnegative()
 });
 export type FireDetails = z.infer<typeof FireDetails>;
@@ -695,7 +695,7 @@ export type FireDetails = z.infer<typeof FireDetails>;
 export const ThrowDetails = z.object({
     unitId: UnitId,
     itemId: ItemId,
-    worldPos: Vec2Recipe
+    worldPos: IVec2
 });
 export type ThrowDetails = z.infer<typeof ThrowDetails>;
 
@@ -708,8 +708,8 @@ export const ProjectileVisual = z.object({
 export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
 
 export const Tracer = z.object({
-    srcPos: Vec2Recipe,
-    dstPos: Vec2Recipe,
+    srcPos: IVec2,
+    dstPos: IVec2,
     flightTimeInMs: z.number().nonnegative(),
     maxRange: z.number().nonnegative(),
 

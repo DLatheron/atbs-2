@@ -237,7 +237,7 @@ export class Ray {
             const sampleInc = new TilePos({
                 [this.rcAxis.major]: this.signAxis.major,
                 [this.rcAxis.minor]: 0
-            } as ITilePos); // TS doesn't fully understand the relationship, i.e. major/minor axis are XOR x/y.
+            } as unknown as ITilePos); // TS doesn't fully understand the relationship, i.e. major/minor axis are XOR x/y.
 
             let finalPos: Vec2 | undefined;
 
@@ -251,7 +251,7 @@ export class Ray {
                 const additionalTilePos = currentTilePos.add({
                     [this.rcAxis.major]: 0,
                     [this.rcAxis.minor]: sampleInc[this.rcAxis.minor]
-                } as ITilePos);
+                } as unknown as ITilePos);
 
                 currentMinorAxisTilePos = minorAxisTilePos;
 

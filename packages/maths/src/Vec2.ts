@@ -1,15 +1,8 @@
 import { z } from "zod";
+import { Z } from "zod-class";
 import { Clamp, Lerp } from "./Maths.js";
 import { Orientation } from "./Orientation.js";
 import { TilePos } from "./TilePos.js";
-import { Z } from "zod-class";
-
-export const Vec2Recipe = z.tuple([z.number(), z.number()]);
-export type Vec2Recipe = z.infer<typeof Vec2Recipe>;
-
-export function isVec2Recipe(arg: unknown): arg is Vec2Recipe {
-    return arg !== null && arg !== undefined && Array.isArray(arg) && arg.length === 2;
-}
 
 export const IVec2 = z.object({
     x: z.number(),
@@ -21,14 +14,17 @@ export function isIVec2(arg: unknown): arg is IVec2 {
     return arg !== null && arg !== undefined && typeof arg === "object" && "x" in arg && "y" in arg;
 }
 
-export class Vec2 extends Z.class({
-    x: z.number(),
-    y: z.number()
-}) {
+export class Vec2
+    extends Z.class({
+        x: z.number(),
+        y: z.number()
+    })
+    implements IVec2
+{
     constructor();
-    constructor(x: number, y: number);
-    constructor(vecObject: { x: number; y: number });
+    constructor(vecObject: IVec2);
     constructor(vecArray: [number, number]);
+    constructor(x: number, y: number);
     constructor(...args: unknown[]) {
         switch (args.length) {
             case 0:
@@ -37,14 +33,20 @@ export class Vec2 extends Z.class({
 
             case 1:
                 if (Array.isArray(args[0]) && args[0].length === 2) {
-                    super({ x: args[0][0] as number, y: args[0][1] as number });
+                    if (typeof args[0][0] === "number" && typeof args[0][1] === "number") {
+                        super({ x: args[0][0], y: args[0][1] });
+                    }
                 } else {
-                    super(args[0] as z.infer<typeof Vec2>);
+                    if (isIVec2(args[0])) {
+                        super(args[0]);
+                    }
                 }
                 break;
 
             case 2:
-                super({ x: args[0] as number, y: args[1] as number });
+                if (typeof args[0] === "number" && typeof args[1] === "number") {
+                    super({ x: args[0], y: args[1] });
+                }
                 break;
 
             default:
@@ -133,7 +135,7 @@ export class Vec2 extends Z.class({
         return new Vec2(Math.floor(this.x), Math.floor(this.y));
     }
 
-    toTilePos(tileSize: number) {
+    toTilePos(tileSize: number): TilePos {
         return new TilePos({
             col: Math.floor(this.x * tileSize),
             row: Math.floor(this.y * tileSize)
@@ -200,10 +202,6 @@ export class Vec2 extends Z.class({
 
     toString(): string {
         return `(${this.x}, ${this.y})`;
-    }
-
-    toRecipe(): Vec2Recipe {
-        return [this.x, this.y];
     }
 
     static IsEqual(a?: IVec2, b?: IVec2, threshold = 0.00001) {
@@ -298,32 +296,6 @@ export class Vec2 extends Z.class({
     static StepUpLeft(): Vec2 {
         return new Vec2(-1, -1);
     }
-
-    // Overridding this serialization breaks too much stuff...
-    // /**
-    //  * Makes a class not derived from Serializable suitable for passing
-    //  * over the wire in a similar way.
-    //  * @returns {Object} to serialize to JSON instead of the default.
-    //  */
-    // toJSON(): { $ref: { type: string, instance: unknown} } {
-    //     return {
-    //         $ref: {
-    //             type: "Vec2",
-    //             instance: { x: this.x, y: this.y }
-    //         }
-    //     };
-    // }
-
-    // static Vec2FromRecipe(recipe: Vec2Recipe, factory: RecipeFactory): Vec2 {
-    //     return new Vec2(Vec2.Vec2RecipeToProps(recipe, factory));
-    // }
-
-    // static Vec2RecipeToProps(recipe: Vec2Recipe, _factory: RecipeFactory): IVec2 {
-    //     return {
-    //         x: recipe[0],
-    //         y: recipe[1]
-    //     };
-    // }
 
     static OrientationToDirectionVector(orientation: Orientation): Vec2 {
         switch (orientation) {

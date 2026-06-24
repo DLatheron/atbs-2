@@ -20,7 +20,7 @@ export class Aabb {
      *   x, y, width, height
      */
     constructor(other: Aabb);
-    constructor(min: IVec2, max: IVec2);
+    constructor(min: Vec2, max: IVec2);
     constructor(x: number, y: number, width: number, height: number);
     constructor(...args: unknown[]) {
         if (args.length === 1 && isAabb(args[0])) {

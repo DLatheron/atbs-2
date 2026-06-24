@@ -9,7 +9,7 @@ import {
     ThrowDetails,
     UnitId
 } from "./PrimitiveTypes.js";
-import { Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
+import { ITilePos, IVec2, Orientation } from "@atbs/maths";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
@@ -64,7 +64,7 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:game:tile:info"),
         payload: z.object({
-            tilePos: TilePosRecipe
+            tilePos: ITilePos
         })
     }),
     z.object({
@@ -74,8 +74,8 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:game:tile:click"),
         payload: z.object({
-            tilePos: TilePosRecipe,
-            worldPos: Vec2Recipe
+            tilePos: ITilePos,
+            worldPos: IVec2
         })
     }),
     z.object({
