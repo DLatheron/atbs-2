@@ -369,15 +369,15 @@ export function DebugDrawArc(
 export function DebugDrawText(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-    text: string,
     worldPos: Vec2,
-    color: IColour,
+    text: string,
+    colour: IColour,
     fontFamily: string = "sans-serif",
     fontSize: number = 20
 ) {
     const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
 
-    context.fillStyle = color.asRGBAColorString;
+    context.fillStyle = colourToRGBA(colour);
     context.font = `${fontSize}px ${fontFamily}`;
     context.fillText(text, canvasPos.x, canvasPos.y);
     context.stroke();
