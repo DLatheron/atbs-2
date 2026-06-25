@@ -1,5 +1,6 @@
 export * from "./Aabb.js";
 export * from "./Colour.js";
+export * from "./DebugGraphics.js";
 export * from "./DefaultMap.js";
 export * as Misc from "./Misc.js";
 export * as Maths from "./Maths.js";

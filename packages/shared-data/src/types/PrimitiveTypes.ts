@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { Colour, IColour, ITilePos, IVec2, Maths, Orientation } from "@atbs/maths";
+import { ITilePos, IVec2, Maths, Orientation } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
@@ -716,42 +716,3 @@ export const Tracer = z.object({
     visual: ProjectileVisual
 });
 export type Tracer = z.infer<typeof Tracer>;
-
-export const DebugTile = z.object({
-    tilePos: ITilePos,
-    fillColour: IColour,
-    strokeColour: IColour.default(Colour.Transparent),
-    strokeThickness: z.number().default(1)
-});
-export type DebugTile = z.infer<typeof DebugTile>;
-
-export const DebugLine = z.object({
-    srcWorldPos: IVec2,
-    dstWorldPos: IVec2,
-    strokeColour: IColour,
-    strokeThickness: z.number().default(1)
-});
-export type DebugLine = z.infer<typeof DebugLine>;
-
-export const DebugCircle = z.object({
-    srcCenterPos: IVec2,
-    radius: z.number(),
-    strokeColour: IColour,
-    fillColour: IColour
-});
-export type DebugCircle = z.infer<typeof DebugCircle>;
-
-export const DebugPoint = z.object({
-    srcCenterPos: IVec2,
-    size: z.number().default(1),
-    colour: IColour
-});
-export type DebugPoint = z.infer<typeof DebugPoint>;
-
-export const DebugGraphics = z.object({
-    tiles: z.array(DebugTile).optional(),
-    lines: z.array(DebugLine).optional(),
-    circles: z.array(DebugCircle).optional(),
-    points: z.array(DebugPoint).optional()
-});
-export type DebugGraphics = z.infer<typeof DebugGraphics>;

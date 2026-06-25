@@ -3,7 +3,6 @@ import { LobbyState } from "./LobbyState.js";
 import {
     ClientMap,
     ClientSummary,
-    DebugGraphics,
     ErrorType,
     FireModeItemSummary,
     ItemSummary,
@@ -20,7 +19,7 @@ import {
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { RenderMode } from "./RenderMode.js";
-import { IVec2, ITilePos } from "@atbs/maths";
+import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -189,7 +188,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:debug:graphics"),
-        payload: DebugGraphics.nullable()
+        payload: z.array(DebugGraphic).nullable()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

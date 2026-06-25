@@ -1,4 +1,6 @@
-import { IVec2, Vec2 } from "./Vec2.js";
+import type { IColour } from "./Colour.js";
+import { type DebugBox, DebugGraphicType } from "./DebugGraphics.js";
+import { type IVec2, Vec2 } from "./Vec2.js";
 import { checkIntersection } from "line-intersect";
 
 export function isAabb(arg: unknown): arg is Aabb {
@@ -245,6 +247,22 @@ export class Aabb {
 
     toString(): string {
         return `min: ${this.min}, max: ${this.max}`;
+    }
+
+    toDebugGraphic(
+        fillColour?: IColour,
+        strokeColour?: IColour,
+        strokeThickness?: number
+    ): DebugBox {
+        return {
+            type: DebugGraphicType.enum.box,
+            centerWorldPos: this.middleCenter,
+            width: this.width,
+            height: this.height,
+            fillColour,
+            strokeColour,
+            strokeThickness
+        };
     }
 
     static IsEqual(a?: Aabb, b?: Aabb, threshold = 0.00001) {

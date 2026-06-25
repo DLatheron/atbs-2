@@ -272,21 +272,21 @@ export function DebugDrawBox(
     worldPos: IVec2,
     width: number,
     height: number,
-    strokeColour: IColour,
+    strokeColour?: IColour,
     strokeThickness?: number,
     fillColour?: IColour
 ) {
     const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
 
-    context.strokeStyle = colourToRGBA(strokeColour);
-    context.lineWidth = strokeThickness ?? 1;
     context.beginPath();
     context.rect(canvasPos.x, canvasPos.y, width, height);
     if (fillColour) {
         context.fillStyle = colourToRGBA(fillColour);
-        context.stroke();
         context.fill();
-    } else {
+    }
+    if (strokeColour) {
+        context.strokeStyle = colourToRGBA(strokeColour);
+        context.lineWidth = strokeThickness ?? 1;
         context.stroke();
     }
 }
@@ -302,10 +302,83 @@ export function DebugDrawLine(
     const srcCanvasPos = camera.worldToCanvas(new Vec2(srcWorldPos));
     const dstCanvasPos = camera.worldToCanvas(new Vec2(dstWorldPos));
 
-    context.strokeStyle = colourToRGBA(strokeColour);
-    context.lineWidth = strokeThickness ?? 1;
     context.beginPath();
     context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
     context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+
+    context.strokeStyle = colourToRGBA(strokeColour);
+    context.lineWidth = strokeThickness ?? 1;
+    context.stroke();
+}
+
+export function DebugDrawPoint(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    worldPos: IVec2,
+    colour: IColour,
+    size: number = 1
+) {
+    const canvasPos = camera.worldToCanvas(
+        new Vec2(Math.round(worldPos.x), Math.round(worldPos.y)).sub({
+            x: size / 2,
+            y: size / 2
+        })
+    );
+
+    context.fillStyle = colourToRGBA(colour);
+    context.fillRect(canvasPos.x, canvasPos.y, size, size);
+}
+
+export function DebugDrawArc(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    centerPos: IVec2,
+    radius: number,
+    startAngleInDegrees: number,
+    endAngleInDegrees: number,
+    clockwise?: boolean,
+    strokeColour?: IColour,
+    strokeThickness?: number,
+    fillColour?: IColour
+) {
+    const centerCanvasPos = camera.worldToCanvas(new Vec2(centerPos));
+    const angleOffsetInDegreesToRealign = 90;
+
+    context.lineWidth = strokeThickness ?? 1;
+    context.beginPath();
+    context.moveTo(centerCanvasPos.x, centerCanvasPos.y);
+    context.arc(
+        centerCanvasPos.x,
+        centerCanvasPos.y,
+        radius,
+        degreesToRadians(startAngleInDegrees - angleOffsetInDegreesToRealign),
+        degreesToRadians(endAngleInDegrees - angleOffsetInDegreesToRealign),
+        clockwise ?? false
+    );
+    context.lineTo(centerCanvasPos.x, centerCanvasPos.y);
+    if (fillColour) {
+        context.fillStyle = colourToRGBA(fillColour);
+        context.fill();
+    }
+    if (strokeColour) {
+        context.strokeStyle = colourToRGBA(strokeColour);
+        context.stroke();
+    }
+}
+
+export function DebugDrawText(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    text: string,
+    worldPos: Vec2,
+    color: IColour,
+    fontFamily: string = "sans-serif",
+    fontSize: number = 20
+) {
+    const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
+
+    context.fillStyle = color.asRGBAColorString;
+    context.font = `${fontSize}px ${fontFamily}`;
+    context.fillText(text, canvasPos.x, canvasPos.y);
     context.stroke();
 }

@@ -1,4 +1,4 @@
-import { Orientation, TilePos } from "@atbs/maths";
+import { DebugGraphicType, type DebugTile, type IColour, Orientation, TilePos } from "@atbs/maths";
 import z from "zod";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
@@ -163,5 +163,19 @@ export class Tile implements IRenderableEntity {
 
     get anythingCollidable() {
         return this.furniture || this.units.length > 0; // || this.vfx.length > 0;
+    }
+
+    toDebugGraphic(
+        fillColour?: IColour,
+        strokeColour?: IColour,
+        strokeThickness?: number
+    ): DebugTile {
+        return {
+            type: DebugGraphicType.enum.tile,
+            tilePos: this.location,
+            fillColour,
+            strokeColour,
+            strokeThickness
+        };
     }
 }

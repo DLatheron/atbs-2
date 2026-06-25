@@ -1,9 +1,6 @@
 import {
     ClientMap,
     ClientToServerMessage,
-    DebugGraphics,
-    DebugLine,
-    DebugTile,
     FireDetails,
     FireMode,
     FireModeEx,
@@ -23,7 +20,7 @@ import { CanvasLoopProps } from "./components/CanvasLoop";
 import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
-import { Orientation, OrientationToRadians } from "@atbs/maths";
+import { DebugGraphic, DebugGraphicType, Orientation, OrientationToRadians } from "@atbs/maths";
 import { ImageCache } from "./ImageCache";
 import { Timer } from "./Timer";
 import { IInteractionHandler } from "./IInteractionHandler";
@@ -32,8 +29,11 @@ import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
 import { MapMode } from "./MapMode";
 import {
+    DebugDrawArc,
     DebugDrawBox,
     DebugDrawLine,
+    DebugDrawPoint,
+    DebugDrawText,
     DrawLaserSight,
     DrawProjectile,
     DrawRangeSight
@@ -90,7 +90,7 @@ export class World {
     private _tracers?: Tracer[];
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
-    private _debugGraphics: DebugGraphics | null;
+    private _debugGraphics: DebugGraphic[] | null;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -341,11 +341,11 @@ export class World {
         return this._frameTime;
     }
 
-    get debugGraphics(): DebugGraphics | null {
+    get debugGraphics(): DebugGraphic[] | null {
         return this._debugGraphics;
     }
 
-    set debugGraphics(value: DebugGraphics | null) {
+    set debugGraphics(value: DebugGraphic[] | null) {
         this._debugGraphics = value;
     }
 
@@ -619,34 +619,83 @@ export class World {
             return;
         }
 
-        const { tiles, lines } = this.debugGraphics;
+        for (const graphic of this.debugGraphics) {
+            switch (graphic.type) {
+                case DebugGraphicType.enum.tile:
+                    DebugDrawBox(
+                        renderProps.camera,
+                        renderProps.context,
+                        this.tileToWorld(graphic.tilePos),
+                        this.map.tileSize,
+                        this.map.tileSize,
+                        graphic.strokeColour,
+                        graphic.strokeThickness,
+                        graphic.fillColour
+                    );
+                    break;
 
-        tiles?.forEach((tile: DebugTile) => {
-            const topLeftWorldPos = this.tileToWorld(tile.tilePos);
-            const { tileSize } = this.map;
+                case DebugGraphicType.enum.box:
+                    DebugDrawBox(
+                        renderProps.camera,
+                        renderProps.context,
+                        graphic.centerWorldPos,
+                        graphic.width,
+                        graphic.height,
+                        graphic.strokeColour,
+                        graphic.strokeThickness,
+                        graphic.fillColour
+                    );
+                    break;
 
-            DebugDrawBox(
-                renderProps.camera,
-                renderProps.context,
-                topLeftWorldPos,
-                tileSize,
-                tileSize,
-                tile.strokeColour,
-                tile.strokeThickness,
-                tile.fillColour
-            );
-        });
+                case DebugGraphicType.enum.line:
+                    DebugDrawLine(
+                        renderProps.camera,
+                        renderProps.context,
+                        graphic.srcWorldPos,
+                        graphic.dstWorldPos,
+                        graphic.strokeColour,
+                        graphic.strokeThickness
+                    );
+                    break;
 
-        lines?.forEach((line: DebugLine) => {
-            DebugDrawLine(
-                renderProps.camera,
-                renderProps.context,
-                line.srcWorldPos,
-                line.dstWorldPos,
-                line.strokeColour,
-                line.strokeThickness
-            );
-        });
+                case DebugGraphicType.enum.point:
+                    DebugDrawPoint(
+                        renderProps.camera,
+                        renderProps.context,
+                        graphic.worldPos,
+                        graphic.colour,
+                        graphic.size
+                    );
+                    break;
+
+                case DebugGraphicType.enum.arc:
+                    DebugDrawArc(
+                        renderProps.camera,
+                        renderProps.context,
+                        graphic.centerWorldPos,
+                        graphic.radius,
+                        graphic.startAngleInDegrees,
+                        graphic.endAngleInDegrees,
+                        graphic.clockwise,
+                        graphic.strokeColour,
+                        graphic.strokeThickness,
+                        graphic.fillColour
+                    );
+                    break;
+
+                case DebugGraphicType.enum.text:
+                    DebugDrawText(
+                        renderProps.camera,
+                        renderProps.context,
+                        graphic.worldPos,
+                        graphic.text,
+                        graphic.colour,
+                        graphic.fontFamily,
+                        graphic.fontSize
+                    );
+                    break;
+            }
+        }
     }
 
     calcUnitPosOutsideCollision(to: Vec2): Vec2 {
