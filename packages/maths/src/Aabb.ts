@@ -243,6 +243,10 @@ export class Aabb {
         }
     }
 
+    toString(): string {
+        return `min: ${this.min}, max: ${this.max}`;
+    }
+
     static IsEqual(a?: Aabb, b?: Aabb, threshold = 0.00001) {
         return Vec2.IsEqual(a?.min, b?.min, threshold) && Vec2.IsEqual(a?.max, b?.max, threshold);
     }

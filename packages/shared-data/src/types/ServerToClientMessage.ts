@@ -3,6 +3,7 @@ import { LobbyState } from "./LobbyState.js";
 import {
     ClientMap,
     ClientSummary,
+    DebugGraphics,
     ErrorType,
     FireModeItemSummary,
     ItemSummary,
@@ -185,6 +186,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             tracers: z.array(Tracer),
             isOnTarget: OnTarget
         })
+    }),
+    z.object({
+        type: z.literal("server:debug:graphics"),
+        payload: DebugGraphics.nullable()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

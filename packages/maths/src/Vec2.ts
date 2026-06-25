@@ -11,7 +11,7 @@ export const IVec2 = z.object({
 export type IVec2 = z.infer<typeof IVec2>;
 
 export function isIVec2(arg: unknown): arg is IVec2 {
-    return arg !== null && arg !== undefined && typeof arg === "object" && "x" in arg && "y" in arg;
+    return IVec2.safeParse(arg).success;
 }
 
 export class Vec2

@@ -1,4 +1,4 @@
-import { degreesToRadians, Vec2 } from "@atbs/maths";
+import { colourToRGBA, degreesToRadians, IColour, IVec2, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 
 export function DrawProjectile(
@@ -264,4 +264,48 @@ export function DrawRoundsThatWillBeFired(
         context.fillText(` x${roundsThatWillBeFired}`, canvasPos.x, canvasPos.y);
         context.stroke();
     }
+}
+
+export function DebugDrawBox(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    worldPos: IVec2,
+    width: number,
+    height: number,
+    strokeColour: IColour,
+    strokeThickness?: number,
+    fillColour?: IColour
+) {
+    const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
+
+    context.strokeStyle = colourToRGBA(strokeColour);
+    context.lineWidth = strokeThickness ?? 1;
+    context.beginPath();
+    context.rect(canvasPos.x, canvasPos.y, width, height);
+    if (fillColour) {
+        context.fillStyle = colourToRGBA(fillColour);
+        context.stroke();
+        context.fill();
+    } else {
+        context.stroke();
+    }
+}
+
+export function DebugDrawLine(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    srcWorldPos: IVec2,
+    dstWorldPos: IVec2,
+    strokeColour: IColour,
+    strokeThickness?: number
+) {
+    const srcCanvasPos = camera.worldToCanvas(new Vec2(srcWorldPos));
+    const dstCanvasPos = camera.worldToCanvas(new Vec2(dstWorldPos));
+
+    context.strokeStyle = colourToRGBA(strokeColour);
+    context.lineWidth = strokeThickness ?? 1;
+    context.beginPath();
+    context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
+    context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+    context.stroke();
 }

@@ -1,6 +1,9 @@
 import {
     ClientMap,
     ClientToServerMessage,
+    DebugGraphics,
+    DebugLine,
+    DebugTile,
     FireDetails,
     FireMode,
     FireModeEx,
@@ -17,7 +20,7 @@ import {
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
 import { CanvasLoopProps } from "./components/CanvasLoop";
-import { TilePos } from "../../maths/dist/TilePos";
+import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
 import { Orientation, OrientationToRadians } from "@atbs/maths";
@@ -28,7 +31,13 @@ import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
 import { MapMode } from "./MapMode";
-import { DrawLaserSight, DrawProjectile, DrawRangeSight } from "./RenderHelpers";
+import {
+    DebugDrawBox,
+    DebugDrawLine,
+    DrawLaserSight,
+    DrawProjectile,
+    DrawRangeSight
+} from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { VisualTracer } from "./Tracer";
 
@@ -81,6 +90,7 @@ export class World {
     private _tracers?: Tracer[];
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
+    private _debugGraphics: DebugGraphics | null;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -121,6 +131,7 @@ export class World {
         this._tracers = undefined;
         this._renderPlugins = [];
         this._drawSights = false;
+        this._debugGraphics = null;
     }
 
     get hasMap(): boolean {
@@ -330,6 +341,14 @@ export class World {
         return this._frameTime;
     }
 
+    get debugGraphics(): DebugGraphics | null {
+        return this._debugGraphics;
+    }
+
+    set debugGraphics(value: DebugGraphics | null) {
+        this._debugGraphics = value;
+    }
+
     setTracers(tracers: Tracer[], completeCallback: () => void): void {
         // TODO: Reset the simulation time.
 
@@ -510,13 +529,13 @@ export class World {
         return new TilePos(Math.ceil(worldPos.x / tileSize), Math.ceil(worldPos.y / tileSize));
     }
 
-    tileToWorld(tilePos: TilePos): Vec2 {
+    tileToWorld(tilePos: ITilePos): Vec2 {
         const { tileSize } = this.map;
 
         return new Vec2(tilePos.col * tileSize, tilePos.row * tileSize);
     }
 
-    tileCenterToWorld(tilePos: TilePos): Vec2 {
+    tileCenterToWorld(tilePos: ITilePos): Vec2 {
         const { tileSize } = this.map;
         const halfTileSize = tileSize / 2;
 
@@ -587,10 +606,47 @@ export class World {
 
         this._interactionHandler?.render?.(canvasLoopProps);
 
+        this._renderDebugGraphics(renderProps);
+
         if (this._renderStarted) {
             this._renderStarted();
             this._renderStarted = null;
         }
+    }
+
+    private _renderDebugGraphics(renderProps: RenderPluginRenderProps) {
+        if (!this.debugGraphics) {
+            return;
+        }
+
+        const { tiles, lines } = this.debugGraphics;
+
+        tiles?.forEach((tile: DebugTile) => {
+            const topLeftWorldPos = this.tileToWorld(tile.tilePos);
+            const { tileSize } = this.map;
+
+            DebugDrawBox(
+                renderProps.camera,
+                renderProps.context,
+                topLeftWorldPos,
+                tileSize,
+                tileSize,
+                tile.strokeColour,
+                tile.strokeThickness,
+                tile.fillColour
+            );
+        });
+
+        lines?.forEach((line: DebugLine) => {
+            DebugDrawLine(
+                renderProps.camera,
+                renderProps.context,
+                line.srcWorldPos,
+                line.dstWorldPos,
+                line.strokeColour,
+                line.strokeThickness
+            );
+        });
     }
 
     calcUnitPosOutsideCollision(to: Vec2): Vec2 {

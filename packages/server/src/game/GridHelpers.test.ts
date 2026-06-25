@@ -36,7 +36,7 @@ describe("GridHelpers", () => {
             ];
             simpleGrid = cloneDeep(emptyGrid);
 
-            grid = { aabb: new Aabb(0, 0, 10, 10), gridScale: 1 };
+            grid = { aabb: new Aabb(0, 0, 10, 10), gridScale: 1, subGrid: false };
             material = vi.mocked(Material);
             game = vi.mocked(Game);
             firingUnit = vi.mocked(Unit);
@@ -84,6 +84,8 @@ describe("GridHelpers", () => {
                     return collisions.length === expectedMaterials.length;
                 }
             );
+
+            console.dir({ samples }, { depth: null });
 
             return {
                 hit,
@@ -228,6 +230,66 @@ describe("GridHelpers", () => {
                 hit: undefined,
                 samples: [],
                 collisions: []
+            });
+        });
+
+        it("should the perform sub-sampling of the grid when enabled, but the ray causes each sub-grid cell to be skipped", () => {
+            grid.subGrid = true;
+            projectile = new Projectile({
+                ...projectileProps,
+                srcPos: new Vec2(0, 0),
+                directionVector: new Vec2(0.5, 1).normalise()
+            });
+
+            simpleGrid[9] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+
+            expect(stepTracker([material])).toStrictEqual({
+                hit: new Vec2(4.5, 9),
+                samples: [
+                    { samplePos: new Vec2(0, 0), sample: 0 },
+                    { samplePos: new Vec2(0, 1), sample: 0 },
+                    { samplePos: new Vec2(1, 2), sample: 0 },
+                    { samplePos: new Vec2(1, 3), sample: 0 },
+                    { samplePos: new Vec2(2, 4), sample: 0 },
+                    { samplePos: new Vec2(2, 5), sample: 0 },
+                    { samplePos: new Vec2(3, 6), sample: 0 },
+                    { samplePos: new Vec2(3, 7), sample: 0 },
+                    { samplePos: new Vec2(4, 8), sample: 0 },
+                    { samplePos: new Vec2(4, 9), sample: 1 }
+                ],
+                collisions: [{ collisionPos: new Vec2(4, 9), material }]
+            });
+        });
+
+        it.skip("should the perform sub-sampling of the grid when enabled, and investigate cells that need it", () => {
+            grid.subGrid = true;
+            projectile = new Projectile({
+                ...projectileProps,
+                srcPos: new Vec2(0.5, 0.5),
+                directionVector: new Vec2(0.75, 1).normalise()
+            });
+
+            simpleGrid[9] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+
+            expect(stepTracker([material])).toStrictEqual({
+                hit: new Vec2(4.5, 9),
+                samples: [
+                    { samplePos: new Vec2(0, 0), sample: 0 },
+                    { samplePos: new Vec2(0, 1), sample: 0 },
+                    { samplePos: new Vec2(1, 1), sample: 0 },
+                    { samplePos: new Vec2(1, 2), sample: 0 },
+                    { samplePos: new Vec2(1, 2), sample: 0 },
+                    { samplePos: new Vec2(2, 2), sample: 0 },
+                    { samplePos: new Vec2(2, 3), sample: 0 },
+                    { samplePos: new Vec2(3, 3), sample: 0 },
+                    { samplePos: new Vec2(3, 4), sample: 0 }
+                    // { samplePos: new Vec2(2, 5), sample: 0 },
+                    // { samplePos: new Vec2(3, 6), sample: 0 },
+                    // { samplePos: new Vec2(3, 7), sample: 0 },
+                    // { samplePos: new Vec2(4, 8), sample: 0 },
+                    // { samplePos: new Vec2(4, 9), sample: 1 }
+                ],
+                collisions: [{ collisionPos: new Vec2(4, 9), material }]
             });
         });
     });

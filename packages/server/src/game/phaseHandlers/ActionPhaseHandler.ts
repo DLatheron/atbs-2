@@ -1,7 +1,7 @@
 import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
-import { TilePos, Vec2 } from "@atbs/maths";
+import { Colour, TilePos, Vec2 } from "@atbs/maths";
 // import type { ClientMessageManager } from "../Game.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
@@ -54,6 +54,33 @@ export class ActionPhaseHandler extends PhaseHandler {
                 from.sendMessage({
                     type: "server:game:tile:info",
                     payload: tile.getTileInfo()
+                });
+                from.sendMessage({
+                    type: "server:debug:graphics",
+                    payload: {
+                        tiles: [
+                            {
+                                tilePos,
+                                fillColour: new Colour({ ...Colour.Green, a: 0.5 }),
+                                strokeColour: Colour.Yellow,
+                                strokeThickness: 1
+                            }
+                        ],
+                        lines: [
+                            {
+                                srcWorldPos: game.map.tileOffsetToWorld(
+                                    tilePos,
+                                    new Vec2({ x: 0, y: 0 })
+                                ),
+                                dstWorldPos: game.map.tileOffsetToWorld(
+                                    tilePos,
+                                    new Vec2({ x: 100, y: 100 })
+                                ),
+                                strokeColour: Colour.White,
+                                strokeThickness: 2
+                            }
+                        ]
+                    }
                 });
             }),
 

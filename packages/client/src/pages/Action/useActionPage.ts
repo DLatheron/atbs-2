@@ -225,6 +225,10 @@ export function useActionPage() {
                 console.info("!!! Queue blocked");
                 await block;
                 console.info(">>> Queue unblocked");
+            }),
+
+            messageManager.registerHandler("server:debug:graphics", async (_context, payload) => {
+                world.debugGraphics = payload;
             })
         ];
 

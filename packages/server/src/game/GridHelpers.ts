@@ -7,6 +7,7 @@ import { roundToScale } from "../../../maths/src/Maths.js";
 export interface Grid {
     aabb: Aabb; // Projectile position of the grid.
     gridScale: number;
+    subGrid: boolean;
 }
 
 /**
@@ -86,13 +87,66 @@ export function stepGrid(
     }
 
     const totalSteps = Math.abs(deltaChange[xyAxis.major]);
+    let lastMinorAxisValue = 0;
 
     for (let step = 0; step < totalSteps; step += grid.gridScale) {
         const stepPos = calcMajorAxisStep(step);
+        // console.dir({ stepPos }, { depth: null });
+
         const samplePos = new Vec2(
             roundToScale(stepPos.x, grid.gridScale),
             roundToScale(stepPos.y, grid.gridScale)
         );
+        const minorAxis = roundToScale(stepPos[xyAxis.minor], grid.gridScale);
+
+        console.info({ minorAxis, lastMinorAxisValue, stepPos });
+        if (minorAxis !== lastMinorAxisValue) {
+            const subSamplePos = new Vec2({
+                ...samplePos,
+                [xyAxis.minor]: roundToScale(lastMinorAxisValue, grid.gridScale)
+            });
+            const subSamplePosAabb = new Aabb(
+                subSamplePos.x,
+                subSamplePos.y,
+                grid.gridScale * 0.999,
+                grid.gridScale * 0.999
+            );
+            const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
+            if (hitsSubSample) {
+                const hitMaterial = sampleHandler(subSamplePos);
+                if (hitMaterial) {
+                    if (handleCollision(subSamplePos, hitMaterial)) {
+                        return stepPos;
+                    }
+                }
+                // console.info(`  Investigate Sub-sample ${subSamplePos}, aabb: ${subSamplePosAabb}, hit: ${hitsSubSample}, srcPos: ${srcPos}, dstPos: ${dstPos}`);
+            } else {
+                // console.info(`  Ignore Sub-sample ${subSamplePos}, aabb: ${subSamplePosAabb}`);
+            }
+        }
+
+        lastMinorAxisValue = minorAxis;
+
+        // // See if we cross the sub-pixel boundary during this step.
+        // if (grid.subGrid) {
+        //     const subStepPos = calcMinorAxisStep(step);
+        //     const subSamplePos = new Vec2(
+        //         roundToScale(subStepPos.x, grid.gridScale),
+        //         roundToScale(subStepPos.y, grid.gridScale)
+        //     );
+
+        //     if (grid.aabb.isPointInside(subSamplePos)) {
+        //         if (!Vec2.IsEqual(samplePos, subSamplePos)) {
+        //             console.dir({ subStepPos }, { depth: null });
+        //             const hitMaterial = sampleHandler(subSamplePos);
+        //             if (hitMaterial) {
+        //                 if (handleCollision(subSamplePos, hitMaterial)) {
+        //                     return stepPos;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         if (!grid.aabb.isPointInside(samplePos)) {
             // We've stepped out the grid.
