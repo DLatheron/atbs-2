@@ -1,4 +1,4 @@
-import { Aabb, Colour, DebugGraphic, DebugGraphicType, TilePos, Vec2 } from "@atbs/maths";
+import { Aabb, Colour, DebugGraphic, DebugGraphicType, Vec2 } from "@atbs/maths";
 import { Projectile } from "./Projectile.js";
 import { Material } from "./Material.js";
 import { XYAxis } from "./Ray.js";
@@ -18,7 +18,10 @@ export type SampleType = z.infer<typeof SampleType>;
 /**
  * Returns a `Material` if the `gridRelativePos` contains a material, otherwise `undefined`.
  */
-export type SampleHandler = (gridRelativePos: Vec2, nextMinorAxisValue: SampleType) => Material | undefined;
+export type SampleHandler = (
+    gridRelativePos: Vec2,
+    nextMinorAxisValue: SampleType
+) => Material | undefined;
 
 /**
  * Returns `true` if the ray cast should stop, otherwise `false`.
@@ -34,7 +37,8 @@ export type CollisionHandler = (gridRelativePos: Vec2, material: Material) => bo
  * subsequent call to `handleCollision`.
  * @param handleCollision A function called after a collision occurs to determine if the projectile should stop its
  * travel.
- * @returns The position of the stopped projectile, or undefined if the project hasn't stopped yet.
+ * @returns The position of the stopped projectile, false if the ray does not intersect with the grid at all or
+ * "out-of-bounds" if the projectile has passed out the other side of the grid.
  */
 export function stepGrid(
     projectile: Readonly<Projectile>,
@@ -42,7 +46,7 @@ export function stepGrid(
     sampleHandler: SampleHandler,
     handleCollision: CollisionHandler,
     debugGraphics?: DebugGraphic[]
-): Vec2 | undefined {
+): Vec2 | false | "out-of-bounds" {
     const { topLeft } = grid.aabb;
     let srcPos: Vec2;
     let dstPos: Vec2;
@@ -55,7 +59,7 @@ export function stepGrid(
         const intersectionPos = grid.aabb.intersectRay(projectile.srcPos, projectile.dstPos);
         if (!intersectionPos) {
             // Ray does not intersect with the grid.
-            return;
+            return false;
         }
         // Source point intersects with the grid, make the destination point grid relative.
         srcPos = intersectionPos.sub(topLeft);
@@ -95,21 +99,22 @@ export function stepGrid(
         };
     }
 
+    // Records which grid squares we have already collided against - to avoid repetitions.
+    const touchedGrid = new Set<string>();
     const lastStep = Math.abs(deltaChange[xyAxis.major]);
-    // const totalSteps = grid.gridScale + roundToScale(Math.abs(deltaChange[xyAxis.major]), grid.gridScale) + 1;
-    let prevMinorAxisValue = 0;
-    // console.dir({ delta: deltaChange[xyAxis.major], totalSteps }, { depth: null });
 
-    const touchedGrid = new Set<string>;
-    // let lastSamplePos: Vec2 | undefined;
-    
     let step = 0;
+    let prevMinorAxisValue = 0;
     let stepPos = calcMajorAxisStep(step);
 
-    function sampleGrid(subSamplePos: Vec2, sampleType: SampleType): Vec2 | undefined {
+    function sampleGrid(subSamplePos: Vec2, sampleType: SampleType): Vec2 | "out-of-bounds" | void {
+        if (!grid.aabb.isPointInside(subSamplePos)) {
+            return "out-of-bounds";
+        }
+
         const gridKey = `${subSamplePos.x}-${subSamplePos.y}`;
         if (touchedGrid.has(gridKey)) {
-            return undefined;
+            return;
         }
 
         const hitMaterial = sampleHandler(subSamplePos, sampleType);
@@ -120,35 +125,39 @@ export function stepGrid(
                 return stepPos;
             }
         }
-
-        return undefined;
     }
 
-    for (/* ever */;;) {
+    for (;;) /* ever */ {
         // Calculate the next position, nextStepPos becomes undefined if we are done.
         const nextStep = Math.min(step + grid.gridScale, lastStep);
         const nextStepPos = calcMajorAxisStep(nextStep);
 
-        debugGraphics?.push({
-            type: DebugGraphicType.enum.point,
-            worldPos: stepPos,
-            size: 6,
-            colour: Colour.Magenta
-        }, {
-            type: DebugGraphicType.enum.text,
-            worldPos: stepPos,
-            text: `${step}`,
-            colour: Colour.White
-        });
+        debugGraphics?.push(
+            {
+                type: DebugGraphicType.enum.point,
+                worldPos: stepPos,
+                size: 6,
+                colour: Colour.Magenta
+            },
+            {
+                type: DebugGraphicType.enum.text,
+                worldPos: stepPos,
+                text: `${step}`,
+                colour: Colour.White
+            }
+        );
 
         const samplePos = new Vec2(
             roundToScale(stepPos.x, grid.gridScale),
             roundToScale(stepPos.y, grid.gridScale)
         );
 
+        //
+        // Check if in the previous sample we stepped across a grid square's minor axis
+        // boundary and therefore need to consider a potentially missed grid square.
+        //
         const minorAxis = roundToScale(stepPos[xyAxis.minor], grid.gridScale);
-        const minorAxisCrossedPreviously = minorAxis !== prevMinorAxisValue
-
+        const minorAxisCrossedPreviously = minorAxis !== prevMinorAxisValue;
         if (minorAxisCrossedPreviously) {
             const subSamplePos = new Vec2({
                 ...samplePos,
@@ -160,33 +169,35 @@ export function stepGrid(
                 grid.gridScale * 0.999,
                 grid.gridScale * 0.999
             );
-            // TODO: We do need this - or can we check the direction instead?
             const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
+
             if (hitsSubSample) {
-                const hitPos = sampleGrid(subSamplePos, "minor-past");
-                if (hitPos) {
-                    return hitPos;
+                const hitResult = sampleGrid(subSamplePos, "minor-past");
+                if (hitResult) {
+                    return hitResult;
                 }
             }
         }
 
-        // TODO: We want some safer sampling of the grid...
-        if (!grid.aabb.isPointInside(samplePos)) {
-            // We've stepped out the grid.
-            break;
+        //
+        // Check the current grid square.
+        //
+        const hitResult = sampleGrid(samplePos, "major");
+        if (hitResult) {
+            return hitResult;
         }
 
-        const hitPos = sampleGrid(samplePos, "major");
-        if (hitPos) {
-            return hitPos;
-        }            
-
-        // We cannot cross the minor axis more quickly than the major axis, therefore we can only cross it
-        // before OR after, NEVER both.
+        //
+        // Check if in the next step we are going to step across a grid square's minor axis
+        // boundary and therefore need to consider a potentially collision BEFORE we visit the
+        // next grid square along the major axis.
+        //
+        // NOTE: We cannot cross the minor axis more quickly than the major axis, therefore we
+        // can only cross it before OR after, NEVER both. So if we've already cross it last time
+        // we can't cross it again so soon.
         if (!minorAxisCrossedPreviously) {
             const nextMinorAxisValue = roundToScale(nextStepPos[xyAxis.minor], grid.gridScale);
             const minorAxisCrossedInFuture = minorAxis !== nextMinorAxisValue;
-            console.dir({ minorAxisCrossedInFuture, minorAxis, nextMinorAxisValue });
             if (minorAxisCrossedInFuture) {
                 const subSamplePos = new Vec2({
                     ...samplePos,
@@ -198,19 +209,18 @@ export function stepGrid(
                     grid.gridScale * 0.999,
                     grid.gridScale * 0.999
                 );
-                // TODO: We do need this - or can we check the direction instead?
                 const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
+
                 if (hitsSubSample) {
-                    const hitPos = sampleGrid(samplePos, "minor-future");
-                    if (hitPos) {
-                        return hitPos;
-                    }     
+                    const hitResult = sampleGrid(subSamplePos, "minor-future");
+                    if (hitResult) {
+                        return hitResult;
+                    }
                 }
             }
         }
 
         prevMinorAxisValue = minorAxis;
-        // lastSamplePos = samplePos;
 
         if (step === lastStep) {
             break;
@@ -219,8 +229,8 @@ export function stepGrid(
         step = nextStep;
         stepPos = nextStepPos;
     }
-     
-    return undefined;
+
+    return "out-of-bounds";
 }
 
 // import { Aabb, Colour, DebugGraphic, DebugGraphicType, Vec2 } from "@atbs/maths";
@@ -419,6 +429,6 @@ export function stepGrid(
 
 //         step = nextStep;
 //     }
-     
+
 //     return undefined;
 // }

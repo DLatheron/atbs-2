@@ -1,10 +1,19 @@
+import z from "zod";
 import type { IColour } from "./Colour.js";
 import { type DebugBox, DebugGraphicType } from "./DebugGraphics.js";
 import { type IVec2, Vec2 } from "./Vec2.js";
 import { checkIntersection } from "line-intersect";
 
-export function isAabb(arg: unknown): arg is Aabb {
-    return arg instanceof Aabb;
+export const IAabb = z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number().positive(),
+    height: z.number().positive()
+});
+export type IAabb = z.infer<typeof IAabb>;
+
+export function isIAabb(arg: unknown): arg is Aabb {
+    return IAabb.safeParse(arg).success;
 }
 
 export function sign(value: number): number {
@@ -21,11 +30,11 @@ export class Aabb {
      * or
      *   x, y, width, height
      */
-    constructor(other: Aabb);
+    constructor(other: IAabb);
     constructor(min: Vec2, max: IVec2);
     constructor(x: number, y: number, width: number, height: number);
     constructor(...args: unknown[]) {
-        if (args.length === 1 && isAabb(args[0])) {
+        if (args.length === 1 && isIAabb(args[0])) {
             const otherAabb = args[0];
 
             this._min = new Vec2(otherAabb.min.x, otherAabb.min.y);

@@ -703,23 +703,27 @@ export class Unit extends SceneObject {
 
             const debugGraphics: DebugGraphic[] = [];
 
-            debugGraphics.push({
-                type: DebugGraphicType.enum.line,
-                srcWorldPos: projectiles[0].srcPos,
-                dstWorldPos: projectiles[0].dstPos,
-                strokeColour: Colour.White,
-                strokeThickness: 2,
-            }, {
-                type: DebugGraphicType.enum.point,
-                worldPos: projectiles[0].srcPos,
-                size: 6,
-                colour: Colour.Red
-            }, {
-                type: DebugGraphicType.enum.point,
-                worldPos: projectiles[0].dstPos,
-                size: 6,
-                colour: Colour.Blue
-            });
+            debugGraphics.push(
+                {
+                    type: DebugGraphicType.enum.line,
+                    srcWorldPos: projectiles[0].srcPos,
+                    dstWorldPos: projectiles[0].dstPos,
+                    strokeColour: Colour.White,
+                    strokeThickness: 2
+                },
+                {
+                    type: DebugGraphicType.enum.point,
+                    worldPos: projectiles[0].srcPos,
+                    size: 6,
+                    colour: Colour.Red
+                },
+                {
+                    type: DebugGraphicType.enum.point,
+                    worldPos: projectiles[0].dstPos,
+                    size: 6,
+                    colour: Colour.Blue
+                }
+            );
 
             const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: false }; // TODO: <-- change soon.
             let sampleOrder = 0;
@@ -733,22 +737,26 @@ export class Unit extends SceneObject {
                     if (tile === undefined) {
                         return undefined;
                     }
-                    debugGraphics.push({
-                        type: DebugGraphicType.enum.tile,
-                        tilePos: tile.location,
-                        fillColour: sampleType === "major"
-                            ? new Colour({ ...Colour.Green, a: 0.25 })
-                            : sampleType === "minor-past"
-                                ? new Colour({ ...Colour.Red, a: 0.25 })
-                                : new Colour({ ...Colour.Blue, a: 0.25 }),
-                        strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
-                    }, {
-                        type: DebugGraphicType.enum.text,
-                        worldPos: map.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
-                        text: `${sampleOrder++}`,
-                        colour: Colour.White,
-                        fontSize: 10
-                    });
+                    debugGraphics.push(
+                        {
+                            type: DebugGraphicType.enum.tile,
+                            tilePos: tile.location,
+                            fillColour:
+                                sampleType === "major"
+                                    ? new Colour({ ...Colour.Green, a: 0.25 })
+                                    : sampleType === "minor-past"
+                                      ? new Colour({ ...Colour.Red, a: 0.25 })
+                                      : new Colour({ ...Colour.Blue, a: 0.25 }),
+                            strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
+                        },
+                        {
+                            type: DebugGraphicType.enum.text,
+                            worldPos: map.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+                            text: `${sampleOrder++}`,
+                            colour: Colour.White,
+                            fontSize: 10
+                        }
+                    );
                     return undefined;
                 },
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
