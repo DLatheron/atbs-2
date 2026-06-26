@@ -8,6 +8,7 @@
     "scripts": {
         "build": "pnpm -r run build",
         "dev": "concurrently -k -n shared,misc,maths,server,client -c yellow,blue,green,red,magenta \"pnpm dev:shared\" \"pnpm dev:maths\" \"pnpm dev:misc\" \"pnpm dev:server\" \"pnpm dev:client\"",
+        "dev:no:server": "concurrently -k -n shared,misc,maths,client -c yellow,blue,green,magenta \"pnpm dev:shared\" \"pnpm dev:maths\" \"pnpm dev:misc\" \"pnpm dev:client\"",
         "dev:shared": "pnpm --filter @atbs/shared-data dev",
         "dev:maths": "pnpm --filter @atbs/misc dev",
         "dev:misc": "pnpm --filter @atbs/maths dev",

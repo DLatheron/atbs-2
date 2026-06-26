@@ -1,15 +1,7 @@
 import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
-import {
-    Colour,
-    DebugGraphicType,
-    DebugTile,
-    OrientationToDegrees,
-    TilePos,
-    Vec2
-} from "@atbs/maths";
-// import type { ClientMessageManager } from "../Game.js";
+import { TilePos, Vec2 } from "@atbs/maths";
 
 export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
@@ -62,79 +54,80 @@ export class ActionPhaseHandler extends PhaseHandler {
                     type: "server:game:tile:info",
                     payload: tile.getTileInfo()
                 });
-                from.sendMessage({
-                    type: "server:debug:graphics",
-                    payload: [
-                        tile.toDebugGraphic(
-                            new Colour({ ...Colour.Green, a: 0.5 }),
-                            Colour.Yellow,
-                            1
-                        ) as DebugTile,
-                        {
-                            type: DebugGraphicType.enum.box,
-                            centerWorldPos: game.map.tileOffsetToWorld(tilePos, new Vec2(-50, -50)),
-                            width: 200,
-                            height: 200,
-                            strokeColour: Colour.Yellow,
-                            strokeThickness: 2
-                        },
-                        {
-                            type: DebugGraphicType.enum.line,
-                            srcWorldPos: game.map.tileOffsetToWorld(
-                                tilePos,
-                                new Vec2({ x: 0, y: 0 })
-                            ),
-                            dstWorldPos: game.map.tileOffsetToWorld(
-                                tilePos,
-                                new Vec2({ x: 100, y: 100 })
-                            ),
-                            strokeColour: Colour.White,
-                            strokeThickness: 2
-                        },
-                        ...(tile.topmostUnit !== null
-                            ? [
-                                  {
-                                      type: DebugGraphicType.enum.arc,
-                                      centerWorldPos: game.map.tileCenterToWorld(tilePos),
-                                      radius: 250,
-                                      startAngleInDegrees:
-                                          OrientationToDegrees[tile.topmostUnit?.orientation] - 45,
-                                      endAngleInDegrees:
-                                          OrientationToDegrees[tile.topmostUnit?.orientation] + 45,
-                                      fillColour: new Colour({ ...Colour.Green, a: 0.5 }),
-                                      strokeColour: Colour.Black
-                                  },
-                                  {
-                                      type: DebugGraphicType.enum.arc,
-                                      centerWorldPos: game.map.tileCenterToWorld(tilePos),
-                                      radius: 200,
-                                      startAngleInDegrees:
-                                          OrientationToDegrees[tile.topmostUnit?.orientation] - 45,
-                                      endAngleInDegrees:
-                                          OrientationToDegrees[tile.topmostUnit?.orientation] + 45,
-                                      clockwise: true,
-                                      fillColour: new Colour({ ...Colour.Red, a: 0.5 }),
-                                      strokeColour: Colour.Black
-                                  },
-                                  {
-                                      type: DebugGraphicType.enum.point,
-                                      worldPos: game.map.tileOffsetToWorld(
-                                          tilePos,
-                                          new Vec2(125, 125)
-                                      ),
-                                      colour: Colour.Blue,
-                                      size: 10
-                                  },
-                                  {
-                                      type: DebugGraphicType.enum.text,
-                                      worldPos: game.map.tileCenterToWorld(tilePos),
-                                      text: tile.topmostUnit.name,
-                                      colour: Colour.Black
-                                  }
-                              ]
-                            : [])
-                    ]
-                });
+
+                // from.sendMessage({
+                //     type: "server:debug:graphics",
+                //     payload: [
+                //         tile.toDebugGraphic(
+                //             new Colour({ ...Colour.Green, a: 0.5 }),
+                //             Colour.Yellow,
+                //             1
+                //         ) as DebugTile,
+                //         {
+                //             type: DebugGraphicType.enum.box,
+                //             centerWorldPos: game.map.tileOffsetToWorld(tilePos, new Vec2(-50, -50)),
+                //             width: 200,
+                //             height: 200,
+                //             strokeColour: Colour.Yellow,
+                //             strokeThickness: 2
+                //         },
+                //         {
+                //             type: DebugGraphicType.enum.line,
+                //             srcWorldPos: game.map.tileOffsetToWorld(
+                //                 tilePos,
+                //                 new Vec2({ x: 0, y: 0 })
+                //             ),
+                //             dstWorldPos: game.map.tileOffsetToWorld(
+                //                 tilePos,
+                //                 new Vec2({ x: 100, y: 100 })
+                //             ),
+                //             strokeColour: Colour.White,
+                //             strokeThickness: 2
+                //         },
+                //         ...(tile.topmostUnit !== null
+                //             ? [
+                //                   {
+                //                       type: DebugGraphicType.enum.arc,
+                //                       centerWorldPos: game.map.tileCenterToWorld(tilePos),
+                //                       radius: 250,
+                //                       startAngleInDegrees:
+                //                           OrientationToDegrees[tile.topmostUnit?.orientation] - 45,
+                //                       endAngleInDegrees:
+                //                           OrientationToDegrees[tile.topmostUnit?.orientation] + 45,
+                //                       fillColour: new Colour({ ...Colour.Green, a: 0.5 }),
+                //                       strokeColour: Colour.Black
+                //                   },
+                //                   {
+                //                       type: DebugGraphicType.enum.arc,
+                //                       centerWorldPos: game.map.tileCenterToWorld(tilePos),
+                //                       radius: 200,
+                //                       startAngleInDegrees:
+                //                           OrientationToDegrees[tile.topmostUnit?.orientation] - 45,
+                //                       endAngleInDegrees:
+                //                           OrientationToDegrees[tile.topmostUnit?.orientation] + 45,
+                //                       clockwise: true,
+                //                       fillColour: new Colour({ ...Colour.Red, a: 0.5 }),
+                //                       strokeColour: Colour.Black
+                //                   },
+                //                   {
+                //                       type: DebugGraphicType.enum.point,
+                //                       worldPos: game.map.tileOffsetToWorld(
+                //                           tilePos,
+                //                           new Vec2(125, 125)
+                //                       ),
+                //                       colour: Colour.Blue,
+                //                       size: 10
+                //                   },
+                //                   {
+                //                       type: DebugGraphicType.enum.text,
+                //                       worldPos: game.map.tileCenterToWorld(tilePos),
+                //                       text: tile.topmostUnit.name,
+                //                       colour: Colour.Black
+                //                   }
+                //               ]
+                //             : [])
+                //     ]
+                // });
             }),
 
             messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {
@@ -275,6 +268,12 @@ export class ActionPhaseHandler extends PhaseHandler {
                 selectedUnit.throw(game, new Vec2(throwDetails.worldPos), this.messageRouter);
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             })
+
+            // messageManager.registerHandler("client:raycast", ({ game }, payload, from) => {
+            //     game.verifyFromPlayingClient(from);
+
+            //     testRayCast(game, payload, from);
+            // })
         ];
     }
 }

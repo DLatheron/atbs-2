@@ -119,6 +119,13 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:unit:throw"),
         payload: ThrowDetails
+    }),
+    z.object({
+        type: z.literal("client:raycast"),
+        payload: z.object({
+            srcWorldPos: IVec2,
+            dstWorldPos: IVec2
+        })
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

@@ -213,7 +213,8 @@ describe("GridHelpers", () => {
                     { samplePos: new Vec2(1, 4), sample: 0 },
                     { samplePos: new Vec2(2, 4), sample: 0 },
                     { samplePos: new Vec2(3, 4), sample: 0 },
-                    { samplePos: new Vec2(4, 4), sample: 0 }
+                    { samplePos: new Vec2(4, 4), sample: 0 },
+                    { samplePos: new Vec2(5, 4), sample: 0 }
                 ],
                 collisions: []
             });

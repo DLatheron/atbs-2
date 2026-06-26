@@ -1,7 +1,7 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
+import { Aabb, ITilePos, Maths, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { HandleMaterialPenetration } from "./Ray.js";
 import { FurnitureManager } from "./FurnitureManager.js";
@@ -141,7 +141,7 @@ export class WorldMap {
         ];
     }
 
-    sampleTile(tilePos: TilePos): Tile | undefined {
+    sampleTile(tilePos: ITilePos): Tile | undefined {
         if (
             tilePos.col < 0 ||
             tilePos.col > this.width - 1 ||

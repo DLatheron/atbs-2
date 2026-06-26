@@ -11,7 +11,6 @@ import {
     FireType,
     getAccuracy,
     getRpm,
-    OnTarget,
     RenderList,
     RenderMode,
     shotsFired,
@@ -23,6 +22,9 @@ import {
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
     ITilePos,
     Maths,
     Orientation,
@@ -41,6 +43,8 @@ import type { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
+import { Material } from "./Material.js";
+import { stepGrid } from "./GridHelpers.js";
 
 const ROTATION_APT_COST = 1;
 const INFINITE_ACTION_POINTS = true;
@@ -598,7 +602,7 @@ export class Unit extends SceneObject {
         );
         console.dir({ targetWorldPoses });
 
-        const maxRange = weapon.loadedRound?.maxRange ?? 0;
+        const maxRange = weapon.loadedRound?.maxRange ?? 0; // TODO:
         console.dir({ maxRange });
 
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
@@ -685,7 +689,11 @@ export class Unit extends SceneObject {
                     index,
                     srcPos: fromWorldPos,
                     directionVector,
-                    projectileRecipe
+                    // TEMPORARY: Override the maxium range of the projectile to be the target position.
+                    projectileRecipe: {
+                        ...projectileRecipe,
+                        maxRange: toWorldPos.sub(fromWorldPos).length
+                    }
                 });
             });
 
@@ -693,17 +701,79 @@ export class Unit extends SceneObject {
             projectiles.sort((a, b) => b.velocity - a.velocity);
             console.dir({ projectiles });
 
+            const debugGraphics: DebugGraphic[] = [];
+
+            debugGraphics.push({
+                type: DebugGraphicType.enum.line,
+                srcWorldPos: projectiles[0].srcPos,
+                dstWorldPos: projectiles[0].dstPos,
+                strokeColour: Colour.White,
+                strokeThickness: 2,
+            }, {
+                type: DebugGraphicType.enum.point,
+                worldPos: projectiles[0].srcPos,
+                size: 6,
+                colour: Colour.Red
+            }, {
+                type: DebugGraphicType.enum.point,
+                worldPos: projectiles[0].dstPos,
+                size: 6,
+                colour: Colour.Blue
+            });
+
+            const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: false }; // TODO: <-- change soon.
+            let sampleOrder = 0;
+
+            stepGrid(
+                projectiles[0],
+                grid,
+                (samplePos, sampleType) => {
+                    console.info({ samplePos }, { depth: null });
+                    const tile = map.sampleTile(map.worldToTile(samplePos));
+                    if (tile === undefined) {
+                        return undefined;
+                    }
+                    debugGraphics.push({
+                        type: DebugGraphicType.enum.tile,
+                        tilePos: tile.location,
+                        fillColour: sampleType === "major"
+                            ? new Colour({ ...Colour.Green, a: 0.25 })
+                            : sampleType === "minor-past"
+                                ? new Colour({ ...Colour.Red, a: 0.25 })
+                                : new Colour({ ...Colour.Blue, a: 0.25 }),
+                        strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
+                    }, {
+                        type: DebugGraphicType.enum.text,
+                        worldPos: map.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+                        text: `${sampleOrder++}`,
+                        colour: Colour.White,
+                        fontSize: 10
+                    });
+                    return undefined;
+                },
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                (_collisionPos: Vec2, _material: Material) => {
+                    return false;
+                },
+                debugGraphics
+            );
+
+            messageRouter.send({
+                type: "server:debug:graphics",
+                payload: debugGraphics
+            });
+
             // TODO: Move the projectiles forward in time...
             // TODO: Psuedo tracers - how do we determine visibility?
-            messageRouter.send([
-                {
-                    type: "server:fire:trace",
-                    payload: {
-                        tracers: projectiles.map((projectile) => projectile.getTracer()),
-                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
-                    }
-                }
-            ]);
+            // messageRouter.send([
+            //     {
+            //         type: "server:fire:trace",
+            //         payload: {
+            //             tracers: projectiles.map((projectile) => projectile.getTracer()),
+            //             isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+            //         }
+            //     }
+            // ]);
         }
 
         /**
