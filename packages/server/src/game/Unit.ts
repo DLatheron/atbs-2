@@ -45,9 +45,9 @@ import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { Material } from "./Material.js";
 import { stepGrid } from "./GridHelpers.js";
+import { config } from "../config/config.schema.js";
 
 const ROTATION_APT_COST = 1;
-const INFINITE_ACTION_POINTS = true;
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
@@ -305,7 +305,7 @@ export class Unit extends SceneObject {
         // Reduce the amount of disorientation based on the number of action points used.
         // this._disorientation = Math.max(0, this._disorientation - aptCost);
 
-        if (!INFINITE_ACTION_POINTS) {
+        if (!config.infiniteActionPoints) {
             this._attributes.actionPoints.value -= aptCost;
 
             messageRouter.send(

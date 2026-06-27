@@ -4,7 +4,9 @@ import z from "zod";
 const Config = z
     .object({
         port: z.int().min(1024).max(65534).optional().default(3000),
-        highlanderGameMode: z.boolean().optional().default(false)
+        highlanderGameMode: z.boolean().optional().default(false),
+        infiniteActionPoints: z.boolean().optional().default(false),
+        infiniteAmmunition: z.boolean().optional().default(false)
     })
     .strict();
 type Config = z.infer<typeof Config>;

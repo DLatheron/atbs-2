@@ -65,9 +65,6 @@ export function stepGrid(
         srcPos = intersectionPos.sub(topLeft);
         dstPos = projectile.dstPos.sub(topLeft);
     }
-    console.dir({ srcPos, dstPos }, { depth: null });
-
-    console.dir({ maxRange: dstPos.sub(srcPos).length, otherMaxRange: projectile.maxRange });
 
     const deltaChange = dstPos.sub(srcPos);
     const xMajorAxis = Math.abs(deltaChange.x) >= Math.abs(deltaChange.y);

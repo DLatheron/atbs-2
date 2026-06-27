@@ -24,6 +24,7 @@ import { unsafeEntries } from "@atbs/misc";
 import { SlotProps, ItemOverrides, ItemRecipe, SlotType, ProjectileRecipe } from "./ItemRecipe.js";
 import type { Unit } from "./Unit.js";
 import cloneDeep from "lodash/cloneDeep.js";
+import { config } from "../config/config.schema.js";
 
 export interface ItemAdditionalData {
     instanceIndex: number;
@@ -475,7 +476,9 @@ export class Item extends SceneObject {
             throw new Error(`Item ${this.id} does not have a loaded round to fire`);
         }
 
-        --loadedRound.quantity;
+        if (!config.infiniteAmmunition) {
+            --loadedRound.quantity;
+        }
 
         if (loadedRound.quantity === 0) {
             (this.loadedMagazine ?? this).emptySlot(SlotType.enum.ammo);
