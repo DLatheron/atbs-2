@@ -47,6 +47,7 @@ export function stepGrid(
     handleCollision: CollisionHandler,
     debugGraphics?: DebugGraphic[]
 ): Vec2 | false | "out-of-bounds" {
+    const { subGrid } = grid;
     const { topLeft } = grid.aabb;
     let srcPos: Vec2;
     let dstPos: Vec2;
@@ -153,27 +154,35 @@ export function stepGrid(
         // Check if in the previous sample we stepped across a grid square's minor axis
         // boundary and therefore need to consider a potentially missed grid square.
         //
-        const minorAxis = roundToScale(stepPos[xyAxis.minor], grid.gridScale);
-        const minorAxisCrossedPreviously = minorAxis !== prevMinorAxisValue;
-        if (minorAxisCrossedPreviously) {
-            const subSamplePos = new Vec2({
-                ...samplePos,
-                [xyAxis.minor]: roundToScale(prevMinorAxisValue, grid.gridScale)
-            });
-            const subSamplePosAabb = new Aabb(
-                subSamplePos.x,
-                subSamplePos.y,
-                grid.gridScale * 0.999,
-                grid.gridScale * 0.999
-            );
-            const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
+        let minorAxis: number;
+        let minorAxisCrossedPreviously: boolean;
 
-            if (hitsSubSample) {
-                const hitResult = sampleGrid(subSamplePos, "minor-past");
-                if (hitResult) {
-                    return hitResult;
+        if (subGrid) {
+            minorAxis = roundToScale(stepPos[xyAxis.minor], grid.gridScale);
+            minorAxisCrossedPreviously = minorAxis !== prevMinorAxisValue;
+            if (minorAxisCrossedPreviously) {
+                const subSamplePos = new Vec2({
+                    ...samplePos,
+                    [xyAxis.minor]: roundToScale(prevMinorAxisValue, grid.gridScale)
+                });
+                const subSamplePosAabb = new Aabb(
+                    subSamplePos.x,
+                    subSamplePos.y,
+                    grid.gridScale * 0.999,
+                    grid.gridScale * 0.999
+                );
+                const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
+
+                if (hitsSubSample) {
+                    const hitResult = sampleGrid(subSamplePos, "minor-past");
+                    if (hitResult) {
+                        return hitResult;
+                    }
                 }
             }
+        } else {
+            minorAxis = 0;
+            minorAxisCrossedPreviously = false;
         }
 
         //
@@ -192,32 +201,34 @@ export function stepGrid(
         // NOTE: We cannot cross the minor axis more quickly than the major axis, therefore we
         // can only cross it before OR after, NEVER both. So if we've already cross it last time
         // we can't cross it again so soon.
-        if (!minorAxisCrossedPreviously) {
-            const nextMinorAxisValue = roundToScale(nextStepPos[xyAxis.minor], grid.gridScale);
-            const minorAxisCrossedInFuture = minorAxis !== nextMinorAxisValue;
-            if (minorAxisCrossedInFuture) {
-                const subSamplePos = new Vec2({
-                    ...samplePos,
-                    [xyAxis.minor]: roundToScale(nextMinorAxisValue, grid.gridScale)
-                });
-                const subSamplePosAabb = new Aabb(
-                    subSamplePos.x,
-                    subSamplePos.y,
-                    grid.gridScale * 0.999,
-                    grid.gridScale * 0.999
-                );
-                const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
+        if (subGrid) {
+            if (!minorAxisCrossedPreviously) {
+                const nextMinorAxisValue = roundToScale(nextStepPos[xyAxis.minor], grid.gridScale);
+                const minorAxisCrossedInFuture = minorAxis !== nextMinorAxisValue;
+                if (minorAxisCrossedInFuture) {
+                    const subSamplePos = new Vec2({
+                        ...samplePos,
+                        [xyAxis.minor]: roundToScale(nextMinorAxisValue, grid.gridScale)
+                    });
+                    const subSamplePosAabb = new Aabb(
+                        subSamplePos.x,
+                        subSamplePos.y,
+                        grid.gridScale * 0.999,
+                        grid.gridScale * 0.999
+                    );
+                    const hitsSubSample = subSamplePosAabb.intersectRay(srcPos, dstPos);
 
-                if (hitsSubSample) {
-                    const hitResult = sampleGrid(subSamplePos, "minor-future");
-                    if (hitResult) {
-                        return hitResult;
+                    if (hitsSubSample) {
+                        const hitResult = sampleGrid(subSamplePos, "minor-future");
+                        if (hitResult) {
+                            return hitResult;
+                        }
                     }
                 }
             }
-        }
 
-        prevMinorAxisValue = minorAxis;
+            prevMinorAxisValue = minorAxis;
+        }
 
         if (step === lastStep) {
             break;

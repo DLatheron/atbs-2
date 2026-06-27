@@ -38,7 +38,8 @@ export class WorldMap {
 
         this._tiles = recipe.tiles.map((tileRow, row) =>
             tileRow.map(
-                (tileRecipe, col) => new Tile(new TilePos(col, row), tileRecipe, furnitureManager)
+                (tileRecipe, col) =>
+                    new Tile(new TilePos(col, row), recipe.tileSize, tileRecipe, furnitureManager)
             )
         );
     }
