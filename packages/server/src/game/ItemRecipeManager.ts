@@ -6,10 +6,10 @@ import { ItemRecipe } from "./ItemRecipe.js";
 const ItemDirectory = "./data/items";
 
 export class ItemRecipeManager {
-    private readonly _ItemRecipeMap = new Map<ItemId, ItemRecipe>();
+    private readonly _itemRecipeMap = new Map<ItemId, ItemRecipe>();
 
     constructor() {
-        this._ItemRecipeMap = new Map<ItemId, ItemRecipe>();
+        this._itemRecipeMap = new Map<ItemId, ItemRecipe>();
     }
 
     async loadItemRecipes(directory = ItemDirectory): Promise<void> {
@@ -35,36 +35,37 @@ export class ItemRecipeManager {
                 this.addRecipe(recipe);
             } catch (error) {
                 console.error(`ERROR Loading Item recipe: ${file}`, error);
+                throw error;
             }
         }
     }
 
-    findRecipe(ItemId: ItemId): ItemRecipe | undefined {
-        return this._ItemRecipeMap.get(ItemId);
+    findRecipe(itemId: ItemId): ItemRecipe | undefined {
+        return this._itemRecipeMap.get(itemId);
     }
 
-    getRecipe(ItemId: ItemId): ItemRecipe {
-        const scenario = this.findRecipe(ItemId);
+    getRecipe(itemId: ItemId): ItemRecipe {
+        const scenario = this.findRecipe(itemId);
         if (!scenario) {
-            throw new Error(`Item recipe ${ItemId} not found`);
+            throw new Error(`Item recipe ${itemId} not found`);
         }
         return scenario;
     }
 
-    hasRecipe(ItemId: ItemId): boolean {
-        return !!this.findRecipe(ItemId);
+    hasRecipe(itemId: ItemId): boolean {
+        return !!this.findRecipe(itemId);
     }
 
-    addRecipe(ItemRecipe: ItemRecipe) {
-        if (this.findRecipe(ItemRecipe.id)) {
-            throw new Error(`Item recipe ${ItemRecipe.id} already registered`);
+    addRecipe(itemRecipe: ItemRecipe) {
+        if (this.findRecipe(itemRecipe.id)) {
+            throw new Error(`Item recipe ${itemRecipe.id} already registered`);
         }
 
-        this._ItemRecipeMap.set(ItemRecipe.id, ItemRecipe);
+        this._itemRecipeMap.set(itemRecipe.id, itemRecipe);
     }
 
-    removeRecipe(ItemId: ItemId): boolean {
-        return this.removeRecipe(ItemId);
+    removeRecipe(itemId: ItemId): boolean {
+        return this.removeRecipe(itemId);
     }
 
     private static readonly _singleton = new ItemRecipeManager();

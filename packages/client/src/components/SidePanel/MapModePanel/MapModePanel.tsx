@@ -1,5 +1,5 @@
 import { TileInfo } from "@atbs/shared-data";
-import { Button, Container, SxProps } from "@mui/material";
+import { Button, Container, Stack, SxProps } from "@mui/material";
 import { TileInfoComponent } from "../../TileInfo";
 
 export interface MapModePanelProps {
@@ -25,32 +25,30 @@ export function MapModePanel({ visible, disabled, tileInfo, onEndTurn, sx }: Map
             sx={{
                 display: "grid",
                 gridTemplateAreas: `
-                    'tileInfo'
-                    'exit-button'
+                    'panel-info'
+                    'bottom-bar'
                 `,
                 gridTemplateRows: "1fr auto",
-                rowGap: 2,
-                p: 1,
+                rowGap: 0,
+                p: 0,
                 ...sx
             }}
         >
-            <Container
-                disableGutters
-                maxWidth={false}
-                sx={{ gridArea: "tileInfo", overflow: "auto" }}
-            >
+            <Stack spacing={1} sx={{ gridArea: "panel-info", p: 1, overflowY: "scroll" }}>
                 <TileInfoComponent tileInfo={tileInfo} />
-            </Container>
-            <Button
-                id="end-turn"
-                title="End the current side's turn"
-                variant="outlined"
-                disabled={disabled}
-                onClick={onEndTurn}
-                sx={{ gridArea: "exit-button" }}
-            >
-                End Turn
-            </Button>
+            </Stack>
+            <Stack spacing={1} sx={{ gridArea: "bottom-bar", px: 1, pb: 1 }}>
+                <Button
+                    id="end-turn"
+                    title="End the current side's turn"
+                    variant="outlined"
+                    disabled={disabled}
+                    onClick={onEndTurn}
+                    sx={{ gridArea: "exit-button" }}
+                >
+                    End Turn
+                </Button>
+            </Stack>
         </Container>
     );
 }

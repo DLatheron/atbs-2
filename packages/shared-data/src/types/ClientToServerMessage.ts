@@ -1,11 +1,20 @@
 import z from "zod";
-import { ClientId, ScenarioId, SideId, UnitId } from "./PrimitiveTypes.js";
-import { Orientation, TilePosRecipe, Vec2Recipe } from "@atbs/maths";
+import {
+    ClientId,
+    FireDetails,
+    FireSelector,
+    ItemId,
+    ScenarioId,
+    SideId,
+    ThrowDetails,
+    UnitId
+} from "./PrimitiveTypes.js";
+import { ITilePos, IVec2, Orientation } from "@atbs/maths";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
 
-export const ClientRenamePayload = z.object({ name: z.string().min(1) });
+export const ClientRenamePayload = z.object({ name: z.string().nonempty() });
 export type ClientRenamePayload = z.infer<typeof ClientRenamePayload>;
 
 export const ClientToServerMessage = z.discriminatedUnion("type", [
@@ -55,7 +64,7 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:game:tile:info"),
         payload: z.object({
-            tilePos: TilePosRecipe
+            tilePos: ITilePos
         })
     }),
     z.object({
@@ -65,8 +74,8 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:game:tile:click"),
         payload: z.object({
-            tilePos: TilePosRecipe,
-            worldPos: Vec2Recipe
+            tilePos: ITilePos,
+            worldPos: IVec2
         })
     }),
     z.object({
@@ -85,6 +94,37 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.object({
             unitId: UnitId,
             orientation: z.enum(Orientation)
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:mode:fire"),
+        payload: UnitId
+    }),
+    z.object({
+        type: z.literal("client:unit:mode:fire:end"),
+        payload: z.null()
+    }),
+    z.object({
+        type: z.literal("client:unit:fire:selector"),
+        payload: z.object({
+            unitId: UnitId,
+            weaponId: ItemId,
+            fireSelector: FireSelector
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:fire"),
+        payload: FireDetails
+    }),
+    z.object({
+        type: z.literal("client:unit:throw"),
+        payload: ThrowDetails
+    }),
+    z.object({
+        type: z.literal("client:raycast"),
+        payload: z.object({
+            srcWorldPos: IVec2,
+            dstWorldPos: IVec2
         })
     })
 ]);

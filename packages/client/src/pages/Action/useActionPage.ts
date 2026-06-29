@@ -4,15 +4,22 @@ import { useServerMessageManager, useWorld } from "../../hooks";
 import {
     ClientMap,
     ErrorType,
+    FireDetails,
+    FireModeItemSummary,
+    FireSelector,
     ImageId,
+    ItemId,
+    OnTarget,
     RenderMode,
     SideSummary,
+    ThrowDetails,
     TileInfo,
     UnitSummary
 } from "@atbs/shared-data";
 import { ImageCache } from "../../ImageCache";
 import { useImageCache } from "../../hooks/useImageCache";
 import { Orientation, TilePos, Vec2 } from "@atbs/maths";
+import { MapMode } from "../../MapMode";
 
 function delay(delayInMs: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, delayInMs));
@@ -22,24 +29,16 @@ export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
     const { imageCache } = useImageCache();
     const { world } = useWorld();
-    const [sidePanelMode, setSidePanelMode] = useState<"map-mode" | "move-mode" | "fire-mode">(
-        "map-mode"
-    );
+    const [sidePanelMode, setSidePanelMode] = useState<MapMode>(MapMode.enum["map-mode"]);
     const [side, setSide] = useState<SideSummary | null>(null);
     const [turn, setTurn] = useState<number>(0);
     const [map, setMap] = useState<ClientMap | null>(null);
     const [unit, setUnit] = useState<UnitSummary | null>(null);
+    const [unitWeapon, setUnitWeapon] = useState<FireModeItemSummary | null>(null);
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
-
-    // // Temporary hack to reload the world if necessary...
-    // useEffect(() => {
-    //     sendMessage({
-    //         type: "client:game:refresh",
-    //         payload: null
-    //     });
-    // }, [sendMessage, world.hasMap]);
+    const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -55,6 +54,9 @@ export function useActionPage() {
                 imageSet.add("throw");
                 imageSet.add("action");
                 imageSet.add("inventory");
+                imageSet.add("fireSingle");
+                imageSet.add("fireBurst");
+                imageSet.add("fireAuto");
 
                 await imageCache.waitForImagesToCache(imageSet);
 
@@ -64,19 +66,49 @@ export function useActionPage() {
                 await world._waitForRenderStart;
             }),
 
-            messageManager.registerHandler("server:unit:selected", (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:move", async (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
 
                 if (payload) {
                     const imageSet = new Set<ImageId>();
                     ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                    if (payload.itemInUse) {
+                        ImageCache.CacheRenderListImages(payload.itemInUse.uiImage, imageSet);
+                    }
+                    await imageCache.waitForImagesToCache(imageSet);
                 }
 
                 setUnit(payload);
+                world.unit = payload;
                 if (payload) {
-                    setSidePanelMode("move-mode");
+                    setSidePanelMode(MapMode.enum["unit-mode"]);
+                    world.mapMode = MapMode.enum["unit-mode"];
                 } else {
-                    setSidePanelMode("map-mode");
+                    setSidePanelMode(MapMode.enum["map-mode"]);
+                    world.mapMode = MapMode.enum["map-mode"];
+                }
+            }),
+
+            messageManager.registerHandler("server:unit:mode:fire", async (_context, payload) => {
+                console.info("$$$ Received unit message $$$", payload?.id);
+
+                if (payload) {
+                    const imageSet = new Set<ImageId>();
+                    ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
+                    for (const weapon of payload.weapons) {
+                        ImageCache.CacheRenderListImages(weapon.uiImage, imageSet);
+                    }
+                    await imageCache.waitForImagesToCache(imageSet);
+                }
+
+                setUnitWeapon(payload);
+                world.unitWeapon = payload;
+                if (payload) {
+                    setSidePanelMode(MapMode.enum["fire-mode"]);
+                    world.mapMode = MapMode.enum["fire-mode"];
+                } else {
+                    setSidePanelMode(MapMode.enum["map-mode"]);
+                    world.mapMode = MapMode.enum["map-mode"];
                 }
             }),
 
@@ -162,6 +194,14 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
                 setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
+                world.unit = merge({}, world.unit, payload);
+            }),
+
+            messageManager.registerHandler("server:unit:weapon:update", (_context, payload) => {
+                setUnitWeapon((weap: FireModeItemSummary | null) =>
+                    weap ? merge({}, weap, payload) : null
+                );
+                world.unitWeapon = merge({}, world.unitWeapon, payload);
             }),
 
             messageManager.registerHandler("server:error", (_context, error) => {
@@ -170,6 +210,25 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:ui:disabled", (_context, disabled) => {
                 setDisabled(disabled);
+            }),
+
+            messageManager.registerHandler("server:fire:trace", async (_context, payload) => {
+                let resolver: (value: unknown) => void;
+                const block = new Promise((resolve) => (resolver = resolve));
+
+                setIsOnTarget(payload.isOnTarget);
+                world.setTracers(payload.tracers, () => {
+                    setIsOnTarget(OnTarget.enum.none);
+                    resolver(undefined);
+                });
+
+                console.info("!!! Queue blocked");
+                await block;
+                console.info(">>> Queue unblocked");
+            }),
+
+            messageManager.registerHandler("server:debug:graphics", async (_context, payload) => {
+                world.debugGraphics = payload;
             })
         ];
 
@@ -231,19 +290,87 @@ export function useActionPage() {
         setError(null);
     }, []);
 
+    const onFireMode = useCallback(() => {
+        if (unit?.id) {
+            sendMessage({
+                type: "client:unit:mode:fire",
+                payload: unit.id
+            });
+        }
+    }, [sendMessage, unit?.id]);
+
+    const onEndFireMode = useCallback(() => {
+        setSidePanelMode(MapMode.enum["unit-mode"]);
+        world.mapMode = MapMode.enum["unit-mode"];
+    }, [world]);
+
+    const onChangeFireSelector = useCallback(
+        (weaponId: ItemId, fireSelector: FireSelector) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:fire:selector",
+                    payload: {
+                        unitId: unit.id,
+                        weaponId,
+                        fireSelector
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onFire = useCallback(
+        (details: FireDetails) => {
+            setDisabled(true);
+
+            sendMessage({
+                type: "client:unit:fire",
+                payload: details
+            });
+        },
+        [sendMessage]
+    );
+
+    useEffect(() => {
+        world.fireCallback = onFire;
+    }, [world, onFire]);
+
+    const onThrow = useCallback(
+        (details: ThrowDetails) => {
+            setDisabled(true);
+
+            sendMessage({
+                type: "client:unit:throw",
+                payload: details
+            });
+        },
+        [sendMessage]
+    );
+
+    useEffect(() => {
+        world.throwCallback = onThrow;
+    }, [world, onThrow]);
+
     return {
         map,
         unit,
+        unitWeapon,
         turn,
         side,
         tileInfo,
         sidePanelMode,
         error,
         disabled,
+        isOnTarget,
         onMove,
         onRotateTo,
+        onChangeFireSelector,
         onEndMovement,
         onEndTurn,
-        onEndError
+        onEndError,
+        onFireMode,
+        onEndFireMode,
+        setIsOnTarget
     };
 }

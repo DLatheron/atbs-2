@@ -21,6 +21,7 @@
         "inUse": 0,
         "items": [
             { "id": "m4+m203.gun" },
+            { "id": "m4.gun" },
             { "id": "m16-30.magazine" },
             { "id": "m16-30.magazine" },
             { "id": "m16-20.magazine" },
@@ -37,7 +38,7 @@
     },
     "collision": {
         "shape": "circle",
-        "radius": 25
+        "radius": 24
     },
     "renderable": {
         "UI_MODE": {
@@ -81,5 +82,11 @@
             "dead": []
         },
         "default": []
+    },
+    "actions": {
+        "throw": {
+            "accuracy": 40,
+            "actionPoints": 20
+        }
     }
 }

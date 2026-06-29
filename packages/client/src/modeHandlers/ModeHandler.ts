@@ -9,12 +9,14 @@ export abstract class ModeHandler implements IInteractionHandler {
 
     private _trackTiles: boolean;
     private _lastTilePos: TilePos | null;
+    private _cursorWorldPos: Vec2 | null;
 
     constructor(world: World, trackTiles: boolean = true) {
         this._world = world;
 
         this._trackTiles = trackTiles;
         this._lastTilePos = null;
+        this._cursorWorldPos = null;
     }
 
     get world(): World {
@@ -37,6 +39,10 @@ export abstract class ModeHandler implements IInteractionHandler {
         this._trackTiles = value;
     }
 
+    get cursorWorldPos(): Vec2 | null {
+        return this._cursorWorldPos;
+    }
+
     static EventToCanvasPos(event: MouseEvent | React.MouseEvent): Vec2 {
         const rect = (event.target as HTMLElement).getBoundingClientRect();
         return new Vec2(event.clientX - rect.x, event.clientY - rect.y);
@@ -44,6 +50,26 @@ export abstract class ModeHandler implements IInteractionHandler {
 
     abstract initialise(): void;
     abstract uninitialse(): void;
+
+    onMouseMove(event: MouseEvent | React.MouseEvent): void {
+        if (!this.world.hasMap) {
+            return;
+        }
+
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        const worldPos = this.camera.canvasToWorld(canvasPos);
+
+        this._cursorWorldPos = worldPos;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    onMouseLeave(_event: MouseEvent | React.MouseEvent): void {
+        if (!this.world.hasMap) {
+            return;
+        }
+
+        this._cursorWorldPos = null;
+    }
 
     trackTile(event: MouseEvent | React.MouseEvent): void {
         const canvasPos = ModeHandler.EventToCanvasPos(event);

@@ -6,7 +6,7 @@ import { ItemManager } from "./ItemManager.js";
 
 export const SideRecipe = z.object({
     id: SideId,
-    name: z.string().min(1),
+    name: z.string().nonempty(),
     description: Description,
     oppositionSideIds: z.array(SideId),
     units: z.array(

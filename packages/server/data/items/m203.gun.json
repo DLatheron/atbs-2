@@ -7,6 +7,7 @@
     "weight": 1.36,
     "renderable": { "default": [] },
     "sight": "ranged",
+    "fireType": "indirect",
     "slotProps": {
         "ammo": {
             "compatibleIds": [
@@ -18,6 +19,7 @@
         }
     },
     "slots": { "ammo": { "id": "40mm-gas.round", "quantity": 1 } },
+    "fireSelector": "single",
     "fireModes": {
         "single": {
             "ammoUse": 1,

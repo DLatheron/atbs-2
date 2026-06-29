@@ -7,14 +7,17 @@ import {
     Explosion,
     ItemType,
     SightType,
-    DamageMap
+    DamageMap,
+    FireSelector,
+    FireType,
+    ProjectileVisual
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
-import { TilePosRecipe } from "@atbs/maths";
+import { TilePos } from "@atbs/maths";
 
 export const Slot = z.object({
-    id: z.string().min(1),
+    id: ItemId,
     quantity: Quantity.optional().default(1)
 });
 export type Slot = z.infer<typeof Slot>;
@@ -28,6 +31,16 @@ export const SlotProps = z.object({
     maxQuantity: Quantity.optional().default(1)
 });
 export type SlotProps = z.infer<typeof SlotProps>;
+
+export const ProjectileRecipe = z.object({
+    numProjectiles: z.number().positive().default(1),
+    maxRange: z.number().positive(),
+    penetration: z.number().nonnegative(),
+    visual: ProjectileVisual,
+    damage: DamageMap,
+    explosion: Explosion.optional()
+});
+export type ProjectileRecipe = z.infer<typeof ProjectileRecipe>;
 
 export const ItemRecipe = z.discriminatedUnion("type", [
     z.object({
@@ -54,7 +67,10 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         sight: SightType.default(SightType.enum.iron),
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
-        fireModes: FireModes
+        fireSelector: FireSelector,
+        fireModes: FireModes,
+        fireType: FireType,
+        spreadAngle: z.number().nonnegative().default(0)
     }),
     z.object({
         id: ItemId,
@@ -66,8 +82,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
-        slots: z.partialRecord(SlotType, Slot).optional(),
-        explosion: Explosion.optional()
+        slots: z.partialRecord(SlotType, Slot).optional()
     }),
     z.object({
         id: ItemId,
@@ -78,11 +93,9 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         quantity: Quantity.default(1),
         weight: Weight,
         renderable: SceneNode,
-        maxRange: z.number().positive(),
+        projectile: ProjectileRecipe,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
-        slots: z.partialRecord(SlotType, Slot).optional(),
-        explosion: Explosion.optional(),
-        damage: DamageMap
+        slots: z.partialRecord(SlotType, Slot).optional()
     }),
     z.object({
         id: ItemId,
@@ -102,7 +115,7 @@ export type ItemRecipe = z.infer<typeof ItemRecipe>;
 
 export const ItemOverrides = z
     .object({
-        location: TilePosRecipe,
+        location: TilePos,
         quantity: Quantity
     })
     .partial();

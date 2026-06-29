@@ -4,18 +4,22 @@ import {
     ClientMap,
     ClientSummary,
     ErrorType,
+    FireModeItemSummary,
+    ItemSummary,
+    OnTarget,
     RenderList,
     ScenarioId,
     ScenarioSummary,
     SideSummary,
     TileInfo,
+    Tracer,
     UnitSummary,
     WaitingFor
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
-import { TilePosRecipe, Vec2Recipe } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
+import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -101,8 +105,24 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: ClientMap
     }),
     z.object({
-        type: z.literal("server:unit:selected"),
+        type: z.literal("server:unit:mode:move"),
         payload: UnitSummary.nullable()
+    }),
+    z.object({
+        type: z.literal("server:unit:selected:update"),
+        payload: zodDeepPartial(UnitSummary)
+    }),
+    z.object({
+        type: z.literal("server:unit:mode:fire"),
+        payload: FireModeItemSummary.nullable()
+    }),
+    z.object({
+        type: z.literal("server:unit:weapon:update"),
+        payload: zodDeepPartial(FireModeItemSummary)
+    }),
+    z.object({
+        type: z.literal("server:unit:mode:throw"),
+        payload: ItemSummary.nullable()
     }),
     z.object({
         type: z.literal("server:turn:start"),
@@ -129,12 +149,12 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.discriminatedUnion("target", [
             z.object({
                 target: z.literal("world"),
-                worldPos: Vec2Recipe,
+                worldPos: IVec2,
                 trackingSpeed: z.number()
             }),
             z.object({
                 target: z.literal("tile"),
-                tilePos: TilePosRecipe,
+                tilePos: ITilePos,
                 trackingSpeed: z.number()
             })
         ])
@@ -144,14 +164,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.number().positive()
     }),
     z.object({
-        type: z.literal("server:unit:selected:update"),
-        payload: zodDeepPartial(UnitSummary)
-    }),
-    z.object({
         type: z.literal("server:map:update"),
         payload: z.array(
             z.object({
-                tilePos: TilePosRecipe,
+                tilePos: ITilePos,
                 tileByRenderMode: z.object({
                     [RenderMode.enum.MAP_MODE]: RenderList,
                     [RenderMode.enum.FIRE_MODE]: RenderList
@@ -162,6 +178,17 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:ui:disabled"),
         payload: z.boolean()
+    }),
+    z.object({
+        type: z.literal("server:fire:trace"),
+        payload: z.object({
+            tracers: z.array(Tracer),
+            isOnTarget: OnTarget
+        })
+    }),
+    z.object({
+        type: z.literal("server:debug:graphics"),
+        payload: z.array(DebugGraphic).nullable()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

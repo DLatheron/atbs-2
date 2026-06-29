@@ -37,6 +37,7 @@ export class ScenarioRecipeManager {
                 this.add(scenarioRecipe);
             } catch (error) {
                 console.error(`ERROR Loading Scenario recipe: ${file}`, error);
+                throw error;
             }
         }
     }

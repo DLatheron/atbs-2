@@ -1,10 +1,19 @@
 import {
+    Action,
+    Actions,
     Attribute,
     AttributeDef,
+    calcFireActionPointCost,
     Description,
     ErrorType,
+    FireMode,
+    FireSelector,
+    FireType,
+    getAccuracy,
+    getRpm,
     RenderList,
     RenderMode,
+    shotsFired,
     TrackingSpeed,
     UnitId,
     UnitSummary,
@@ -13,12 +22,16 @@ import {
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    ITilePos,
     Maths,
     Orientation,
     relativeDirection,
     rotateOrientation,
     TilePos,
-    TilePosRecipe
+    Vec2
 } from "@atbs/maths";
 import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
@@ -27,9 +40,12 @@ import { Clamp } from "../../../maths/src/Maths.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
+import cloneDeep from "lodash/cloneDeep.js";
+import { assert } from "node:console";
+import { Projectile } from "./Projectile.js";
+import { config } from "../config/config.schema.js";
 
 const ROTATION_APT_COST = 1;
-const INFINITE_ACTION_POINTS = false;
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
@@ -59,9 +75,9 @@ const DIRECTIONAL_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
 };
 
 export const UnitRecipe = z.object({
-    id: z.string().min(1),
+    id: UnitId,
     type: UnitType.default(UnitType.enum.human),
-    name: z.string().min(1),
+    name: z.string().nonempty(),
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),
@@ -80,13 +96,14 @@ export const UnitRecipe = z.object({
         shape: z.literal("circle"),
         radius: z.number().positive()
     }),
-    renderable: SceneNode
+    renderable: SceneNode,
+    actions: Actions
 });
 export type UnitRecipe = z.infer<typeof UnitRecipe>;
 
 export const UnitOverrides = z
     .object({
-        location: TilePosRecipe,
+        location: ITilePos,
         orientation: z.enum(Orientation).optional().default(Orientation.CENTER)
     })
     .partial();
@@ -136,7 +153,7 @@ export class Unit extends SceneObject {
             strength: setDefaultAttribute(recipe.attributes.strength)
         };
         this._inventory = new Inventory(this._recipe.inventory, itemManager);
-        this._location = overrides.location ? new TilePos(overrides.location) : null;
+        this._location = overrides.location ? TilePos.parse(overrides.location) : null;
         this._orientation = recipe.isDirectional
             ? (overrides.orientation ?? Orientation.NORTH)
             : (overrides.orientation ?? Orientation.CENTER);
@@ -224,6 +241,32 @@ export class Unit extends SceneObject {
         return this._attributes.constitution.value;
     }
 
+    get strength(): number {
+        return this._attributes.strength.value;
+    }
+
+    get canFire(): boolean {
+        return !!this.itemInUse?.canFire;
+    }
+
+    get canThrow(): boolean {
+        return Action.enum.throw in this._recipe.actions && !!this.itemInUse;
+    }
+
+    getActions(): Actions {
+        const actions = cloneDeep(this._recipe.actions);
+
+        if (Action.enum.throw in actions) {
+            actions[Action.enum.throw].accuracy = this.calcThrowAccuracy(
+                actions[Action.enum.throw].accuracy
+            );
+        }
+
+        console.dir({ actions });
+
+        return actions;
+    }
+
     getRenderList(context: SceneContext): RenderList {
         const unitContext = {
             ...context,
@@ -244,10 +287,7 @@ export class Unit extends SceneObject {
         }
 
         messageRouter.send(
-            {
-                type: "server:error",
-                payload: ErrorType.enum.INSUFFICIENT_ACTION_POINTS
-            },
+            { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_ACTION_POINTS },
             this.side.id
         );
         return false;
@@ -263,7 +303,7 @@ export class Unit extends SceneObject {
         // Reduce the amount of disorientation based on the number of action points used.
         // this._disorientation = Math.max(0, this._disorientation - aptCost);
 
-        if (!INFINITE_ACTION_POINTS) {
+        if (!config.infiniteActionPoints) {
             this._attributes.actionPoints.value -= aptCost;
 
             messageRouter.send(
@@ -330,7 +370,7 @@ export class Unit extends SceneObject {
                 type: "server:camera:move:to",
                 payload: {
                     target: "tile",
-                    tilePos: [mapLocation.col, mapLocation.row],
+                    tilePos: mapLocation,
                     trackingSpeed: TrackingSpeed.enum.MEDIUM
                 }
             },
@@ -364,7 +404,7 @@ export class Unit extends SceneObject {
                         type: "server:map:update",
                         payload: [
                             {
-                                tilePos: [mapLocation.col, mapLocation.row],
+                                tilePos: mapLocation,
                                 tileByRenderMode: {
                                     [RenderMode.enum.MAP_MODE]: tile.getRenderList({
                                         renderMode: RenderMode.enum.MAP_MODE,
@@ -386,7 +426,7 @@ export class Unit extends SceneObject {
         }
     }
 
-    move(game: Game, orientation: Orientation, messageRouter: MessageRouter) {
+    move(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
         const { map } = game;
 
         const direction = this.isDirectional
@@ -438,7 +478,7 @@ export class Unit extends SceneObject {
                     type: "server:map:update",
                     payload: [
                         {
-                            tilePos: [srcPos.col, srcPos.row],
+                            tilePos: srcPos,
                             tileByRenderMode: {
                                 [RenderMode.enum.MAP_MODE]: srcTile.getRenderList({
                                     renderMode: RenderMode.enum.MAP_MODE,
@@ -457,6 +497,14 @@ export class Unit extends SceneObject {
         );
 
         this.location = dstTile.location;
+        messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: { location: this.location }
+            },
+            this.side.id
+        );
+
         dstTile.addUnit(this);
         messageRouter.sendIfVisible(
             [
@@ -464,7 +512,7 @@ export class Unit extends SceneObject {
                     type: "server:map:update",
                     payload: [
                         {
-                            tilePos: [dstPos.col, dstPos.row],
+                            tilePos: dstPos,
                             tileByRenderMode: {
                                 [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
                                     renderMode: RenderMode.enum.MAP_MODE,
@@ -482,7 +530,7 @@ export class Unit extends SceneObject {
                     type: "server:camera:move:to",
                     payload: {
                         target: "tile",
-                        tilePos: [dstPos.col, dstPos.row],
+                        tilePos: dstPos,
                         trackingSpeed: TrackingSpeed.enum.MEDIUM
                     }
                 }
@@ -504,8 +552,311 @@ export class Unit extends SceneObject {
         //     Event.UnitsChangeEvent(this),
         //     Event.VisibilityChangeEvent(visibilityManager.allForUI())
         // );
+    }
 
-        return true;
+    fire(
+        game: Game,
+        weapon: Item,
+        fireSelector: FireSelector,
+        fireMode: FireMode,
+        worldPoses: Vec2[],
+        triggerHeldTimeInMs: number,
+        messageRouter: MessageRouter
+    ): void {
+        if (!this.itemInUse) {
+            throw new Error("No item in use - but on was expected");
+        }
+        if (this.itemInUse.findByItemId(weapon.id) !== weapon) {
+            throw new Error(`Weapon ${weapon.id} is not part of item in use ${this.itemInUse?.id}`);
+        }
+
+        const { map } = game;
+
+        console.info("Fire", {
+            gameId: game.id,
+            weaponId: weapon.id,
+            fireSelector,
+            fireMode,
+            worldPoses,
+            triggerHeldTimeInMs
+        });
+
+        const fireModes = weapon.getFireModes(this);
+        const baseAccuracy = getAccuracy(fireModes, fireSelector, fireMode);
+        const firstShotAccuracy = this.calcWeaponAccuracy(baseAccuracy);
+        console.dir({ firstShotAccuracy });
+
+        const rpm = getRpm(fireModes, fireSelector);
+        const numShots = shotsFired(triggerHeldTimeInMs, rpm);
+        console.dir({ numShotsFired: numShots });
+
+        // Generate world poses - we have a 1:1 correspondence with the number of shots fired.
+        assert(
+            numShots !== worldPoses.length,
+            "Number of shots should equal the number of worldPoses we have been sent"
+        );
+        const targetWorldPoses = worldPoses.map(
+            (worldPos) => worldPos.add({ x: 0.5, y: 0.5 }) // Move to the center of the pixel for accuracy.
+        );
+        console.dir({ targetWorldPoses });
+
+        const maxRange = weapon.loadedRound?.maxRange ?? 0; // TODO:
+        console.dir({ maxRange });
+
+        const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
+        const collisionRadius = this._recipe.collision.radius;
+
+        for (const [shot, toWorldPos] of targetWorldPoses.entries()) {
+            const dir = toWorldPos.sub(unitWorldPos).normalise();
+            const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
+
+            console.dir({ shot, srcWorldPos: fromWorldPos, tgtWorldPos: toWorldPos });
+
+            const range =
+                weapon.fireType === FireType.enum.indirect
+                    ? maxRange
+                    : toWorldPos.sub(fromWorldPos).length;
+            console.dir({ range });
+
+            // TODO: Perturb the range based on the accuracy of this shot.
+            const perturbedRange = range * 1.0;
+            console.dir({ perturbedRange });
+
+            // Calculate the direction of the shot.
+            const dirVector = toWorldPos.sub(fromWorldPos).normalise();
+            console.dir({ dirVector });
+
+            // TODO: Perturn the direction based on the accuracy of this shot.
+            const perturbedDirVector = dirVector;
+            const onTarget = Math.random() < 0.5;
+            console.dir({ perturbedDirVector, onTarget });
+
+            const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
+                fireModes,
+                fireSelector,
+                fireMode
+            );
+            const aptCost = shot === 0 ? initialAptCost : perShotAptCost;
+            console.dir({ shot, aptCost, initialAptCost, perShotAptCost });
+
+            if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+                return;
+            }
+
+            if (weapon.isEmpty) {
+                messageRouter.send(
+                    { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_AMMO },
+                    this.side.id
+                );
+            }
+
+            if (!this._useActionPoints(game, aptCost, messageRouter)) {
+                return;
+            }
+
+            const round = weapon.fire();
+            console.dir({ round });
+
+            messageRouter.send(
+                {
+                    type: "server:unit:weapon:update",
+                    payload: this.itemInUse.getFireModeItemSummary(this)
+                },
+                this.side.id
+            );
+
+            const { projectileRecipe } = round;
+            const { numProjectiles } = projectileRecipe;
+            const spreadAngleInRadians = weapon.spreadAngleInRadians;
+            const startOfSpread = -spreadAngleInRadians / 2;
+            const angleScaler =
+                numProjectiles > 1 ? spreadAngleInRadians / (numProjectiles - 1) : 0;
+
+            console.dir({ numProjectiles });
+
+            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
+                const perturbedAngle = startOfSpread + angleScaler * index;
+                const directionVector = perturbedDirVector.rotate(perturbedAngle);
+
+                console.dir({ perturbedAngle, directionVector, fromWorldPos });
+
+                return new Projectile({
+                    game,
+                    firingUnit: this,
+                    firingWeapon: weapon,
+                    index,
+                    srcPos: fromWorldPos,
+                    directionVector,
+                    // TEMPORARY: Override the maxium range of the projectile to be the target position.
+                    projectileRecipe: {
+                        ...projectileRecipe,
+                        maxRange: toWorldPos.sub(fromWorldPos).length
+                    }
+                });
+            });
+
+            // Sort so that fastest projectiles are first.
+            projectiles.sort((a, b) => b.velocity - a.velocity);
+            console.dir({ projectiles });
+
+            const debugGraphics: DebugGraphic[] = [];
+
+            debugGraphics.push(
+                {
+                    type: DebugGraphicType.enum.line,
+                    srcWorldPos: projectiles[0].srcPos,
+                    dstWorldPos: projectiles[0].dstPos,
+                    strokeColour: Colour.White,
+                    strokeThickness: 2
+                },
+                {
+                    type: DebugGraphicType.enum.point,
+                    worldPos: projectiles[0].srcPos,
+                    size: 6,
+                    colour: Colour.Red
+                },
+                {
+                    type: DebugGraphicType.enum.point,
+                    worldPos: projectiles[0].dstPos,
+                    size: 6,
+                    colour: Colour.Blue
+                }
+            );
+
+            const hitResult = map.castProjectile(projectiles[0], debugGraphics);
+            console.dir({ hitResult }, { depth: null });
+
+            // const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: true };
+            // let sampleOrder = 0;
+
+            // stepGrid(
+            //     projectiles[0],
+            //     grid,
+            //     (samplePos, sampleType) => {
+            //         console.info({ samplePos }, { depth: null });
+            //         const tile = map.sampleTile(map.worldToTile(samplePos));
+            //         if (tile === undefined) {
+            //             return undefined;
+            //         }
+            //         debugGraphics.push(
+            //             {
+            //                 type: DebugGraphicType.enum.tile,
+            //                 tilePos: tile.location,
+            //                 fillColour:
+            //                     sampleType === "major"
+            //                         ? new Colour({ ...Colour.Green, a: 0.25 })
+            //                         : sampleType === "minor-past"
+            //                           ? new Colour({ ...Colour.Red, a: 0.25 })
+            //                           : new Colour({ ...Colour.Blue, a: 0.25 }),
+            //                 strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
+            //             },
+            //             {
+            //                 type: DebugGraphicType.enum.text,
+            //                 worldPos: map.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+            //                 text: `${sampleOrder++}`,
+            //                 colour: Colour.White,
+            //                 fontSize: 10
+            //             }
+            //         );
+
+            //         // const result = tile.stepTile(projectiles[0], debugGraphics);
+            //         // console.dir({ result });
+
+            //         return undefined;
+            //     },
+            //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            //     (_collisionPos: Vec2, _material: Material) => {
+            //         return false;
+            //     },
+            //     debugGraphics
+            // );
+
+            messageRouter.send({
+                type: "server:debug:graphics",
+                payload: debugGraphics
+            });
+
+            // TODO: Move the projectiles forward in time...
+            // TODO: Psuedo tracers - how do we determine visibility?
+            // messageRouter.send([
+            //     {
+            //         type: "server:fire:trace",
+            //         payload: {
+            //             tracers: projectiles.map((projectile) => projectile.getTracer()),
+            //             isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+            //         }
+            //     }
+            // ]);
+        }
+
+        /**
+            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
+                const perturbedAngle = startOfSpread + angleScaler * index;
+                const directionVector = perturbedDirVector.rotate(perturbedAngle);
+
+                return new Projectile(
+                    {
+                        game,
+                        firer: this,
+                        firerPos,
+                        directionVector,
+                        maxRange: perturbedRange,
+                        velocity: round.resolveVelocity,
+                        penetration: round.penetration,
+                        damage: round.damage
+                    },
+                    eventList
+                );
+            });
+
+            // Sort so that fastest projectiles are first.
+            projectiles.sort((a, b) => b.velocity - a.velocity);
+
+            // Set a checkpoint so everything is relative to the start of the checkpoint.
+            eventList.setCheckpoint({ relativeToEndOfLastEvent: 0 });
+            projectiles.forEach((projectile) => projectile.trace());
+
+            const maxProjectileTravelTime = projectiles.reduce((max, projectile) => Math.max(max, projectile.totalRangeTravelled), 0);
+            eventList.addEvents(
+                {
+                    relativeToCheckpointTime: 0,
+                    duration: maxProjectileTravelTime
+                },
+                eventList.allSideIds,
+                Event.TraceEvent(
+                    projectiles.map((projectile) => ({
+                        srcPos: projectile.srcPos,
+                        dstPos: projectile.finalPos,
+                        distanceTravelled: projectile.distanceTravelled,
+                        maxRange: projectile.maxRange,
+                        length: round.resolveLength,
+                        velocity: projectile.velocity,
+                        intensity: round.resolveIntensity,
+                        rangeFallOff: round.resolveRangeFallOff
+                    })),
+                    onTarget
+                ),
+                Event.UnitsChangeEvent(this)
+            );
+            eventList.addEvents(
+                {
+                    relativeToEndOfLastEvent: FIRE_ADDITIONAL_SIMULATION_TIME,
+                    duration: 1000
+                },
+                [this.sideId],
+                Event.CameraEvent(worldPoses[0])
+            );
+
+            projectiles.forEach((projectile) => {
+                round.explosion?.explode(game, projectile.finalPos, projectile.dirVec, eventList);
+            });
+        }T
+         */
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    throw(game: Game, worldPos: Vec2, _messageRouter: MessageRouter): void {
+        console.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
@@ -513,16 +864,26 @@ export class Unit extends SceneObject {
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 
-    toSummary(): UnitSummary {
-        console.info("Item in use:", this.itemInUse, this.itemInUse?.canFire);
+    calcThrowAccuracy(baseAccuracy: number): number {
+        return Clamp(baseAccuracy, 0, 100);
+        // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
+    }
 
+    calcThrowMaxRange(item: Item) {
+        // TODO: Validate that this is good enough...
+        return Math.floor(this.strength / Math.pow(item.weight, 2)) * 400;
+    }
+
+    toSummary(): UnitSummary {
         return {
             id: this.id,
             name: this.name,
             description: this.description,
+            location: this.mapLocation,
             isDirectional: this.isDirectional,
             orientation: this.orientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
+            collisionRadius: this._recipe.collision.radius,
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,
@@ -534,15 +895,17 @@ export class Unit extends SceneObject {
                 weight: this.weight
             },
             uiImage: this.getRenderList({
-                renderMode: RenderMode.enum.MAP_MODE,
-                states: [] // TODO: Populate current states when we have an inventory etc.
+                renderMode: RenderMode.enum.UI_MODE,
+                states: ["alive", this.itemInUse ? "item-in-use" : "default"]
             }),
-            actions: {
-                canFire: this.itemInUse?.canFire ?? false,
-                canThrow: !!this.itemInUse,
+            interactions: {
+                canFire: this.canFire,
+                canThrow: this.canThrow,
                 canAction: false,
                 canInventory: false
-            }
+            },
+            itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
+            actions: this.getActions()
         };
     }
 }

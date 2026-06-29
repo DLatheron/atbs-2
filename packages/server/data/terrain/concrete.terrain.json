@@ -5,6 +5,6 @@
     "description": [{ "text": "Solid concrete." }],
     "renderable": {
         "default": [{ "imageId": "concrete" }],
-        "fire-mode": []
+        "FIRE_MODE": []
     }
 }

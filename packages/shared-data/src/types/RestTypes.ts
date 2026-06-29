@@ -34,7 +34,7 @@ export type CreateOrJoin = z.infer<typeof CreateOrJoin>;
  * Error Response
  */
 export const ErrorResponseBody = z.object({
-    error: z.string().min(1)
+    error: z.string().nonempty()
 });
 export type ErrorResponseBody = z.infer<typeof ErrorResponseBody>;
 
@@ -63,7 +63,7 @@ export type ClientQueryParams = z.infer<typeof ClientQueryParams>;
  */
 export const CreateGameRequestBody = z.object({
     clientId: ClientId,
-    name: z.string().min(1).max(64).default("Default Client Name")
+    name: z.string().nonempty().max(64).default("Default Client Name")
 });
 export type CreateGameRequestBody = z.infer<typeof CreateGameRequestBody>;
 
@@ -78,7 +78,7 @@ export type CreateGameResponseBody = z.infer<typeof CreateGameResponseBody>;
 export const JoinGameRequestBody = z.object({
     gameId: GameId,
     clientId: ClientId,
-    name: z.string().min(1).max(64).default("Default Client Name")
+    name: z.string().nonempty().max(64).default("Default Client Name")
 });
 export type JoinGameRequestBody = z.infer<typeof CreateGameRequestBody>;
 

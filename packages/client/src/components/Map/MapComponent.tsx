@@ -16,7 +16,6 @@ export interface MapComponentProps {
     onDoubleClick?: (event: React.MouseEvent) => void;
 
     disabled?: boolean;
-    // cursor?: string;
     children?: ReactNode;
 
     sx?: SxProps;
@@ -34,7 +33,6 @@ export function MapComponent({
     onDoubleClick,
 
     // disabled = false,
-    // cursor = "default",
     children,
     sx
 }: MapComponentProps) {
@@ -60,7 +58,7 @@ export function MapComponent({
                 position: "relative",
                 userSelect: "none",
                 zIndex: 1,
-                backgroundColor: "pink",
+                backgroundColor: "black",
                 ...sx
             }}
             disableGutters

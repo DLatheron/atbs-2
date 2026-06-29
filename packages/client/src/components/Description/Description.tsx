@@ -1,8 +1,9 @@
 import type { Description } from "@atbs/shared-data";
-import { Container, Typography } from "@mui/material";
+import { Container, SxProps, Typography } from "@mui/material";
 
 export interface DescriptionComponentProps {
     description: Description;
+    sx?: SxProps;
 }
 
 function parseDescription(entry: Description[0], index: number) {
@@ -51,9 +52,9 @@ function parseDescription(entry: Description[0], index: number) {
     throw new Error(`Unexpected description element: ${JSON.stringify(entry)}`);
 }
 
-export function DescriptionComponent({ description }: DescriptionComponentProps) {
+export function DescriptionComponent({ description, sx }: DescriptionComponentProps) {
     return (
-        <Container disableGutters maxWidth={false}>
+        <Container disableGutters maxWidth={false} sx={sx}>
             {description.map(parseDescription)}
         </Container>
     );

@@ -6,8 +6,10 @@ import { CanvasLoopProps } from "../../components/CanvasLoop";
 import { useActionPage } from "./useActionPage";
 import { MapModePanel, SidePanel } from "../../components/SidePanel";
 import { TitleBarComponent } from "../../components/TitleBar";
-import { MoveModePanel } from "../../components/SidePanel/MoveModePanel";
+import { UnitModePanel } from "../../components/SidePanel/UnitModePanel";
 import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
+import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
+import { MapMode } from "../../MapMode";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -19,17 +21,22 @@ export function ActionPage({ visible }: ActionPageProps) {
 
     const {
         unit,
+        unitWeapon,
         turn,
         side,
         tileInfo,
         sidePanelMode,
         error,
         disabled,
+        isOnTarget,
         onMove,
         onRotateTo,
+        onChangeFireSelector,
         onEndMovement,
         onEndTurn,
-        onEndError
+        onEndError,
+        onFireMode,
+        onEndFireMode
     } = useActionPage();
 
     const { world } = useWorld();
@@ -122,26 +129,37 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 sx={{ gridArea: "map " }}
-                // cursor={state.cursor}
                 disabled={disabled}
             ></MapComponent>
             <SidePanel
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
                 <MapModePanel
-                    visible={!error && sidePanelMode === "map-mode"}
+                    visible={!error && sidePanelMode === MapMode.enum["map-mode"]}
                     disabled={disabled}
                     tileInfo={tileInfo}
                     onEndTurn={onEndTurn}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
-                <MoveModePanel
-                    visible={!error && sidePanelMode === "move-mode"}
+                <UnitModePanel
+                    visible={!error && sidePanelMode === MapMode.enum["unit-mode"]}
                     disabled={disabled}
                     unit={unit}
                     onMove={onMove}
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
+                    onFireMode={onFireMode}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
+                />
+                <FireModePanel
+                    visible={!error && sidePanelMode === MapMode.enum["fire-mode"]}
+                    disabled={disabled}
+                    unit={unit}
+                    unitWeapon={unitWeapon}
+                    isOnTarget={isOnTarget}
+                    onRotateTo={onRotateTo}
+                    onChangeFireSelector={onChangeFireSelector}
+                    onEndFireMode={onEndFireMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <ErrorPanel

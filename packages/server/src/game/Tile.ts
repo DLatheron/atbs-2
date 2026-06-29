@@ -1,24 +1,40 @@
-import { Orientation, TilePos } from "@atbs/maths";
+import {
+    Aabb,
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    type DebugTile,
+    type IColour,
+    Orientation,
+    TilePos,
+    Vec2
+} from "@atbs/maths";
 import z from "zod";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
-import { RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
+import { FurnitureState, RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
+import { Furniture } from "./Furniture.js";
+import { FurnitureManager } from "./FurnitureManager.js";
+import { Material } from "./Material.js";
+import { Image } from "./Image.js";
+import { ImageManager } from "./ImageManager.js";
+import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
         id: z.string(),
         orientation: z.enum(Orientation).optional()
-    })
-    // furniture: z
-    //     .object({
-    //         id: z.string(),
-    //         orientation: z.nativeEnum(Orientation).optional(),
-    //         state: z.string().optional()
-    //     })
-    //     .optional(),
+    }),
+    furniture: z
+        .object({
+            id: z.string(),
+            orientation: z.enum(Orientation).optional(),
+            state: FurnitureState.optional()
+        })
+        .optional()
     // items: z
     //     .array(
     //         z.object({
@@ -46,19 +62,47 @@ export const TileRecipe = z.object({
 });
 export type TileRecipe = z.infer<typeof TileRecipe>;
 
+export interface LayerCollision {
+    owner?: Furniture | Unit;
+    image: Image;
+    orientation: Orientation;
+    materials: Material[];
+}
+
 export class Tile implements IRenderableEntity {
     protected _location: TilePos;
+    protected _aabb: Aabb;
+    protected _tileSize: number;
     protected readonly _terrain: Terrain;
+    protected readonly _furniture?: Furniture;
     protected _units: Unit[];
 
-    constructor(location: TilePos, recipe: Readonly<TileRecipe>) {
+    constructor(
+        location: TilePos,
+        tileSize: number,
+        recipe: Readonly<TileRecipe>,
+        furnitureManager: FurnitureManager
+    ) {
         this._location = location;
+        this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
+        this._tileSize = tileSize;
         this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
+        this._furniture = recipe.furniture
+            ? furnitureManager.newFurniture(recipe.furniture.id, {
+                  location,
+                  orientation: recipe.furniture.orientation,
+                  state: recipe.furniture.state
+              })
+            : undefined;
         this._units = [];
     }
 
     get terrain(): Terrain {
         return this._terrain;
+    }
+
+    get furniture(): Furniture | undefined {
+        return this._furniture;
     }
 
     get units(): Unit[] {
@@ -71,6 +115,10 @@ export class Tile implements IRenderableEntity {
 
     get location(): TilePos {
         return this._location;
+    }
+
+    get aabb(): Aabb {
+        return this._aabb;
     }
 
     get isDirectional(): boolean {
@@ -112,6 +160,7 @@ export class Tile implements IRenderableEntity {
 
         return [
             ...this.terrain.getRenderList(context),
+            ...(this.furniture?.getRenderList(context) ?? []),
             ...this.units.map((unit) => unit.getRenderList(context)).flat()
         ];
     }
@@ -120,7 +169,7 @@ export class Tile implements IRenderableEntity {
         const { terrain, topmostUnit } = this;
 
         return {
-            tilePos: [this._location.col, this._location.row],
+            tilePos: this._location,
             terrain: {
                 name: terrain.name,
                 uiImage: terrain.getRenderList({
@@ -140,5 +189,137 @@ export class Tile implements IRenderableEntity {
                 }
             })
         };
+    }
+
+    get anythingCollidable() {
+        return this.furniture || this.units.length > 0; // || this.vfx.length > 0;
+    }
+
+    toDebugGraphic(
+        fillColour?: IColour,
+        strokeColour?: IColour,
+        strokeThickness?: number
+    ): DebugTile {
+        return {
+            type: DebugGraphicType.enum.tile,
+            tilePos: this.location,
+            fillColour,
+            strokeColour,
+            strokeThickness
+        };
+    }
+
+    getCollisionLayers(imageManager: ImageManager): LayerCollision[] {
+        const collisionLayers: LayerCollision[] = [];
+
+        const context: SceneContext = {
+            renderMode: RenderMode.enum.FIRE_MODE,
+            states: []
+        };
+
+        if (this.furniture) {
+            const { materials } = this.furniture;
+
+            this.furniture.getRenderList(context).forEach((layerImage) => {
+                if (layerImage.imageId) {
+                    collisionLayers.push({
+                        owner: this.furniture!,
+                        image: imageManager.getImage(layerImage.imageId),
+                        orientation: layerImage.orientation ?? Orientation.NORTH,
+                        materials
+                    });
+                }
+            });
+        }
+
+        this.units.forEach((unit) => {
+            // const { materials } = unit; // TODO: Unit materials?
+
+            unit.getRenderList(context).forEach((layerImage) => {
+                if (layerImage.imageId) {
+                    collisionLayers.push({
+                        owner: unit,
+                        image: imageManager.getImage(layerImage.imageId),
+                        orientation: layerImage.orientation ?? Orientation.NORTH,
+                        materials: []
+                    });
+                }
+            });
+        });
+
+        // this.vfx.forEach((vfx) => {
+        //     const { materials } = vfx;
+
+        //     vfx.getRenderList(context).forEach((layerImage) => {
+        //         if (layerImage.imageId) {
+        //             layerCollision.push({
+        //                 image: imageManager.getImage(layerImage.imageId),
+        //                 orientation: layerImage.orientation ?? Orientation.NORTH,
+        //                 materials
+        //             });
+        //         }
+        //     });
+        // });
+
+        return collisionLayers;
+    }
+
+    /**
+     * Casts a ray through a tile.
+     * @param subTileSrcPos The source of the ray (in local tile space). This should be inside the tile.
+     * @param subTileDstPos The destination of the ray (in local tile space). This is not necessarily inside the tile.
+     * @param debugGraphics Optional array for recording intersections and collisions.
+     * @returns The position and material first hit, or `undefined` if no collision occurs.
+     */
+    castRay(
+        subTileSrcPos: Vec2,
+        subTileDstPos: Vec2,
+        debugGraphics?: DebugGraphic[]
+    ): GridRayTraceResult {
+        console.info(`Tile ${this.location}: Casting against tile`);
+
+        if (!this.anythingCollidable) {
+            console.info("  - Contains nothing collidable");
+            return;
+        }
+
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        if (collisionLayers.length === 0) {
+            console.info("  - Has no collision layers (but is collidable?");
+            return;
+        }
+
+        for (const samplePos of walkCellBresenhamLine(
+            subTileSrcPos,
+            subTileDstPos,
+            this._tileSize
+        )) {
+            console.info(`  - ${samplePos} - sampling...`);
+
+            for (const { image, orientation, materials } of collisionLayers) {
+                const materialColour = image.getColour(samplePos, orientation);
+                if (materialColour.a > 0.0) {
+                    const [material] = Material.DetermineMaterial(materialColour, materials);
+                    console.info(`    - hit material ${material.id}: ${material.rgb}`);
+
+                    debugGraphics?.push(
+                        {
+                            type: DebugGraphicType.enum.point,
+                            worldPos: this.aabb.topLeft.add(samplePos),
+                            size: 8,
+                            colour: Colour.White
+                        },
+                        {
+                            type: DebugGraphicType.enum.point,
+                            worldPos: this.aabb.topLeft.add(samplePos),
+                            size: 6,
+                            colour: new Colour({ ...material.rgb!, a: 1 })
+                        }
+                    );
+
+                    return { pos: samplePos, material };
+                }
+            }
+        }
     }
 }

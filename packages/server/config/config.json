@@ -1,3 +1,5 @@
 {
-    "highlanderGameMode": true
+    "highlanderGameMode": true,
+    "infiniteActionPoints": true,
+    "infiniteAmmunition": true
 }

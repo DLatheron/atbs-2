@@ -13,13 +13,15 @@
         "default": [{ "imageId": "m4" }],
         "FIRE_MODE": []
     },
-    "sight": "optical",
+    "sight": "laser",
+    "fireType": "direct",
     "slotProps": {
         "ammo": {
             "compatibleIds": ["m16-30.magazine", "m16-20.magazine"]
         }
     },
     "slots": { "ammo": { "id": "m16-30.magazine" } },
+    "fireSelector": "single",
     "fireModes": {
         "single": {
             "ammoUse": 1,

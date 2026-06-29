@@ -1,15 +1,8 @@
 import { z } from "zod";
+import { Z } from "zod-class";
 import { Clamp } from "./Maths.js";
-// import { RecipeFactory } from "../../server/src/factory/RecipeFactory";
 import { Orientation } from "./Orientation.js";
 import { IVec2, Vec2, isIVec2 } from "./Vec2.js";
-
-export const TilePosRecipe = z.tuple([z.int().nonnegative(), z.int().nonnegative()]);
-export type TilePosRecipe = z.infer<typeof TilePosRecipe>;
-
-export function isTilePosRecipe(arg: unknown): arg is TilePosRecipe {
-    return arg !== null && arg !== undefined && Array.isArray(arg) && arg.length === 2;
-}
 
 export const ITilePos = z.object({
     col: z.int().nonnegative(),
@@ -23,42 +16,48 @@ export function isITilePos(arg: unknown): arg is ITilePos {
     );
 }
 
-export function isTilePos(arg: unknown): arg is TilePos {
-    return arg instanceof TilePos;
-}
-
-// function checkedRounded(value: number) {
-//     return Math.abs(value - Math.floor(value)) === 0;
-// }
-
-export class TilePos implements ITilePos {
-    public col: number; // x.
-    public row: number; // y.
-
-    constructor();
+export class TilePos
+    extends Z.class({
+        col: z.number(), // x.
+        row: z.number() // y.
+    })
+    implements ITilePos
+{
+    constructor(posObject: ITilePos);
+    constructor(posArray: [number, number]);
     constructor(col: number, row: number);
-    constructor(vec: ITilePos);
-    constructor(recipe: Readonly<TilePosRecipe>);
     constructor(...args: unknown[]) {
-        if (isTilePosRecipe(args[0])) {
-            this.col = args[0][0];
-            this.row = args[0][1];
-            return;
-        }
-        if (isITilePos(args[0])) {
-            this.col = Math.floor(args[0].col);
-            this.row = Math.floor(args[0].row);
-            return;
-        }
+        switch (args.length) {
+            case 1:
+                if (Array.isArray(args[0]) && args[0].length === 2) {
+                    if (typeof args[0][0] === "number" && typeof args[0][1] === "number") {
+                        super({ col: args[0][0], row: args[0][1] });
+                    }
+                } else {
+                    if (isITilePos(args[0])) {
+                        super(args[0]);
+                    }
+                }
+                break;
 
-        this.col = typeof args[0] === "number" ? Math.floor(args[0]) : 0;
-        this.row = typeof args[1] === "number" ? Math.floor(args[1]) : 0;
+            case 2:
+                if (typeof args[0] === "number" && typeof args[1] === "number") {
+                    super({ col: args[0], row: args[1] });
+                }
+                break;
+
+            default:
+                throw new Error(`Invalid arguments to TilePos: ${JSON.stringify(args)}`);
+                break;
+        }
     }
 
     clone(): TilePos {
         return new TilePos(this.col, this.row);
     }
 
+    add(addVec: IVec2): TilePos;
+    add(addVec: ITilePos): TilePos;
     add(addVec: IVec2 | ITilePos): TilePos {
         if (isIVec2(addVec)) {
             return new TilePos(this.col + addVec.x, this.row + addVec.y);
@@ -67,6 +66,8 @@ export class TilePos implements ITilePos {
         }
     }
 
+    subtract(subVec: IVec2): TilePos;
+    subtract(subVec: ITilePos): TilePos;
     subtract(subVec: IVec2 | ITilePos): TilePos {
         if (isIVec2(subVec)) {
             return new TilePos(this.col - subVec.x, this.row - subVec.y);
@@ -79,11 +80,11 @@ export class TilePos implements ITilePos {
         return this.col * this.col + this.row * this.row;
     }
 
-    length() {
+    length(): number {
         return Math.sqrt(this.sqrdLength());
     }
 
-    manhattanLength() {
+    manhattanLength(): number {
         return Math.abs(this.col) + Math.abs(this.row);
     }
 
@@ -144,17 +145,6 @@ export class TilePos implements ITilePos {
         return new TilePos(col, row);
     }
 
-    // static TilePosFromRecipe(recipe: TilePosRecipe, factory: RecipeFactory): TilePos {
-    //     return new TilePos(TilePos.TilePosRecipeToProps(recipe, factory));
-    // }
-
-    // static TilePosRecipeToProps(recipe: TilePosRecipe, _factory: RecipeFactory): ITilePos {
-    //     return {
-    //         col: recipe[0],
-    //         row: recipe[1]
-    //     };
-    // }
-
     static IsEqual(a?: ITilePos, b?: ITilePos, threshold = 0.00001) {
         if (!a) {
             if (!b) {
@@ -169,31 +159,31 @@ export class TilePos implements ITilePos {
         }
     }
 
-    static StepZero() {
+    static StepZero(): TilePos {
         return new TilePos(0, 0);
     }
-    static StepUp() {
+    static StepUp(): TilePos {
         return new TilePos(0, -1);
     }
-    static StepUpRight() {
+    static StepUpRight(): TilePos {
         return new TilePos(1, -1);
     }
-    static StepRight() {
+    static StepRight(): TilePos {
         return new TilePos(1, 0);
     }
-    static StepDownRight() {
+    static StepDownRight(): TilePos {
         return new TilePos(1, 1);
     }
-    static StepDown() {
+    static StepDown(): TilePos {
         return new TilePos(0, 1);
     }
-    static StepDownLeft() {
+    static StepDownLeft(): TilePos {
         return new TilePos(-1, 1);
     }
-    static StepLeft() {
+    static StepLeft(): TilePos {
         return new TilePos(-1, 0);
     }
-    static StepUpLeft() {
+    static StepUpLeft(): TilePos {
         return new TilePos(-1, -1);
     }
 }

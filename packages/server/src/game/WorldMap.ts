@@ -1,12 +1,25 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, Maths, TilePos, Vec2 } from "@atbs/maths";
+import {
+    Aabb,
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    ITilePos,
+    Maths,
+    TilePos,
+    Vec2
+} from "@atbs/maths";
 import { Unit } from "./Unit.js";
+import { FurnitureManager } from "./FurnitureManager.js";
+import { ItemManager } from "./ItemManager.js";
+import { Projectile } from "./Projectile.js";
+import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 
 export const MapRecipe = z.object({
     id: MapId,
-    name: z.string().min(1),
+    name: z.string().nonempty(),
     width: z.number().min(1).max(256),
     height: z.number().min(1).max(256),
     tileSize: z.number().min(50).max(200),
@@ -22,7 +35,11 @@ export class WorldMap {
     private readonly _tileSize: number;
     private readonly _tiles: Tile[][];
 
-    constructor(recipe: Readonly<MapRecipe>) {
+    constructor(
+        recipe: Readonly<MapRecipe>,
+        _itemManager: ItemManager,
+        furnitureManager: FurnitureManager
+    ) {
         this._id = recipe.id;
         this._name = recipe.name;
         this._width = recipe.width;
@@ -30,7 +47,10 @@ export class WorldMap {
         this._tileSize = recipe.tileSize;
 
         this._tiles = recipe.tiles.map((tileRow, row) =>
-            tileRow.map((tileRecipe, col) => new Tile(new TilePos(col, row), tileRecipe))
+            tileRow.map(
+                (tileRecipe, col) =>
+                    new Tile(new TilePos(col, row), recipe.tileSize, tileRecipe, furnitureManager)
+            )
         );
     }
 
@@ -82,6 +102,43 @@ export class WorldMap {
         );
     }
 
+    worldToTile(worldPos: Vec2): TilePos {
+        const { tileSize } = this;
+
+        return new TilePos(Math.floor(worldPos.x / tileSize), Math.floor(worldPos.y / tileSize));
+    }
+
+    worldToTileUpper(worldPos: Vec2): TilePos {
+        const { tileSize } = this;
+
+        return new TilePos(Math.ceil(worldPos.x / tileSize), Math.ceil(worldPos.y / tileSize));
+    }
+
+    worldToSubTile(tilePos: TilePos, worldPos: Vec2) {
+        const tileTopLeft = tilePos.scale(this.tileSize);
+
+        return new Vec2(worldPos).sub(tileTopLeft).clamp({
+            min: { x: 0, y: 0 },
+            max: { x: this.tileSize, y: this.tileSize }
+        });
+    }
+
+    tileToWorld(tilePos: TilePos): Vec2 {
+        const { tileSize } = this;
+
+        return new Vec2(tilePos.col * tileSize, tilePos.row * tileSize);
+    }
+
+    tileCenterToWorld(tilePos: TilePos): Vec2 {
+        const { tileSize } = this;
+        const halfTileSize = tileSize / 2;
+
+        return new Vec2(
+            tilePos.col * tileSize + halfTileSize,
+            tilePos.row * tileSize + halfTileSize
+        );
+    }
+
     getTile(tilePos: TilePos): Tile {
         if (this.isOutside(tilePos)) {
             throw new Error(`Sample at ${tilePos} is outside the map boundaries`);
@@ -95,7 +152,7 @@ export class WorldMap {
         ];
     }
 
-    sampleTile(tilePos: TilePos): Tile | undefined {
+    sampleTile(tilePos: ITilePos): Tile | undefined {
         if (
             tilePos.col < 0 ||
             tilePos.col > this.width - 1 ||
@@ -105,6 +162,20 @@ export class WorldMap {
             return undefined;
         }
         return this._tiles[tilePos.row][tilePos.col];
+    }
+
+    tileTopLeft(tilePos: TilePos) {
+        return this.tileOffsetToWorld(tilePos, new Vec2({ x: 0, y: 0 }));
+    }
+
+    tileOffsetToWorld(
+        tilePos: TilePos,
+        tileOffset: Vec2 = new Vec2(this.tileSize / 2, this.tileSize / 2)
+    ) {
+        return new Vec2(
+            tilePos.col * this.tileSize + tileOffset.x,
+            tilePos.row * this.tileSize + tileOffset.y
+        );
     }
 
     renderClientMap(): ClientMap {
@@ -143,5 +214,42 @@ export class WorldMap {
 
         const tile = this.getTile(unit.location);
         tile.addUnit(unit);
+    }
+
+    /**
+     * Cast a projectile through the map until its first collision.
+     * @param projectile The projectile to cast.
+     * @param debugGraphics Optional array for recording intersections and collisions.
+     * @returns The position and material first hit, or `undefined` if no collision occurs.
+     */
+    castProjectile(projectile: Projectile, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
+        const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
+        let sampleOrder = 0;
+
+        return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
+            const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
+            const tile = this.sampleTile(tilePos);
+            if (!tile) {
+                return undefined;
+            }
+
+            debugGraphics?.push(
+                {
+                    type: DebugGraphicType.enum.tile,
+                    tilePos: tile.location,
+                    fillColour: new Colour({ ...Colour.Green, a: 0.25 }),
+                    strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
+                },
+                {
+                    type: DebugGraphicType.enum.text,
+                    worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+                    text: `${sampleOrder++}: ${tile.location}`,
+                    colour: Colour.White,
+                    fontSize: 10
+                }
+            );
+
+            return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics);
+        });
     }
 }

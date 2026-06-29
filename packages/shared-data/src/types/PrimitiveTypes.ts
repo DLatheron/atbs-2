@@ -1,7 +1,17 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { Maths, Orientation, TilePosRecipe } from "@atbs/maths";
+import { ITilePos, IVec2, Maths, Orientation } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
+
+export const MILLISECONDS_IN_A_MINUTE = 60000;
+
+const onTarget = ["none", "onTarget", "offTarget"] as const;
+export const OnTarget = z.enum(onTarget);
+export type OnTarget = z.infer<typeof OnTarget>;
+
+const unitType = ["human"] as const;
+export const UnitType = z.enum(unitType);
+export type UnitType = z.infer<typeof UnitType>;
 
 export const ClientId = z.uuid();
 export type ClientId = z.infer<typeof ClientId>;
@@ -9,31 +19,37 @@ export type ClientId = z.infer<typeof ClientId>;
 export const GameId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
 export type GameId = z.infer<typeof GameId>;
 
-export const ScenarioId = z.string().min(1);
+export const ScenarioId = z.string().nonempty();
 export type ScenarioId = z.infer<typeof ScenarioId>;
 
-export const SideId = z.string().min(1);
+export const SideId = z.string().nonempty();
 export type SideId = z.infer<typeof SideId>;
 
-export const MapId = z.string().min(1);
+export const MapId = z.string().nonempty();
 export type MapId = z.infer<typeof MapId>;
 
-export const TerrainId = z.string().min(1);
+export const TerrainId = z.string().nonempty();
 export type TerrainId = z.infer<typeof TerrainId>;
 
-export const ObjectId = z.string().min(1);
+export const FurnitureId = z.string().nonempty();
+export type FurnitureId = z.infer<typeof FurnitureId>;
+
+export const MaterialId = z.string().nonempty();
+export type MaterialId = z.infer<typeof MaterialId>;
+
+export const ObjectId = z.string().nonempty();
 export type ObjectId = z.infer<typeof ObjectId>;
 
-export const UnitId = z.string().min(1);
+export const UnitId = z.string().nonempty();
 export type UnitId = z.infer<typeof UnitId>;
 
-export const ItemId = z.string().min(1);
+export const ItemId = z.string().nonempty();
 export type ItemId = z.infer<typeof ItemId>;
 
-export const InstanceId = z.string().min(1);
+export const InstanceId = z.string().nonempty();
 export type InstanceId = z.infer<typeof InstanceId>;
 
-export const ImageId = z.string().min(1);
+export const ImageId = z.string().nonempty();
 export type ImageId = z.infer<typeof ImageId>;
 
 export const Weight = z.number().nonnegative();
@@ -56,6 +72,49 @@ export type DescriptionText = z.infer<typeof DescriptionText>;
 
 export const DescriptionLine = z.object({ line: z.boolean() });
 export type DescriptionLine = z.infer<typeof DescriptionLine>;
+
+export const furnitureState = ["default", "destroyed", "open", "closed", "locked"] as const;
+export const FurnitureState = z.enum(furnitureState);
+export type FurnitureState = z.infer<typeof FurnitureState>;
+
+export const RGBColor = z.object({
+    r: z.number().min(0).max(255),
+    g: z.number().min(0).max(255),
+    b: z.number().min(0).max(255)
+});
+export type RGBColor = z.infer<typeof RGBColor>;
+
+export const HSLColor = z.object({
+    h: z.number().min(0).max(255),
+    s: z.number().min(0).max(255),
+    l: z.number().min(0).max(255)
+});
+export type HSLColor = z.infer<typeof HSLColor>;
+
+export const MovementObstruction = z
+    .partialRecord(UnitType.or(z.literal("default")), z.number().nonnegative())
+    .and(z.object({ default: z.number().nonnegative() }));
+export type MovementObstruction = z.infer<typeof MovementObstruction>;
+
+export const FurnitureStateMovementObstructionMap = z
+    .partialRecord(FurnitureState, MovementObstruction)
+    .and(z.object({ default: MovementObstruction }));
+export type FurnitureStateMovementObstructionMap = z.infer<
+    typeof FurnitureStateMovementObstructionMap
+>;
+
+export const materialTransition = ["enter", "exit", "transition"] as const;
+export const MaterialTransition = z.enum(materialTransition);
+export type MaterialTransition = z.infer<typeof MaterialTransition>;
+
+export const materialDensityType = ["eyeball", "projectile"] as const;
+export const MaterialDensityType = z.enum(materialDensityType);
+export type MaterialDensityType = z.infer<typeof MaterialDensityType>;
+
+export const MaterialDensityMap = z
+    .partialRecord(MaterialDensityType.or(z.literal("default")), z.number().positive())
+    .and(z.object({ default: z.number().positive() }));
+export type MaterialDensityMap = z.infer<typeof MaterialDensityMap>;
 
 export const AttributeDef = z.object({
     max: z.int().nonnegative(),
@@ -140,48 +199,28 @@ export const ClientSummary = z.object({
 export type ClientSummary = z.infer<typeof ClientSummary>;
 
 export const ScenarioSummary = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
+    id: ScenarioId,
+    name: z.string().nonempty(),
     description: Description,
     sides: z.array(
         z.object({
             id: SideId,
-            name: z.string().min(1),
+            name: z.string().nonempty(),
             description: Description
         })
     )
 });
 export type ScenarioSummary = z.infer<typeof ScenarioSummary>;
 
-export const UnitSummary = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
-    description: Description,
-    orientation: z.enum(Orientation),
-    viewAngleInDegrees: z.int().positive(),
-    isDirectional: z.boolean().optional().default(true),
-    attributes: z.object({
-        actionPoints: Attribute,
-        constitution: Attribute,
-        fitness: Attribute,
-        morale: Attribute,
-        stamina: Attribute,
-        speed: Attribute,
-        strength: Attribute,
-        weight: z.number().positive()
-    }),
-    uiImage: RenderList,
-    actions: z.object({
-        canFire: z.boolean(),
-        canThrow: z.boolean(),
-        canAction: z.boolean(),
-        canInventory: z.boolean()
-    })
+export const FurnitureSummary = z.object({
+    id: FurnitureId,
+    name: z.string().nonempty(),
+    description: Description
 });
-export type UnitSummary = z.infer<typeof UnitSummary>;
+export type FurnitureSummary = z.infer<typeof FurnitureSummary>;
 
 export const TileInfo = z.object({
-    tilePos: TilePosRecipe,
+    tilePos: ITilePos,
     terrain: z.object({
         name: z.string(),
         uiImage: RenderList,
@@ -203,7 +242,11 @@ export const WaitingFor = z.object({
 });
 export type WaitingFor = z.infer<typeof WaitingFor>;
 
-const errorType = ["INSUFFICIENT_ACTION_POINTS", "UNABLE_TO_MOVE_THERE"] as const;
+const errorType = [
+    "INSUFFICIENT_ACTION_POINTS",
+    "INSUFFICIENT_AMMO",
+    "UNABLE_TO_MOVE_THERE"
+] as const;
 
 export const ErrorType = z.enum(errorType);
 export type ErrorType = z.infer<typeof ErrorType>;
@@ -239,21 +282,19 @@ export function resolveJitteredValue(value: JitteredValue) {
     }
 }
 
-const unitType = ["human"] as const;
-export const UnitType = z.enum(unitType);
-export type UnitType = z.infer<typeof UnitType>;
-
 const damageType = ["default", "disorientation"] as const;
 export const DamageType = z.enum(damageType);
 export type DamageType = z.infer<typeof DamageType>;
 
-export const DamageMap = z.union([
-    z.record(UnitType, z.number().positive()),
-    z.object({
-        type: DamageType.default(DamageType.enum.default),
-        default: z.number().positive()
-    })
-]);
+export const DamageMap = z
+    .partialRecord(UnitType.or(z.literal("default")), z.number().nonnegative())
+    .and(
+        z.object({
+            type: DamageType.default(DamageType.enum.default),
+            default: z.number().nonnegative()
+        })
+    );
+export type DamageMap = z.infer<typeof DamageMap>;
 
 const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
 export const ItemType = z.enum(itemType);
@@ -279,39 +320,260 @@ const fireMode = ["aimed", "snapshot"] as const;
 export const FireMode = z.enum(fireMode);
 export type FireMode = z.infer<typeof FireMode>;
 
-export const FireModeDetails = z.object({
+const fireModeEx = ["none", ...fireMode, "throw"] as const;
+export const FireModeEx = z.enum(fireModeEx);
+export type FireModeEx = z.infer<typeof FireModeEx>;
+
+export const FireModeDetail = z.object({
     accuracy: z.number().min(0).max(100),
     actionPoints: z.int().positive()
 });
+export type FireModeDetail = z.infer<typeof FireModeDetail>;
+
+export const FireModeExtendedDetail = FireModeDetail.extend({
+    actionPointsPerRound: z.int().positive()
+});
+export type FireModeExtendedDetail = z.infer<typeof FireModeExtendedDetail>;
+
+export const FireModeDetails = z.record(FireMode, FireModeDetail);
 export type FireModeDetails = z.infer<typeof FireModeDetails>;
 
+export const FireModeExtendedDetails = z.record(FireMode, FireModeExtendedDetail);
+export type FireModeExtendedDetails = z.infer<typeof FireModeExtendedDetails>;
+
+export const FireModeSingle = z.object({
+    ammoUse: z.int().positive(),
+    fireModeDetails: FireModeDetails
+});
+export type FireModeSingle = z.infer<typeof FireModeSingle>;
+
+export const FireModeBurst = z.object({
+    ammoUse: z.int().positive(),
+    rpm: z.int().positive(),
+    fireModeDetails: FireModeDetails
+});
+export type FireModeBurst = z.infer<typeof FireModeBurst>;
+
+export const FireModeAuto = z.object({
+    rpm: z.int().positive(),
+    fireModeDetails: FireModeExtendedDetails
+});
+export type FireModeAuto = z.infer<typeof FireModeAuto>;
+
+// This is horrible, but seems to be the only way to build such a scheme 🤷‍♂️
 export const FireModes = z.union([
     z.object({
-        [FireSelector.enum.single]: z.object({
-            ammoUse: z.int().positive(),
-            fireModeDetails: z.record(FireMode, FireModeDetails)
-        })
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.burst]: FireModeBurst,
+        [FireSelector.enum.auto]: FireModeAuto
     }),
     z.object({
-        [FireSelector.enum.burst]: z.object({
-            ammoUse: z.int().positive(),
-            rpm: z.int().positive(),
-            fireModeDetails: z.record(FireMode, FireModeDetails)
-        })
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.burst]: FireModeBurst
     }),
     z.object({
-        [FireSelector.enum.auto]: z.object({
-            rpm: z.int().positive(),
-            fireModeDetails: z.record(
-                FireMode,
-                FireModeDetails.extend({
-                    actionPointsPerRound: z.int().positive()
-                })
-            )
-        })
-    })
+        [FireSelector.enum.single]: FireModeSingle,
+        [FireSelector.enum.auto]: FireModeAuto
+    }),
+    z.object({ [FireSelector.enum.burst]: FireModeBurst, [FireSelector.enum.auto]: FireModeAuto }),
+    z.object({ [FireSelector.enum.single]: FireModeSingle }),
+    z.object({ [FireSelector.enum.burst]: FireModeBurst }),
+    z.object({ [FireSelector.enum.auto]: FireModeAuto })
 ]);
 export type FireModes = z.infer<typeof FireModes>;
+
+export function isFireModeSingle(fireMode: unknown): fireMode is FireModeSingle {
+    return FireModeSingle.safeParse(fireMode).success;
+}
+
+export function isFireModeBurst(fireMode: unknown): fireMode is FireModeBurst {
+    return FireModeBurst.safeParse(fireMode).success;
+}
+
+export function isFireModeAuto(fireMode: unknown): fireMode is FireModeAuto {
+    return FireModeAuto.safeParse(fireMode).success;
+}
+
+export function getRpm(fireModes: FireModes, fireSelector: FireSelector): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return 0;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].rpm;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return fireModes[FireSelector.enum.auto].rpm;
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function getAccuracy(
+    fireModes: FireModes,
+    fireSelector: FireSelector,
+    fireMode: FireMode
+): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return fireModes[fireSelector].fireModeDetails[fireMode].accuracy;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[fireSelector].fireModeDetails[fireMode].accuracy;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return fireModes[fireSelector].fireModeDetails[fireMode].accuracy;
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function shotsFired(timeDeltaInMS: number, rpm: number) {
+    return Math.floor((timeDeltaInMS * rpm) / MILLISECONDS_IN_A_MINUTE);
+}
+
+export function getSingleFireMode(fireModes: FireModes): FireModeSingle {
+    if (!(FireSelector.enum.single in fireModes)) {
+        throw new Error(`Single mode is not supported, only: ${Object.keys(fireModes).join("|")}`);
+    }
+
+    return fireModes[FireSelector.enum.single];
+}
+
+export function getBurstFireMode(fireModes: FireModes): FireModeBurst {
+    if (!(FireSelector.enum.burst in fireModes)) {
+        throw new Error(`Burst mode is not supported, only: ${Object.keys(fireModes).join("|")}`);
+    }
+
+    return fireModes[FireSelector.enum.burst];
+}
+
+export function getAutoFireMode(fireModes: FireModes): FireModeAuto {
+    if (!(FireSelector.enum.auto in fireModes)) {
+        throw new Error(`Auto mode is not supported, only: ${Object.keys(fireModes).join("|")}`);
+    }
+
+    return fireModes[FireSelector.enum.auto];
+}
+
+export function calcFireActionPointCost(
+    fireModes: FireModes,
+    fireSelector: FireSelector,
+    fireMode: FireMode
+): { initialAptCost: number; perShotAptCost: number } {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return {
+                    initialAptCost:
+                        fireModes[FireSelector.enum.single].fireModeDetails[fireMode].actionPoints,
+                    perShotAptCost: 0
+                };
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return {
+                    initialAptCost:
+                        fireModes[FireSelector.enum.burst].fireModeDetails[fireMode].actionPoints,
+                    perShotAptCost: 0
+                };
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return {
+                    initialAptCost:
+                        fireModes[FireSelector.enum.auto].fireModeDetails[fireMode].actionPoints,
+                    perShotAptCost:
+                        fireModes[FireSelector.enum.auto].fireModeDetails[fireMode]
+                            .actionPointsPerRound
+                };
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function calcMinimumAmmoUse(fireModes: FireModes, fireSelector: FireSelector): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return 1;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].ammoUse;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return 0;
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function calcAmmoUse(
+    fireModes: FireModes,
+    fireSelector: FireSelector,
+    triggerHeldTimeInMs: number = 0
+): number {
+    switch (fireSelector) {
+        case FireSelector.enum.single:
+            if (FireSelector.enum.single in fireModes) {
+                return 1;
+            }
+            break;
+
+        case FireSelector.enum.burst:
+            if (FireSelector.enum.burst in fireModes) {
+                return fireModes[FireSelector.enum.burst].ammoUse;
+            }
+            break;
+
+        case FireSelector.enum.auto:
+            if (FireSelector.enum.auto in fireModes) {
+                return shotsFired(triggerHeldTimeInMs, fireModes[FireSelector.enum.auto].rpm);
+            }
+            break;
+    }
+
+    throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+const action = ["throw"] as const;
+export const Action = z.enum(action);
+export type Action = z.infer<typeof Action>;
+
+export const Actions = z.union([z.object({ [Action.enum.throw]: FireModeDetail }), z.object({})]);
+export type Actions = z.infer<typeof Actions>;
 
 export const FragmentExplosion = z.object({
     type: z.literal(ExplosionType.enum.fragment),
@@ -356,22 +618,61 @@ export const ItemSummary = z.object({
     shortName: z.string(),
     description: Description,
     quantity: Quantity,
-    weight: Weight
+    weight: Weight,
+    maxThrowRange: z.number().nonnegative(),
+    uiImage: RenderList
 });
 export type ItemSummary = z.infer<typeof ItemSummary>;
 
+export const UnitSummary = z.object({
+    id: UnitId,
+    name: z.string().nonempty(),
+    description: Description,
+    location: ITilePos,
+    orientation: z.enum(Orientation),
+    viewAngleInDegrees: z.int().positive(),
+    collisionRadius: z.number().positive(),
+    isDirectional: z.boolean().optional().default(true),
+    attributes: z.object({
+        actionPoints: Attribute,
+        constitution: Attribute,
+        fitness: Attribute,
+        morale: Attribute,
+        stamina: Attribute,
+        speed: Attribute,
+        strength: Attribute,
+        weight: z.number().positive()
+    }),
+    uiImage: RenderList,
+    interactions: z.object({
+        canFire: z.boolean(),
+        canThrow: z.boolean(),
+        canAction: z.boolean(),
+        canInventory: z.boolean()
+    }),
+    itemInUse: ItemSummary.nullable(),
+    actions: Actions
+});
+export type UnitSummary = z.infer<typeof UnitSummary>;
+
+export const FireModeWeaponSummary = z.object({
+    id: ItemId,
+    name: z.string(),
+    shortName: z.string(),
+    description: Description,
+    capacity: z.int().nonnegative(),
+    maxCapacity: z.int().nonnegative(),
+    loadedRound: z.string().optional(),
+    sight: SightType,
+    maxRange: z.number().optional(),
+    fireSelector: FireSelector,
+    fireModes: FireModes,
+    uiImage: RenderList
+});
+export type FireModeWeaponSummary = z.infer<typeof FireModeWeaponSummary>;
+
 export const FireModeItemSummary = ItemSummary.extend({
-    weapons: z.array(
-        z.object({
-            id: ItemId,
-            name: z.string(),
-            shortName: z.string(),
-            description: Description,
-            capacity: z.int().nonnegative(),
-            maxCapacity: z.int().nonnegative(),
-            fireModes: FireModes
-        })
-    )
+    weapons: z.array(FireModeWeaponSummary)
 });
 export type FireModeItemSummary = z.infer<typeof FireModeItemSummary>;
 
@@ -380,3 +681,38 @@ export const InventorySummary = z.object({
     items: ItemSummary
 });
 export type InventorySummary = z.infer<typeof InventorySummary>;
+
+export const FireDetails = z.object({
+    unitId: UnitId,
+    weaponId: ItemId,
+    fireSelector: FireSelector,
+    fireMode: FireMode,
+    worldPoses: z.array(IVec2),
+    triggerHeldTimeInMs: z.number().nonnegative()
+});
+export type FireDetails = z.infer<typeof FireDetails>;
+
+export const ThrowDetails = z.object({
+    unitId: UnitId,
+    itemId: ItemId,
+    worldPos: IVec2
+});
+export type ThrowDetails = z.infer<typeof ThrowDetails>;
+
+export const ProjectileVisual = z.object({
+    intensity: z.number().min(0).max(1).default(1),
+    velocity: z.number().positive(),
+    length: z.number().positive(),
+    rangeFallOff: z.number().positive()
+});
+export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
+
+export const Tracer = z.object({
+    srcPos: IVec2,
+    dstPos: IVec2,
+    flightTimeInMs: z.number().nonnegative(),
+    maxRange: z.number().nonnegative(),
+
+    visual: ProjectileVisual
+});
+export type Tracer = z.infer<typeof Tracer>;

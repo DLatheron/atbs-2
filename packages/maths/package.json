@@ -12,11 +12,13 @@
     "scripts": {
         "build": "tsc -b",
         "dev": "tsc -b --watch --preserveWatchOutput",
-        "clean": "rm -rf dist tsconfig.tsbuildinfo"
+        "clean": "rm -rf dist tsconfig.tsbuildinfo",
+        "test": "vitest run"
     },
     "dependencies": {
         "line-intersect": "^3.0.0",
         "uuid": "^14.0.0",
-        "zod": "^4.4.3"
+        "zod": "^4.4.3",
+        "zod-class": "^0.0.18"
     }
 }

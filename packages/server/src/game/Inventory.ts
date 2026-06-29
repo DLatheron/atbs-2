@@ -24,7 +24,7 @@ export class Inventory {
         this._itemManager = itemManager;
 
         recipe.items.forEach(({ id, overrides }) => {
-            const item = itemManager.createItem(id, overrides);
+            const item = itemManager.newItem(id, overrides);
             this.addItem(item, this._items.length);
         });
     }

@@ -1,18 +1,37 @@
-export class Colour {
-    public r: number;
-    public g: number;
-    public b: number;
-    public a: number;
+import z from "zod";
+import { Z } from "zod-class";
 
+export const IColour = z.object({
+    r: z.number().min(0).max(255),
+    g: z.number().min(0).max(255),
+    b: z.number().min(0).max(255),
+    a: z.number().min(0).max(1)
+});
+export type IColour = z.infer<typeof IColour>;
+
+export function isIColour(arg: unknown): arg is IColour {
+    return IColour.safeParse(arg).success;
+}
+
+export function colourToRGBA(colour: IColour) {
+    return `rgba(${colour.r}, ${colour.g}, ${colour.b}, ${colour.a ?? 1})`;
+}
+
+export class Colour
+    extends Z.class({
+        r: z.number().min(0).max(255),
+        g: z.number().min(0).max(255),
+        b: z.number().min(0).max(255),
+        a: z.number().min(0).max(1)
+    })
+    implements IColour
+{
     constructor({ r, g, b, a = 1 }: { r: number; g: number; b: number; a?: number }) {
-        this.r = r;
-        this.g = g;
-        this.b = b;
-        this.a = a;
+        super({ r, g, b, a });
     }
 
     get asRGBAColorString(): string {
-        return `rgba(${this.r},${this.g},${this.b},${this.a})`;
+        return colourToRGBA(this);
     }
 
     static EnsuredNormalised(component: number): number {
@@ -35,7 +54,23 @@ export class Colour {
             a: 1.0
         });
     }
-}
 
-export const whiteColour = new Colour({ r: 255, g: 255, b: 255, a: 1 });
-export const blackColour = new Colour({ r: 0, g: 0, b: 0, a: 1 });
+    toString(): string {
+        const a = Math.floor(Colour.DenormaliseComponent(this.a)).toString(16).padStart(2, "0");
+        const r = Math.floor(this.r).toString(16).padStart(2, "0");
+        const g = Math.floor(this.g).toString(16).padStart(2, "0");
+        const b = Math.floor(this.b).toString(16).padStart(2, "0");
+
+        return `#${a}${r}${g}${b}`;
+    }
+
+    static Transparent = new Colour({ r: 0, g: 0, b: 0, a: 0 });
+    static Red = new Colour({ r: 255, g: 0, b: 0, a: 1 });
+    static Yellow = new Colour({ r: 255, g: 255, b: 0, a: 1 });
+    static Green = new Colour({ r: 0, g: 255, b: 0, a: 1 });
+    static Cyan = new Colour({ r: 0, g: 255, b: 255, a: 1 });
+    static Blue = new Colour({ r: 0, g: 0, b: 255, a: 1 });
+    static Magenta = new Colour({ r: 255, g: 0, b: 255, a: 1 });
+    static White = new Colour({ r: 255, g: 255, b: 255, a: 1 });
+    static Black = new Colour({ r: 0, g: 0, b: 0, a: 1 });
+}

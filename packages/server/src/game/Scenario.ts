@@ -1,13 +1,14 @@
-import { Description, ScenarioSummary, SideId, MapId } from "@atbs/shared-data";
+import { Description, ScenarioSummary, SideId, MapId, ScenarioId } from "@atbs/shared-data";
 import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
 import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
 import { ItemManager } from "./ItemManager.js";
+import { FurnitureManager } from "./FurnitureManager.js";
 
 export const ScenarioRecipe = z.object({
-    id: z.string().min(1),
-    name: z.string().min(1),
+    id: ScenarioId,
+    name: z.string().nonempty(),
     description: Description,
     worldMapId: MapId,
     sides: z.array(SideRecipe)
@@ -20,14 +21,18 @@ export class Scenario {
     private readonly _sidesMap: Map<SideId, Side>;
     private readonly _map: WorldMap;
 
-    constructor(recipe: Readonly<ScenarioRecipe>, itemManager: ItemManager) {
+    constructor(
+        recipe: Readonly<ScenarioRecipe>,
+        itemManager: ItemManager,
+        furnitureManager: FurnitureManager
+    ) {
         this._recipe = recipe;
 
         this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe, itemManager));
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
 
         const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);
-        this._map = new WorldMap(mapRecipe);
+        this._map = new WorldMap(mapRecipe, itemManager, furnitureManager);
     }
 
     get id() {

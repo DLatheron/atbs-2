@@ -24,6 +24,8 @@ import { Unit } from "./Unit.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { ItemManager } from "./ItemManager.js";
 import { ItemRecipeManager } from "./ItemRecipeManager.js";
+import { FurnitureManager } from "./FurnitureManager.js";
+import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -58,6 +60,7 @@ export class Game {
     private readonly _context: ClientMessageContext;
     private readonly _messageManager: ClientMessageManager;
     private readonly _itemManager: ItemManager;
+    private readonly _furnitureManager: FurnitureManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -72,13 +75,15 @@ export class Game {
     constructor(
         ownerId: ClientId,
         scenarioRecipeManager: ScenarioRecipeManager,
-        itemRecipeManager: ItemRecipeManager
+        itemRecipeManager: ItemRecipeManager,
+        furnitureRecipeManager: FurnitureRecipeManager
     ) {
         this._scenarioRecipeManager = scenarioRecipeManager;
         this._ownerId = ownerId;
         this._id = generateGameId();
         this._clientManager = new ClientManager();
         this._itemManager = new ItemManager(itemRecipeManager);
+        this._furnitureManager = new FurnitureManager(furnitureRecipeManager);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -282,6 +287,10 @@ export class Game {
 
     get itemManager(): ItemManager {
         return this._itemManager;
+    }
+
+    get furnitureManager(): FurnitureManager {
+        return this._furnitureManager;
     }
 
     set scenario(value: Scenario | null) {

@@ -73,6 +73,7 @@ export class MapModeHandler extends ModeHandler {
             movementDelta: Vec2.Zero()
         };
         this.camera.additionalVelocity = null;
+        this.world.mouseCursor = "grabbing";
     }
 
     endMapDrag(event: MouseEvent | React.MouseEvent): void {
@@ -82,6 +83,7 @@ export class MapModeHandler extends ModeHandler {
             this.camera.additionalVelocity = this._mapDrag.movementDelta;
 
             this._mapDrag = null;
+            this.world.mouseCursor = undefined;
         }
     }
 
@@ -108,11 +110,19 @@ export class MapModeHandler extends ModeHandler {
             return;
         }
 
+        super.onMouseMove(event);
+
         this.updateDelta(event, TrackingSpeed.enum.VERY_FAST);
         this.trackTile(event);
     }
 
     onMouseLeave(event: MouseEvent | React.MouseEvent): void {
+        if (!this.world.hasMap) {
+            return;
+        }
+
+        super.onMouseLeave(event);
+
         this.endMapDrag(event);
         this._clearTileInfoQuery();
     }
@@ -125,8 +135,8 @@ export class MapModeHandler extends ModeHandler {
         this.world.sendMessage({
             type: "client:game:tile:click",
             payload: {
-                tilePos: [tilePos.col, tilePos.row],
-                worldPos: [worldPos.x, worldPos.y]
+                tilePos,
+                worldPos
             }
         });
     }
@@ -141,7 +151,7 @@ export class MapModeHandler extends ModeHandler {
         this._tileInfoQuery.timerId = window.setTimeout(() => {
             this.world.sendMessage({
                 type: "client:game:tile:info",
-                payload: { tilePos: [tilePos.col, tilePos.row] }
+                payload: { tilePos }
             });
         }, TILE_INFO_QUERY_DEBOUNCE_IN_MS);
     }

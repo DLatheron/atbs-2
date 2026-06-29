@@ -2,6 +2,7 @@ import { TileInfo } from "@atbs/shared-data";
 import { Container, Stack, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../Description/Description";
 import { ImageComponent } from "../Image/Image";
+import { UnitDetailsComponent } from "../UnitDetails";
 
 export interface TileInfoComponentProps {
     tileInfo: TileInfo | null;
@@ -17,24 +18,23 @@ export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
             {tileInfo && (
                 <Stack direction="column" spacing={2}>
                     {terrain && (
-                        <>
-                            <Typography variant="h5">Terrain:</Typography>
+                        <Stack
+                            spacing={2}
+                            sx={{
+                                borderRadius: 2,
+                                border: "1px black solid",
+                                backgroundColor: "beige",
+                                p: 1
+                            }}
+                        >
+                            <Typography variant="h5" sx={{ textAlign: "center" }}>
+                                {terrain.name}{" "}
+                            </Typography>
                             <ImageComponent images={terrain.uiImage} />
-                            <Typography variant="h6">{terrain.name}</Typography>
                             <DescriptionComponent description={terrain.description} />
-                        </>
+                        </Stack>
                     )}
-                    <hr />
-                    <Typography variant="h5">Unit:</Typography>
-                    {unit ? (
-                        <>
-                            <Typography variant="h6">{unit.name}</Typography>
-                            <ImageComponent images={unit.uiImage} />
-                            <DescriptionComponent description={unit.description} />
-                        </>
-                    ) : (
-                        <Typography variant="body1">No unit</Typography>
-                    )}
+                    {unit && <UnitDetailsComponent unit={unit} />}
                 </Stack>
             )}
         </Container>

@@ -99,7 +99,11 @@ export class ImageCache {
                 ImageCache.CacheRenderListImages(renderList, imageIdSet)
             )
         );
-
+        map.tilesByRenderMode[RenderMode.enum.FIRE_MODE].forEach((rowOfTiles: RenderList[]) =>
+            rowOfTiles.forEach((renderList: RenderList) =>
+                ImageCache.CacheRenderListImages(renderList, imageIdSet)
+            )
+        );
         return imageIdSet;
     }
 

@@ -12,15 +12,19 @@ import {
     Quantity,
     RenderList,
     UnitType,
-    Weight
+    Weight,
+    RenderMode,
+    SightType,
+    FireType
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
-import { TilePos } from "@atbs/maths";
+import { degreesToRadians, TilePos } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";
-import { SlotProps, ItemOverrides, ItemRecipe, SlotType } from "./ItemRecipe.js";
+import { SlotProps, ItemOverrides, ItemRecipe, SlotType, ProjectileRecipe } from "./ItemRecipe.js";
 import type { Unit } from "./Unit.js";
 import cloneDeep from "lodash/cloneDeep.js";
+import { config } from "../config/config.schema.js";
 
 export interface ItemAdditionalData {
     instanceIndex: number;
@@ -34,6 +38,7 @@ export class Item extends SceneObject {
 
     private _location: TilePos | null;
     private _quantity;
+    private _fireSelector: FireSelector | null;
 
     constructor(
         recipe: ItemRecipe,
@@ -49,12 +54,13 @@ export class Item extends SceneObject {
 
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._quantity = overrides.quantity ?? recipe.quantity;
+        this._fireSelector = recipe.type === ItemType.enum.gun ? recipe.fireSelector : null;
 
         this._slots = new Map<SlotType, Item>();
         const { slots } = recipe;
         if (slots) {
             for (const [slotType, { id, quantity }] of unsafeEntries(slots)) {
-                const slotItem = itemManager.createItem(id, { quantity });
+                const slotItem = itemManager.newItem(id, { quantity });
 
                 this._slots.set(slotType, slotItem);
             }
@@ -146,12 +152,12 @@ export class Item extends SceneObject {
     }
 
     get allItems(): Item[] {
-        const subItems = this.subItems;
+        const allItems: Item[] = [this];
 
-        return subItems.reduce((subItems, item) => {
+        return this.subItems.reduce((subItems, item) => {
             subItems.push(...item.allItems);
             return subItems;
-        }, subItems);
+        }, allItems);
     }
 
     get compatibleAmmoIds(): ItemId[] {
@@ -161,7 +167,11 @@ export class Item extends SceneObject {
     }
 
     get maxRange(): number {
-        return "maxRange" in this._recipe ? this._recipe.maxRange : 0;
+        return "projectile" in this._recipe ? this._recipe.projectile.maxRange : 0;
+    }
+
+    get spreadAngleInRadians(): number {
+        return "spreadAngle" in this._recipe ? degreesToRadians(this._recipe.spreadAngle) : 0;
     }
 
     get capacity(): number {
@@ -174,6 +184,63 @@ export class Item extends SceneObject {
 
     get canCollapse(): boolean {
         return this.type === ItemType.enum.round;
+    }
+
+    get loadedMagazine(): Item | null {
+        const item = this.findSlotContents(SlotType.enum.ammo);
+
+        return item?.type === ItemType.enum.magazine ? item : null;
+    }
+
+    get loadedRound(): Item | null {
+        const item = this.findSlotContents(SlotType.enum.ammo);
+        const subItem = item?.findSlotContents(SlotType.enum.ammo);
+
+        return subItem ?? item ?? null;
+    }
+
+    get fireSelector(): FireSelector {
+        if (!this._fireSelector) {
+            throw new Error(`Item ${this.id} does not have a fire selector`);
+        }
+
+        return this._fireSelector;
+    }
+
+    set fireSelector(value: FireSelector) {
+        if (!this._fireSelector) {
+            throw new Error(`Item ${this.id} does not have a fire selector`);
+        }
+
+        this._fireSelector = value;
+    }
+
+    get sight(): SightType {
+        if ("sight" in this._recipe) {
+            return this._recipe.sight;
+        } else {
+            return SightType.enum.iron;
+        }
+    }
+
+    get fireType(): FireType {
+        if (!("fireType" in this._recipe)) {
+            throw new Error(`Item ${this.id} does not have a fire type`);
+        }
+
+        return this._recipe.fireType;
+    }
+
+    get isEmpty(): boolean {
+        return this.capacity === 0;
+    }
+
+    get projectileRecipe(): ProjectileRecipe {
+        if (!("projectile" in this._recipe)) {
+            throw new Error(`Item ${this.id} is does not have a projectile`);
+        }
+
+        return this._recipe.projectile;
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -198,6 +265,22 @@ export class Item extends SceneObject {
 
     setSlotContents(slot: SlotType, item: Item): void {
         this._slots.set(slot, item);
+    }
+
+    findByItemId(id: ItemId): Item | undefined {
+        if (this.id === id) {
+            return this;
+        }
+
+        return Array.from(this._slots.values()).find((slotItem) => slotItem.id === id);
+    }
+
+    getByItemId(id: ItemId): Item {
+        const item = this.findByItemId(id);
+        if (!item) {
+            throw new Error(`Item ${this.id} did not have a sub-item with id ${id}`);
+        }
+        return item;
     }
 
     hasSlotProps(slot: SlotType): boolean {
@@ -269,7 +352,7 @@ export class Item extends SceneObject {
 
                 spaceForRounds = maxQuantity - itemsRounds.quantity;
             } else {
-                itemsRounds = this._itemManager.createItem(ammo.recipeId, { quantity: 0 });
+                itemsRounds = this._itemManager.newItem(ammo.recipeId, { quantity: 0 });
                 spaceForRounds = maxQuantity;
             }
             if (spaceForRounds <= 0) {
@@ -305,13 +388,13 @@ export class Item extends SceneObject {
     }
 
     calcDamage(unitType: UnitType): number {
-        if (!("damage" in this._recipe)) {
+        if (!("projectile" in this._recipe)) {
             return 0;
         }
 
-        return unitType in this._recipe.damage
-            ? this._recipe.damage[unitType]
-            : this._recipe.damage.default;
+        const { damage: damageMap } = this._recipe.projectile;
+        const damage = unitType in damageMap ? damageMap[unitType] : undefined;
+        return damage ?? damageMap.default;
     }
 
     getRenderList(context: SceneContext): RenderList {
@@ -343,7 +426,8 @@ export class Item extends SceneObject {
         const fireModes = cloneDeep(this._recipe.fireModes);
 
         if (FireSelector.enum.single in fireModes) {
-            const { fireModeDetails } = fireModes[FireSelector.enum.single];
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            const { fireModeDetails } = fireModes[FireSelector.enum.single]!;
 
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
@@ -354,7 +438,8 @@ export class Item extends SceneObject {
         }
 
         if (FireSelector.enum.burst in fireModes) {
-            const { fireModeDetails } = fireModes[FireSelector.enum.burst];
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            const { fireModeDetails } = fireModes[FireSelector.enum.burst]!;
 
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
@@ -365,7 +450,8 @@ export class Item extends SceneObject {
         }
 
         if (FireSelector.enum.auto in fireModes) {
-            const { fireModeDetails } = fireModes[FireSelector.enum.auto];
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            const { fireModeDetails } = fireModes[FireSelector.enum.auto]!;
 
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
@@ -375,32 +461,100 @@ export class Item extends SceneObject {
             );
         }
 
+        console.info({ id: this.id, fireModes: this._recipe.fireModes });
+
         return fireModes;
     }
 
-    getItemSummary(): ItemSummary {
+    fire(): Item {
+        if (this.type !== ItemType.enum.gun) {
+            throw new Error(`Item ${this.id} cannot be fired, because its it not a gun`);
+        }
+
+        const { loadedRound } = this;
+        if (!loadedRound) {
+            throw new Error(`Item ${this.id} does not have a loaded round to fire`);
+        }
+
+        if (!config.infiniteAmmunition) {
+            --loadedRound.quantity;
+        }
+
+        if (loadedRound.quantity === 0) {
+            (this.loadedMagazine ?? this).emptySlot(SlotType.enum.ammo);
+        }
+
+        return loadedRound;
+    }
+
+    getItemSummary(unit: Unit): ItemSummary {
         return {
             id: this.id,
             name: this.name,
             shortName: this.shortName,
             description: this.description,
             quantity: this.quantity,
-            weight: this.weight
+            weight: this.weight,
+            maxThrowRange: unit.calcThrowMaxRange(this),
+            uiImage: this.getRenderList({
+                renderMode: RenderMode.enum.UI_MODE,
+                states: []
+            })
         };
     }
 
     getFireModeItemSummary(unit: Unit): FireModeItemSummary {
+        if (this.type === ItemType.enum.gun) {
+            const { loadedMagazine } = this;
+            const { loadedRound } = this;
+
+            return {
+                ...this.getItemSummary(unit),
+                weapons: [
+                    {
+                        id: this.id,
+                        name: this.name,
+                        shortName: this.shortName,
+                        description: this.description,
+                        capacity: (loadedMagazine ?? this).capacity,
+                        maxCapacity: (loadedMagazine ?? this).maxCapacity,
+                        sight: this.sight,
+                        maxRange: loadedRound?.maxRange,
+                        fireSelector: this.fireSelector,
+                        fireModes: this.getFireModes(unit),
+                        loadedRound: loadedRound?.name,
+                        uiImage: this.getRenderList({
+                            renderMode: RenderMode.enum.UI_MODE,
+                            states: []
+                        })
+                    }
+                ]
+            };
+        }
+
         return {
-            ...this.getItemSummary(),
-            weapons: this.getWeapons().map((weapon) => ({
-                id: weapon.id,
-                name: weapon.name,
-                shortName: weapon.shortName,
-                description: weapon.description,
-                capacity: weapon.capacity,
-                maxCapacity: weapon.maxCapacity,
-                fireModes: weapon.getFireModes(unit)
-            }))
+            ...this.getItemSummary(unit),
+            weapons: this.getWeapons().map((weapon) => {
+                const { loadedMagazine } = weapon;
+                const { loadedRound } = weapon;
+
+                return {
+                    id: weapon.id,
+                    name: weapon.name,
+                    shortName: weapon.shortName,
+                    description: weapon.description,
+                    capacity: (loadedMagazine ?? weapon).capacity,
+                    maxCapacity: (loadedMagazine ?? weapon).maxCapacity,
+                    fireSelector: weapon.fireSelector,
+                    fireModes: weapon.getFireModes(unit),
+                    loadedRound: loadedRound?.name,
+                    sight: weapon.sight,
+                    uiImage: weapon.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: []
+                    })
+                };
+            })
         };
     }
 }

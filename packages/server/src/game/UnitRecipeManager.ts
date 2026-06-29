@@ -47,6 +47,7 @@ export class UnitRecipeManager {
                 this.addRecipe(recipe);
             } catch (error) {
                 console.error(`ERROR Loading Unit recipe: ${file}`, error);
+                throw error;
             }
         }
     }
