@@ -1,0 +1,31 @@
+{
+    "id": "12-gauge-buckshot.round",
+    "type": "round",
+    "name": "12 Gauge Buckshot Shells",
+    "shortName": "5.56mm NATO",
+    "description": [
+        {
+            "text": "12-gauge buckshot shells sporting a medium range, but with limited penetration abilities."
+        }
+    ],
+    "weight": 0.028,
+    "projectile": {
+        "numProjectiles": 2,
+        "maxRange": 2000,
+        "penetration": 10,
+        "visual": {
+            "intensity": 1,
+            "velocity": 600,
+            "length": 30,
+            "rangeFallOff": 10
+        },
+        "damage": {
+            "human": 5,
+            "default": 3
+        }
+    },
+    "renderable": {
+        "default": [{ "imageId": "12-gauge-buckshot" }],
+        "FIRE_MODE": []
+    }
+}

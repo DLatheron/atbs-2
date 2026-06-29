@@ -99,6 +99,11 @@ export class Projectile {
         };
     }
 
+    calculateTimeTo(pos: Vec2): number {
+        const length = pos.sub(this.srcPos).length;
+        return (length / this.velocity) * 1000;
+    }
+
     getTracer(): Tracer {
         const endPos = this.impact?.pos ?? this.dstPos;
         const distanceTravelled = endPos.sub(this.srcPos).length;

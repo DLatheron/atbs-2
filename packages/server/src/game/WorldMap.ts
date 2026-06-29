@@ -1,16 +1,7 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import {
-    Aabb,
-    Colour,
-    DebugGraphic,
-    DebugGraphicType,
-    ITilePos,
-    Maths,
-    TilePos,
-    Vec2
-} from "@atbs/maths";
+import { Aabb, DebugGraphic, ITilePos, Maths, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
@@ -224,7 +215,7 @@ export class WorldMap {
      */
     castProjectile(projectile: Projectile, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
         const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
-        let sampleOrder = 0;
+        // let sampleOrder = 0;
 
         return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
             const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
@@ -233,21 +224,21 @@ export class WorldMap {
                 return undefined;
             }
 
-            debugGraphics?.push(
-                {
-                    type: DebugGraphicType.enum.tile,
-                    tilePos: tile.location,
-                    fillColour: new Colour({ ...Colour.Green, a: 0.25 }),
-                    strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
-                },
-                {
-                    type: DebugGraphicType.enum.text,
-                    worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
-                    text: `${sampleOrder++}: ${tile.location}`,
-                    colour: Colour.White,
-                    fontSize: 10
-                }
-            );
+            // debugGraphics?.push(
+            //     {
+            //         type: DebugGraphicType.enum.tile,
+            //         tilePos: tile.location,
+            //         fillColour: new Colour({ ...Colour.Green, a: 0.05 }),
+            //         strokeColour: new Colour({ ...Colour.Yellow, a: 0.05 })
+            //     },
+            //     {
+            //         type: DebugGraphicType.enum.text,
+            //         worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+            //         text: `${sampleOrder++}: ${tile.location}`,
+            //         colour: Colour.White,
+            //         fontSize: 10
+            //     }
+            // );
 
             return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics);
         });

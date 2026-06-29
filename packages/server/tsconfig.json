@@ -5,6 +5,10 @@
         "outDir": "dist"
     },
     "references": [{ "path": "../maths" }, { "path": "../shared-data" }],
-    "include": ["src", "../shared-data/src/types/ServerToClientMessage.ts"],
+    "include": [
+        "src",
+        "../shared-data/src/types/ServerToClientMessage.ts",
+        "../misc/src/PriorityQueue.ts"
+    ],
     "exclude": ["src/**/*.test.ts"]
 }

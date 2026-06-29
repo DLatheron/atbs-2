@@ -11,7 +11,7 @@ import {
     FireType,
     getAccuracy,
     getRpm,
-    OnTarget,
+    // OnTarget,
     RenderList,
     RenderMode,
     shotsFired,
@@ -45,6 +45,8 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { config } from "../config/config.schema.js";
+import { PriorityQueue } from "@atbs/misc";
+import { Material } from "./Material.js";
 
 const ROTATION_APT_COST = 1;
 
@@ -611,7 +613,7 @@ export class Unit extends SceneObject {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
             const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
 
-            console.dir({ shot, srcWorldPos: fromWorldPos, tgtWorldPos: toWorldPos });
+            console.dir({ shot, srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
 
             const range =
                 weapon.fireType === FireType.enum.indirect
@@ -690,8 +692,8 @@ export class Unit extends SceneObject {
                     directionVector,
                     // TEMPORARY: Override the maxium range of the projectile to be the target position.
                     projectileRecipe: {
-                        ...projectileRecipe,
-                        maxRange: toWorldPos.sub(fromWorldPos).length
+                        ...projectileRecipe
+                        // maxRange: toWorldPos.sub(fromWorldPos).length
                     }
                 });
             });
@@ -700,36 +702,70 @@ export class Unit extends SceneObject {
             projectiles.sort((a, b) => b.velocity - a.velocity);
             console.dir({ projectiles });
 
-            let debugGraphics: DebugGraphic[] | undefined;
-            // debugGraphics = [];
+            const debugGraphics: DebugGraphic[] = [];
 
-            debugGraphics?.push(
-                {
+            // debugGraphics?.push(
+            //     {
+            //         type: DebugGraphicType.enum.line,
+            //         srcWorldPos: projectiles[0].srcPos,
+            //         dstWorldPos: projectiles[0].dstPos,
+            //         strokeColour: Colour.White,
+            //         strokeThickness: 2
+            //     },
+            //     {
+            //         type: DebugGraphicType.enum.point,
+            //         worldPos: projectiles[0].srcPos,
+            //         size: 6,
+            //         colour: Colour.Red
+            //     },
+            //     {
+            //         type: DebugGraphicType.enum.point,
+            //         worldPos: projectiles[0].dstPos,
+            //         size: 6,
+            //         colour: Colour.Blue
+            //     }
+            // );
+
+            const eventQueue = new PriorityQueue<{
+                priority: number;
+                projectile: Projectile;
+                pos: Vec2;
+                material: Material;
+            }>((a, b) => a.priority < b.priority); // Inverse priority queue.
+
+            for (const projectile of projectiles) {
+                const hitResult = map.castProjectile(projectile, debugGraphics);
+                console.dir({ hitResult }, { depth: null });
+
+                if (hitResult) {
+                    const timeTo = projectile.calculateTimeTo(hitResult.pos);
+                    console.dir(
+                        `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
+                    );
+                    projectile.impact = hitResult.pos;
+
+                    eventQueue.push({
+                        priority: timeTo,
+                        projectile,
+                        ...hitResult
+                    });
+                }
+
+                debugGraphics?.push({
                     type: DebugGraphicType.enum.line,
-                    srcWorldPos: projectiles[0].srcPos,
-                    dstWorldPos: projectiles[0].dstPos,
+                    srcWorldPos: projectile.srcPos,
+                    dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
                     strokeColour: Colour.White,
                     strokeThickness: 2
-                },
-                {
-                    type: DebugGraphicType.enum.point,
-                    worldPos: projectiles[0].srcPos,
-                    size: 6,
-                    colour: Colour.Red
-                },
-                {
-                    type: DebugGraphicType.enum.point,
-                    worldPos: projectiles[0].dstPos,
-                    size: 6,
-                    colour: Colour.Blue
-                }
-            );
+                });
+            }
 
-            const hitResult = map.castProjectile(projectiles[0], debugGraphics);
-            console.dir({ hitResult }, { depth: null });
+            let event: { priority: number; projectile: Projectile; pos: Vec2; material: Material };
 
-            if (hitResult) {
-                projectiles[0].impact = hitResult?.pos;
+            while ((event = eventQueue.pop())) {
+                console.info(
+                    `${event.priority} event ${event.projectile.index} hit ${event.material.id} at ${event.pos}`
+                );
             }
 
             if (debugGraphics) {
@@ -741,15 +777,15 @@ export class Unit extends SceneObject {
 
             // TODO: Move the projectiles forward in time...
             // TODO: Psuedo tracers - how do we determine visibility?
-            messageRouter.send([
-                {
-                    type: "server:fire:trace",
-                    payload: {
-                        tracers: projectiles.map((projectile) => projectile.getTracer()),
-                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
-                    }
-                }
-            ]);
+            // messageRouter.send([
+            //     {
+            //         type: "server:fire:trace",
+            //         payload: {
+            //             tracers: projectiles.map((projectile) => projectile.getTracer()),
+            //             isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+            //         }
+            //     }
+            // ]);
         }
 
         /**
