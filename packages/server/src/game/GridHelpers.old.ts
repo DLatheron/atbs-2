@@ -4,6 +4,8 @@ import { Grid, SampleHandler, CollisionHandler, SampleType } from "./GridHelpers
 import { Projectile } from "./Projectile.js";
 import { XYAxis } from "./Ray.js";
 
+const AABB_DIMENSION_SCALER = 0.999;
+
 /**
  *
  * @param projectile Projectile that is being tracked.

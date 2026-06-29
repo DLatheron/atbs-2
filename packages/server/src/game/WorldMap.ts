@@ -1,11 +1,23 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, ITilePos, Maths, TilePos, Vec2 } from "@atbs/maths";
+import {
+    Aabb,
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    ITilePos,
+    Maths,
+    TilePos,
+    Vec2
+} from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { HandleMaterialPenetration } from "./Ray.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
+import { Projectile } from "./Projectile.js";
+import { stepGrid, GridHit } from "./GridHelpers.js";
+import { Material } from "./Material.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -283,5 +295,67 @@ export class WorldMap {
         //         handleMaterialPenetration(trackingWorldPos);
         //     }
         // }
+    }
+
+    // stepMap(projectile: Projectile, debugGraphics?: DebugGraphic[])
+
+    stepMap(
+        projectile: Projectile,
+        debugGraphics?: DebugGraphic[]
+    ): GridHit | false | "out-of-bounds" {
+        const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: true };
+        let sampleOrder = 0;
+
+        return stepGrid(
+            projectile,
+            grid,
+            (samplePos, sampleType) => {
+                console.info({ samplePos }, { depth: null });
+                const tile = this.sampleTile(this.worldToTile(samplePos));
+                if (tile === undefined) {
+                    return undefined;
+                }
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.tile,
+                        tilePos: tile.location,
+                        fillColour:
+                            sampleType === "major"
+                                ? new Colour({ ...Colour.Green, a: 0.25 })
+                                : sampleType === "minor-past"
+                                  ? new Colour({ ...Colour.Red, a: 0.25 })
+                                  : new Colour({ ...Colour.Blue, a: 0.25 }),
+                        strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
+                    },
+                    {
+                        type: DebugGraphicType.enum.text,
+                        worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+                        text: `${sampleOrder++}: ${tile.location}`,
+                        colour: Colour.White,
+                        fontSize: 10
+                    }
+                );
+
+                const result = tile.stepTile(projectile, debugGraphics);
+                console.dir({ result });
+                if (result === false) {
+                    console.info(`Projectile did not intersect tile ${tile.location}`);
+                    return undefined;
+                } else if (result === "out-of-bounds") {
+                    console.info(`Projectile passed safely through tile ${tile.location}`);
+                    return undefined;
+                } else {
+                    console.info(
+                        `Projectile hit tile ${tile.location} material ${result.material} at ${result.worldPos}`
+                    );
+                    return result.material;
+                }
+            },
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            (_collisionPos: Vec2, _material: Material) => {
+                return false;
+            },
+            debugGraphics
+        );
     }
 }

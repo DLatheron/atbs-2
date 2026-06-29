@@ -19,7 +19,7 @@ import { Furniture } from "./Furniture.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { Projectile } from "./Projectile.js";
 import { Material } from "./Material.js";
-import { stepGrid } from "./GridHelpers.js";
+import { GridHit, stepGrid } from "./GridHelpers.js";
 import { Image } from "./Image.js";
 import { ImageManager } from "./ImageManager.js";
 
@@ -265,7 +265,7 @@ export class Tile implements IRenderableEntity {
     stepTile(
         projectile: Projectile,
         debugGraphics?: DebugGraphic[]
-    ): Vec2 | false | "out-of-bounds" {
+    ): GridHit | false | "out-of-bounds" {
         if (!this.anythingCollidable) {
             return false;
         }
@@ -274,6 +274,8 @@ export class Tile implements IRenderableEntity {
         if (collisionLayers.length === 0) {
             return false;
         }
+
+        console.info(`Casting against tile ${this.location}`);
 
         // TODO: Get the collision layers we need to consider AND their orientation...
 
@@ -305,6 +307,7 @@ export class Tile implements IRenderableEntity {
             projectile,
             grid,
             (samplePos) => {
+                console.info("Tile sampling at", samplePos);
                 let hitMaterial: Material | undefined;
 
                 for (const { image, orientation, materials } of collisionLayers) {
@@ -316,6 +319,7 @@ export class Tile implements IRenderableEntity {
                         break;
                     }
                 }
+
                 return hitMaterial;
             },
             // eslint-disable-next-line @typescript-eslint/no-unused-vars

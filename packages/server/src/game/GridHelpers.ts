@@ -13,6 +13,13 @@ export interface Grid {
     subGrid: boolean;
 }
 
+export interface GridHit {
+    worldPos: Vec2;
+    material: Material;
+}
+
+export type StepGridResult = GridHit | false | "out-of-bounds";
+
 const sampleType = ["major", "minor-past", "minor-future"] as const;
 export const SampleType = z.enum(sampleType);
 export type SampleType = z.infer<typeof SampleType>;
@@ -30,13 +37,24 @@ export type SampleHandler = (
  */
 export type CollisionHandler = (gridRelativePos: Vec2, material: Material) => boolean;
 
+/**
+ *
+ * @param projectile
+ * @param grid
+ * @param sampleHandler
+ * @param handleCollision
+ * @param debugGraphics
+ * @returns Returns the world position of the intersection point and its material (if a collision occurs),
+ * `false` if the projectile does not intersect with the grid at all, or `"out-of-bounds"` if the projectile
+ * passes through the grid and out the other side.
+ */
 export function stepGrid(
     projectile: Readonly<Projectile>,
     grid: Readonly<Grid>,
     sampleHandler: SampleHandler,
     handleCollision: CollisionHandler,
     debugGraphics?: DebugGraphic[]
-): Vec2 | false | "out-of-bounds" {
+): StepGridResult {
     const { topLeft } = grid.aabb;
     let srcPos: Vec2;
     let dstPos: Vec2;
@@ -65,7 +83,7 @@ export function stepGrid(
 
         if (hitMaterial) {
             if (handleCollision(sample.pos, hitMaterial)) {
-                return sample.pos;
+                return { worldPos: sample.pos, material: hitMaterial };
             }
         }
     }
@@ -73,16 +91,17 @@ export function stepGrid(
     return false;
 }
 
-function preCalcMajorAxisStep(srcPos: Vec2, dstPos: Vec2): {
+function preCalcMajorAxisStep(
+    srcPos: Vec2,
+    dstPos: Vec2
+): {
     calcMajorAxisStep: (majorAxisStep: number) => Vec2;
     lastStep: number;
     xyAxis: XYAxis;
 } {
     const deltaChange = dstPos.sub(srcPos);
     const xMajorAxis = Math.abs(deltaChange.x) >= Math.abs(deltaChange.y);
-    const xyAxis: XYAxis = xMajorAxis
-        ? { major: "x", minor: "y" }
-        : { major: "y", minor: "x" };
+    const xyAxis: XYAxis = xMajorAxis ? { major: "x", minor: "y" } : { major: "y", minor: "x" };
 
     const deltaMajor = Math.sign(deltaChange[xyAxis.major]);
     const deltaMinor = deltaChange[xyAxis.minor] / deltaChange[xyAxis.major];
@@ -100,7 +119,7 @@ function preCalcMajorAxisStep(srcPos: Vec2, dstPos: Vec2): {
         calcMajorAxisStep,
         lastStep,
         xyAxis
-    }
+    };
 }
 
 function hitsSubGrid(
@@ -152,7 +171,7 @@ function* walkGrid(
             return true;
         }
     };
-    
+
     const { calcMajorAxisStep, lastStep, xyAxis } = preCalcMajorAxisStep(srcPos, dstPos);
 
     let step = 0;
@@ -178,10 +197,7 @@ function* walkGrid(
             }
         );
 
-        const samplePos = new Vec2(
-            roundToGrid(stepPos.x),
-            roundToGrid(stepPos.y)
-        );
+        const samplePos = new Vec2(roundToGrid(stepPos.x), roundToGrid(stepPos.y));
 
         //
         // Check if in the previous sample we stepped across a grid square's minor axis
@@ -199,12 +215,7 @@ function* walkGrid(
                     [xyAxis.minor]: roundToGrid(prevMinorAxisValue)
                 });
 
-                if (hitsSubGrid(
-                    srcPos,
-                    dstPos,
-                    gridScale,
-                    subSamplePos
-                )) {
+                if (hitsSubGrid(srcPos, dstPos, gridScale, subSamplePos)) {
                     if (!grid.aabb.isPointInside(subSamplePos)) {
                         yield { outOfBounds: true };
                     }
@@ -224,6 +235,9 @@ function* walkGrid(
         //
         // Check the current grid square.
         //
+        if (!grid.aabb.isPointInside(samplePos)) {
+            yield { outOfBounds: true };
+        }
         if (canVisitGrid(samplePos)) {
             yield {
                 pos: samplePos,
@@ -249,12 +263,7 @@ function* walkGrid(
                         [xyAxis.minor]: roundToGrid(nextMinorAxisValue)
                     });
 
-                    if (hitsSubGrid(
-                        srcPos,
-                        dstPos,
-                        gridScale,
-                        subSamplePos
-                    )) {
+                    if (hitsSubGrid(srcPos, dstPos, gridScale, subSamplePos)) {
                         if (!grid.aabb.isPointInside(subSamplePos)) {
                             yield { outOfBounds: true };
                         }
