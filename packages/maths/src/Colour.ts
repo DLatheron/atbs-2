@@ -55,6 +55,15 @@ export class Colour
         });
     }
 
+    toString(): string {
+        const a = Math.floor(Colour.DenormaliseComponent(this.a)).toString(16).padStart(2, "0");
+        const r = Math.floor(this.r).toString(16).padStart(2, "0");
+        const g = Math.floor(this.g).toString(16).padStart(2, "0");
+        const b = Math.floor(this.b).toString(16).padStart(2, "0");
+
+        return `#${a}${r}${g}${b}`;
+    }
+
     static Transparent = new Colour({ r: 0, g: 0, b: 0, a: 0 });
     static Red = new Colour({ r: 255, g: 0, b: 0, a: 1 });
     static Yellow = new Colour({ r: 255, g: 255, b: 0, a: 1 });

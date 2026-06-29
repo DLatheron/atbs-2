@@ -1,5 +1,6 @@
 import {
     Aabb,
+    Colour,
     DebugGraphic,
     DebugGraphicType,
     type DebugTile,
@@ -17,11 +18,10 @@ import { FurnitureState, RenderList, RenderMode, TileInfo } from "@atbs/shared-d
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
 import { FurnitureManager } from "./FurnitureManager.js";
-import { Projectile } from "./Projectile.js";
 import { Material } from "./Material.js";
-import { stepGrid } from "./GridHelpers.js";
 import { Image } from "./Image.js";
 import { ImageManager } from "./ImageManager.js";
+import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -72,6 +72,7 @@ export interface LayerCollision {
 export class Tile implements IRenderableEntity {
     protected _location: TilePos;
     protected _aabb: Aabb;
+    protected _tileSize: number;
     protected readonly _terrain: Terrain;
     protected readonly _furniture?: Furniture;
     protected _units: Unit[];
@@ -84,6 +85,7 @@ export class Tile implements IRenderableEntity {
     ) {
         this._location = location;
         this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
+        this._tileSize = tileSize;
         this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
         this._furniture = recipe.furniture
             ? furnitureManager.newFurniture(recipe.furniture.id, {
@@ -208,7 +210,7 @@ export class Tile implements IRenderableEntity {
     }
 
     getCollisionLayers(imageManager: ImageManager): LayerCollision[] {
-        const layerCollision: LayerCollision[] = [];
+        const collisionLayers: LayerCollision[] = [];
 
         const context: SceneContext = {
             renderMode: RenderMode.enum.FIRE_MODE,
@@ -220,7 +222,7 @@ export class Tile implements IRenderableEntity {
 
             this.furniture.getRenderList(context).forEach((layerImage) => {
                 if (layerImage.imageId) {
-                    layerCollision.push({
+                    collisionLayers.push({
                         owner: this.furniture!,
                         image: imageManager.getImage(layerImage.imageId),
                         orientation: layerImage.orientation ?? Orientation.NORTH,
@@ -235,7 +237,7 @@ export class Tile implements IRenderableEntity {
 
             unit.getRenderList(context).forEach((layerImage) => {
                 if (layerImage.imageId) {
-                    layerCollision.push({
+                    collisionLayers.push({
                         owner: unit,
                         image: imageManager.getImage(layerImage.imageId),
                         orientation: layerImage.orientation ?? Orientation.NORTH,
@@ -259,73 +261,65 @@ export class Tile implements IRenderableEntity {
         //     });
         // });
 
-        return layerCollision;
+        return collisionLayers;
     }
 
-    stepTile(
-        projectile: Projectile,
+    /**
+     * Casts a ray through a tile.
+     * @param subTileSrcPos The source of the ray (in local tile space). This should be inside the tile.
+     * @param subTileDstPos The destination of the ray (in local tile space). This is not necessarily inside the tile.
+     * @param debugGraphics Optional array for recording intersections and collisions.
+     * @returns The position and material first hit, or `undefined` if no collision occurs.
+     */
+    castRay(
+        subTileSrcPos: Vec2,
+        subTileDstPos: Vec2,
         debugGraphics?: DebugGraphic[]
-    ): Vec2 | false | "out-of-bounds" {
+    ): GridRayTraceResult {
+        console.info(`Tile ${this.location}: Casting against tile`);
+
         if (!this.anythingCollidable) {
-            return false;
+            console.info("  - Contains nothing collidable");
+            return;
         }
 
         const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
         if (collisionLayers.length === 0) {
-            return false;
+            console.info("  - Has no collision layers (but is collidable?");
+            return;
         }
 
-        // TODO: Get the collision layers we need to consider AND their orientation...
+        for (const samplePos of walkCellBresenhamLine(
+            subTileSrcPos,
+            subTileDstPos,
+            this._tileSize
+        )) {
+            console.info(`  - ${samplePos} - sampling...`);
 
-        // debugGraphics?.push(
-        //     {
-        //         type: DebugGraphicType.enum.line,
-        //         srcWorldPos: projectile.srcPos,
-        //         dstWorldPos: projectile.dstPos,
-        //         strokeColour: Colour.White,
-        //         strokeThickness: 2
-        //     },
-        //     {
-        //         type: DebugGraphicType.enum.point,
-        //         worldPos: projectile.srcPos,
-        //         size: 6,
-        //         colour: Colour.Red
-        //     },
-        //     {
-        //         type: DebugGraphicType.enum.point,
-        //         worldPos: projectile.dstPos,
-        //         size: 6,
-        //         colour: Colour.Blue
-        //     }
-        // );
+            for (const { image, orientation, materials } of collisionLayers) {
+                const materialColour = image.getColour(samplePos, orientation);
+                if (materialColour.a > 0.0) {
+                    const [material] = Material.DetermineMaterial(materialColour, materials);
+                    console.info(`    - hit material ${material.id}: ${material.rgb}`);
 
-        const grid = { aabb: this.aabb, gridScale: 1, subGrid: false };
+                    debugGraphics?.push(
+                        {
+                            type: DebugGraphicType.enum.point,
+                            worldPos: this.aabb.topLeft.add(samplePos),
+                            size: 8,
+                            colour: Colour.White
+                        },
+                        {
+                            type: DebugGraphicType.enum.point,
+                            worldPos: this.aabb.topLeft.add(samplePos),
+                            size: 6,
+                            colour: new Colour({ ...material.rgb!, a: 1 })
+                        }
+                    );
 
-        const result = stepGrid(
-            projectile,
-            grid,
-            (samplePos) => {
-                let hitMaterial: Material | undefined;
-
-                for (const { image, orientation, materials } of collisionLayers) {
-                    const materialColour = image.getColour(samplePos, orientation);
-                    if (materialColour.a > 0.0) {
-                        // NOTE: We only consider the first material that we strike!
-                        const [material] = Material.DetermineMaterial(materialColour, materials);
-                        hitMaterial = material;
-                        break;
-                    }
+                    return { pos: samplePos, material };
                 }
-                return hitMaterial;
-            },
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            (_collisionPos: Vec2, _material: Material) => {
-                // TODO: Do something with the material.
-                return false;
-            },
-            debugGraphics
-        );
-
-        return result;
+            }
+        }
     }
 }

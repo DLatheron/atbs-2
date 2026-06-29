@@ -1,11 +1,21 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, ITilePos, Maths, TilePos, Vec2 } from "@atbs/maths";
+import {
+    Aabb,
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    ITilePos,
+    Maths,
+    TilePos,
+    Vec2
+} from "@atbs/maths";
 import { Unit } from "./Unit.js";
-import { HandleMaterialPenetration } from "./Ray.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
+import { Projectile } from "./Projectile.js";
+import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -206,82 +216,40 @@ export class WorldMap {
         tile.addUnit(unit);
     }
 
-    rayCastTile(
-        tile: Tile,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        _entryWorldPos: Vec2,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        _exitWorldPos: Vec2,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        _handleMaterialPenetration: HandleMaterialPenetration
-    ): Vec2 | undefined {
-        if (!tile.anythingCollidable) {
-            return;
-        }
+    /**
+     * Cast a projectile through the map until its first collision.
+     * @param projectile The projectile to cast.
+     * @param debugGraphics Optional array for recording intersections and collisions.
+     * @returns The position and material first hit, or `undefined` if no collision occurs.
+     */
+    castProjectile(projectile: Projectile, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
+        const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
+        let sampleOrder = 0;
 
-        // const entrySubTile = this.worldToSubTile(tile.location, entryWorldPos);
-        // const exitSubTile = this.worldToSubTile(tile.location, exitWorldPos);
+        return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
+            const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
+            const tile = this.sampleTile(tilePos);
+            if (!tile) {
+                return undefined;
+            }
 
-        // const collisionImages = tile.getTileForCollision(ImageManager.GetSingleton);
-        // const deltaChange = exitSubTile.sub(entrySubTile);
-        // const xMajorAxis = Math.abs(deltaChange.x) >= Math.abs(deltaChange.y);
-        // let xyAxis: XYAxis;
-        // let calcMajorAxisStep: (majorAxisStep: number) => Vec2;
-        // if (xMajorAxis) {
-        //     xyAxis = { major: "x", minor: "y" };
+            debugGraphics?.push(
+                {
+                    type: DebugGraphicType.enum.tile,
+                    tilePos: tile.location,
+                    fillColour: new Colour({ ...Colour.Green, a: 0.25 }),
+                    strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
+                },
+                {
+                    type: DebugGraphicType.enum.text,
+                    worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+                    text: `${sampleOrder++}: ${tile.location}`,
+                    colour: Colour.White,
+                    fontSize: 10
+                }
+            );
 
-        //     const dx = Math.sign(deltaChange.x);
-        //     const dy = deltaChange.y / deltaChange.x;
-
-        //     calcMajorAxisStep = (majorAxisStep) => {
-        //         const x = majorAxisStep * dx;
-        //         const y = x * dy;
-
-        //         return entrySubTile.add({ x, y });
-        //     };
-        // } else {
-        //     xyAxis = { major: "y", minor: "x" };
-
-        //     const dx = deltaChange.x / deltaChange.y;
-        //     const dy = Math.sign(deltaChange.y);
-
-        //     calcMajorAxisStep = (majorAxisStep) => {
-        //         const y = majorAxisStep * dy;
-        //         const x = y * dx;
-
-        //         return entrySubTile.add({ x, y });
-        //     };
-        // }
-
-        // const totalSteps = Math.abs(deltaChange[xyAxis.major]);
-        // const tileTopLeft = this.tileTopLeft(tile.location);
-        // let trackingWorldPos;
-
-        // for (let step = 0; step < totalSteps; ++step) {
-        //     const samplePos = calcMajorAxisStep(step);
-
-        //     trackingWorldPos = tileTopLeft.add(samplePos);
-
-        //     let hitMaterial = false;
-
-        //     for (const { owner, image, orientation, materials } of collisionImages) {
-        //         const materialColour = image.getColour(samplePos, orientation);
-        //         if (materialColour.a > 0.0) {
-        //             const [material] = Material.DetermineMaterial(materialColour, materials);
-
-        //             if (handleMaterialPenetration(trackingWorldPos, owner, material)) {
-        //                 // Record the final position of the trace.
-        //                 return trackingWorldPos;
-        //             }
-
-        //             hitMaterial = true;
-        //             break; // NOTE: Only consider the first material that we strike!
-        //         }
-        //     }
-
-        //     if (!hitMaterial) {
-        //         handleMaterialPenetration(trackingWorldPos);
-        //     }
-        // }
+            return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics);
+        });
     }
 }
