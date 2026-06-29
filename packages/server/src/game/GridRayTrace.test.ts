@@ -140,19 +140,21 @@ describe("GridRayTrace", () => {
             });
 
             expect(hit).toEqual({
-                worldPos: new Vec2(2.25, 2.75),
+                pos: new Vec2(2.25, 2.75),
                 material
             });
         });
 
-        it("should return false when no collision occurs", () => {
-            expect(traceGridRay(new Vec2(0, 0), new Vec2(4, 4), grid, () => undefined)).toBe(false);
+        it("should return undefined when no collision occurs", () => {
+            expect(
+                traceGridRay(new Vec2(0, 0), new Vec2(4, 4), grid, () => undefined)
+            ).toBeUndefined();
         });
 
-        it("should return out-of-bounds when the ray exits without colliding", () => {
-            expect(traceGridRay(new Vec2(0, 0), new Vec2(15, 15), grid, () => undefined)).toBe(
-                "out-of-bounds"
-            );
+        it("should return undefined when the ray exits without colliding", () => {
+            expect(
+                traceGridRay(new Vec2(0, 0), new Vec2(15, 15), grid, () => undefined)
+            ).toBeUndefined();
         });
     });
 });

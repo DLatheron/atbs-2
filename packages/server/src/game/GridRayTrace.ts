@@ -1,8 +1,13 @@
 import { Aabb, Vec2 } from "@atbs/maths";
 import { Material } from "./Material.js";
-import { Grid } from "./GridHelpers.js";
 
 const EPSILON = 1e-9;
+
+export interface Grid {
+    aabb: Aabb; // Projectile position of the grid.
+    gridScale: number;
+    subGrid: boolean;
+}
 
 export interface GridRayTraceHitResult {
     pos: Vec2;
