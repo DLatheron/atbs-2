@@ -44,7 +44,7 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { Material } from "./Material.js";
-import { stepGrid } from "./GridHelpers.js";
+import { stepGrid, stepGrid } from "./GridHelpers.js";
 import { config } from "../config/config.schema.js";
 
 const ROTATION_APT_COST = 1;
@@ -725,7 +725,7 @@ export class Unit extends SceneObject {
                 }
             );
 
-            const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: false }; // TODO: <-- change soon.
+            const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: true };
             let sampleOrder = 0;
 
             stepGrid(
@@ -757,6 +757,10 @@ export class Unit extends SceneObject {
                             fontSize: 10
                         }
                     );
+
+                    // const result = tile.stepTile(projectiles[0], debugGraphics);
+                    // console.dir({ result });
+
                     return undefined;
                 },
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,6 +1,5 @@
 import {
     Aabb,
-    Colour,
     DebugGraphic,
     DebugGraphicType,
     type DebugTile,
@@ -261,7 +260,7 @@ export class Tile implements IRenderableEntity {
         // });
 
         return layerCollision;
-    }    
+    }
 
     stepTile(
         projectile: Projectile,
