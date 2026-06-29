@@ -43,11 +43,12 @@ describe("GridRayTrace", () => {
             const { walks } = collectCellWalks(new Vec2(0, 0), new Vec2(9, 9));
 
             expect(walks).toHaveLength(10);
-            expect(walks[0]).toEqual({
-                cellOrigin: new Vec2(0, 0),
-                srcPos: new Vec2(0, 0),
-                dstPos: new Vec2(1, 1)
-            });
+            expect(walks[0].cellOrigin).toEqual(new Vec2(0, 0));
+            expect(walks[0].srcPos).toEqual(new Vec2(0, 0));
+            expect(walks[0].dstPos.x).toBeLessThan(1);
+            expect(walks[0].dstPos.y).toBeLessThan(1);
+            expect(walks[0].dstPos.x).toBeCloseTo(1, 5);
+            expect(walks[0].dstPos.y).toBeCloseTo(1, 5);
             expect(walks[9]).toEqual({
                 cellOrigin: new Vec2(9, 9),
                 srcPos: new Vec2(0, 0),
@@ -68,7 +69,9 @@ describe("GridRayTrace", () => {
             ]);
 
             expect(walks[0].srcPos).toEqual(new Vec2(0, 0));
-            expect(walks[0].dstPos).toEqual(new Vec2(1, 0));
+            expect(walks[0].dstPos.x).toBeLessThan(1);
+            expect(walks[0].dstPos.y).toBe(0);
+            expect(walks[0].dstPos.x).toBeCloseTo(1, 5);
         });
 
         it("should clip rays that start outside the grid", () => {
@@ -94,6 +97,33 @@ describe("GridRayTrace", () => {
                 new Vec2(8, 8),
                 new Vec2(9, 9)
             ]);
+        });
+
+        it("should keep cell-local coordinates inside half-open cell bounds", () => {
+            const largeCellGrid: Grid = {
+                aabb: new Aabb(0, 0, 100, 100),
+                gridScale: 100,
+                subGrid: false
+            };
+
+            for (const cellWalk of walkGridCells(
+                new Vec2(0, 0),
+                new Vec2(250, 50),
+                largeCellGrid
+            )) {
+                if ("outOfBounds" in cellWalk) {
+                    break;
+                }
+
+                expect(cellWalk.srcPos.x).toBeGreaterThanOrEqual(0);
+                expect(cellWalk.srcPos.y).toBeGreaterThanOrEqual(0);
+                expect(cellWalk.dstPos.x).toBeGreaterThanOrEqual(0);
+                expect(cellWalk.dstPos.y).toBeGreaterThanOrEqual(0);
+                expect(cellWalk.srcPos.x).toBeLessThan(100);
+                expect(cellWalk.srcPos.y).toBeLessThan(100);
+                expect(cellWalk.dstPos.x).toBeLessThan(100);
+                expect(cellWalk.dstPos.y).toBeLessThan(100);
+            }
         });
 
         it("should yield nothing when the ray misses the grid", () => {

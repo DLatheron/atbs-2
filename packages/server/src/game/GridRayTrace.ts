@@ -1,13 +1,19 @@
 import { Aabb, Vec2 } from "@atbs/maths";
 import { Material } from "./Material.js";
-import { Grid, GridHit } from "./GridHelpers.js";
+import { Grid } from "./GridHelpers.js";
 
 const EPSILON = 1e-9;
 
+export interface GridRayTraceHitResult {
+    pos: Vec2;
+    material: Material;
+}
+export type GridRayTraceResult = GridRayTraceHitResult | undefined;
+
 /**
  * A ray segment clipped to a single grid cell. Positions are in cell-local space
- * where `(0, 0)` is the top-left corner of the cell and `(gridScale, gridScale)` is
- * the bottom-right corner.
+ * using half-open bounds: `[0, gridScale)` on each axis. The minimum corner `(0, 0)`
+ * is inclusive; the maximum corner at `gridScale` is exclusive.
  */
 export interface GridCellWalk {
     /** Top-left corner of the cell in grid-relative coordinates */
@@ -24,11 +30,70 @@ export type GridCellWalkYield = GridCellWalk | { outOfBounds: true };
  * Returns a hit position in cell-local coordinates and its material if a collision
  * occurred in this cell, otherwise `undefined`.
  */
-export type GridCellHandler = (
-    cellWalk: GridCellWalk
-) => { pos: Vec2; material: Material } | undefined;
+export type GridCellHandler = (cellWalk: GridCellWalk) => GridRayTraceResult;
 
-export type GridRayTraceResult = GridHit | false | "out-of-bounds";
+// export type GridRayTraceResult = GridHit | false | "out-of-bounds";
+
+/**
+ * Walks an integer line from `(x0, y0)` to `(x1, y1)` using Bresenham's algorithm.
+ */
+export function* walkBresenhamLine(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number
+): Generator<{ x: number; y: number }, undefined, undefined> {
+    let x = x0;
+    let y = y0;
+
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const stepX = x0 < x1 ? 1 : -1;
+    const stepY = y0 < y1 ? 1 : -1;
+    let error = dx - dy;
+
+    for (;;) {
+        yield { x, y };
+
+        if (x === x1 && y === y1) {
+            return;
+        }
+
+        const error2 = 2 * error;
+
+        if (error2 > -dy) {
+            error -= dy;
+            x += stepX;
+        }
+
+        if (error2 < dx) {
+            error += dx;
+            y += stepY;
+        }
+    }
+}
+
+/**
+ * Walks pixel coordinates along a clipped cell-local ray segment using Bresenham's algorithm.
+ * Yields integer positions in `[0, cellSize)` on each axis.
+ */
+export function* walkCellBresenhamLine(
+    srcPos: Vec2,
+    dstPos: Vec2,
+    cellSize: number
+): Generator<Vec2, undefined, undefined> {
+    const toPixel = (pos: Vec2) => ({
+        x: Math.min(Math.max(Math.floor(pos.x), 0), cellSize - 1),
+        y: Math.min(Math.max(Math.floor(pos.y), 0), cellSize - 1)
+    });
+
+    const srcPixel = toPixel(srcPos);
+    const dstPixel = toPixel(dstPos);
+
+    for (const pixel of walkBresenhamLine(srcPixel.x, srcPixel.y, dstPixel.x, dstPixel.y)) {
+        yield new Vec2(pixel.x, pixel.y);
+    }
+}
 
 function clipRayToGrid(
     srcPos: Vec2,
@@ -57,6 +122,13 @@ function clipRayToGrid(
 
 function isCellOriginInsideGrid(cellOrigin: Vec2, gridAabb: Aabb): boolean {
     return gridAabb.isPointInside(cellOrigin);
+}
+
+function toCellLocal(pos: Vec2, cellOrigin: Vec2, gridScale: number): Vec2 {
+    const local = pos.sub(cellOrigin);
+    const max = gridScale - EPSILON;
+
+    return new Vec2(Math.min(Math.max(local.x, 0), max), Math.min(Math.max(local.y, 0), max));
 }
 
 function advancePastBoundary(
@@ -107,7 +179,7 @@ export function* walkGridCells(
             return;
         }
 
-        const cellLocalPos = gridSrcPos.sub(cellOrigin);
+        const cellLocalPos = toCellLocal(gridSrcPos, cellOrigin, gridScale);
         yield {
             cellOrigin,
             srcPos: cellLocalPos,
@@ -154,8 +226,8 @@ export function* walkGridCells(
 
         yield {
             cellOrigin,
-            srcPos: segmentSrc.sub(cellOrigin),
-            dstPos: segmentDst.sub(cellOrigin)
+            srcPos: toCellLocal(segmentSrc, cellOrigin, gridScale),
+            dstPos: toCellLocal(segmentDst, cellOrigin, gridScale)
         };
 
         if (tEnd >= 1 - EPSILON) {
@@ -168,7 +240,7 @@ export function* walkGridCells(
                 !cellOrigin.isEqual(dstCellOrigin) &&
                 isCellOriginInsideGrid(dstCellOrigin, gridRelativeAabb)
             ) {
-                const cellLocalPos = gridDstPos.sub(dstCellOrigin);
+                const cellLocalPos = toCellLocal(gridDstPos, dstCellOrigin, gridScale);
                 yield {
                     cellOrigin: dstCellOrigin,
                     srcPos: cellLocalPos,
@@ -198,8 +270,8 @@ export function* walkGridCells(
 
 /**
  * Traces a ray through a uniform square grid, invoking `cellHandler` for each cell visited.
- * Returns the world position and material of the first collision, `false` if no collision
- * occurred, or `"out-of-bounds"` if the ray exits the grid without colliding.
+ * Returns the world position and material of the first collision, `undefined` if no collision
+ * occurred.
  */
 export function traceGridRay(
     srcPos: Vec2,
@@ -211,17 +283,17 @@ export function traceGridRay(
 
     for (const cellWalk of walkGridCells(srcPos, dstPos, grid)) {
         if ("outOfBounds" in cellWalk) {
-            return "out-of-bounds";
+            return;
         }
 
         const hit = cellHandler(cellWalk);
         if (hit) {
             return {
-                worldPos: cellWalk.cellOrigin.add(hit.pos).add(topLeft),
+                pos: cellWalk.cellOrigin.add(hit.pos).add(topLeft),
                 material: hit.material
             };
         }
     }
 
-    return false;
+    return;
 }

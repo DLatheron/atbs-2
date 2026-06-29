@@ -723,7 +723,7 @@ export class Unit extends SceneObject {
                 }
             );
 
-            const hitResult = map.stepMap(projectiles[0], debugGraphics);
+            const hitResult = map.castProjectile(projectiles[0], debugGraphics);
             console.dir({ hitResult }, { depth: null });
 
             // const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: true };
