@@ -11,6 +11,7 @@ import {
     FireType,
     getAccuracy,
     getRpm,
+    OnTarget,
     RenderList,
     RenderMode,
     shotsFired,
@@ -699,9 +700,10 @@ export class Unit extends SceneObject {
             projectiles.sort((a, b) => b.velocity - a.velocity);
             console.dir({ projectiles });
 
-            const debugGraphics: DebugGraphic[] = [];
+            let debugGraphics: DebugGraphic[] | undefined;
+            // debugGraphics = [];
 
-            debugGraphics.push(
+            debugGraphics?.push(
                 {
                     type: DebugGraphicType.enum.line,
                     srcWorldPos: projectiles[0].srcPos,
@@ -726,67 +728,28 @@ export class Unit extends SceneObject {
             const hitResult = map.castProjectile(projectiles[0], debugGraphics);
             console.dir({ hitResult }, { depth: null });
 
-            // const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: true };
-            // let sampleOrder = 0;
+            if (hitResult) {
+                projectiles[0].impact = hitResult?.pos;
+            }
 
-            // stepGrid(
-            //     projectiles[0],
-            //     grid,
-            //     (samplePos, sampleType) => {
-            //         console.info({ samplePos }, { depth: null });
-            //         const tile = map.sampleTile(map.worldToTile(samplePos));
-            //         if (tile === undefined) {
-            //             return undefined;
-            //         }
-            //         debugGraphics.push(
-            //             {
-            //                 type: DebugGraphicType.enum.tile,
-            //                 tilePos: tile.location,
-            //                 fillColour:
-            //                     sampleType === "major"
-            //                         ? new Colour({ ...Colour.Green, a: 0.25 })
-            //                         : sampleType === "minor-past"
-            //                           ? new Colour({ ...Colour.Red, a: 0.25 })
-            //                           : new Colour({ ...Colour.Blue, a: 0.25 }),
-            //                 strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
-            //             },
-            //             {
-            //                 type: DebugGraphicType.enum.text,
-            //                 worldPos: map.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
-            //                 text: `${sampleOrder++}`,
-            //                 colour: Colour.White,
-            //                 fontSize: 10
-            //             }
-            //         );
-
-            //         // const result = tile.stepTile(projectiles[0], debugGraphics);
-            //         // console.dir({ result });
-
-            //         return undefined;
-            //     },
-            //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            //     (_collisionPos: Vec2, _material: Material) => {
-            //         return false;
-            //     },
-            //     debugGraphics
-            // );
-
-            messageRouter.send({
-                type: "server:debug:graphics",
-                payload: debugGraphics
-            });
+            if (debugGraphics) {
+                messageRouter.send({
+                    type: "server:debug:graphics",
+                    payload: debugGraphics
+                });
+            }
 
             // TODO: Move the projectiles forward in time...
             // TODO: Psuedo tracers - how do we determine visibility?
-            // messageRouter.send([
-            //     {
-            //         type: "server:fire:trace",
-            //         payload: {
-            //             tracers: projectiles.map((projectile) => projectile.getTracer()),
-            //             isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
-            //         }
-            //     }
-            // ]);
+            messageRouter.send([
+                {
+                    type: "server:fire:trace",
+                    payload: {
+                        tracers: projectiles.map((projectile) => projectile.getTracer()),
+                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                    }
+                }
+            ]);
         }
 
         /**

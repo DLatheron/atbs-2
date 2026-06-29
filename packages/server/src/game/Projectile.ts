@@ -26,7 +26,7 @@ export class Projectile {
 
     private _impact?: {
         time: number;
-        position: Vec2;
+        pos: Vec2;
     };
 
     constructor(props: ProjectileProps) {
@@ -86,18 +86,28 @@ export class Projectile {
     get impact():
         | {
               time: number;
-              position: Vec2;
+              pos: Vec2;
           }
         | undefined {
         return this._impact;
     }
 
+    set impact(value: Vec2) {
+        this._impact = {
+            time: 0,
+            pos: value
+        };
+    }
+
     getTracer(): Tracer {
+        const endPos = this.impact?.pos ?? this.dstPos;
+        const distanceTravelled = endPos.sub(this.srcPos).length;
+
         return {
             srcPos: this.srcPos,
-            dstPos: this.dstPos,
-            flightTimeInMs: (this.maxRange / this.velocity) * 1000,
-            maxRange: this.maxRange,
+            dstPos: this.impact?.pos ?? this.dstPos,
+            flightTimeInMs: (distanceTravelled / this.velocity) * 1000,
+            maxRange: distanceTravelled,
             visual: this._props.projectileRecipe.visual
         };
     }
