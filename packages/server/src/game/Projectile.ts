@@ -1,10 +1,25 @@
-import { Vec2 } from "@atbs/maths";
+import { Colour, DebugGraphic, DebugGraphicType, Vec2 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
-import { Unit } from "./Unit.js";
+import { isUnit, Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
-import { Tracer } from "@atbs/shared-data";
+import { MaterialDensityType, Tracer } from "@atbs/shared-data";
+import { Material } from "./Material.js";
+import { LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
+import { isFurniture } from "./Furniture.js";
+
+interface CollisionEvent extends Priority {
+    projectile: Projectile;
+    pos: Vec2;
+    material: Material;
+}
+
+export class CollisionEventQueue extends PriorityQueue<CollisionEvent> {
+    constructor() {
+        super(LowestFirst);
+    }
+}
 
 export interface ProjectileProps {
     game: Game;
@@ -23,6 +38,7 @@ export class Projectile {
     private _srcPos: Vec2;
     private _dstPos: Vec2;
     private _velocity: number;
+    private _penetration: number;
 
     private _impact?: {
         time: number;
@@ -35,6 +51,7 @@ export class Projectile {
         this._srcPos = new Vec2(props.srcPos);
         this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
         this._velocity = props.projectileRecipe.visual.velocity;
+        this._penetration = this.maxPenetration;
 
         this._impact = undefined;
     }
@@ -79,6 +96,14 @@ export class Projectile {
         return this._velocity;
     }
 
+    get penetration(): number {
+        return this._penetration;
+    }
+
+    set penetration(value: number) {
+        this._penetration = Math.min(value, 0);
+    }
+
     get maxPenetration(): number {
         return this._props.projectileRecipe.penetration;
     }
@@ -115,5 +140,116 @@ export class Projectile {
             maxRange: distanceTravelled,
             visual: this._props.projectileRecipe.visual
         };
+    }
+
+    static ProcessProjectiles(
+        projectiles: Projectile[],
+        map: WorldMap,
+        debugGraphics?: DebugGraphic[]
+    ) {
+        // Sort so that fastest projectiles are first.
+        projectiles.sort((a, b) => b.velocity - a.velocity);
+        console.dir({ projectiles });
+
+        // debugGraphics?.push(
+        //     {
+        //         type: DebugGraphicType.enum.line,
+        //         srcWorldPos: projectiles[0].srcPos,
+        //         dstWorldPos: projectiles[0].dstPos,
+        //         strokeColour: Colour.White,
+        //         strokeThickness: 2
+        //     },
+        //     {
+        //         type: DebugGraphicType.enum.point,
+        //         worldPos: projectiles[0].srcPos,
+        //         size: 6,
+        //         colour: Colour.Red
+        //     },
+        //     {
+        //         type: DebugGraphicType.enum.point,
+        //         worldPos: projectiles[0].dstPos,
+        //         size: 6,
+        //         colour: Colour.Blue
+        //     }
+        // );
+
+        const eventQueue = new CollisionEventQueue();
+
+        // Determine the initial impact of every projectile.
+        for (const projectile of projectiles) {
+            const hitResult = map.castProjectile(projectile, debugGraphics);
+            console.dir({ hitResult }, { depth: null });
+
+            if (hitResult) {
+                const timeTo = projectile.calculateTimeTo(hitResult.pos);
+                console.dir(
+                    `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
+                );
+                projectile.impact = hitResult.pos;
+
+                eventQueue.push({
+                    priority: timeTo,
+                    projectile,
+                    ...hitResult
+                });
+            }
+
+            debugGraphics?.push({
+                type: DebugGraphicType.enum.line,
+                srcWorldPos: projectile.srcPos,
+                dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
+                strokeColour: Colour.White,
+                strokeThickness: 2
+            });
+        }
+
+        // No collisions to process - just the projectiles reaching their maximum range.
+        if (eventQueue.isEmpty) {
+            return;
+        }
+
+        // We now have an timed-based queue of events.
+        let event: CollisionEvent;
+
+        // Process the first event and see what happens.
+        while ((event = eventQueue.pop())) {
+            const { priority: atTime, material, owner, pos, projectile } = event;
+
+            let projectileStopped = false;
+            console.info(`${atTime} event ${projectile.index} hit ${material.id} at ${pos}`);
+
+            const density = material.getDensityForType(MaterialDensityType.enum.projectile);
+
+            projectile.penetration -= density;
+            if (projectile.penetration === 0) {
+                projectileStopped = true;
+            }
+            console.info("Projectile stopped", projectileStopped);
+
+            // Apply damage to material owner.
+            if (isFurniture(owner)) {
+                console.info("Collided with furniture!", owner.id);
+            } else if (isUnit(owner)) {
+                console.info("Collided with unit!", owner.id);
+            }
+        }
+
+        // We have hit a material... we need to do the damage, and potentially continue the travel of that projectile
+        // until something 'special' happens.
+
+        // - apply damage to hit material
+        //   - kill unit
+        //   - destroy furniture
+        // - potentially ricohet
+        // - penetrate material
+        // - cut hole in material
+        // - dig crater in material
+        // - update projectile to current state...
+
+        // while ((event = eventQueue.pop())) {
+        //     console.info(
+        //         `${event.priority} event ${event.projectile.index} hit ${event.material.id} at ${event.pos}`
+        //     );
+        // }
     }
 }

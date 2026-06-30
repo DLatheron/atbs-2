@@ -23,9 +23,7 @@ import {
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
-    Colour,
     DebugGraphic,
-    DebugGraphicType,
     ITilePos,
     Maths,
     Orientation,
@@ -45,8 +43,6 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { config } from "../config/config.schema.js";
-import { PriorityQueue } from "@atbs/misc";
-import { Material } from "./Material.js";
 
 const ROTATION_APT_COST = 1;
 
@@ -118,6 +114,10 @@ export interface UnitAdditionalData {
 
 function setDefaultAttribute(attributeDef: AttributeDef): Attribute {
     return { max: attributeDef.max, value: attributeDef.value ?? attributeDef.max };
+}
+
+export function isUnit(arg: unknown): arg is Unit {
+    return arg instanceof Unit;
 }
 
 export class Unit extends SceneObject {
@@ -698,75 +698,79 @@ export class Unit extends SceneObject {
                 });
             });
 
-            // Sort so that fastest projectiles are first.
-            projectiles.sort((a, b) => b.velocity - a.velocity);
-            console.dir({ projectiles });
+            // // Sort so that fastest projectiles are first.
+            // projectiles.sort((a, b) => b.velocity - a.velocity);
+            // console.dir({ projectiles });
+
+            // const debugGraphics: DebugGraphic[] = [];
+
+            // // debugGraphics?.push(
+            // //     {
+            // //         type: DebugGraphicType.enum.line,
+            // //         srcWorldPos: projectiles[0].srcPos,
+            // //         dstWorldPos: projectiles[0].dstPos,
+            // //         strokeColour: Colour.White,
+            // //         strokeThickness: 2
+            // //     },
+            // //     {
+            // //         type: DebugGraphicType.enum.point,
+            // //         worldPos: projectiles[0].srcPos,
+            // //         size: 6,
+            // //         colour: Colour.Red
+            // //     },
+            // //     {
+            // //         type: DebugGraphicType.enum.point,
+            // //         worldPos: projectiles[0].dstPos,
+            // //         size: 6,
+            // //         colour: Colour.Blue
+            // //     }
+            // // );
+
+            // const eventQueue = new PriorityQueue<{
+            //     priority: number;
+            //     projectile: Projectile;
+            //     pos: Vec2;
+            //     material: Material;
+            // }>((a, b) => a.priority < b.priority); // Inverse priority queue.
+
+            // for (const projectile of projectiles) {
+            //     const hitResult = map.castProjectile(projectile, debugGraphics);
+            //     console.dir({ hitResult }, { depth: null });
+
+            //     if (hitResult) {
+            //         const timeTo = projectile.calculateTimeTo(hitResult.pos);
+            //         console.dir(
+            //             `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
+            //         );
+            //         projectile.impact = hitResult.pos;
+
+            //         eventQueue.push({
+            //             priority: timeTo,
+            //             projectile,
+            //             ...hitResult
+            //         });
+            //     }
+
+            //     debugGraphics?.push({
+            //         type: DebugGraphicType.enum.line,
+            //         srcWorldPos: projectile.srcPos,
+            //         dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
+            //         strokeColour: Colour.White,
+            //         strokeThickness: 2
+            //     });
+            // }
+
+            // let event: { priority: number; projectile: Projectile; pos: Vec2; material: Material };
+
+            // while ((event = eventQueue.pop())) {
+            //     console.info(
+            //         `${event.priority} event ${event.projectile.index} hit ${event.material.id} at ${event.pos}`
+            //     );
+            // }
 
             const debugGraphics: DebugGraphic[] = [];
 
-            // debugGraphics?.push(
-            //     {
-            //         type: DebugGraphicType.enum.line,
-            //         srcWorldPos: projectiles[0].srcPos,
-            //         dstWorldPos: projectiles[0].dstPos,
-            //         strokeColour: Colour.White,
-            //         strokeThickness: 2
-            //     },
-            //     {
-            //         type: DebugGraphicType.enum.point,
-            //         worldPos: projectiles[0].srcPos,
-            //         size: 6,
-            //         colour: Colour.Red
-            //     },
-            //     {
-            //         type: DebugGraphicType.enum.point,
-            //         worldPos: projectiles[0].dstPos,
-            //         size: 6,
-            //         colour: Colour.Blue
-            //     }
-            // );
-
-            const eventQueue = new PriorityQueue<{
-                priority: number;
-                projectile: Projectile;
-                pos: Vec2;
-                material: Material;
-            }>((a, b) => a.priority < b.priority); // Inverse priority queue.
-
-            for (const projectile of projectiles) {
-                const hitResult = map.castProjectile(projectile, debugGraphics);
-                console.dir({ hitResult }, { depth: null });
-
-                if (hitResult) {
-                    const timeTo = projectile.calculateTimeTo(hitResult.pos);
-                    console.dir(
-                        `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
-                    );
-                    projectile.impact = hitResult.pos;
-
-                    eventQueue.push({
-                        priority: timeTo,
-                        projectile,
-                        ...hitResult
-                    });
-                }
-
-                debugGraphics?.push({
-                    type: DebugGraphicType.enum.line,
-                    srcWorldPos: projectile.srcPos,
-                    dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
-                    strokeColour: Colour.White,
-                    strokeThickness: 2
-                });
-            }
-
-            let event: { priority: number; projectile: Projectile; pos: Vec2; material: Material };
-
-            while ((event = eventQueue.pop())) {
-                console.info(
-                    `${event.priority} event ${event.projectile.index} hit ${event.material.id} at ${event.pos}`
-                );
-            }
+            Projectile.ProcessProjectiles(projectiles, map, debugGraphics);
 
             if (debugGraphics) {
                 messageRouter.send({

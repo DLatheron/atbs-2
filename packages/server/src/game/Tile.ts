@@ -63,7 +63,7 @@ export const TileRecipe = z.object({
 export type TileRecipe = z.infer<typeof TileRecipe>;
 
 export interface LayerCollision {
-    owner?: Furniture | Unit;
+    owner: Furniture | Unit;
     image: Image;
     orientation: Orientation;
     materials: Material[];
@@ -296,7 +296,7 @@ export class Tile implements IRenderableEntity {
         )) {
             console.info(`  - ${samplePos} - sampling...`);
 
-            for (const { image, orientation, materials } of collisionLayers) {
+            for (const { image, orientation, owner, materials } of collisionLayers) {
                 const materialColour = image.getColour(samplePos, orientation);
                 if (materialColour.a > 0.0) {
                     const [material] = Material.DetermineMaterial(materialColour, materials);
@@ -317,7 +317,7 @@ export class Tile implements IRenderableEntity {
                         }
                     );
 
-                    return { pos: samplePos, material };
+                    return { pos: samplePos, material, owner };
                 }
             }
         }

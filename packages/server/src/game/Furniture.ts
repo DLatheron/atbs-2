@@ -35,6 +35,10 @@ export interface FurnitureAdditionalData {
     instanceIndex: number;
 }
 
+export function isFurniture(arg: unknown): arg is Furniture {
+    return arg instanceof Furniture;
+}
+
 export class Furniture extends SceneObject {
     private readonly _recipe: Readonly<FurnitureRecipe>;
     // private readonly _furnitureManager: FurnitureManager;
