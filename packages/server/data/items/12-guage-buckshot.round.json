@@ -10,7 +10,7 @@
     ],
     "weight": 0.028,
     "projectile": {
-        "numProjectiles": 2,
+        "numProjectiles": 1,
         "maxRange": 2000,
         "penetration": 10,
         "visual": {

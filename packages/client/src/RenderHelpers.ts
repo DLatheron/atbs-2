@@ -297,7 +297,8 @@ export function DebugDrawLine(
     srcWorldPos: IVec2,
     dstWorldPos: IVec2,
     strokeColour: IColour,
-    strokeThickness?: number
+    strokeThickness?: number,
+    lineDash?: number[]
 ) {
     const srcCanvasPos = camera.worldToCanvas(new Vec2(srcWorldPos));
     const dstCanvasPos = camera.worldToCanvas(new Vec2(dstWorldPos));
@@ -307,8 +308,10 @@ export function DebugDrawLine(
     context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
 
     context.strokeStyle = colourToRGBA(strokeColour);
+    context.setLineDash(lineDash ?? []);
     context.lineWidth = strokeThickness ?? 1;
     context.stroke();
+    context.setLineDash([]);
 }
 
 export function DebugDrawPoint(

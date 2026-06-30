@@ -7,6 +7,7 @@ import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
 import { Projectile } from "./Projectile.js";
 import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
+import { Material } from "./Material.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -241,6 +242,50 @@ export class WorldMap {
             // );
 
             return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics);
+        });
+    }
+
+    stepProjectile(
+        projectile: Projectile,
+        currentMaterial: Material,
+        debugGraphics?: DebugGraphic[]
+    ): GridRayTraceResult {
+        const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
+        // let sampleOrder = 0;
+
+        return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
+            const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
+            const tile = this.sampleTile(tilePos);
+            if (!tile) {
+                return undefined;
+            }
+
+            // debugGraphics?.push(
+            //     {
+            //         type: DebugGraphicType.enum.tile,
+            //         tilePos: tile.location,
+            //         fillColour: new Colour({ ...Colour.Green, a: 0.05 }),
+            //         strokeColour: new Colour({ ...Colour.Yellow, a: 0.05 })
+            //     },
+            //     {
+            //         type: DebugGraphicType.enum.text,
+            //         worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+            //         text: `${sampleOrder++}: ${tile.location}`,
+            //         colour: Colour.White,
+            //         fontSize: 10
+            //     }
+            // );
+
+            const collisionResult = tile.stepProjectile(
+                projectile,
+                cellWalk.srcPos,
+                cellWalk.dstPos,
+                currentMaterial,
+                debugGraphics
+            );
+            if (collisionResult) {
+                return collisionResult;
+            }
         });
     }
 }

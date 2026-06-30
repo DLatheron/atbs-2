@@ -10,7 +10,7 @@
     ],
     "weight": 0.01231,
     "projectile": {
-        "maxRange": 1000,
+        "maxRange": 3000,
         "penetration": 100,
         "visual": {
             "intensity": 1,

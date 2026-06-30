@@ -32,7 +32,8 @@ export const DebugLine = z.object({
     srcWorldPos: IVec2,
     dstWorldPos: IVec2,
     strokeColour: IColour,
-    strokeThickness: z.number().positive().optional()
+    strokeThickness: z.number().positive().optional(),
+    lineDash: z.array(z.number()).optional()
 });
 export type DebugLine = z.infer<typeof DebugLine>;
 

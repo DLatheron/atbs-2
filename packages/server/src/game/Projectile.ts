@@ -1,18 +1,16 @@
 import { Colour, DebugGraphic, DebugGraphicType, Vec2 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
-import { isUnit, Unit } from "./Unit.js";
+import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
-import { MaterialDensityType, Tracer } from "@atbs/shared-data";
-import { Material } from "./Material.js";
+import { Tracer } from "@atbs/shared-data";
 import { LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
+import { GridRayTraceHitResult } from "./GridRayTrace.js";
 
-interface CollisionEvent extends Priority {
+interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
-    pos: Vec2;
-    material: Material;
 }
 
 export class CollisionEventQueue extends PriorityQueue<CollisionEvent> {
@@ -80,6 +78,10 @@ export class Projectile {
         return this._srcPos;
     }
 
+    set srcPos(value: Vec2) {
+        this._srcPos = value;
+    }
+
     get dstPos(): Vec2 {
         return this._dstPos;
     }
@@ -101,7 +103,7 @@ export class Projectile {
     }
 
     set penetration(value: number) {
-        this._penetration = Math.min(value, 0);
+        this._penetration = Math.max(value, 0);
     }
 
     get maxPenetration(): number {
@@ -140,6 +142,16 @@ export class Projectile {
             maxRange: distanceTravelled,
             visual: this._props.projectileRecipe.visual
         };
+    }
+
+    commitSegmentTo(pos: Vec2): void {
+        // TODO: Commit this
+        console.info(
+            `TODO: Commit the segment from ${this._srcPos} to ${pos} - update srcPos to ${pos} (maybe advance recorded start time etc.)`
+        );
+
+        this._srcPos = pos;
+        this._impact = undefined;
     }
 
     static ProcessProjectiles(
@@ -215,23 +227,80 @@ export class Projectile {
         while ((event = eventQueue.pop())) {
             const { priority: atTime, material, owner, pos, projectile } = event;
 
-            let projectileStopped = false;
-            console.info(`${atTime} event ${projectile.index} hit ${material.id} at ${pos}`);
+            if (material) {
+                // TODO: Need to back up the current segment, as we change this.
+                projectile.commitSegmentTo(pos);
+                // projectile.srcPos = pos;
 
-            const density = material.getDensityForType(MaterialDensityType.enum.projectile);
+                // Apply damage to material owner.
+                if (isFurniture(owner)) {
+                    console.info("Collided with furniture!", owner.id);
+                } else if (isUnit(owner)) {
+                    console.info("Collided with unit!", owner.id);
+                }
 
-            projectile.penetration -= density;
-            if (projectile.penetration === 0) {
-                projectileStopped = true;
+                const nextChange = map.stepProjectile(projectile, material, debugGraphics);
+                if (nextChange) {
+                    debugGraphics?.push({
+                        type: DebugGraphicType.enum.line,
+                        srcWorldPos: pos,
+                        dstWorldPos: nextChange.pos,
+                        strokeColour: Colour.Red,
+                        strokeThickness: 2,
+                        lineDash: [2, 2]
+                    });
+
+                    const timeTo = projectile.calculateTimeTo(nextChange.pos);
+
+                    if (projectile.penetration > 0) {
+                        eventQueue.push({
+                            priority: atTime + timeTo,
+                            projectile,
+                            ...nextChange
+                        });
+                    }
+
+                    projectile.commitSegmentTo(nextChange.pos);
+                }
+
+            } else {
+                const hitResult = map.castProjectile(projectile, debugGraphics);
+                console.dir({ hitResult }, { depth: null });
+
+                if (hitResult) {
+                    const timeTo = projectile.calculateTimeTo(hitResult.pos);
+                    console.dir(
+                        `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
+                    );
+                    projectile.impact = hitResult.pos;
+
+                    eventQueue.push({
+                        priority: timeTo,
+                        projectile,
+                        ...hitResult
+                    });
+                }
+
+                console.dir({ srcPos: projectile.srcPos, dstPos: projectile.impact?.pos ?? projectile.dstPos }, { depth: null });
+                debugGraphics?.push({
+                    type: DebugGraphicType.enum.line,
+                    srcWorldPos: projectile.srcPos,
+                    dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
+                    strokeColour: Colour.White,
+                    strokeThickness: 2
+                });
             }
-            console.info("Projectile stopped", projectileStopped);
 
-            // Apply damage to material owner.
-            if (isFurniture(owner)) {
-                console.info("Collided with furniture!", owner.id);
-            } else if (isUnit(owner)) {
-                console.info("Collided with unit!", owner.id);
-            }
+            // let projectileStopped = false;
+            // console.info(`${atTime} event ${projectile.index} hit ${material.id} at ${pos}`);
+
+            // const density = material.getDensityForType(MaterialDensityType.enum.projectile);
+
+            // projectile.penetration -= density;
+            // if (projectile.penetration === 0) {
+            //     projectileStopped = true;
+            // }
+            // console.info("Projectile stopped", projectileStopped);
         }
 
         // We have hit a material... we need to do the damage, and potentially continue the travel of that projectile
