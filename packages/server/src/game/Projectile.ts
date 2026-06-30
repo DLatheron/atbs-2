@@ -262,7 +262,6 @@ export class Projectile {
 
                     projectile.commitSegmentTo(nextChange.pos);
                 }
-
             } else {
                 const hitResult = map.castProjectile(projectile, debugGraphics);
                 console.dir({ hitResult }, { depth: null });
@@ -281,7 +280,13 @@ export class Projectile {
                     });
                 }
 
-                console.dir({ srcPos: projectile.srcPos, dstPos: projectile.impact?.pos ?? projectile.dstPos }, { depth: null });
+                console.dir(
+                    {
+                        srcPos: projectile.srcPos,
+                        dstPos: projectile.impact?.pos ?? projectile.dstPos
+                    },
+                    { depth: null }
+                );
                 debugGraphics?.push({
                     type: DebugGraphicType.enum.line,
                     srcWorldPos: projectile.srcPos,
