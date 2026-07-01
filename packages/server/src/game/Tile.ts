@@ -29,7 +29,7 @@ import { Material } from "./Material.js";
 import { Image } from "./Image.js";
 import { ImageManager } from "./ImageManager.js";
 import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
-import { Projectile } from "./Projectile.js";
+import { IRayCast } from "./IRayCast.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -329,8 +329,8 @@ export class Tile implements IRenderableEntity {
         }
     }
 
-    stepProjectile(
-        projectile: Projectile,
+    stepRay(
+        ray: IRayCast,
         subTileSrcPos: Vec2,
         subTileDstPos: Vec2,
         currentMaterial: Material,
@@ -387,8 +387,8 @@ export class Tile implements IRenderableEntity {
             const { material, owner } = collisionSample;
             const density = material.getDensityForType(MaterialDensityType.enum.projectile);
 
-            projectile.penetration -= density;
-            if (projectile.penetration === 0) {
+            ray.life -= density;
+            if (!ray.isRayAlive) {
                 // Projectile ran out of penetration power.
                 console.info(`Projectile ran out of penetration power in ${material.id}`);
 

@@ -4,10 +4,11 @@ import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
-import { Tracer } from "@atbs/shared-data";
+import { Segment, Tracer } from "@atbs/shared-data";
 import { LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
+import { IRayCast } from "./IRayCast.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -30,13 +31,14 @@ export interface ProjectileProps {
     projectileRecipe: ProjectileRecipe;
 }
 
-export class Projectile {
+export class Projectile implements IRayCast {
     private readonly _props: ProjectileProps;
 
     private _srcPos: Vec2;
     private _dstPos: Vec2;
     private _velocity: number;
     private _penetration: number;
+    private _segments: Segment[];
 
     private _impact?: {
         time: number;
@@ -50,6 +52,7 @@ export class Projectile {
         this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
         this._velocity = props.projectileRecipe.visual.velocity;
         this._penetration = this.maxPenetration;
+        this._segments = [];
 
         this._impact = undefined;
     }
@@ -78,10 +81,6 @@ export class Projectile {
         return this._srcPos;
     }
 
-    set srcPos(value: Vec2) {
-        this._srcPos = value;
-    }
-
     get dstPos(): Vec2 {
         return this._dstPos;
     }
@@ -106,8 +105,24 @@ export class Projectile {
         this._penetration = Math.max(value, 0);
     }
 
+    get life(): number {
+        return this.penetration;
+    }
+
+    set life(value: number) {
+        this.penetration = value;
+    }
+
+    get isRayAlive(): boolean {
+        return this.penetration > 0;
+    }
+
     get maxPenetration(): number {
         return this._props.projectileRecipe.penetration;
+    }
+
+    get segments(): Segment[] {
+        return this._segments;
     }
 
     get impact():
@@ -136,20 +151,32 @@ export class Projectile {
         const distanceTravelled = endPos.sub(this.srcPos).length;
 
         return {
+            // TODO: These will become obsolete shortly...
             srcPos: this.srcPos,
             dstPos: this.impact?.pos ?? this.dstPos,
             flightTimeInMs: (distanceTravelled / this.velocity) * 1000,
             maxRange: distanceTravelled,
+            // TODO: ^^^ to become obsolete soon.
+
+            segments: this.segments,
             visual: this._props.projectileRecipe.visual
         };
     }
 
-    commitSegmentTo(pos: Vec2): void {
+    commitSegmentTo(time: number, pos: Vec2): void {
         // TODO: Commit this
         console.info(
             `TODO: Commit the segment from ${this._srcPos} to ${pos} - update srcPos to ${pos} (maybe advance recorded start time etc.)`
         );
 
+        const previousTime = this.segments.length === 0 ? 0 : this.segments[0].dst.time;
+
+        this._segments.push({
+            src: { pos: this.srcPos, time: previousTime },
+            dst: { pos, time }
+        });
+
+        // Reset projectile for next segment.
         this._srcPos = pos;
         this._impact = undefined;
     }
@@ -189,7 +216,7 @@ export class Projectile {
 
         // Determine the initial impact of every projectile.
         for (const projectile of projectiles) {
-            const hitResult = map.castProjectile(projectile, debugGraphics);
+            const hitResult = map.castRay(projectile, debugGraphics);
             console.dir({ hitResult }, { depth: null });
 
             if (hitResult) {
@@ -229,8 +256,9 @@ export class Projectile {
 
             if (material) {
                 // TODO: Need to back up the current segment, as we change this.
-                projectile.commitSegmentTo(pos);
-                // projectile.srcPos = pos;
+                projectile.commitSegmentTo(atTime, pos);
+
+                // TODO: Apply damage 'atTime'... (or at nextChange time?)
 
                 // Apply damage to material owner.
                 if (isFurniture(owner)) {
@@ -239,7 +267,7 @@ export class Projectile {
                     console.info("Collided with unit!", owner.id);
                 }
 
-                const nextChange = map.stepProjectile(projectile, material, debugGraphics);
+                const nextChange = map.stepRay(projectile, material, debugGraphics);
                 if (nextChange) {
                     debugGraphics?.push({
                         type: DebugGraphicType.enum.line,
@@ -251,19 +279,20 @@ export class Projectile {
                     });
 
                     const timeTo = projectile.calculateTimeTo(nextChange.pos);
+                    const cumulativeTime = atTime + timeTo;
 
-                    if (projectile.penetration > 0) {
+                    if (projectile.life > 0) {
                         eventQueue.push({
-                            priority: atTime + timeTo,
+                            priority: cumulativeTime,
                             projectile,
                             ...nextChange
                         });
                     }
 
-                    projectile.commitSegmentTo(nextChange.pos);
+                    projectile.commitSegmentTo(cumulativeTime, nextChange.pos);
                 }
             } else {
-                const hitResult = map.castProjectile(projectile, debugGraphics);
+                const hitResult = map.castRay(projectile, debugGraphics);
                 console.dir({ hitResult }, { depth: null });
 
                 if (hitResult) {

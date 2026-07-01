@@ -5,9 +5,9 @@ import { Aabb, DebugGraphic, ITilePos, Maths, TilePos, Vec2 } from "@atbs/maths"
 import { Unit } from "./Unit.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
-import { Projectile } from "./Projectile.js";
 import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 import { Material } from "./Material.js";
+import { IRayCast } from "./IRayCast.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -210,15 +210,15 @@ export class WorldMap {
 
     /**
      * Cast a projectile through the map until its first collision.
-     * @param projectile The projectile to cast.
+     * @param ray The projectile to cast.
      * @param debugGraphics Optional array for recording intersections and collisions.
      * @returns The position and material first hit, or `undefined` if no collision occurs.
      */
-    castProjectile(projectile: Projectile, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
+    castRay(ray: IRayCast, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
         const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
         // let sampleOrder = 0;
 
-        return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
+        return traceGridRay(ray.srcPos, ray.dstPos, grid, (cellWalk) => {
             const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
             const tile = this.sampleTile(tilePos);
             if (!tile) {
@@ -245,15 +245,15 @@ export class WorldMap {
         });
     }
 
-    stepProjectile(
-        projectile: Projectile,
+    stepRay(
+        ray: IRayCast,
         currentMaterial: Material,
         debugGraphics?: DebugGraphic[]
     ): GridRayTraceResult {
         const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
         // let sampleOrder = 0;
 
-        return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
+        return traceGridRay(ray.srcPos, ray.dstPos, grid, (cellWalk) => {
             const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
             const tile = this.sampleTile(tilePos);
             if (!tile) {
@@ -276,8 +276,8 @@ export class WorldMap {
             //     }
             // );
 
-            const collisionResult = tile.stepProjectile(
-                projectile,
+            const collisionResult = tile.stepRay(
+                ray,
                 cellWalk.srcPos,
                 cellWalk.dstPos,
                 currentMaterial,
