@@ -410,7 +410,12 @@ export function DebugDrawPath(
                         ? Maths.Clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
                         : 0;
 
-                const gradient = context.createLinearGradient(srcCanvasPos.x, srcCanvasPos.y, dstCanvasPos.x, dstCanvasPos.y);
+                const gradient = context.createLinearGradient(
+                    srcCanvasPos.x,
+                    srcCanvasPos.y,
+                    dstCanvasPos.x,
+                    dstCanvasPos.y
+                );
                 gradient.addColorStop(0.0, colourToRGBA({ ...Colour.White, a: startTransparency }));
                 gradient.addColorStop(1.0, colourToRGBA({ ...Colour.White, a: endTransparency }));
                 context.strokeStyle = gradient;
