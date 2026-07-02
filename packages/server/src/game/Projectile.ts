@@ -1,10 +1,10 @@
-import { Colour, DebugGraphic, DebugGraphicType, Vec2 } from "@atbs/maths";
+import { Colour, DebugGraphic, DebugGraphicType, PathSegment, Vec2 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
-import { Segment, Tracer } from "@atbs/shared-data";
+import { Tracer } from "@atbs/shared-data";
 import { LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
@@ -38,7 +38,7 @@ export class Projectile implements IRayCast {
     private _dstPos: Vec2;
     private _velocity: number;
     private _penetration: number;
-    private _segments: Segment[];
+    private _segments: PathSegment[];
 
     private _impact?: {
         time: number;
@@ -52,7 +52,12 @@ export class Projectile implements IRayCast {
         this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
         this._velocity = props.projectileRecipe.visual.velocity;
         this._penetration = this.maxPenetration;
-        this._segments = [];
+        this._segments = [
+            {
+                pos: props.srcPos,
+                time: 0
+            }
+        ];
 
         this._impact = undefined;
     }
@@ -121,7 +126,7 @@ export class Projectile implements IRayCast {
         return this._props.projectileRecipe.penetration;
     }
 
-    get segments(): Segment[] {
+    get segments(): PathSegment[] {
         return this._segments;
     }
 
@@ -147,34 +152,25 @@ export class Projectile implements IRayCast {
     }
 
     getTracer(): Tracer {
-        const endPos = this.impact?.pos ?? this.dstPos;
-        const distanceTravelled = endPos.sub(this.srcPos).length;
+        if (!this.impact) {
+            const endPos = this.dstPos;
+            const timeAtEnd = this.calculateTimeTo(endPos);
+
+            this.commitSegmentTo(timeAtEnd, endPos);
+        }
 
         return {
-            // TODO: These will become obsolete shortly...
-            srcPos: this.srcPos,
-            dstPos: this.impact?.pos ?? this.dstPos,
-            flightTimeInMs: (distanceTravelled / this.velocity) * 1000,
-            maxRange: distanceTravelled,
-            // TODO: ^^^ to become obsolete soon.
-
             segments: this.segments,
-            visual: this._props.projectileRecipe.visual
+            trail: [0, -200, -600] // TODO: Calculate based on visuals...
         };
     }
 
     commitSegmentTo(time: number, pos: Vec2): void {
-        // TODO: Commit this
         console.info(
             `TODO: Commit the segment from ${this._srcPos} to ${pos} - update srcPos to ${pos} (maybe advance recorded start time etc.)`
         );
 
-        const previousTime = this.segments.length === 0 ? 0 : this.segments[0].dst.time;
-
-        this._segments.push({
-            src: { pos: this.srcPos, time: previousTime },
-            dst: { pos, time }
-        });
+        this._segments.push({ pos, time });
 
         // Reset projectile for next segment.
         this._srcPos = pos;
@@ -255,7 +251,6 @@ export class Projectile implements IRayCast {
             const { priority: atTime, material, owner, pos, projectile } = event;
 
             if (material) {
-                // TODO: Need to back up the current segment, as we change this.
                 projectile.commitSegmentTo(atTime, pos);
 
                 // TODO: Apply damage 'atTime'... (or at nextChange time?)
@@ -287,9 +282,9 @@ export class Projectile implements IRayCast {
                             projectile,
                             ...nextChange
                         });
+                    } else {
+                        projectile.impact = nextChange.pos;
                     }
-
-                    projectile.commitSegmentTo(cumulativeTime, nextChange.pos);
                 }
             } else {
                 const hitResult = map.castRay(projectile, debugGraphics);

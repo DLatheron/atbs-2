@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { ITilePos, IVec2, Maths, Orientation } from "@atbs/maths";
+import { ITilePos, IVec2, Maths, Orientation, PathSegment } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
@@ -707,26 +707,20 @@ export const ProjectileVisual = z.object({
 });
 export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
 
-export const SegmentPos = z.object({
-    pos: IVec2,
-    time: z.number().nonnegative()
-});
-export type SegmentPos = z.infer<typeof SegmentPos>;
+// export const SegmentPos = z.object({
+//     pos: IVec2,
+//     time: z.number().nonnegative()
+// });
+// export type SegmentPos = z.infer<typeof SegmentPos>;
 
-export const Segment = z.object({
-    src: SegmentPos,
-    dst: SegmentPos
-});
-export type Segment = z.infer<typeof Segment>;
+// export const Segment = z.object({
+//     src: SegmentPos,
+//     dst: SegmentPos
+// });
+// export type Segment = z.infer<typeof Segment>;
 
 export const Tracer = z.object({
-    srcPos: IVec2,
-    dstPos: IVec2,
-    flightTimeInMs: z.number().nonnegative(),
-    maxRange: z.number().nonnegative(),
-
-    segments: z.array(Segment),
-
-    visual: ProjectileVisual
+    segments: z.array(PathSegment).min(2),
+    trail: z.tuple([z.number(), z.number(), z.number()])
 });
 export type Tracer = z.infer<typeof Tracer>;

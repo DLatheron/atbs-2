@@ -78,9 +78,9 @@ export const DebugPath = z.object({
     type: z.literal(DebugGraphicType.enum.path),
     segments: z.array(PathSegment).min(2),
     strokeColour: IColour,
+    trail: z.tuple([z.number(), z.number(), z.number()]),
     strokeThickness: z.number().positive().optional(),
-    lineDash: z.array(z.number()).optional(),
-    trail: z.tuple([z.number(), z.number(), z.number()]).optional()
+    lineDash: z.array(z.number()).optional()
 });
 export type DebugPath = z.infer<typeof DebugPath>;
 

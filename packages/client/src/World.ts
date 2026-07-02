@@ -21,6 +21,7 @@ import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
 import {
+    Colour,
     DebugGraphic,
     DebugGraphicType,
     Orientation,
@@ -46,7 +47,6 @@ import {
     DrawRangeSight
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
-import { VisualTracer } from "./Tracer";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -94,7 +94,6 @@ export class World {
     private _throwCallback: ThrowCallback;
     private _fireModeEx: FireModeEx;
     private _frameTime: number;
-    private _tracers?: Tracer[];
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
     private _debugGraphics: DebugGraphic[] | null;
@@ -135,7 +134,6 @@ export class World {
         };
         this._fireModeEx = FireModeEx.enum.aimed;
         this._frameTime = 0;
-        this._tracers = undefined;
         this._renderPlugins = [];
         this._drawSights = false;
         this._debugGraphics = null;
@@ -369,11 +367,7 @@ export class World {
     setTracers(tracers: Tracer[], completeCallback: () => void): void {
         // TODO: Reset the simulation time.
 
-        this._tracers = tracers;
-
-        const visualTracers = this._tracers.map(
-            (trace) => new VisualTracer(this._timer.time, trace)
-        );
+        const { time: startTime } = this._timer;
 
         this._timer.resume();
 
@@ -392,43 +386,26 @@ export class World {
                 return "Tracers";
             },
 
-            update({ time }: RenderPluginUpdateProps) {
-                if (visualTracers) {
-                    // Work backwards through the list so we can delete them safely whilst iterating.
-                    for (let i = visualTracers.length - 1; i >= 0; i--) {
-                        const projectile = visualTracers[i];
+            render({ camera, context, time }: RenderPluginRenderProps) {
+                let allComplete = true;
 
-                        const projectileAlive = projectile.update({
-                            simulationTime: time
-                        });
-
-                        if (!projectileAlive) {
-                            visualTracers.splice(i, 1);
-                        }
+                for (const { segments, trail } of tracers) {
+                    if (
+                        !DrawProjectile(
+                            camera,
+                            context,
+                            startTime,
+                            time,
+                            segments,
+                            trail,
+                            Colour.White
+                        )
+                    ) {
+                        allComplete = false;
                     }
                 }
 
-                // // Only track the average position of the projectiles if it is the initial tracked trace event.
-                // if (projectiles.length && onTarget !== undefined) {
-                //     const averagePos = projectiles
-                //         .reduce((cumulativePos, projectile) => {
-                //             cumulativePos = cumulativePos.add(projectile.headPos);
-                //             return cumulativePos;
-                //         }, Vec2.Zero())
-                //         .divide(projectiles.length);
-
-                //     gameWorld.camera.interpolateToWorldPos(averagePos);
-                // }
-
-                return false;
-            },
-
-            render({ camera, context }: RenderPluginRenderProps) {
-                if (visualTracers.length > 0) {
-                    for (const { headPos, tailPos, intensity } of visualTracers) {
-                        DrawProjectile(camera, context, headPos, tailPos, intensity);
-                    }
-                } else {
+                if (allComplete) {
                     completionCallback();
                     return true;
                 }

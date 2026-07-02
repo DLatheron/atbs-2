@@ -26,7 +26,6 @@ import { ItemManager } from "./ItemManager.js";
 import { ItemRecipeManager } from "./ItemRecipeManager.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
-import { DebugGraphicType, Colour } from "@atbs/maths";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -522,28 +521,28 @@ export class Game {
             true
         );
 
-        this.messageRouter.broadcast(
-            {
-                type: "server:debug:graphics",
-                payload: [
-                    {
-                        type: DebugGraphicType.enum.path,
-                        segments: [
-                            { pos: { x: 100, y: 100 }, time: 0 },
-                            { pos: { x: 1100, y: 100 }, time: 10000 },
-                            { pos: { x: 1100, y: 1100 }, time: 20000 },
-                            { pos: { x: 100, y: 1100 }, time: 30000 },
-                            { pos: { x: 100, y: 100 }, time: 40000 }
-                        ],
-                        strokeColour: Colour.White,
-                        strokeThickness: 2,
-                        trail: [0, -100, -10000]
-                    }
-                ]
-            },
-            [],
-            true
-        );
+        // this.messageRouter.broadcast(
+        //     {
+        //         type: "server:debug:graphics",
+        //         payload: [
+        //             {
+        //                 type: DebugGraphicType.enum.path,
+        //                 segments: [
+        //                     { pos: { x: 100, y: 100 }, time: 0 },
+        //                     { pos: { x: 1100, y: 100 }, time: 10000 },
+        //                     { pos: { x: 1100, y: 1100 }, time: 20000 },
+        //                     { pos: { x: 100, y: 1100 }, time: 30000 },
+        //                     { pos: { x: 100, y: 100 }, time: 40000 }
+        //                 ],
+        //                 strokeColour: Colour.White,
+        //                 strokeThickness: 2,
+        //                 trail: [0, -100, -10000]
+        //             }
+        //         ]
+        //     },
+        //     [],
+        //     true
+        // );
 
         this._playState.sides = [...this.sides];
         this.selectedUnit = null;

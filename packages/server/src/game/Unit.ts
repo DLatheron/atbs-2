@@ -11,6 +11,7 @@ import {
     FireType,
     getAccuracy,
     getRpm,
+    OnTarget,
     // OnTarget,
     RenderList,
     RenderMode,
@@ -768,11 +769,12 @@ export class Unit extends SceneObject {
             //     );
             // }
 
+            const showDebugGraphics = false;
             const debugGraphics: DebugGraphic[] = [];
 
             Projectile.ProcessProjectiles(projectiles, map, debugGraphics);
 
-            if (debugGraphics) {
+            if (showDebugGraphics && debugGraphics) {
                 messageRouter.send({
                     type: "server:debug:graphics",
                     payload: debugGraphics
@@ -781,15 +783,15 @@ export class Unit extends SceneObject {
 
             // TODO: Move the projectiles forward in time...
             // TODO: Psuedo tracers - how do we determine visibility?
-            // messageRouter.send([
-            //     {
-            //         type: "server:fire:trace",
-            //         payload: {
-            //             tracers: projectiles.map((projectile) => projectile.getTracer()),
-            //             isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
-            //         }
-            //     }
-            // ]);
+            messageRouter.send([
+                {
+                    type: "server:fire:trace",
+                    payload: {
+                        tracers: projectiles.map((projectile) => projectile.getTracer()),
+                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                    }
+                }
+            ]);
         }
 
         /**

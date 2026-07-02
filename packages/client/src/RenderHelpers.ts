@@ -13,44 +13,163 @@ import { Camera2d } from "./Camera2d";
 export function DrawProjectile(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-    headPos: Vec2,
-    tailPos: Vec2,
-    intensity: number
-): void {
-    const headRadius = 2;
-    const trailWidth = 2;
+    baseTime: number,
+    timeNow: number,
+    segments: PathSegment[],
+    pathTrail: [number, number, number],
+    strokeColour: IColour,
+    strokeThickness?: number,
+    lineDash?: number[]
+): boolean {
+    const time = Math.max(timeNow - baseTime, 0);
 
-    const headCanvasPos = camera.worldToCanvas(headPos);
-    const tailCanvasPos = camera.worldToCanvas(tailPos);
+    const HEAD_START_INDEX = 0;
+    const HEAD_TAIL_INDEX = 1;
+    const TAIL_END_INDEX = 2;
 
-    const hex = Math.floor(255 * intensity);
-    const color = `rgba(${hex}, ${hex}, ${hex}, ${intensity})`;
-    const gradient = context.createLinearGradient(
-        tailCanvasPos.x,
-        tailCanvasPos.y,
-        headCanvasPos.x,
-        headCanvasPos.y
-    );
-    gradient.addColorStop(0, `rgba(${hex}, ${hex}, ${hex}, 0)`);
-    gradient.addColorStop(0.9, color);
-    gradient.addColorStop(1.0, color);
+    const headStartTime = time + pathTrail[HEAD_START_INDEX];
+    const headTailTime = time + pathTrail[HEAD_TAIL_INDEX];
+    const tailEndTime = time + pathTrail[TAIL_END_INDEX];
 
-    const bronze = `rgba(134, 125, 56, ${intensity})`;
-    context.fillStyle = bronze;
-    context.strokeStyle = gradient;
-    context.lineWidth = trailWidth;
+    let start = segments[0];
+    let complete = true;
 
-    context.beginPath();
-    context.moveTo(headCanvasPos.x, headCanvasPos.y);
-    context.lineTo(tailCanvasPos.x, tailCanvasPos.y);
-    context.stroke();
+    context.strokeStyle = colourToRGBA(strokeColour);
+    context.setLineDash(lineDash ?? []);
+    context.lineWidth = strokeThickness ?? 1;
 
-    context.lineWidth = 1;
+    for (let i = 1; i < segments.length; ++i) {
+        const end = segments[i];
 
-    context.beginPath();
-    context.arc(headCanvasPos.x, headCanvasPos.y, headRadius, 0, 2 * Math.PI);
-    context.fill();
+        const overlapsSegment = headStartTime >= start.time && tailEndTime < end.time;
+        if (overlapsSegment) {
+            const segmentPosDelta = new Vec2(end.pos).sub(start.pos);
+            const segmentTimeDelta = end.time - start.time;
+
+            const headStartTimeDelta = headStartTime - start.time;
+            const headTailTimeDelta = headTailTime - start.time;
+            const tailEndDelta = tailEndTime - start.time;
+
+            const clampedStartTimeDelta = Maths.Clamp(headStartTimeDelta, 0, segmentTimeDelta);
+            const clampedHeadTailTimeDelta = Maths.Clamp(headTailTimeDelta, 0, segmentTimeDelta);
+            const clampedTailEndDelta = Maths.Clamp(tailEndDelta, 0, segmentTimeDelta);
+
+            //
+            // Head
+            //
+            if (clampedStartTimeDelta !== clampedHeadTailTimeDelta) {
+                const srcCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedStartTimeDelta / segmentTimeDelta))
+                    )
+                );
+                const dstCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedHeadTailTimeDelta / segmentTimeDelta))
+                    )
+                );
+
+                context.strokeStyle = colourToRGBA(strokeColour);
+                context.beginPath();
+                context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
+                context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+                context.stroke();
+            }
+
+            //
+            // Tail
+            //
+            if (clampedHeadTailTimeDelta !== clampedTailEndDelta) {
+                const srcCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedHeadTailTimeDelta / segmentTimeDelta))
+                    )
+                );
+                const dstCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedTailEndDelta / segmentTimeDelta))
+                    )
+                );
+
+                const startTailTime = start.time + clampedHeadTailTimeDelta;
+                const endTailTime = start.time + clampedTailEndDelta;
+                const tailDuration = headTailTime - tailEndTime;
+                const startTransparency =
+                    tailDuration > 0
+                        ? Maths.Clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
+                        : 1;
+                const endTransparency =
+                    tailDuration > 0
+                        ? Maths.Clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
+                        : 0;
+
+                const gradient = context.createLinearGradient(
+                    srcCanvasPos.x,
+                    srcCanvasPos.y,
+                    dstCanvasPos.x,
+                    dstCanvasPos.y
+                );
+                gradient.addColorStop(0.0, colourToRGBA({ ...Colour.Red, a: startTransparency }));
+                gradient.addColorStop(1.0, colourToRGBA({ ...Colour.Red, a: endTransparency }));
+                context.strokeStyle = gradient;
+                context.beginPath();
+                context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
+                context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+                context.stroke();
+            }
+
+            complete = false;
+        }
+
+        start = end;
+    }
+
+    context.setLineDash([]);
+
+    return complete;
 }
+
+// export function DrawProjectile(
+//     camera: Camera2d,
+//     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+//     headPos: Vec2,
+//     tailPos: Vec2,
+//     intensity: number
+// ): void {
+//     const headRadius = 2;
+//     const trailWidth = 2;
+
+//     const headCanvasPos = camera.worldToCanvas(headPos);
+//     const tailCanvasPos = camera.worldToCanvas(tailPos);
+
+//     const hex = Math.floor(255 * intensity);
+//     const color = `rgba(${hex}, ${hex}, ${hex}, ${intensity})`;
+//     const gradient = context.createLinearGradient(
+//         tailCanvasPos.x,
+//         tailCanvasPos.y,
+//         headCanvasPos.x,
+//         headCanvasPos.y
+//     );
+//     gradient.addColorStop(0, `rgba(${hex}, ${hex}, ${hex}, 0)`);
+//     gradient.addColorStop(0.9, color);
+//     gradient.addColorStop(1.0, color);
+
+//     const bronze = `rgba(134, 125, 56, ${intensity})`;
+//     context.fillStyle = bronze;
+//     context.strokeStyle = gradient;
+//     context.lineWidth = trailWidth;
+
+//     context.beginPath();
+//     context.moveTo(headCanvasPos.x, headCanvasPos.y);
+//     context.lineTo(tailCanvasPos.x, tailCanvasPos.y);
+//     context.stroke();
+
+//     context.lineWidth = 1;
+
+//     context.beginPath();
+//     context.arc(headCanvasPos.x, headCanvasPos.y, headRadius, 0, 2 * Math.PI);
+//     context.fill();
+// }
 
 export function DrawLaserSight(
     camera: Camera2d,
@@ -380,7 +499,7 @@ export function DebugDrawPath(
                     )
                 );
 
-                context.strokeStyle = colourToRGBA(Colour.White);
+                context.strokeStyle = colourToRGBA(strokeColour);
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
                 context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
@@ -416,8 +535,8 @@ export function DebugDrawPath(
                     dstCanvasPos.x,
                     dstCanvasPos.y
                 );
-                gradient.addColorStop(0.0, colourToRGBA({ ...Colour.White, a: startTransparency }));
-                gradient.addColorStop(1.0, colourToRGBA({ ...Colour.White, a: endTransparency }));
+                gradient.addColorStop(0.0, colourToRGBA({ ...strokeColour, a: startTransparency }));
+                gradient.addColorStop(1.0, colourToRGBA({ ...strokeColour, a: endTransparency }));
                 context.strokeStyle = gradient;
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
