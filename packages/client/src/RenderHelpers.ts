@@ -1,4 +1,13 @@
-import { colourToRGBA, degreesToRadians, IColour, IVec2, Vec2 } from "@atbs/maths";
+import {
+    Colour,
+    colourToRGBA,
+    degreesToRadians,
+    IColour,
+    IVec2,
+    Maths,
+    PathSegment,
+    Vec2
+} from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 
 export function DrawProjectile(
@@ -303,7 +312,6 @@ export function DebugDrawLine(
     const srcCanvasPos = camera.worldToCanvas(new Vec2(srcWorldPos));
     const dstCanvasPos = camera.worldToCanvas(new Vec2(dstWorldPos));
 
-    context.beginPath();
     context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
     context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
 
@@ -311,6 +319,111 @@ export function DebugDrawLine(
     context.setLineDash(lineDash ?? []);
     context.lineWidth = strokeThickness ?? 1;
     context.stroke();
+    context.setLineDash([]);
+}
+
+export function DebugDrawPath(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    time: number,
+    segments: PathSegment[],
+    pathTrail: [number, number, number],
+    strokeColour: IColour,
+    strokeThickness?: number,
+    lineDash?: number[]
+) {
+    const HEAD_START_INDEX = 0;
+    const HEAD_TAIL_INDEX = 1;
+    const TAIL_END_INDEX = 2;
+
+    // const segmentsInCanvasSpace = segments.map(({ pos: worldPos, time }) => ({
+    //     pos: camera.worldToCanvas(new Vec2(worldPos)),
+    //     time
+    // }));
+
+    const headStartTime = time + pathTrail[HEAD_START_INDEX];
+    const headTailTime = time + pathTrail[HEAD_TAIL_INDEX];
+    const tailEndTime = time + pathTrail[TAIL_END_INDEX];
+
+    let start = segments[0];
+
+    context.strokeStyle = colourToRGBA(strokeColour);
+    context.setLineDash(lineDash ?? []);
+    context.lineWidth = strokeThickness ?? 1;
+
+    for (let i = 1; i < segments.length; ++i) {
+        const end = segments[i];
+
+        const overlapsSegment = headStartTime >= start.time && tailEndTime < end.time;
+        if (overlapsSegment) {
+            const segmentPosDelta = new Vec2(end.pos).sub(start.pos);
+            const segmentTimeDelta = end.time - start.time;
+
+            const headStartTimeDelta = headStartTime - start.time;
+            const headTailTimeDelta = headTailTime - start.time;
+            const tailEndDelta = tailEndTime - start.time;
+            // let headTailOpacity = 1;
+
+            const clampedStartTimeDelta = Maths.Clamp(headStartTimeDelta, 0, segmentTimeDelta);
+            const clampedHeadTailTimeDelta = Maths.Clamp(headTailTimeDelta, 0, segmentTimeDelta);
+            const clampedTailEndDelta = Maths.Clamp(tailEndDelta, 0, segmentTimeDelta);
+
+            if (clampedStartTimeDelta !== clampedHeadTailTimeDelta) {
+                const srcCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedStartTimeDelta / segmentTimeDelta))
+                    )
+                );
+                const dstCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedHeadTailTimeDelta / segmentTimeDelta))
+                    )
+                );
+
+                context.strokeStyle = colourToRGBA(Colour.White);
+                context.beginPath();
+                context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
+                context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+                context.stroke();
+            }
+            if (clampedHeadTailTimeDelta !== clampedTailEndDelta) {
+                const srcCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedHeadTailTimeDelta / segmentTimeDelta))
+                    )
+                );
+                const dstCanvasPos = camera.worldToCanvas(
+                    new Vec2(start.pos).add(
+                        new Vec2(segmentPosDelta.scale(clampedTailEndDelta / segmentTimeDelta))
+                    )
+                );
+
+                const startTailTime = start.time + clampedHeadTailTimeDelta;
+                const endTailTime = start.time + clampedTailEndDelta;
+                const tailDuration = headTailTime - tailEndTime;
+                const startTransparency =
+                    tailDuration > 0
+                        ? Maths.Clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
+                        : 1;
+                const endTransparency =
+                    tailDuration > 0
+                        ? Maths.Clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
+                        : 0;
+
+                const gradient = context.createLinearGradient(srcCanvasPos.x, srcCanvasPos.y, dstCanvasPos.x, dstCanvasPos.y);
+                gradient.addColorStop(0.0, colourToRGBA({ ...Colour.White, a: startTransparency }));
+                gradient.addColorStop(1.0, colourToRGBA({ ...Colour.White, a: endTransparency }));
+                context.strokeStyle = gradient;
+                context.beginPath();
+                context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
+                context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+                context.stroke();
+            }
+        }
+
+        start = end;
+    }
+
     context.setLineDash([]);
 }
 

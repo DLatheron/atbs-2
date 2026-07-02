@@ -20,7 +20,13 @@ import { CanvasLoopProps } from "./components/CanvasLoop";
 import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
-import { DebugGraphic, DebugGraphicType, Orientation, OrientationToRadians } from "@atbs/maths";
+import {
+    DebugGraphic,
+    DebugGraphicType,
+    Orientation,
+    OrientationToRadians,
+    PathSegment
+} from "@atbs/maths";
 import { ImageCache } from "./ImageCache";
 import { Timer } from "./Timer";
 import { IInteractionHandler } from "./IInteractionHandler";
@@ -32,6 +38,7 @@ import {
     DebugDrawArc,
     DebugDrawBox,
     DebugDrawLine,
+    DebugDrawPath,
     DebugDrawPoint,
     DebugDrawText,
     DrawLaserSight,
@@ -347,6 +354,16 @@ export class World {
 
     set debugGraphics(value: DebugGraphic[] | null) {
         this._debugGraphics = value;
+
+        // Sort out base time of path segments
+        value?.forEach((graphic) => {
+            if (graphic.type === DebugGraphicType.enum.path) {
+                graphic.segments.forEach((segment: PathSegment) => ({
+                    ...segment,
+                    time: segment.time + this.frameTime
+                }));
+            }
+        });
     }
 
     setTracers(tracers: Tracer[], completeCallback: () => void): void {
@@ -654,7 +671,21 @@ export class World {
                         graphic.srcWorldPos,
                         graphic.dstWorldPos,
                         graphic.strokeColour,
-                        graphic.strokeThickness
+                        graphic.strokeThickness,
+                        graphic.lineDash
+                    );
+                    break;
+
+                case DebugGraphicType.enum.path:
+                    DebugDrawPath(
+                        renderProps.camera,
+                        renderProps.context,
+                        renderProps.time,
+                        graphic.segments,
+                        graphic.trail,
+                        graphic.strokeColour,
+                        graphic.strokeThickness,
+                        graphic.lineDash
                     );
                     break;
 
