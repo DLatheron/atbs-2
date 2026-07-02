@@ -20,6 +20,11 @@ export class CollisionEventQueue extends PriorityQueue<CollisionEvent> {
     }
 }
 
+export interface Impact {
+    pos: Vec2;
+    time: number;
+}
+
 export interface ProjectileProps {
     game: Game;
     firingUnit: Unit;
@@ -40,10 +45,7 @@ export class Projectile implements IRayCast {
     private _penetration: number;
     private _segments: PathSegment[];
 
-    private _impact?: {
-        time: number;
-        pos: Vec2;
-    };
+    private _impact?: Impact;
 
     constructor(props: ProjectileProps) {
         this._props = props;
@@ -130,20 +132,12 @@ export class Projectile implements IRayCast {
         return this._segments;
     }
 
-    get impact():
-        | {
-              time: number;
-              pos: Vec2;
-          }
-        | undefined {
+    get impact(): Impact | undefined {
         return this._impact;
     }
 
-    set impact(value: Vec2) {
-        this._impact = {
-            time: 0,
-            pos: value
-        };
+    set impact(value: Impact | undefined) {
+        this._impact = value;
     }
 
     calculateTimeTo(pos: Vec2): number {
@@ -152,11 +146,16 @@ export class Projectile implements IRayCast {
     }
 
     getTracer(): Tracer {
-        if (!this.impact) {
+        if (this.impact) {
+            console.info(`Commit impact segment ${this.impact.time}:${this.impact.pos}`);
+            this.commitSegmentTo(this.impact.time, this.impact.pos);
+        } else {
+            const previousTime = this.segments[this.segments.length - 1].time;
             const endPos = this.dstPos;
             const timeAtEnd = this.calculateTimeTo(endPos);
 
-            this.commitSegmentTo(timeAtEnd, endPos);
+            console.info(`Commit end segment ${timeAtEnd}:${endPos}`);
+            this.commitSegmentTo(previousTime + timeAtEnd, endPos);
         }
 
         return {
@@ -170,10 +169,6 @@ export class Projectile implements IRayCast {
     }
 
     commitSegmentTo(time: number, pos: Vec2): void {
-        console.info(
-            `TODO: Commit the segment from ${this._srcPos} to ${pos} - update srcPos to ${pos} (maybe advance recorded start time etc.)`
-        );
-
         this._segments.push({ pos, time });
 
         // Reset projectile for next segment.
@@ -188,43 +183,19 @@ export class Projectile implements IRayCast {
     ) {
         // Sort so that fastest projectiles are first.
         projectiles.sort((a, b) => b.velocity - a.velocity);
-        console.dir({ projectiles });
-
-        // debugGraphics?.push(
-        //     {
-        //         type: DebugGraphicType.enum.line,
-        //         srcWorldPos: projectiles[0].srcPos,
-        //         dstWorldPos: projectiles[0].dstPos,
-        //         strokeColour: Colour.White,
-        //         strokeThickness: 2
-        //     },
-        //     {
-        //         type: DebugGraphicType.enum.point,
-        //         worldPos: projectiles[0].srcPos,
-        //         size: 6,
-        //         colour: Colour.Red
-        //     },
-        //     {
-        //         type: DebugGraphicType.enum.point,
-        //         worldPos: projectiles[0].dstPos,
-        //         size: 6,
-        //         colour: Colour.Blue
-        //     }
-        // );
 
         const eventQueue = new CollisionEventQueue();
 
         // Determine the initial impact of every projectile.
         for (const projectile of projectiles) {
             const hitResult = map.castRay(projectile, debugGraphics);
-            console.dir({ hitResult }, { depth: null });
 
             if (hitResult) {
                 const timeTo = projectile.calculateTimeTo(hitResult.pos);
                 console.dir(
                     `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
                 );
-                projectile.impact = hitResult.pos;
+                projectile.impact = { pos: hitResult.pos, time: timeTo };
 
                 eventQueue.push({
                     priority: timeTo,
@@ -253,8 +224,10 @@ export class Projectile implements IRayCast {
         // Process the first event and see what happens.
         while ((event = eventQueue.pop())) {
             const { priority: atTime, material, owner, pos, projectile } = event;
+            console.dir({ priority: atTime, pos });
 
             if (material) {
+                console.info(`Commit material entry segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
                 // TODO: Apply damage 'atTime'... (or at nextChange time?)
@@ -287,19 +260,23 @@ export class Projectile implements IRayCast {
                             ...nextChange
                         });
                     } else {
-                        projectile.impact = nextChange.pos;
+                        projectile.impact = { pos: nextChange.pos, time: cumulativeTime };
                     }
                 }
             } else {
+                console.info(`Commit material exit segment ${atTime}:${pos}`);
+                projectile.commitSegmentTo(atTime, pos);
+
                 const hitResult = map.castRay(projectile, debugGraphics);
-                console.dir({ hitResult }, { depth: null });
 
                 if (hitResult) {
                     const timeTo = projectile.calculateTimeTo(hitResult.pos);
+                    const cumulativeTime = atTime + timeTo;
+
                     console.dir(
                         `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
                     );
-                    projectile.impact = hitResult.pos;
+                    projectile.impact = { pos: hitResult.pos, time: cumulativeTime };
 
                     eventQueue.push({
                         priority: timeTo,
@@ -308,13 +285,6 @@ export class Projectile implements IRayCast {
                     });
                 }
 
-                console.dir(
-                    {
-                        srcPos: projectile.srcPos,
-                        dstPos: projectile.impact?.pos ?? projectile.dstPos
-                    },
-                    { depth: null }
-                );
                 debugGraphics?.push({
                     type: DebugGraphicType.enum.line,
                     srcWorldPos: projectile.srcPos,
@@ -323,35 +293,6 @@ export class Projectile implements IRayCast {
                     strokeThickness: 2
                 });
             }
-
-            // let projectileStopped = false;
-            // console.info(`${atTime} event ${projectile.index} hit ${material.id} at ${pos}`);
-
-            // const density = material.getDensityForType(MaterialDensityType.enum.projectile);
-
-            // projectile.penetration -= density;
-            // if (projectile.penetration === 0) {
-            //     projectileStopped = true;
-            // }
-            // console.info("Projectile stopped", projectileStopped);
         }
-
-        // We have hit a material... we need to do the damage, and potentially continue the travel of that projectile
-        // until something 'special' happens.
-
-        // - apply damage to hit material
-        //   - kill unit
-        //   - destroy furniture
-        // - potentially ricohet
-        // - penetrate material
-        // - cut hole in material
-        // - dig crater in material
-        // - update projectile to current state...
-
-        // while ((event = eventQueue.pop())) {
-        //     console.info(
-        //         `${event.priority} event ${event.projectile.index} hit ${event.material.id} at ${event.pos}`
-        //     );
-        // }
     }
 }

@@ -584,7 +584,6 @@ export class World {
         const offset = new Vec2(tileSize / 2, tileSize / 2);
 
         this.renderTerrainAndFurniture(context, tileSize, scale, offset);
-        this.renderSight(context, time);
 
         // TODO: Render tracers...
         const renderProps: RenderPluginRenderProps = {
@@ -600,6 +599,7 @@ export class World {
         this._interactionHandler?.render?.(canvasLoopProps);
 
         this._renderDebugGraphics(renderProps);
+        this.renderSight(context, time);
 
         if (this._renderStarted) {
             this._renderStarted();

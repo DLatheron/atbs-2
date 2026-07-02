@@ -12,7 +12,6 @@ import {
     getAccuracy,
     getRpm,
     OnTarget,
-    // OnTarget,
     RenderList,
     RenderMode,
     shotsFired,
@@ -769,7 +768,7 @@ export class Unit extends SceneObject {
             //     );
             // }
 
-            const showDebugGraphics = true;
+            const showDebugGraphics = false;
             const debugGraphics: DebugGraphic[] = [];
 
             Projectile.ProcessProjectiles(projectiles, map, debugGraphics);

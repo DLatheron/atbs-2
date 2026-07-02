@@ -440,6 +440,7 @@ export function DebugDrawLine(
     const srcCanvasPos = camera.worldToCanvas(new Vec2(srcWorldPos));
     const dstCanvasPos = camera.worldToCanvas(new Vec2(dstWorldPos));
 
+    context.beginPath();
     context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
     context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
 
