@@ -707,20 +707,9 @@ export const ProjectileVisual = z.object({
 });
 export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
 
-// export const SegmentPos = z.object({
-//     pos: IVec2,
-//     time: z.number().nonnegative()
-// });
-// export type SegmentPos = z.infer<typeof SegmentPos>;
-
-// export const Segment = z.object({
-//     src: SegmentPos,
-//     dst: SegmentPos
-// });
-// export type Segment = z.infer<typeof Segment>;
-
 export const Tracer = z.object({
     segments: z.array(PathSegment).min(2),
-    trail: z.tuple([z.number(), z.number(), z.number()])
+    trail: z.tuple([z.number().nonpositive(), z.number().nonpositive(), z.number().nonpositive()]),
+    rangeFade: z.tuple([z.number().nonpositive(), z.number().nonpositive()]).optional()
 });
 export type Tracer = z.infer<typeof Tracer>;

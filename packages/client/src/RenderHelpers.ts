@@ -17,11 +17,11 @@ export function DrawProjectile(
     timeNow: number,
     segments: PathSegment[],
     pathTrail: [number, number, number],
-    strokeColour: IColour,
-    strokeThickness?: number,
-    lineDash?: number[]
+    rangeFade?: [number, number]
 ): boolean {
     const time = Math.max(timeNow - baseTime, 0);
+    const strokeColour = Colour.White;
+    const strokeThickness = 1;
 
     const HEAD_START_INDEX = 0;
     const HEAD_TAIL_INDEX = 1;
@@ -35,8 +35,7 @@ export function DrawProjectile(
     let complete = true;
 
     context.strokeStyle = colourToRGBA(strokeColour);
-    context.setLineDash(lineDash ?? []);
-    context.lineWidth = strokeThickness ?? 1;
+    context.lineWidth = strokeThickness;
 
     for (let i = 1; i < segments.length; ++i) {
         const end = segments[i];
@@ -123,8 +122,6 @@ export function DrawProjectile(
 
         start = end;
     }
-
-    context.setLineDash([]);
 
     return complete;
 }
@@ -609,7 +606,7 @@ export function DebugDrawArc(
 export function DebugDrawText(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-    worldPos: Vec2,
+    worldPos: IVec2,
     text: string,
     colour: IColour,
     fontFamily: string = "sans-serif",

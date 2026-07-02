@@ -152,16 +152,22 @@ export class Projectile implements IRayCast {
     }
 
     getTracer(): Tracer {
-        if (!this.impact) {
+        const continuedToMaxRange = !this.impact;
+        let rangeFade: [number, number] | undefined;
+
+        if (continuedToMaxRange) {
             const endPos = this.dstPos;
             const timeAtEnd = this.calculateTimeTo(endPos);
 
             this.commitSegmentTo(timeAtEnd, endPos);
+
+            rangeFade = [this._props.projectileRecipe.visual.rangeFallOff, timeAtEnd];
         }
 
         return {
             segments: this.segments,
-            trail: [0, -200, -600] // TODO: Calculate based on visuals...
+            trail: [0, -200, -600],
+            ...(rangeFade && { rangeFade })
         };
     }
 
