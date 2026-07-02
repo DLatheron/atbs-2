@@ -16,7 +16,7 @@
         "visual": {
             "intensity": 1,
             "velocity": 600,
-            "length": 30,
+            "lengthInMs": [0, -200, -600],
             "rangeFallOff": 10
         },
         "damage": {

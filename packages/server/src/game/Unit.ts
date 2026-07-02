@@ -769,7 +769,7 @@ export class Unit extends SceneObject {
             //     );
             // }
 
-            const showDebugGraphics = false;
+            const showDebugGraphics = true;
             const debugGraphics: DebugGraphic[] = [];
 
             Projectile.ProcessProjectiles(projectiles, map, debugGraphics);

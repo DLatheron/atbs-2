@@ -11,11 +11,11 @@
     "weight": 0.01231,
     "projectile": {
         "maxRange": 3000,
-        "penetration": 100,
+        "penetration": 200,
         "visual": {
             "intensity": 1,
             "velocity": 1000,
-            "length": 50,
+            "lengthInMs": [0, -20, -100],
             "rangeFallOff": 10
         },
         "damage": {

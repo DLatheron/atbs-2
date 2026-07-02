@@ -21,7 +21,6 @@ import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
 import {
-    Colour,
     DebugGraphic,
     DebugGraphicType,
     Orientation,
@@ -389,7 +388,7 @@ export class World {
             render({ camera, context, time }: RenderPluginRenderProps) {
                 let allComplete = true;
 
-                for (const { segments, trail } of tracers) {
+                for (const { segments, trail, rangeFade } of tracers) {
                     if (
                         !DrawProjectile(
                             camera,
@@ -398,7 +397,7 @@ export class World {
                             time,
                             segments,
                             trail,
-                            Colour.White
+                            rangeFade
                         )
                     ) {
                         allComplete = false;

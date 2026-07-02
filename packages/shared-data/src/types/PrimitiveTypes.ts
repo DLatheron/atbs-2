@@ -702,14 +702,24 @@ export type ThrowDetails = z.infer<typeof ThrowDetails>;
 export const ProjectileVisual = z.object({
     intensity: z.number().min(0).max(1).default(1),
     velocity: z.number().positive(),
-    length: z.number().positive(),
+    lengthInMs: z.tuple([
+        z.number().nonpositive(),
+        z.number().nonpositive(),
+        z.number().nonpositive()
+    ]),
     rangeFallOff: z.number().positive()
 });
 export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
 
+export const RangeFade = z.object({
+    maxRangeInMs: z.number().positive(),
+    rangeFalloffPower: z.number().positive()
+});
+export type RangeFade = z.infer<typeof RangeFade>;
+
 export const Tracer = z.object({
     segments: z.array(PathSegment).min(2),
     trail: z.tuple([z.number().nonpositive(), z.number().nonpositive(), z.number().nonpositive()]),
-    rangeFade: z.tuple([z.number().nonpositive(), z.number().nonpositive()]).optional()
+    rangeFade: RangeFade
 });
 export type Tracer = z.infer<typeof Tracer>;

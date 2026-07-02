@@ -16,7 +16,7 @@ export function Random(min: number, max: number): number {
     return min + Math.random() * range;
 }
 
-export function CalcFallOff(
+export function calcFalloff(
     amount: number,
     range: number,
     maxRange: number,

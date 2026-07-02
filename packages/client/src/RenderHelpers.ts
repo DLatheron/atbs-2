@@ -9,6 +9,8 @@ import {
     Vec2
 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
+import { RangeFade } from "@atbs/shared-data";
+import { calcFalloff } from "../../maths/src/Maths";
 
 export function DrawProjectile(
     camera: Camera2d,
@@ -17,7 +19,7 @@ export function DrawProjectile(
     timeNow: number,
     segments: PathSegment[],
     pathTrail: [number, number, number],
-    rangeFade?: [number, number]
+    rangeFade: RangeFade
 ): boolean {
     const time = Math.max(timeNow - baseTime, 0);
     const strokeColour = Colour.White;
@@ -30,6 +32,13 @@ export function DrawProjectile(
     const headStartTime = time + pathTrail[HEAD_START_INDEX];
     const headTailTime = time + pathTrail[HEAD_TAIL_INDEX];
     const tailEndTime = time + pathTrail[TAIL_END_INDEX];
+
+    const rangeOpacity = calcFalloff(
+        1,
+        headStartTime,
+        rangeFade.maxRangeInMs,
+        rangeFade.rangeFalloffPower
+    );
 
     let start = segments[0];
     let complete = true;
@@ -68,7 +77,10 @@ export function DrawProjectile(
                     )
                 );
 
-                context.strokeStyle = colourToRGBA(strokeColour);
+                context.strokeStyle = colourToRGBA({
+                    ...strokeColour,
+                    a: strokeColour.a * rangeOpacity
+                });
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
                 context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
@@ -94,13 +106,13 @@ export function DrawProjectile(
                 const endTailTime = start.time + clampedTailEndDelta;
                 const tailDuration = headTailTime - tailEndTime;
                 const startTransparency =
-                    tailDuration > 0
+                    (tailDuration > 0
                         ? Maths.Clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
-                        : 1;
+                        : 1) * rangeOpacity;
                 const endTransparency =
-                    tailDuration > 0
+                    (tailDuration > 0
                         ? Maths.Clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
-                        : 0;
+                        : 0) * rangeOpacity;
 
                 const gradient = context.createLinearGradient(
                     srcCanvasPos.x,
@@ -108,8 +120,8 @@ export function DrawProjectile(
                     dstCanvasPos.x,
                     dstCanvasPos.y
                 );
-                gradient.addColorStop(0.0, colourToRGBA({ ...Colour.Red, a: startTransparency }));
-                gradient.addColorStop(1.0, colourToRGBA({ ...Colour.Red, a: endTransparency }));
+                gradient.addColorStop(0.0, colourToRGBA({ ...strokeColour, a: startTransparency }));
+                gradient.addColorStop(1.0, colourToRGBA({ ...strokeColour, a: endTransparency }));
                 context.strokeStyle = gradient;
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
