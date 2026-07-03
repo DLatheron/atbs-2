@@ -22,6 +22,16 @@
             "rangeFalloffPower": 10
         },
         "damage": { "default": 1 },
+
+        "mass": 190,
+        "velocity": 84,
+        "diameter": 40,
+        "hardness": 1,
+        "shape": 0,
+        "stability": 1,
+        "bounce": 0,
+        "integrity": 0,
+
         "explosion": {
             "type": "fragment",
             "maxRange": { "min": 150, "max": 300 },

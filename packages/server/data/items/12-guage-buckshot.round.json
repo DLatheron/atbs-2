@@ -22,6 +22,16 @@
             "trailLengthInPixels": 100,
             "rangeFalloffPower": 10
         },
+
+        "mass": 3.4,
+        "velocity": 488,
+        "diameter": 5,
+        "hardness": 1,
+        "shape": 0,
+        "stability": 0,
+        "bounce": 0,
+        "integrity": 0.1,
+
         "damage": {
             "human": 5,
             "default": 3

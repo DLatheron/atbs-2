@@ -22,6 +22,16 @@
             "rangeFalloffPower": 10
         },
         "damage": { "default": 1 },
+
+        "mass": 190,
+        "velocity": 84,
+        "diameter": 40,
+        "hardness": 1,
+        "shape": 0,
+        "stability": 0.25,
+        "bounce": 1,
+        "integrity": 0.2,
+
         "explosion": {
             "type": "gas",
             "particles": [12, 8, 4],

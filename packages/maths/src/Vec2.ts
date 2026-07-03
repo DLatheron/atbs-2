@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Z } from "zod-class";
-import { Clamp, Lerp, generateRandomBetween } from "./Maths.js";
+import { clamp, lerp, generateRandomBetween } from "./Maths.js";
 import { degreesToRadians, Orientation } from "./Orientation.js";
 import { TilePos } from "./TilePos.js";
 
@@ -159,6 +159,10 @@ export class Vec2
         return this.rotate(randomAngleInRadians);
     }
 
+    calcImpactAngle(normal: Vec2): number {
+        return -this.dot(normal);
+    }
+
     /**
      * Clamps a vector between the specified limits.
      * @param limits Min/max limits.
@@ -166,8 +170,8 @@ export class Vec2
      */
     clamp(limits: { min: IVec2; max: IVec2 }, upperThreshold = 1): Vec2 {
         return new Vec2(
-            Clamp(this.x, limits.min.x, limits.max.x - upperThreshold),
-            Clamp(this.y, limits.min.y, limits.max.y - upperThreshold)
+            clamp(this.x, limits.min.x, limits.max.x - upperThreshold),
+            clamp(this.y, limits.min.y, limits.max.y - upperThreshold)
         );
     }
 
@@ -235,8 +239,8 @@ export class Vec2
         }
     }
 
-    static Interpolate(a: IVec2, b: IVec2, t: number, interpolateFn = Lerp): Vec2 {
-        t = Clamp(t, 0, 1);
+    static Interpolate(a: IVec2, b: IVec2, t: number, interpolateFn = lerp): Vec2 {
+        t = clamp(t, 0, 1);
 
         return new Vec2(interpolateFn(a.x, b.x, t), interpolateFn(a.y, b.y, t));
     }
@@ -246,7 +250,7 @@ export class Vec2
             return a;
         }
 
-        const dot = Clamp(a.dot(b), -1.0, 1.0);
+        const dot = clamp(a.dot(b), -1.0, 1.0);
 
         const theta = Math.acos(dot) * t;
         const relativeVec = b.sub(a.scale(dot)).normalise();

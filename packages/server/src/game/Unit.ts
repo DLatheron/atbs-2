@@ -23,9 +23,10 @@ import {
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
+    clamp,
     DebugGraphic,
+    generateRandomBetween,
     ITilePos,
-    Maths,
     Orientation,
     relativeDirection,
     rotateOrientation,
@@ -35,7 +36,6 @@ import {
 import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
-import { Clamp } from "../../../maths/src/Maths.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
@@ -363,7 +363,7 @@ export class Unit extends SceneObject {
         const { mapLocation } = this;
 
         let relativeRotation = relativeDirection(this.orientation, orientation);
-        if (Math.abs(relativeRotation) === 4 && Maths.generateRandomBetween(0, 1) > 0.5) {
+        if (Math.abs(relativeRotation) === 4 && generateRandomBetween(0, 1) > 0.5) {
             relativeRotation = -relativeRotation;
         }
 
@@ -735,12 +735,12 @@ export class Unit extends SceneObject {
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
-        return Clamp(baseAccuracy, 0, 100);
+        return clamp(baseAccuracy, 0, 100);
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 
     calcThrowAccuracy(baseAccuracy: number): number {
-        return Clamp(baseAccuracy, 0, 100);
+        return clamp(baseAccuracy, 0, 100);
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 

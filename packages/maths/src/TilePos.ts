@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Z } from "zod-class";
-import { Clamp } from "./Maths.js";
+import { clamp } from "./Maths.js";
 import { Orientation } from "./Orientation.js";
 import { IVec2, Vec2, isIVec2 } from "./Vec2.js";
 
@@ -99,8 +99,8 @@ export class TilePos
     // NOTE: min threshold is inclusive, max threshold is exclusive!
     clamp(limits: { min: Vec2; max: Vec2 }): TilePos {
         return new TilePos(
-            Clamp(this.col, limits.min.x, limits.max.x - 1),
-            Clamp(this.row, limits.min.y, limits.max.y - 1)
+            clamp(this.col, limits.min.x, limits.max.x - 1),
+            clamp(this.row, limits.min.y, limits.max.y - 1)
         );
     }
 

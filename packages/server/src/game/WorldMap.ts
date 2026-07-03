@@ -1,7 +1,7 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, DebugGraphic, ITilePos, Maths, Orientation, TilePos, Vec2 } from "@atbs/maths";
+import { Aabb, clamp, DebugGraphic, ITilePos, Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
@@ -140,8 +140,8 @@ export class WorldMap {
     }
 
     getTileClamped(tilePos: TilePos): Tile {
-        return this._tiles[Maths.Clamp(tilePos.row, 0, this.height - 1)][
-            Maths.Clamp(tilePos.col, 0, this.width - 1)
+        return this._tiles[clamp(tilePos.row, 0, this.height - 1)][
+            clamp(tilePos.col, 0, this.width - 1)
         ];
     }
 

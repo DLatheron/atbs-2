@@ -1,6 +1,14 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { Colour, IColour, ITilePos, IVec2, Maths, Orientation, PathSegment } from "@atbs/maths";
+import {
+    Colour,
+    generateRandomBetween,
+    IColour,
+    ITilePos,
+    IVec2,
+    Orientation,
+    PathSegment
+} from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
@@ -275,7 +283,7 @@ export function resolveJitteredValue(value: JitteredValue) {
     switch (value.distribution) {
         case Distribution.enum.linear:
         case undefined:
-            return Maths.generateRandomBetween(value.min, value.max);
+            return generateRandomBetween(value.min, value.max);
 
         default:
             throw new Error(`Unexpected distribution: ${value.distribution}`);

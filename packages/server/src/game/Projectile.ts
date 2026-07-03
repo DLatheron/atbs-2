@@ -1,4 +1,21 @@
-import { Colour, DebugGraphic, DebugGraphicType, PathSegment, Vec2 } from "@atbs/maths";
+import {
+    calcEffectiveThickness,
+    calcKineticEnergy,
+    calcMaterialResistance,
+    calcNewVelocity,
+    calcPenetrationRatio,
+    calcPenetrationSpread,
+    calcProjectilePower,
+    calcRicochetProbability,
+    calcRicochetSpread,
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    evaluatePenetrationRatio,
+    generateRandomBetween,
+    PathSegment,
+    Vec2
+} from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";
@@ -11,7 +28,6 @@ import { GridRayTraceHitResult } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { Material, MaterialPerturbation, PerturbationType } from "./Material.js";
-import { generateRandomBetween } from "../../../maths/src/Maths.js";
 import { config } from "../config/config.schema.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
@@ -64,7 +80,7 @@ export class Projectile implements IRayCast {
         );
         this._maxRange = props.projectileRecipe.maxRange;
         this._directionVector = props.directionVector;
-        this._velocity = props.projectileRecipe.visual.velocityInPps;
+        this._velocity = props.projectileRecipe.velocity;
         this._penetration = this.maxPenetration;
         this._segments = [
             {
@@ -116,6 +132,10 @@ export class Projectile implements IRayCast {
         return this._velocity;
     }
 
+    set velocity(value: number) {
+        this._velocity = value;
+    }
+
     get penetration(): number {
         return this._penetration;
     }
@@ -150,6 +170,22 @@ export class Projectile implements IRayCast {
 
     set impact(value: Impact | undefined) {
         this._impact = value;
+    }
+
+    get mass(): number {
+        return this._props.projectileRecipe.mass;
+    }
+
+    get hardness(): number {
+        return this._props.projectileRecipe.hardness;
+    }
+
+    get shape(): number {
+        return this._props.projectileRecipe.shape;
+    }
+
+    get stability(): number {
+        return this._props.projectileRecipe.stability;
     }
 
     isRicocheted(material: Material): MaterialPerturbation | undefined {
@@ -193,6 +229,11 @@ export class Projectile implements IRayCast {
 
         this._dstPos = this.srcPos.add(perturbedReflectedDir.scale(this.maxRange));
         this._directionVector = perturbedReflectedDir;
+    }
+
+    changeDirection(newDirection: Vec2) {
+        this._dstPos = this.srcPos.add(newDirection.scale(this.maxRange));
+        this._directionVector = newDirection;
     }
 
     perturb(newDirection: Vec2, perturbation: MaterialPerturbation) {
@@ -316,18 +357,129 @@ export class Projectile implements IRayCast {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                 }
 
-                const ricochetPerturbation = projectile.isRicocheted(material);
-                if (ricochetPerturbation) {
+                {
                     const normal = map.calcNormal(ImageManager.GetSingleton(), pos);
                     if (normal) {
-                        projectile.ricochet(normal, ricochetPerturbation);
-                    }
-                } else {
-                    const entryPerturbation = projectile.isPerturbed(material);
-                    if (entryPerturbation) {
-                        projectile.perturb(projectile.directionVector, entryPerturbation);
+                        // Step 1 - Compute Impact Angle.
+                        const dotOfImpactAngle = projectile.directionVector.calcImpactAngle(normal);
+                        console.dir({
+                            dir: projectile.directionVector,
+                            normal,
+                            dotOfImpactAngle
+                        });
+
+                        // Step 2 - Compute Penetration Score.
+                        const kineticEnergy = calcKineticEnergy(
+                            projectile.mass,
+                            projectile.velocity
+                        );
+                        // const momentum = calcMomentum(projectile.mass, projectile.velocity);
+                        const projectilePower = calcProjectilePower(
+                            kineticEnergy,
+                            projectile.hardness,
+                            projectile.shape
+                        );
+                        const materialResistance = calcMaterialResistance(
+                            material.hardness,
+                            material.toughness,
+                            calcEffectiveThickness(material.thickness, dotOfImpactAngle)
+                        );
+                        const penetrationRatio = calcPenetrationRatio(
+                            projectilePower,
+                            materialResistance
+                        );
+                        const penetrationResult = evaluatePenetrationRatio(penetrationRatio);
+                        console.dir({
+                            kineticEnergy,
+                            projectilePower,
+                            materialResistance,
+                            penetrationRatio,
+                            penetrationResult
+                        });
+
+                        if (penetrationResult === "no-penetration") {
+                            // Step 3 - Ricochet Probability.
+                            const ricochetProbability = calcRicochetProbability(
+                                dotOfImpactAngle,
+                                projectile.hardness,
+                                material.hardness,
+                                material.elasticity
+                            );
+                            const doesRicochet = generateRandomBetween(0, 1) > ricochetProbability;
+                            console.dir({ ricochetProbability, doesRicochet });
+
+                            if (doesRicochet) {
+                                // Step 4 - Reflection Directory.
+                                const reflectionDirection =
+                                    projectile.directionVector.reflect(normal);
+
+                                // Step 5 - Random Perturbation.
+                                const ricochetSpread = calcRicochetSpread(
+                                    material.roughness,
+                                    projectile.stability,
+                                    dotOfImpactAngle
+                                );
+                                const randomAngle = generateRandomBetween(
+                                    -ricochetSpread,
+                                    ricochetSpread
+                                );
+                                const perturbedReflectioDirection =
+                                    reflectionDirection.rotate(randomAngle);
+
+                                console.dir({
+                                    reflectionDirection,
+                                    ricochetSpread,
+                                    randomAngle,
+                                    perturbedReflectioDirection
+                                });
+
+                                projectile.changeDirection(perturbedReflectioDirection);
+                            }
+                        } else {
+                            // Step 6 - Penetration.
+                            projectile.velocity = calcNewVelocity(
+                                projectile.velocity,
+                                material.density,
+                                material.thickness
+                            );
+
+                            // Step 7 - Exit perturbation.
+                            const penetrationSpread = calcPenetrationSpread(
+                                material.roughness,
+                                material.thickness,
+                                projectile.stability
+                            );
+                            const randomAngle = generateRandomBetween(
+                                -penetrationSpread,
+                                penetrationSpread
+                            );
+                            const perturbedDirectionVector =
+                                projectile.directionVector.rotate(randomAngle);
+
+                            console.dir({
+                                velocity: projectile.velocity,
+                                penetrationSpread,
+                                randomAngle,
+                                perturbedDirectionVector
+                            });
+
+                            projectile.changeDirection(perturbedDirectionVector);
+                        }
                     }
                 }
+
+                // const ricochetPerturbation = projectile.isRicocheted(material);
+                // if (ricochetPerturbation) {
+                //     const normal = map.calcNormal(ImageManager.GetSingleton(), pos);
+                //     if (normal) {
+                //         projectile.ricochet(normal, ricochetPerturbation);
+                //     }
+                // } else {
+                //     const entryPerturbation = projectile.isPerturbed(material);
+                //     if (entryPerturbation) {
+                //         projectile.perturb(projectile.directionVector, entryPerturbation);
+                //     }
+                // }
 
                 const nextChange = map.stepRay(projectile, material, debugGraphics);
                 if (nextChange) {

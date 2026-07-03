@@ -1,14 +1,6 @@
-import {
-    colourToRGBA,
-    degreesToRadians,
-    IColour,
-    IVec2,
-    Maths,
-    PathSegment,
-    Vec2
-} from "@atbs/maths";
+import { colourToRGBA, degreesToRadians, IColour, IVec2, PathSegment, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
-import { calcFalloff } from "../../maths/src/Maths";
+import { calcFalloff, clamp } from "../../maths/src/Maths";
 import { Tracer } from "@atbs/shared-data";
 
 export function DrawProjectile(
@@ -47,8 +39,8 @@ export function DrawProjectile(
             const headStartTimeDelta = headStartTime - start.time;
             const tailEndDelta = tailEndTime - start.time;
 
-            const clampedStartTimeDelta = Maths.Clamp(headStartTimeDelta, 0, segmentTimeDelta);
-            const clampedTailEndDelta = Maths.Clamp(tailEndDelta, 0, segmentTimeDelta);
+            const clampedStartTimeDelta = clamp(headStartTimeDelta, 0, segmentTimeDelta);
+            const clampedTailEndDelta = clamp(tailEndDelta, 0, segmentTimeDelta);
 
             //
             // Head
@@ -89,11 +81,11 @@ export function DrawProjectile(
                 const tailDuration = headStartTime - tailEndTime;
                 const startTransparency =
                     (tailDuration > 0
-                        ? Maths.Clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
+                        ? clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
                         : 1) * rangeOpacity;
                 const endTransparency =
                     (tailDuration > 0
-                        ? Maths.Clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
+                        ? clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
                         : 0) * rangeOpacity;
 
                 const gradient = context.createLinearGradient(
@@ -445,9 +437,9 @@ export function DebugDrawPath(
             const tailEndDelta = tailEndTime - start.time;
             // let headTailOpacity = 1;
 
-            const clampedStartTimeDelta = Maths.Clamp(headStartTimeDelta, 0, segmentTimeDelta);
-            const clampedHeadTailTimeDelta = Maths.Clamp(headTailTimeDelta, 0, segmentTimeDelta);
-            const clampedTailEndDelta = Maths.Clamp(tailEndDelta, 0, segmentTimeDelta);
+            const clampedStartTimeDelta = clamp(headStartTimeDelta, 0, segmentTimeDelta);
+            const clampedHeadTailTimeDelta = clamp(headTailTimeDelta, 0, segmentTimeDelta);
+            const clampedTailEndDelta = clamp(tailEndDelta, 0, segmentTimeDelta);
 
             if (clampedStartTimeDelta !== clampedHeadTailTimeDelta) {
                 const srcCanvasPos = camera.worldToCanvas(
@@ -484,12 +476,10 @@ export function DebugDrawPath(
                 const tailDuration = headTailTime - tailEndTime;
                 const startTransparency =
                     tailDuration > 0
-                        ? Maths.Clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
+                        ? clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
                         : 1;
                 const endTransparency =
-                    tailDuration > 0
-                        ? Maths.Clamp((endTailTime - tailEndTime) / tailDuration, 0, 1)
-                        : 0;
+                    tailDuration > 0 ? clamp((endTailTime - tailEndTime) / tailDuration, 0, 1) : 0;
 
                 const gradient = context.createLinearGradient(
                     srcCanvasPos.x,

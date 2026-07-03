@@ -78,7 +78,14 @@ export const MaterialRecipe = z
         rgb: RGBColor.optional(),
         hsl: HSLColor.optional(),
         densityMap: MaterialDensityMap,
-        perturbation: z.partialRecord(PerturbationType, MaterialPerturbation).optional()
+        perturbation: z.partialRecord(PerturbationType, MaterialPerturbation).optional(),
+
+        hardness: z.number().describe("Resistance to indentation"),
+        toughness: z.number().describe("Resistance to fracture"),
+        thickness: z.number().describe("In metres (to be calculated)"),
+        roughness: z.number().describe("Affects ricochet randomness"),
+        elasticity: z.number().describe("How much energy is returned"),
+        density: z.number().describe("Affect penetration distance")
     })
     .refine((data) => data.rgb != null || data.hsl != null, {
         error: "Provide at least one of rgb or hsl"
@@ -116,6 +123,30 @@ export class Material {
 
     get densityMap(): MaterialDensityMap {
         return this._recipe.densityMap;
+    }
+
+    get hardness(): number {
+        return this._recipe.hardness;
+    }
+
+    get toughness(): number {
+        return this._recipe.toughness;
+    }
+
+    get thickness(): number {
+        return this._recipe.thickness;
+    }
+
+    get roughness(): number {
+        return this._recipe.roughness;
+    }
+
+    get elasticity(): number {
+        return this._recipe.elasticity;
+    }
+
+    get density(): number {
+        return this._recipe.density;
     }
 
     getPerturbation(type: PerturbationType): MaterialPerturbation | undefined {

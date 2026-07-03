@@ -24,7 +24,16 @@
         "damage": {
             "human": 18,
             "default": 20
-        }
+        },
+
+        "mass": 0.00356,
+        "velocity": 993,
+        "diameter": 5.56,
+        "hardness": 1,
+        "shape": 1,
+        "stability": 1,
+        "bounce": 0,
+        "integrity": 1
     },
     "renderable": {
         "default": [{ "imageId": "5.56mm-nato" }],
