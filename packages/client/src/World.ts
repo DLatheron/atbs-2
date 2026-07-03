@@ -388,18 +388,8 @@ export class World {
             render({ camera, context, time }: RenderPluginRenderProps) {
                 let allComplete = true;
 
-                for (const { segments, trail, rangeFade } of tracers) {
-                    if (
-                        !DrawProjectile(
-                            camera,
-                            context,
-                            startTime,
-                            time,
-                            segments,
-                            trail,
-                            rangeFade
-                        )
-                    ) {
+                for (const tracer of tracers) {
+                    if (!DrawProjectile(camera, context, startTime, time, tracer)) {
                         allComplete = false;
                     }
                 }

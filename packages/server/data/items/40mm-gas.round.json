@@ -13,10 +13,12 @@
         "maxRange": 3000,
         "penetration": 0,
         "visual": {
-            "intensity": 1,
-            "velocity": 400,
-            "lengthInMs": [0, -50, -200],
-            "rangeFallOff": 10
+            "velocityInPps": 600,
+            "headColour": { "r": 0, "g": 255, "b": 0, "a": 1 },
+            "headLengthInPixels": 10,
+            "trailColour": { "r": 0, "g": 255, "b": 0, "a": 1 },
+            "trailLengthInPixels": 20,
+            "rangeFalloffPower": 10
         },
         "damage": { "default": 1 },
         "explosion": {

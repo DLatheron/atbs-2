@@ -10,7 +10,7 @@ import {
     DamageMap,
     FireSelector,
     FireType,
-    ProjectileVisual
+    VisualRecipe
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
@@ -36,7 +36,7 @@ export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),
     maxRange: z.number().positive(),
     penetration: z.number().nonnegative(),
-    visual: ProjectileVisual,
+    visual: VisualRecipe,
     damage: DamageMap,
     explosion: Explosion.optional()
 });

@@ -1,6 +1,6 @@
 import z from "zod";
 import { Phase } from "./Phase.js";
-import { ITilePos, IVec2, Maths, Orientation, PathSegment } from "@atbs/maths";
+import { Colour, IColour, ITilePos, IVec2, Maths, Orientation, PathSegment } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
@@ -699,27 +699,43 @@ export const ThrowDetails = z.object({
 });
 export type ThrowDetails = z.infer<typeof ThrowDetails>;
 
-export const ProjectileVisual = z.object({
-    intensity: z.number().min(0).max(1).default(1),
-    velocity: z.number().positive(),
-    lengthInMs: z.tuple([
-        z.number().nonpositive(),
-        z.number().nonpositive(),
-        z.number().nonpositive()
-    ]),
-    rangeFallOff: z.number().positive()
-});
-export type ProjectileVisual = z.infer<typeof ProjectileVisual>;
-
-export const RangeFade = z.object({
-    maxRangeInMs: z.number().positive(),
+export const VisualRecipe = z.object({
+    velocityInPps: z
+        .number()
+        .positive()
+        .describe("Velocity of the projectile in pixels per second"),
+    headColour: IColour.default(Colour.White),
+    headLengthInPixels: z.number().positive(),
+    trailColour: IColour.default(Colour.White),
+    trailLengthInPixels: z.number().positive(),
     rangeFalloffPower: z.number().positive()
 });
-export type RangeFade = z.infer<typeof RangeFade>;
+export type VisualRecipe = z.infer<typeof VisualRecipe>;
+
+export const Visual = z.object({
+    velocity: z.number().positive(),
+    headColour: IColour.default(Colour.White),
+    headLengthInMs: z.number().positive(),
+    trailColour: IColour.default(Colour.White),
+    trailLengthInMs: z.number().positive(),
+    rangeFalloffPower: z.number().positive()
+});
+export type Visual = z.infer<typeof Visual>;
+
+// export const RangeFade = z.object({
+//     maxRangeInMs: z.number().positive(),
+//     rangeFalloffPower: z.number().positive()
+// });
+// export type RangeFade = z.infer<typeof RangeFade>;
 
 export const Tracer = z.object({
     segments: z.array(PathSegment).min(2),
-    trail: z.tuple([z.number().nonpositive(), z.number().nonpositive(), z.number().nonpositive()]),
-    rangeFade: RangeFade
+    // z.tuple([z.number().nonpositive(), z.number().nonpositive(), z.number().nonpositive()]),
+    headColour: IColour,
+    headLengthInMs: z.number().positive(),
+    trailColour: IColour,
+    trailLengthInMs: z.number().positive(),
+    maxRangeInMs: z.number().positive(),
+    rangeFalloffPower: z.number().positive()
 });
 export type Tracer = z.infer<typeof Tracer>;

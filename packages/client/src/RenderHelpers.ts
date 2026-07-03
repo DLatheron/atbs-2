@@ -9,45 +9,38 @@ import {
     Vec2
 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
-import { RangeFade } from "@atbs/shared-data";
 import { calcFalloff } from "../../maths/src/Maths";
+import { Tracer } from "@atbs/shared-data";
 
 export function DrawProjectile(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     baseTime: number,
     timeNow: number,
-    segments: PathSegment[],
-    pathTrail: [number, number, number],
-    rangeFade: RangeFade
+    tracer: Tracer
 ): boolean {
     const time = Math.max(timeNow - baseTime, 0);
     const strokeColour = Colour.White;
     const strokeThickness = 1;
 
-    const HEAD_START_INDEX = 0;
-    const HEAD_TAIL_INDEX = 1;
-    const TAIL_END_INDEX = 2;
-
-    const headStartTime = time + pathTrail[HEAD_START_INDEX];
-    const headTailTime = time + pathTrail[HEAD_TAIL_INDEX];
-    const tailEndTime = time + pathTrail[TAIL_END_INDEX];
+    const headStartTime = time;
+    const headTailTime = time - tracer.headLengthInMs;
+    const tailEndTime = headTailTime - tracer.trailLengthInMs;
 
     const rangeOpacity = calcFalloff(
         1,
         headStartTime,
-        rangeFade.maxRangeInMs,
-        rangeFade.rangeFalloffPower
+        tracer.maxRangeInMs,
+        tracer.rangeFalloffPower
     );
 
-    let start = segments[0];
+    let start = tracer.segments[0];
     let complete = true;
 
-    context.strokeStyle = colourToRGBA(strokeColour);
     context.lineWidth = strokeThickness;
 
-    for (let i = 1; i < segments.length; ++i) {
-        const end = segments[i];
+    for (let i = 1; i < tracer.segments.length; ++i) {
+        const end = tracer.segments[i];
 
         const overlapsSegment = headStartTime >= start.time && tailEndTime < end.time;
         if (overlapsSegment) {
@@ -78,8 +71,8 @@ export function DrawProjectile(
                 );
 
                 context.strokeStyle = colourToRGBA({
-                    ...strokeColour,
-                    a: strokeColour.a * rangeOpacity
+                    ...tracer.headColour,
+                    a: tracer.headColour.a * rangeOpacity
                 });
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
@@ -120,8 +113,8 @@ export function DrawProjectile(
                     dstCanvasPos.x,
                     dstCanvasPos.y
                 );
-                gradient.addColorStop(0.0, colourToRGBA({ ...strokeColour, a: startTransparency }));
-                gradient.addColorStop(1.0, colourToRGBA({ ...strokeColour, a: endTransparency }));
+                gradient.addColorStop(0.0, colourToRGBA({ ...tracer.trailColour, a: tracer.trailColour.a * startTransparency }));
+                gradient.addColorStop(1.0, colourToRGBA({ ...tracer.trailColour, a: tracer.trailColour.a * endTransparency }));
                 context.strokeStyle = gradient;
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);

@@ -52,7 +52,7 @@ export class Projectile implements IRayCast {
 
         this._srcPos = new Vec2(props.srcPos);
         this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
-        this._velocity = props.projectileRecipe.visual.velocity;
+        this._velocity = props.projectileRecipe.visual.velocityInPps;
         this._penetration = this.maxPenetration;
         this._segments = [
             {
@@ -158,13 +158,26 @@ export class Projectile implements IRayCast {
             this.commitSegmentTo(previousTime + timeAtEnd, endPos);
         }
 
+        const { velocity } = this;
+        const {
+            headColour,
+            headLengthInPixels,
+            trailColour,
+            trailLengthInPixels,
+            rangeFalloffPower
+        } = this._props.projectileRecipe.visual;
+        const headLengthInMs = (headLengthInPixels / velocity) * 1000;
+        const trailLengthInMs = (trailLengthInPixels / velocity) * 1000;
+        const maxRangeInMs = (this.maxRange / velocity) * 1000;
+
         return {
             segments: this.segments,
-            trail: this._props.projectileRecipe.visual.lengthInMs,
-            rangeFade: {
-                maxRangeInMs: (this.maxRange / this.velocity) * 1000,
-                rangeFalloffPower: this._props.projectileRecipe.visual.rangeFallOff
-            }
+            headLengthInMs,
+            headColour,
+            trailLengthInMs,
+            trailColour,
+            maxRangeInMs,
+            rangeFalloffPower
         };
     }
 

@@ -836,7 +836,7 @@ export class Unit extends SceneObject {
                         length: round.resolveLength,
                         velocity: projectile.velocity,
                         intensity: round.resolveIntensity,
-                        rangeFallOff: round.resolveRangeFallOff
+                        rangeFalloff: round.resolveRangeFalloff
                     })),
                     onTarget
                 ),
