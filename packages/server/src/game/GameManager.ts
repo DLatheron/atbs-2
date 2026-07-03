@@ -1,7 +1,11 @@
 import { GameId } from "@atbs/shared-data";
 import { Game } from "./Game.js";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 export class GameManager {
+    static readonly Logger: Logger = new Logger("GameManager", config.logLevels?.gameManager);
+
     private readonly _games = new Map<GameId, Game>();
 
     addGame(game: Game): void {
@@ -31,7 +35,7 @@ export class GameManager {
 
         this._games.clear();
 
-        console.info("All games killed", this._games);
+        GameManager.Logger.info("All games killed", this._games);
     }
 
     findOnlyGame(): GameId | undefined {

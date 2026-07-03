@@ -14,7 +14,7 @@ import type { PhaseHandler } from "./phaseHandlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phaseHandlers/LobbyPhaseHandler.js";
 import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
 import { DeploymentPhaseHandler } from "./phaseHandlers/DeploymentPhaseHandler.js";
-import { CastToArray, MessageManager } from "@atbs/misc";
+import { CastToArray, Logger, MessageManager } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
 import { ScenarioRecipeManager } from "./ScenarioRecipeManager.js";
 import { Side } from "./Side.js";
@@ -27,6 +27,7 @@ import { ItemRecipeManager } from "./ItemRecipeManager.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
 import { MaterialManager } from "./MaterialManager.js";
+import { config } from "../config/config.schema.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -53,6 +54,8 @@ export type ClientMessageManager = MessageManager<
 >;
 
 export class Game {
+    readonly logger: Logger;
+
     private readonly _scenarioRecipeManager: ScenarioRecipeManager;
 
     private _ownerId: ClientId;
@@ -80,9 +83,13 @@ export class Game {
         furnitureRecipeManager: FurnitureRecipeManager,
         materialManager: MaterialManager
     ) {
+        const gameId = generateGameId();
+
+        this.logger = new Logger(`Game-${gameId}`, config.logLevels?.game);
+
         this._scenarioRecipeManager = scenarioRecipeManager;
+        this._id = gameId;
         this._ownerId = ownerId;
-        this._id = generateGameId();
         this._clientManager = new ClientManager();
         this._itemManager = new ItemManager(itemRecipeManager);
         this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
@@ -251,7 +258,7 @@ export class Game {
 
     private _registerMessageHandlers() {
         this._messageManager.registerHandler("client:ping", () => {
-            // console.dir({ handler: "client:ping", context, payload, from });
+            // this.logger.dir({ handler: "client:ping", context, payload, from });
         });
     }
 
@@ -328,7 +335,7 @@ export class Game {
     }
 
     reportError(error: string) {
-        console.error(error);
+        this.logger.error(error);
     }
 
     /**
@@ -402,7 +409,7 @@ export class Game {
     broadcastMessage(message: ServerToClientMessage, exclude?: ClientId | ClientId[]) {
         const excludes = exclude ? CastToArray(exclude) : [];
 
-        console.info("Broadcasting", message.type, "excluding", excludes);
+        this.logger.info("Broadcasting", message.type, "excluding", excludes);
 
         for (const client of this._clientManager.clients) {
             if (!excludes.includes(client.id)) {
@@ -423,13 +430,13 @@ export class Game {
 
             this.queueMessage(message, from);
         } catch (error) {
-            console.error("Issue decoding message", messageString);
+            this.logger.error("Issue decoding message", messageString);
             throw error;
         }
     }
 
     destroyGame() {
-        console.info("DDD Destroying game", this.gameId);
+        this.logger.info("DDD Destroying game", this.gameId);
 
         while (this.clients.length > 0) {
             const client = this.clients[0];
@@ -476,12 +483,12 @@ export class Game {
         }
 
         if (selectedUnit) {
-            console.info("Deselect unit", selectedUnit.name);
+            this.logger.info("Deselect unit", selectedUnit.name);
             // TODO: Deal with unselecting the unit...
         }
 
         if (value) {
-            console.info("Selecting unit", value.name);
+            this.logger.info("Selecting unit", value.name);
             // TODO: Deal with selecting the unit.
         }
 
@@ -512,7 +519,7 @@ export class Game {
     startTurn(): void {
         const { turn } = this;
 
-        console.info(`Starting turn: ${turn}`);
+        this.logger.info(`Starting turn: ${turn}`);
 
         this.messageRouter.broadcast(
             {
@@ -605,7 +612,7 @@ export class Game {
     endTurn(): void {
         const { turn } = this;
 
-        console.info(`Ending turn: ${turn}`);
+        this.logger.info(`Ending turn: ${turn}`);
 
         const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
         if (!playingClient) {
@@ -624,7 +631,7 @@ export class Game {
 
         this._playState.sides.shift();
 
-        console.info(`Side '${this.turnsSide.name}' to play`);
+        this.logger.info(`Side '${this.turnsSide.name}' to play`);
 
         this.startSide();
 

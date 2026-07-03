@@ -30,6 +30,8 @@ import { Image } from "./Image.js";
 import { ImageManager } from "./ImageManager.js";
 import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
+import { Logger } from "@atbs/misc";
+import { config } from "../config/config.schema.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -78,6 +80,8 @@ export interface LayerCollision {
 }
 
 export class Tile implements IRenderableEntity {
+    readonly logger: Logger;
+
     protected _location: TilePos;
     protected _aabb: Aabb;
     protected _tileSize: number;
@@ -91,6 +95,8 @@ export class Tile implements IRenderableEntity {
         recipe: Readonly<TileRecipe>,
         furnitureManager: FurnitureManager
     ) {
+        this.logger = new Logger(`Tile-${location}`, config.logLevels?.tile);
+
         this._location = location;
         this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
         this._tileSize = tileSize;
@@ -160,7 +166,7 @@ export class Tile implements IRenderableEntity {
 
     getRenderList(context: SceneContext): RenderList {
         if (this.units.length > 0) {
-            console.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
+            this.logger.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
                 depth: null,
                 colors: true
             });
@@ -284,16 +290,16 @@ export class Tile implements IRenderableEntity {
         subTileDstPos: Vec2,
         debugGraphics?: DebugGraphic[]
     ): GridRayTraceResult {
-        console.info(`Tile ${this.location}: Casting against tile`);
+        this.logger.info("Casting against tile");
 
         if (!this.anythingCollidable) {
-            console.info("  - Contains nothing collidable");
+            this.logger.info("  - Contains nothing collidable");
             return;
         }
 
         const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
         if (collisionLayers.length === 0) {
-            console.info("  - Has no collision layers (but is collidable?");
+            this.logger.info("  - Has no collision layers (but is collidable?");
             return;
         }
 
@@ -302,12 +308,12 @@ export class Tile implements IRenderableEntity {
             subTileDstPos,
             this._tileSize
         )) {
-            console.info(`  - ${samplePos} - sampling...`);
+            this.logger.info(`  - ${samplePos} - sampling...`);
 
             const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
             if (collisionSample) {
                 const { material, owner } = collisionSample;
-                console.info(`    - hit material ${material.id}: ${material.rgb}`);
+                this.logger.info(`    - hit material ${material.id}: ${material.rgb}`);
 
                 debugGraphics?.push(
                     {
@@ -336,16 +342,16 @@ export class Tile implements IRenderableEntity {
         currentMaterial: Material,
         debugGraphics?: DebugGraphic[]
     ): GridRayTraceResult {
-        console.info(`Tile ${this.location}: Stepping projectile through tile`);
+        this.logger.info("Stepping projectile through tile");
 
         if (!this.anythingCollidable) {
-            console.info("  - Contains nothing collidable");
+            this.logger.info("  - Contains nothing collidable");
             return;
         }
 
         const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
         if (collisionLayers.length === 0) {
-            console.info("  - Has no collision layers (but is collidable?");
+            this.logger.info("  - Has no collision layers (but is collidable?");
             return;
         }
 
@@ -354,13 +360,15 @@ export class Tile implements IRenderableEntity {
             subTileDstPos,
             this._tileSize
         )) {
-            console.info(`  - ${samplePos} - sampling...`);
+            this.logger.info(`  - ${samplePos} - sampling...`);
 
             const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
 
             if (!collisionSample) {
                 // No material - so this is the exit point.
-                console.info(`Projectile exited material ${currentMaterial.id} at ${samplePos}`);
+                this.logger.info(
+                    `Projectile exited material ${currentMaterial.id} at ${samplePos}`
+                );
 
                 debugGraphics?.push(
                     {
@@ -390,7 +398,7 @@ export class Tile implements IRenderableEntity {
             ray.life -= density;
             if (!ray.isRayAlive) {
                 // Projectile ran out of penetration power.
-                console.info(`Projectile ran out of penetration power in ${material.id}`);
+                this.logger.info(`Projectile ran out of penetration power in ${material.id}`);
 
                 debugGraphics?.push(
                     {
@@ -417,7 +425,7 @@ export class Tile implements IRenderableEntity {
 
             if (material !== currentMaterial) {
                 // Material is not longer in the list, so choose the top-most material as the new one.
-                console.info(`Material changed to ${material.id}`);
+                this.logger.info(`Material changed to ${material.id}`);
 
                 // Material changed - so generate a new collision point to process from.
                 debugGraphics?.push(

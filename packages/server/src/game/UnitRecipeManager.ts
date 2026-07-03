@@ -3,10 +3,17 @@ import { Unit, UnitAdditionalData, UnitOverrides, UnitRecipe } from "./Unit.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 import { ItemManager } from "./ItemManager.js";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const UnitDirectory = "./data/units";
 
 export class UnitRecipeManager {
+    static readonly Logger: Logger = new Logger(
+        "UnitRecipeManager",
+        config.logLevels?.unitRecipeManager
+    );
+
     private readonly _unitRecipeMap = new Map<UnitId, UnitRecipe>();
 
     constructor() {
@@ -42,11 +49,11 @@ export class UnitRecipeManager {
                 const rawRecipe = JSON.parse(fileContents);
                 const recipe = UnitRecipe.parse(rawRecipe);
 
-                console.info(`Loaded Unit recipe: ${fullPath}`);
+                UnitRecipeManager.Logger.info(`Loaded Unit recipe: ${fullPath}`);
 
                 this.addRecipe(recipe);
             } catch (error) {
-                console.error(`ERROR Loading Unit recipe: ${file}`, error);
+                UnitRecipeManager.Logger.error(`ERROR Loading Unit recipe: ${file}`, error);
                 throw error;
             }
         }

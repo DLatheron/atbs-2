@@ -2,10 +2,17 @@ import { ScenarioId, ScenarioSummary } from "@atbs/shared-data";
 import { ScenarioRecipe } from "./Scenario.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const ScenarioDirectory = "./data/scenarios";
 
 export class ScenarioRecipeManager {
+    static readonly Logger: Logger = new Logger(
+        "ScenarioRecipeManager",
+        config.logLevels?.scenarioRecipeManager
+    );
+
     private readonly _scenarioRecipes: ScenarioRecipe[];
     private readonly _scenarioRecipeMap: Map<ScenarioId, ScenarioRecipe>;
 
@@ -32,11 +39,11 @@ export class ScenarioRecipeManager {
                 const rawRecipe = JSON.parse(fileContents);
                 const scenarioRecipe = ScenarioRecipe.parse(rawRecipe);
 
-                console.info(`Loaded Scenario recipe: ${fullPath}`);
+                ScenarioRecipeManager.Logger.info(`Loaded Scenario recipe: ${fullPath}`);
 
                 this.add(scenarioRecipe);
             } catch (error) {
-                console.error(`ERROR Loading Scenario recipe: ${file}`, error);
+                ScenarioRecipeManager.Logger.error(`ERROR Loading Scenario recipe: ${file}`, error);
                 throw error;
             }
         }

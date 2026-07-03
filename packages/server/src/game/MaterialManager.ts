@@ -3,10 +3,17 @@ import { Material } from "./Material.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 import { MaterialRecipe } from "./Material.js";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const MaterialDirectory = "./data/materials";
 
 export class MaterialManager {
+    static readonly Logger: Logger = new Logger(
+        "MaterialManager",
+        config.logLevels?.materialManager
+    );
+
     private readonly _materialMap: Map<MaterialId, Material>;
 
     constructor() {
@@ -31,11 +38,11 @@ export class MaterialManager {
                 const rawRecipe = JSON.parse(fileContents);
                 const recipe = MaterialRecipe.parse(rawRecipe);
 
-                console.info(`Loaded Material recipe: ${fullPath}`);
+                MaterialManager.Logger.info(`Loaded Material recipe: ${fullPath}`);
 
                 this.addMaterial(recipe);
             } catch (error) {
-                console.error(`ERROR Loading Material recipe: ${file}`, error);
+                MaterialManager.Logger.error(`ERROR Loading Material recipe: ${file}`, error);
                 throw error;
             }
         }

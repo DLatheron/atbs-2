@@ -5,6 +5,8 @@ import { StatusCodes } from "http-status-codes";
 import { Colour, Orientation } from "@atbs/maths";
 
 import { Image } from "./Image.js";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const ImageDirectories = [
     "./data/terrain",
@@ -50,7 +52,7 @@ interface ImageDetails {
 }
 
 export class ImageManager {
-    static Singleton = new ImageManager();
+    static readonly Logger: Logger = new Logger("ImageManager", config.logLevels?.imageManager);
 
     private readonly _idToDetails: Record<string, ImageDetails> = {};
 
@@ -69,7 +71,7 @@ export class ImageManager {
         const filenames = directoryContents.filter(
             (filename) => path.parse(filename).ext.toLowerCase() === ".png"
         );
-        console.info(filenames);
+        ImageManager.Logger.info(filenames);
 
         for (const filename of filenames) {
             const fullPath = path.join(directory, filename);
@@ -93,7 +95,7 @@ export class ImageManager {
 
         this.addImage(id, directoryPath, image);
 
-        console.info(`Loaded Image: ${id}`);
+        ImageManager.Logger.info(`Loaded Image: ${id}`);
     }
 
     getImageDetails(id: string): ImageDetails {
@@ -149,7 +151,7 @@ export class ImageManager {
             return;
         }
 
-        console.info({
+        ImageManager.Logger.info({
             imageId1,
             orientation1,
             blendImageId,

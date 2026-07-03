@@ -43,6 +43,7 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const ROTATION_APT_COST = 1;
 
@@ -121,6 +122,8 @@ export function isUnit(arg: unknown): arg is Unit {
 }
 
 export class Unit extends SceneObject {
+    readonly logger: Logger;
+
     private readonly _recipe: Readonly<UnitRecipe>;
     private readonly _attributes: {
         actionPoints: Attribute;
@@ -144,6 +147,8 @@ export class Unit extends SceneObject {
         itemManager: ItemManager
     ) {
         super(recipe.renderable);
+
+        this.logger = new Logger(`Unit-${recipe.id}`, config.logLevels.unit);
 
         this._recipe = recipe;
         this._attributes = {
@@ -265,7 +270,7 @@ export class Unit extends SceneObject {
             );
         }
 
-        console.dir({ actions });
+        this.logger.dir({ actions });
 
         return actions;
     }
@@ -334,7 +339,7 @@ export class Unit extends SceneObject {
     }
 
     startTurn() {
-        console.info("Starting turn for unit", this.id);
+        this.logger.info("Starting turn");
 
         // if (this.disorientated) {
         //     // Reduce the amount of disorientation based on the number of action points remaining...
@@ -351,7 +356,7 @@ export class Unit extends SceneObject {
     }
 
     rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
-        console.info("Rotating", this.name, "to orientation", orientation);
+        this.logger.info("Rotating", this.name, "to orientation", orientation);
 
         this._verifyDirectional();
 
@@ -575,7 +580,7 @@ export class Unit extends SceneObject {
 
         const { map } = game;
 
-        console.info("Fire", {
+        this.logger.info("Fire", {
             gameId: game.id,
             weaponId: weapon.id,
             fireSelector,
@@ -587,11 +592,11 @@ export class Unit extends SceneObject {
         const fireModes = weapon.getFireModes(this);
         const baseAccuracy = getAccuracy(fireModes, fireSelector, fireMode);
         const firstShotAccuracy = this.calcWeaponAccuracy(baseAccuracy);
-        console.dir({ firstShotAccuracy });
+        this.logger.dir({ firstShotAccuracy });
 
         const rpm = getRpm(fireModes, fireSelector);
         const numShots = shotsFired(triggerHeldTimeInMs, rpm);
-        console.dir({ numShotsFired: numShots });
+        this.logger.dir({ numShotsFired: numShots });
 
         // Generate world poses - we have a 1:1 correspondence with the number of shots fired.
         assert(
@@ -601,10 +606,10 @@ export class Unit extends SceneObject {
         const targetWorldPoses = worldPoses.map(
             (worldPos) => worldPos.add({ x: 0.5, y: 0.5 }) // Move to the center of the pixel for accuracy.
         );
-        console.dir({ targetWorldPoses });
+        this.logger.dir({ targetWorldPoses });
 
         const maxRange = weapon.loadedRound?.maxRange ?? 0; // TODO:
-        console.dir({ maxRange });
+        this.logger.dir({ maxRange });
 
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
         const collisionRadius = this._recipe.collision.radius;
@@ -613,26 +618,26 @@ export class Unit extends SceneObject {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
             const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
 
-            console.dir({ shot, srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
+            this.logger.dir({ shot, srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
 
             const range =
                 weapon.fireType === FireType.enum.indirect
                     ? maxRange
                     : toWorldPos.sub(fromWorldPos).length;
-            console.dir({ range });
+            this.logger.dir({ range });
 
             // TODO: Perturb the range based on the accuracy of this shot.
             const perturbedRange = range * 1.0;
-            console.dir({ perturbedRange });
+            this.logger.dir({ perturbedRange });
 
             // Calculate the direction of the shot.
             const dirVector = toWorldPos.sub(fromWorldPos).normalise();
-            console.dir({ dirVector });
+            this.logger.dir({ dirVector });
 
             // TODO: Perturn the direction based on the accuracy of this shot.
             const perturbedDirVector = dirVector;
             const onTarget = Math.random() < 0.5;
-            console.dir({ perturbedDirVector, onTarget });
+            this.logger.dir({ perturbedDirVector, onTarget });
 
             const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
                 fireModes,
@@ -640,7 +645,7 @@ export class Unit extends SceneObject {
                 fireMode
             );
             const aptCost = shot === 0 ? initialAptCost : perShotAptCost;
-            console.dir({ shot, aptCost, initialAptCost, perShotAptCost });
+            this.logger.dir({ shot, aptCost, initialAptCost, perShotAptCost });
 
             if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
                 return;
@@ -658,7 +663,7 @@ export class Unit extends SceneObject {
             }
 
             const round = weapon.fire();
-            console.dir({ round });
+            this.logger.dir({ round });
 
             messageRouter.send(
                 {
@@ -675,13 +680,13 @@ export class Unit extends SceneObject {
             const angleScaler =
                 numProjectiles > 1 ? spreadAngleInRadians / (numProjectiles - 1) : 0;
 
-            console.dir({ numProjectiles });
+            this.logger.dir({ numProjectiles });
 
             const projectiles = [...Array(numProjectiles).keys()].map((index) => {
                 const perturbedAngle = startOfSpread + angleScaler * index;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
-                console.dir({ perturbedAngle, directionVector, fromWorldPos });
+                this.logger.dir({ perturbedAngle, directionVector, fromWorldPos });
 
                 return new Projectile({
                     game,
@@ -726,7 +731,7 @@ export class Unit extends SceneObject {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     throw(game: Game, worldPos: Vec2, _messageRouter: MessageRouter): void {
-        console.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
+        this.logger.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {

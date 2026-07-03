@@ -2,10 +2,17 @@ import { FurnitureId } from "@atbs/shared-data";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 import { FurnitureRecipe } from "./Furniture.js";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const FurnitureDirectory = "./data/furniture";
 
 export class FurnitureRecipeManager {
+    static readonly Logger: Logger = new Logger(
+        "FurnitureRecipeManager",
+        config.logLevels?.furnitureRecipeManager
+    );
+
     private readonly _furnitureRecipeMap = new Map<FurnitureId, FurnitureRecipe>();
 
     constructor() {
@@ -30,11 +37,14 @@ export class FurnitureRecipeManager {
                 const rawRecipe = JSON.parse(fileContents);
                 const recipe = FurnitureRecipe.parse(rawRecipe);
 
-                console.info(`Loaded Furniture recipe: ${fullPath}`);
+                FurnitureRecipeManager.Logger.info(`Loaded Furniture recipe: ${fullPath}`);
 
                 this.addRecipe(recipe);
             } catch (error) {
-                console.error(`ERROR Loading Furniture recipe: ${file}`, error);
+                FurnitureRecipeManager.Logger.error(
+                    `ERROR Loading Furniture recipe: ${file}`,
+                    error
+                );
                 throw error;
             }
         }

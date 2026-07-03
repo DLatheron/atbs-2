@@ -8,15 +8,18 @@ import { parseURLSearchParams, ConnectSocketQueryParams } from "@atbs/shared-dat
 import { createApp } from "./app.js";
 import { gameManager } from "./game/GameManager.js";
 import { config } from "./config/config.schema.js";
-
-process.on("uncaughtException", function (error) {
-    console.error(error);
-});
-
-console.info("Configuration:");
-console.dir(config, { depth: null, colors: true, compact: false });
+import { Logger } from "@atbs/misc";
 
 async function startServer() {
+    const logger = new Logger("Server", config.logLevels?.server);
+
+    logger.info("Configuration:");
+    logger.dir(config, { depth: null, colors: true, compact: false });
+
+    process.on("uncaughtException", function (error) {
+        logger.error(error);
+    });
+
     const port = Number(config.port);
 
     const app = await createApp();
@@ -32,7 +35,7 @@ async function startServer() {
             const host = request.headers.host ?? "localhost";
             const url = new URL(request.url ?? "", `http://${host}`);
             if (url.pathname !== "/ws/game") {
-                console.error("Incorrect path - destroying socket");
+                logger.error("Incorrect path - destroying socket");
                 socket.destroy();
                 return;
             }
@@ -40,7 +43,7 @@ async function startServer() {
                 wss.emit("connection", ws, request);
             });
         } catch (error) {
-            console.error("Upgrade error - destroying socket", error);
+            logger.error("Upgrade error - destroying socket", error);
             socket.destroy();
         }
     });
@@ -56,22 +59,22 @@ async function startServer() {
 
         const game = gameManager.findGame(gameId);
         if (!game) {
-            console.error(`Connection from client: ${clientId}, failed to find game: ${gameId}`);
+            logger.error(`Connection from client: ${clientId}, failed to find game: ${gameId}`);
             return;
         }
 
         const client = game.findClient(clientId);
         if (!client) {
-            console.error(`Client: ${clientId}, not found in game: ${gameId}`);
+            logger.error(`Client: ${clientId}, not found in game: ${gameId}`);
             return;
         }
         client.assignSocket(socket);
     });
 
     server.listen(port, () => {
-        console.clear();
-        console.info(`Server listening on http://localhost:${port}`);
-        console.info("WebSocket server ready");
+        logger.clear();
+        logger.info(`Server listening on http://localhost:${port}`);
+        logger.info("WebSocket server ready");
     });
 }
 

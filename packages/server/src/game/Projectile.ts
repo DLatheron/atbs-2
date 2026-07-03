@@ -5,13 +5,14 @@ import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
 import { Tracer } from "@atbs/shared-data";
-import { LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
+import { Logger, LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { Material, MaterialPerturbation, PerturbationType } from "./Material.js";
 import { generateRandomBetween } from "../../../maths/src/Maths.js";
+import { config } from "../config/config.schema.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -40,6 +41,8 @@ export interface ProjectileProps {
 }
 
 export class Projectile implements IRayCast {
+    static readonly Logger: Logger = new Logger("Projectile", config.logLevels?.projectile);
+
     private readonly _props: ProjectileProps;
 
     private _srcPos: Vec2;
@@ -209,14 +212,14 @@ export class Projectile implements IRayCast {
 
     getTracer(): Tracer {
         if (this.impact) {
-            console.info(`Commit impact segment ${this.impact.time}:${this.impact.pos}`);
+            Projectile.Logger.info(`Commit impact segment ${this.impact.time}:${this.impact.pos}`);
             this.commitSegmentTo(this.impact.time, this.impact.pos);
         } else {
             const previousTime = this.segments[this.segments.length - 1].time;
             const endPos = this.dstPos;
             const timeAtEnd = this.calculateTimeTo(endPos);
 
-            console.info(`Commit end segment ${timeAtEnd}:${endPos}`);
+            Projectile.Logger.info(`Commit end segment ${timeAtEnd}:${endPos}`);
             this.commitSegmentTo(previousTime + timeAtEnd, endPos);
         }
 
@@ -266,7 +269,7 @@ export class Projectile implements IRayCast {
 
             if (hitResult) {
                 const timeTo = projectile.calculateTimeTo(hitResult.pos);
-                console.dir(
+                Projectile.Logger.dir(
                     `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
                 );
                 projectile.impact = { pos: hitResult.pos, time: timeTo };
@@ -298,19 +301,19 @@ export class Projectile implements IRayCast {
         // Process the first event and see what happens.
         while ((event = eventQueue.pop())) {
             const { priority: atTime, material, owner, pos, projectile } = event;
-            console.dir({ priority: atTime, pos });
+            Projectile.Logger.dir({ priority: atTime, pos });
 
             if (material) {
-                console.info(`Commit material entry segment ${atTime}:${pos}`);
+                Projectile.Logger.info(`Commit material entry segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
                 // TODO: Apply damage 'atTime'... (or at nextChange time?)
 
                 // Apply damage to material owner.
                 if (isFurniture(owner)) {
-                    console.info("Collided with furniture!", owner.id);
+                    Projectile.Logger.info("Collided with furniture!", owner.id);
                 } else if (isUnit(owner)) {
-                    console.info("Collided with unit!", owner.id);
+                    Projectile.Logger.info("Collided with unit!", owner.id);
                 }
 
                 const ricochetPerturbation = projectile.isRicocheted(material);
@@ -351,7 +354,7 @@ export class Projectile implements IRayCast {
                     }
                 }
             } else {
-                console.info(`Commit material exit segment ${atTime}:${pos}`);
+                Projectile.Logger.info(`Commit material exit segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
                 const hitResult = map.castRay(projectile, debugGraphics);
@@ -359,7 +362,7 @@ export class Projectile implements IRayCast {
                     const timeTo = projectile.calculateTimeTo(hitResult.pos);
                     const cumulativeTime = atTime + timeTo;
 
-                    console.dir(
+                    Projectile.Logger.dir(
                         `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
                     );
                     projectile.impact = { pos: hitResult.pos, time: cumulativeTime };
