@@ -103,6 +103,7 @@ export function useActionPage() {
 
                 setUnitWeapon(payload);
                 world.unitWeapon = payload;
+                world.unitWeaponIndex = 0;
                 if (payload) {
                     setSidePanelMode(MapMode.enum["fire-mode"]);
                     world.mapMode = MapMode.enum["fire-mode"];

@@ -190,7 +190,10 @@ export class World {
 
     set unitWeapon(value: FireModeItemSummary | null) {
         this._unitWeapon = value;
-        this._unitWeaponIndex = 0;
+
+        if (this.unitWeaponIndex > (this._unitWeapon?.weapons.length ?? 0)) {
+            this._unitWeaponIndex = 0;
+        }
     }
 
     get unitWeaponIndex(): number {

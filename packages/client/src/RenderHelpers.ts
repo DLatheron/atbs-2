@@ -1,5 +1,4 @@
 import {
-    Colour,
     colourToRGBA,
     degreesToRadians,
     IColour,
@@ -20,7 +19,6 @@ export function DrawProjectile(
     tracer: Tracer
 ): boolean {
     const time = Math.max(timeNow - baseTime, 0);
-    const strokeColour = Colour.White;
     const strokeThickness = 1;
 
     const headStartTime = time;
@@ -113,8 +111,20 @@ export function DrawProjectile(
                     dstCanvasPos.x,
                     dstCanvasPos.y
                 );
-                gradient.addColorStop(0.0, colourToRGBA({ ...tracer.trailColour, a: tracer.trailColour.a * startTransparency }));
-                gradient.addColorStop(1.0, colourToRGBA({ ...tracer.trailColour, a: tracer.trailColour.a * endTransparency }));
+                gradient.addColorStop(
+                    0.0,
+                    colourToRGBA({
+                        ...tracer.trailColour,
+                        a: tracer.trailColour.a * startTransparency
+                    })
+                );
+                gradient.addColorStop(
+                    1.0,
+                    colourToRGBA({
+                        ...tracer.trailColour,
+                        a: tracer.trailColour.a * endTransparency
+                    })
+                );
                 context.strokeStyle = gradient;
                 context.beginPath();
                 context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
