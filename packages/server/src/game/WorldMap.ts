@@ -1,13 +1,14 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, DebugGraphic, ITilePos, Maths, TilePos, Vec2 } from "@atbs/maths";
+import { Aabb, DebugGraphic, ITilePos, Maths, Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
 import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 import { Material } from "./Material.js";
 import { IRayCast } from "./IRayCast.js";
+import { ImageManager } from "./ImageManager.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -287,5 +288,47 @@ export class WorldMap {
                 return collisionResult;
             }
         });
+    }
+
+    private _sampleWorldPosForCollision(imageManager: ImageManager, worldPos: Vec2) {
+        const tilePos = this.worldToTile(worldPos);
+        const tile = this.getTile(tilePos);
+        const collisionImages = tile.getCollisionLayers(imageManager);
+        const subTilePos = this.worldToSubTile(tilePos, worldPos);
+
+        for (const { image, orientation } of collisionImages) {
+            const materialColour = image.getColour(subTilePos, orientation);
+            if (materialColour.a > 0.0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    calcNormal(imageManager: ImageManager, worldPos: Vec2): Vec2 {
+        const directionSamples = [
+            Orientation.NORTH,
+            Orientation.NORTH_EAST,
+            Orientation.EAST,
+            Orientation.SOUTH_EAST,
+            Orientation.SOUTH,
+            Orientation.SOUTH_WEST,
+            Orientation.WEST,
+            Orientation.NORTH_WEST
+        ];
+
+        const normal = directionSamples.reduce((normal, direction) => {
+            const samplePos = worldPos.add(Vec2.StepInDirection(direction));
+            const collision = this._sampleWorldPosForCollision(imageManager, samplePos);
+            if (!collision) {
+                normal = normal.add(Vec2.StepInDirection(direction));
+            }
+            return normal;
+        }, new Vec2());
+
+        const resolvedNormal = normal.normalise();
+
+        return resolvedNormal;
     }
 }

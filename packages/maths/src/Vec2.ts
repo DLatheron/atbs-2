@@ -142,6 +142,12 @@ export class Vec2
         });
     }
 
+    reflect(n: Vec2): Vec2 {
+        const dot = this.dot(n) * 2;
+
+        return this.sub(n.scale(dot));
+    }
+
     /**
      * Clamps a vector between the specified limits.
      * @param limits Min/max limits.

@@ -9,6 +9,7 @@ import { LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
+import { ImageManager } from "./ImageManager.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -41,6 +42,8 @@ export class Projectile implements IRayCast {
 
     private _srcPos: Vec2;
     private _dstPos: Vec2;
+    private _maxRange: number;
+    private _directionVector: Vec2;
     private _velocity: number;
     private _penetration: number;
     private _segments: PathSegment[];
@@ -51,7 +54,9 @@ export class Projectile implements IRayCast {
         this._props = props;
 
         this._srcPos = new Vec2(props.srcPos);
-        this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
+        this._dstPos = this.srcPos.add(props.directionVector.scale(props.projectileRecipe.maxRange));
+        this._maxRange = props.projectileRecipe.maxRange;
+        this._directionVector = props.directionVector;
         this._velocity = props.projectileRecipe.visual.velocityInPps;
         this._penetration = this.maxPenetration;
         this._segments = [
@@ -93,11 +98,11 @@ export class Projectile implements IRayCast {
     }
 
     get directionVector(): Vec2 {
-        return this._props.directionVector;
+        return this._directionVector;
     }
 
     get maxRange(): number {
-        return this._props.projectileRecipe.maxRange;
+        return this._maxRange;
     }
 
     get velocity(): number {
@@ -138,6 +143,20 @@ export class Projectile implements IRayCast {
 
     set impact(value: Impact | undefined) {
         this._impact = value;
+    }
+
+    ricochet(normal: Vec2) {
+        const reflectedDir = this.directionVector.reflect(normal);
+
+        // Update and recalculate where we going...
+        // TODO: Recalculate the maxRange down...
+        // How far has we travelled so far?
+        const rangeSoFar = this.srcPos.sub(this.segments[0].pos).length;
+        const newMaxRange = this.maxRange - rangeSoFar;
+
+        this._maxRange = Math.max(newMaxRange, 0);
+        this._dstPos = this.srcPos.add(reflectedDir.scale(this.maxRange));
+        this._directionVector = reflectedDir;
     }
 
     calculateTimeTo(pos: Vec2): number {
@@ -230,6 +249,8 @@ export class Projectile implements IRayCast {
             return;
         }
 
+        const ricochet = true;
+
         // We now have an timed-based queue of events.
         let event: CollisionEvent;
 
@@ -249,6 +270,11 @@ export class Projectile implements IRayCast {
                     console.info("Collided with furniture!", owner.id);
                 } else if (isUnit(owner)) {
                     console.info("Collided with unit!", owner.id);
+                }
+
+                if (ricochet) {
+                    const normal = map.calcNormal(ImageManager.GetSingleton(), pos);
+                    projectile.ricochet(normal);
                 }
 
                 const nextChange = map.stepRay(projectile, material, debugGraphics);
