@@ -161,18 +161,17 @@ export class Projectile implements IRayCast {
         const { velocity } = this;
         const {
             headColour,
-            headLengthInPixels,
+            headRadiusInPixels,
             trailColour,
             trailLengthInPixels,
             rangeFalloffPower
         } = this._props.projectileRecipe.visual;
-        const headLengthInMs = (headLengthInPixels / velocity) * 1000;
         const trailLengthInMs = (trailLengthInPixels / velocity) * 1000;
         const maxRangeInMs = (this.maxRange / velocity) * 1000;
 
         return {
             segments: this.segments,
-            headLengthInMs,
+            headRadiusInPixels,
             headColour,
             trailLengthInMs,
             trailColour,

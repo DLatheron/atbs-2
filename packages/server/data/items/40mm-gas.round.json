@@ -15,7 +15,7 @@
         "visual": {
             "velocityInPps": 600,
             "headColour": { "r": 0, "g": 255, "b": 0, "a": 1 },
-            "headLengthInPixels": 10,
+            "headRadiusInPixels": 4,
             "trailColour": { "r": 0, "g": 255, "b": 0, "a": 1 },
             "trailLengthInPixels": 20,
             "rangeFalloffPower": 10

@@ -705,7 +705,7 @@ export const VisualRecipe = z.object({
         .positive()
         .describe("Velocity of the projectile in pixels per second"),
     headColour: IColour.default(Colour.White),
-    headLengthInPixels: z.number().positive(),
+    headRadiusInPixels: z.number().nonnegative(),
     trailColour: IColour.default(Colour.White),
     trailLengthInPixels: z.number().positive(),
     rangeFalloffPower: z.number().positive()
@@ -715,24 +715,17 @@ export type VisualRecipe = z.infer<typeof VisualRecipe>;
 export const Visual = z.object({
     velocity: z.number().positive(),
     headColour: IColour.default(Colour.White),
-    headLengthInMs: z.number().positive(),
+    headRadiusInPixels: z.number().nonnegative(),
     trailColour: IColour.default(Colour.White),
     trailLengthInMs: z.number().positive(),
     rangeFalloffPower: z.number().positive()
 });
 export type Visual = z.infer<typeof Visual>;
 
-// export const RangeFade = z.object({
-//     maxRangeInMs: z.number().positive(),
-//     rangeFalloffPower: z.number().positive()
-// });
-// export type RangeFade = z.infer<typeof RangeFade>;
-
 export const Tracer = z.object({
     segments: z.array(PathSegment).min(2),
-    // z.tuple([z.number().nonpositive(), z.number().nonpositive(), z.number().nonpositive()]),
     headColour: IColour,
-    headLengthInMs: z.number().positive(),
+    headRadiusInPixels: z.number().positive(),
     trailColour: IColour,
     trailLengthInMs: z.number().positive(),
     maxRangeInMs: z.number().positive(),

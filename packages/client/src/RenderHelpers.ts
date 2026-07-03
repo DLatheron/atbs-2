@@ -19,11 +19,10 @@ export function DrawProjectile(
     tracer: Tracer
 ): boolean {
     const time = Math.max(timeNow - baseTime, 0);
-    const strokeThickness = 1;
+    const strokeThickness = 2;
 
     const headStartTime = time;
-    const headTailTime = time - tracer.headLengthInMs;
-    const tailEndTime = headTailTime - tracer.trailLengthInMs;
+    const tailEndTime = headStartTime - tracer.trailLengthInMs;
 
     const rangeOpacity = calcFalloff(
         1,
@@ -46,25 +45,18 @@ export function DrawProjectile(
             const segmentTimeDelta = end.time - start.time;
 
             const headStartTimeDelta = headStartTime - start.time;
-            const headTailTimeDelta = headTailTime - start.time;
             const tailEndDelta = tailEndTime - start.time;
 
             const clampedStartTimeDelta = Maths.Clamp(headStartTimeDelta, 0, segmentTimeDelta);
-            const clampedHeadTailTimeDelta = Maths.Clamp(headTailTimeDelta, 0, segmentTimeDelta);
             const clampedTailEndDelta = Maths.Clamp(tailEndDelta, 0, segmentTimeDelta);
 
             //
             // Head
             //
-            if (clampedStartTimeDelta !== clampedHeadTailTimeDelta) {
+            if (clampedStartTimeDelta < segmentTimeDelta) {
                 const srcCanvasPos = camera.worldToCanvas(
                     new Vec2(start.pos).add(
                         new Vec2(segmentPosDelta.scale(clampedStartTimeDelta / segmentTimeDelta))
-                    )
-                );
-                const dstCanvasPos = camera.worldToCanvas(
-                    new Vec2(start.pos).add(
-                        new Vec2(segmentPosDelta.scale(clampedHeadTailTimeDelta / segmentTimeDelta))
                     )
                 );
 
@@ -73,18 +65,17 @@ export function DrawProjectile(
                     a: tracer.headColour.a * rangeOpacity
                 });
                 context.beginPath();
-                context.moveTo(srcCanvasPos.x, srcCanvasPos.y);
-                context.lineTo(dstCanvasPos.x, dstCanvasPos.y);
+                context.arc(srcCanvasPos.x, srcCanvasPos.y, 2, 0, 2 * Math.PI);
                 context.stroke();
             }
 
             //
             // Tail
             //
-            if (clampedHeadTailTimeDelta !== clampedTailEndDelta) {
+            if (clampedStartTimeDelta !== clampedTailEndDelta) {
                 const srcCanvasPos = camera.worldToCanvas(
                     new Vec2(start.pos).add(
-                        new Vec2(segmentPosDelta.scale(clampedHeadTailTimeDelta / segmentTimeDelta))
+                        new Vec2(segmentPosDelta.scale(clampedStartTimeDelta / segmentTimeDelta))
                     )
                 );
                 const dstCanvasPos = camera.worldToCanvas(
@@ -93,9 +84,9 @@ export function DrawProjectile(
                     )
                 );
 
-                const startTailTime = start.time + clampedHeadTailTimeDelta;
+                const startTailTime = start.time + clampedStartTimeDelta;
                 const endTailTime = start.time + clampedTailEndDelta;
-                const tailDuration = headTailTime - tailEndTime;
+                const tailDuration = headStartTime - tailEndTime;
                 const startTransparency =
                     (tailDuration > 0
                         ? Maths.Clamp((startTailTime - tailEndTime) / tailDuration, 0, 1)
@@ -140,48 +131,6 @@ export function DrawProjectile(
 
     return complete;
 }
-
-// export function DrawProjectile(
-//     camera: Camera2d,
-//     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
-//     headPos: Vec2,
-//     tailPos: Vec2,
-//     intensity: number
-// ): void {
-//     const headRadius = 2;
-//     const trailWidth = 2;
-
-//     const headCanvasPos = camera.worldToCanvas(headPos);
-//     const tailCanvasPos = camera.worldToCanvas(tailPos);
-
-//     const hex = Math.floor(255 * intensity);
-//     const color = `rgba(${hex}, ${hex}, ${hex}, ${intensity})`;
-//     const gradient = context.createLinearGradient(
-//         tailCanvasPos.x,
-//         tailCanvasPos.y,
-//         headCanvasPos.x,
-//         headCanvasPos.y
-//     );
-//     gradient.addColorStop(0, `rgba(${hex}, ${hex}, ${hex}, 0)`);
-//     gradient.addColorStop(0.9, color);
-//     gradient.addColorStop(1.0, color);
-
-//     const bronze = `rgba(134, 125, 56, ${intensity})`;
-//     context.fillStyle = bronze;
-//     context.strokeStyle = gradient;
-//     context.lineWidth = trailWidth;
-
-//     context.beginPath();
-//     context.moveTo(headCanvasPos.x, headCanvasPos.y);
-//     context.lineTo(tailCanvasPos.x, tailCanvasPos.y);
-//     context.stroke();
-
-//     context.lineWidth = 1;
-
-//     context.beginPath();
-//     context.arc(headCanvasPos.x, headCanvasPos.y, headRadius, 0, 2 * Math.PI);
-//     context.fill();
-// }
 
 export function DrawLaserSight(
     camera: Camera2d,
