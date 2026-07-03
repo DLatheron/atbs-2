@@ -30,7 +30,8 @@ export const createGame: RequestHandler = async (
         clientId,
         req.app.locals.scenarioRecipeManager,
         req.app.locals.itemRecipeManager,
-        req.app.locals.furnitureRecipeManager
+        req.app.locals.furnitureRecipeManager,
+        req.app.locals.materialManager
     );
     const existingGame = gameManager.findGame(game.id);
     if (existingGame) {

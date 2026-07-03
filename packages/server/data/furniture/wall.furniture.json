@@ -12,21 +12,7 @@
             "destroyed": []
         }
     },
-    "materials": [
-        {
-            "id": "concrete",
-            "category": "furniture",
-            "rgb": {
-                "r": 128,
-                "g": 128,
-                "b": 128
-            },
-            "densityMap": {
-                "default": 10,
-                "eyeball": 100
-            }
-        }
-    ],
+    "materials": ["concrete.material"],
     "hitPoints": { "max": 200 },
     "movementObstruction": {
         "default": { "default": 100 },

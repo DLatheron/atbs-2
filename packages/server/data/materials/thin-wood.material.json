@@ -1,0 +1,20 @@
+{
+    "id": "thin-wood.material",
+    "category": "furniture",
+    "rgb": {
+        "r": 107,
+        "g": 66,
+        "b": 0
+    },
+    "densityMap": {
+        "default": 3,
+        "eyeball": 100
+    },
+    "perturbation": {
+        "entry": {
+            "chance": 100,
+            "angleInDegrees": 30,
+            "angularFalloffPower": 10
+        }
+    }
+}

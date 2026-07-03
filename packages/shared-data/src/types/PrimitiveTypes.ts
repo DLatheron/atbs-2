@@ -275,7 +275,7 @@ export function resolveJitteredValue(value: JitteredValue) {
     switch (value.distribution) {
         case Distribution.enum.linear:
         case undefined:
-            return Maths.Random(value.min, value.max);
+            return Maths.generateRandomBetween(value.min, value.max);
 
         default:
             throw new Error(`Unexpected distribution: ${value.distribution}`);

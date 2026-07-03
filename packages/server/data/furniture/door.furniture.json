@@ -15,21 +15,7 @@
         }
     },
     "state": "closed",
-    "materials": [
-        {
-            "id": "door",
-            "category": "furniture",
-            "rgb": {
-                "r": 0,
-                "g": 212,
-                "b": 255
-            },
-            "densityMap": {
-                "default": 3,
-                "eyeball": 100
-            }
-        }
-    ],
+    "materials": ["thin-wood.material", "thick-wood.material"],
     "hitPoints": { "max": 50 },
     "movementObstruction": {
         "default": { "default": 100 },

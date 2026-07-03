@@ -306,7 +306,7 @@ export class WorldMap {
         return false;
     }
 
-    calcNormal(imageManager: ImageManager, worldPos: Vec2): Vec2 {
+    calcNormal(imageManager: ImageManager, worldPos: Vec2): Vec2 | undefined {
         const directionSamples = [
             Orientation.NORTH,
             Orientation.NORTH_EAST,
@@ -326,6 +326,10 @@ export class WorldMap {
             }
             return normal;
         }, new Vec2());
+
+        if (normal.lengthSqrd === 0) {
+            return;
+        }
 
         const resolvedNormal = normal.normalise();
 

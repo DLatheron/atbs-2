@@ -26,6 +26,7 @@ import { ItemManager } from "./ItemManager.js";
 import { ItemRecipeManager } from "./ItemRecipeManager.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
+import { MaterialManager } from "./MaterialManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -76,14 +77,15 @@ export class Game {
         ownerId: ClientId,
         scenarioRecipeManager: ScenarioRecipeManager,
         itemRecipeManager: ItemRecipeManager,
-        furnitureRecipeManager: FurnitureRecipeManager
+        furnitureRecipeManager: FurnitureRecipeManager,
+        materialManager: MaterialManager
     ) {
         this._scenarioRecipeManager = scenarioRecipeManager;
         this._ownerId = ownerId;
         this._id = generateGameId();
         this._clientManager = new ClientManager();
         this._itemManager = new ItemManager(itemRecipeManager);
-        this._furnitureManager = new FurnitureManager(furnitureRecipeManager);
+        this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<

@@ -11,7 +11,7 @@ export function Lerp(a: number, b: number, t: number): number {
     return a + (b - a) * t;
 }
 
-export function Random(min: number, max: number): number {
+export function generateRandomBetween(min: number, max: number): number {
     const range = max - min;
     return min + Math.random() * range;
 }

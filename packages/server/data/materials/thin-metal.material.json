@@ -1,0 +1,13 @@
+{
+    "id": "thin-metal.material",
+    "category": "furniture",
+    "rgb": {
+        "r": 87,
+        "g": 87,
+        "b": 87
+    },
+    "densityMap": {
+        "default": 5,
+        "eyeball": 100
+    }
+}

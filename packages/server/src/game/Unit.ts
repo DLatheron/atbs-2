@@ -358,7 +358,7 @@ export class Unit extends SceneObject {
         const { mapLocation } = this;
 
         let relativeRotation = relativeDirection(this.orientation, orientation);
-        if (Math.abs(relativeRotation) === 4 && Maths.Random(0, 1) > 0.5) {
+        if (Math.abs(relativeRotation) === 4 && Maths.generateRandomBetween(0, 1) > 0.5) {
             relativeRotation = -relativeRotation;
         }
 
@@ -698,76 +698,6 @@ export class Unit extends SceneObject {
                 });
             });
 
-            // // Sort so that fastest projectiles are first.
-            // projectiles.sort((a, b) => b.velocity - a.velocity);
-            // console.dir({ projectiles });
-
-            // const debugGraphics: DebugGraphic[] = [];
-
-            // // debugGraphics?.push(
-            // //     {
-            // //         type: DebugGraphicType.enum.line,
-            // //         srcWorldPos: projectiles[0].srcPos,
-            // //         dstWorldPos: projectiles[0].dstPos,
-            // //         strokeColour: Colour.White,
-            // //         strokeThickness: 2
-            // //     },
-            // //     {
-            // //         type: DebugGraphicType.enum.point,
-            // //         worldPos: projectiles[0].srcPos,
-            // //         size: 6,
-            // //         colour: Colour.Red
-            // //     },
-            // //     {
-            // //         type: DebugGraphicType.enum.point,
-            // //         worldPos: projectiles[0].dstPos,
-            // //         size: 6,
-            // //         colour: Colour.Blue
-            // //     }
-            // // );
-
-            // const eventQueue = new PriorityQueue<{
-            //     priority: number;
-            //     projectile: Projectile;
-            //     pos: Vec2;
-            //     material: Material;
-            // }>((a, b) => a.priority < b.priority); // Inverse priority queue.
-
-            // for (const projectile of projectiles) {
-            //     const hitResult = map.castProjectile(projectile, debugGraphics);
-            //     console.dir({ hitResult }, { depth: null });
-
-            //     if (hitResult) {
-            //         const timeTo = projectile.calculateTimeTo(hitResult.pos);
-            //         console.dir(
-            //             `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
-            //         );
-            //         projectile.impact = hitResult.pos;
-
-            //         eventQueue.push({
-            //             priority: timeTo,
-            //             projectile,
-            //             ...hitResult
-            //         });
-            //     }
-
-            //     debugGraphics?.push({
-            //         type: DebugGraphicType.enum.line,
-            //         srcWorldPos: projectile.srcPos,
-            //         dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
-            //         strokeColour: Colour.White,
-            //         strokeThickness: 2
-            //     });
-            // }
-
-            // let event: { priority: number; projectile: Projectile; pos: Vec2; material: Material };
-
-            // while ((event = eventQueue.pop())) {
-            //     console.info(
-            //         `${event.priority} event ${event.projectile.index} hit ${event.material.id} at ${event.pos}`
-            //     );
-            // }
-
             const showDebugGraphics = false;
             const debugGraphics: DebugGraphic[] = [];
 
@@ -792,70 +722,6 @@ export class Unit extends SceneObject {
                 }
             ]);
         }
-
-        /**
-            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
-                const perturbedAngle = startOfSpread + angleScaler * index;
-                const directionVector = perturbedDirVector.rotate(perturbedAngle);
-
-                return new Projectile(
-                    {
-                        game,
-                        firer: this,
-                        firerPos,
-                        directionVector,
-                        maxRange: perturbedRange,
-                        velocity: round.resolveVelocity,
-                        penetration: round.penetration,
-                        damage: round.damage
-                    },
-                    eventList
-                );
-            });
-
-            // Sort so that fastest projectiles are first.
-            projectiles.sort((a, b) => b.velocity - a.velocity);
-
-            // Set a checkpoint so everything is relative to the start of the checkpoint.
-            eventList.setCheckpoint({ relativeToEndOfLastEvent: 0 });
-            projectiles.forEach((projectile) => projectile.trace());
-
-            const maxProjectileTravelTime = projectiles.reduce((max, projectile) => Math.max(max, projectile.totalRangeTravelled), 0);
-            eventList.addEvents(
-                {
-                    relativeToCheckpointTime: 0,
-                    duration: maxProjectileTravelTime
-                },
-                eventList.allSideIds,
-                Event.TraceEvent(
-                    projectiles.map((projectile) => ({
-                        srcPos: projectile.srcPos,
-                        dstPos: projectile.finalPos,
-                        distanceTravelled: projectile.distanceTravelled,
-                        maxRange: projectile.maxRange,
-                        length: round.resolveLength,
-                        velocity: projectile.velocity,
-                        intensity: round.resolveIntensity,
-                        rangeFalloff: round.resolveRangeFalloff
-                    })),
-                    onTarget
-                ),
-                Event.UnitsChangeEvent(this)
-            );
-            eventList.addEvents(
-                {
-                    relativeToEndOfLastEvent: FIRE_ADDITIONAL_SIMULATION_TIME,
-                    duration: 1000
-                },
-                [this.sideId],
-                Event.CameraEvent(worldPoses[0])
-            );
-
-            projectiles.forEach((projectile) => {
-                round.explosion?.explode(game, projectile.finalPos, projectile.dirVec, eventList);
-            });
-        }T
-         */
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

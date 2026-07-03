@@ -11,7 +11,8 @@ import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import { Orientation, TilePos } from "@atbs/maths";
 import { FurnitureManager } from "./FurnitureManager.js";
-import { Material, MaterialRecipe } from "./Material.js";
+import { Material } from "./Material.js";
+import { MaterialManager } from "./MaterialManager.js";
 
 export const FurnitureRecipe = z.object({
     id: FurnitureId,
@@ -20,7 +21,7 @@ export const FurnitureRecipe = z.object({
     renderable: SceneNode,
     hitPoints: AttributeDef.optional(),
     movementObstruction: FurnitureStateMovementObstructionMap,
-    materials: z.array(MaterialRecipe)
+    materials: z.array(z.string())
     // action: z.record(z.string().nonempty(), z.unknown()).optional()
 });
 export type FurnitureRecipe = z.infer<typeof FurnitureRecipe>;
@@ -41,7 +42,7 @@ export function isFurniture(arg: unknown): arg is Furniture {
 
 export class Furniture extends SceneObject {
     private readonly _recipe: Readonly<FurnitureRecipe>;
-    // private readonly _furnitureManager: FurnitureManager;
+    private readonly _furnitureManager: FurnitureManager;
 
     private readonly _id: InstanceId;
     private readonly _location: TilePos;
@@ -54,17 +55,20 @@ export class Furniture extends SceneObject {
         recipe: Readonly<FurnitureRecipe>,
         overrides: Readonly<FurnitureOverrides>,
         additionalData: Readonly<FurnitureAdditionalData>,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        _furnitureManager: FurnitureManager
+        furnitureManager: FurnitureManager
     ) {
         super(recipe.renderable);
 
         this._id = `${recipe.id}-${additionalData.instanceIndex}`;
         this._recipe = recipe;
-        // this._furnitureManager = furnitureManager;
+
+        this._furnitureManager = furnitureManager;
+
         this._location = new TilePos(overrides.location);
         this._orientation = overrides.orientation ?? Orientation.NORTH;
-        this._materials = recipe.materials.map((materialRecipe) => new Material(materialRecipe));
+        this._materials = recipe.materials.map((materialId) =>
+            this.materialManager.getMaterial(materialId)
+        );
         this._state = overrides.state ?? FurnitureState.enum.default;
         this._hitPoints = recipe.hitPoints?.value ?? recipe.hitPoints?.max ?? 0;
     }
@@ -102,6 +106,14 @@ export class Furniture extends SceneObject {
 
     get materials(): Material[] {
         return this._materials;
+    }
+
+    private get furnitureManager(): FurnitureManager {
+        return this._furnitureManager;
+    }
+
+    private get materialManager(): MaterialManager {
+        return this.furnitureManager.materialManager;
     }
 
     getRenderList(context: SceneContext): RenderList {

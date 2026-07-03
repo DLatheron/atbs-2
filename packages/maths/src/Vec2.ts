@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Z } from "zod-class";
-import { Clamp, Lerp } from "./Maths.js";
-import { Orientation } from "./Orientation.js";
+import { Clamp, Lerp, generateRandomBetween } from "./Maths.js";
+import { degreesToRadians, Orientation } from "./Orientation.js";
 import { TilePos } from "./TilePos.js";
 
 export const IVec2 = z.object({
@@ -146,6 +146,17 @@ export class Vec2
         const dot = this.dot(n) * 2;
 
         return this.sub(n.scale(dot));
+    }
+
+    perturbVector(angleInDegrees: number, power: number = 1): Vec2 {
+        const random = generateRandomBetween(-1, 1);
+        const randomPower =
+            power !== 1 ? Math.pow(Math.abs(random), power) * Math.sign(random) : random;
+        const angleInRadians = degreesToRadians(angleInDegrees);
+        const randomAngleInRadians = angleInRadians * randomPower;
+        console.info({ random, randomPower, angleInRadians, randomAngleInRadians });
+
+        return this.rotate(randomAngleInRadians);
     }
 
     /**

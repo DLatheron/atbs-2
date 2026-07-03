@@ -1,0 +1,13 @@
+{
+    "id": "thick-wood.material",
+    "category": "furniture",
+    "rgb": {
+        "r": 139,
+        "g": 107,
+        "b": 0
+    },
+    "densityMap": {
+        "default": 6,
+        "eyeball": 100
+    }
+}

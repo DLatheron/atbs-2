@@ -77,7 +77,7 @@ export class UnitRecipeManager {
     }
 
     removeRecipe(unitId: UnitId): boolean {
-        return this.removeRecipe(unitId);
+        return this._unitRecipeMap.delete(unitId);
     }
 
     private static readonly _singleton = new UnitRecipeManager();

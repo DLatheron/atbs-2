@@ -10,6 +10,8 @@ import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
+import { Material, MaterialPerturbation, PerturbationType } from "./Material.js";
+import { generateRandomBetween } from "../../../maths/src/Maths.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -54,7 +56,9 @@ export class Projectile implements IRayCast {
         this._props = props;
 
         this._srcPos = new Vec2(props.srcPos);
-        this._dstPos = this.srcPos.add(props.directionVector.scale(props.projectileRecipe.maxRange));
+        this._dstPos = this.srcPos.add(
+            props.directionVector.scale(props.projectileRecipe.maxRange)
+        );
         this._maxRange = props.projectileRecipe.maxRange;
         this._directionVector = props.directionVector;
         this._velocity = props.projectileRecipe.visual.velocityInPps;
@@ -145,18 +149,57 @@ export class Projectile implements IRayCast {
         this._impact = value;
     }
 
-    ricochet(normal: Vec2) {
+    isRicocheted(material: Material): MaterialPerturbation | undefined {
+        const { perturbation } = this._props.projectileRecipe;
+        const materialPerturbation = material.getPerturbation(PerturbationType.enum.ricochet);
+        if (!materialPerturbation) {
+            return;
+        }
+
+        const chance = perturbation * (materialPerturbation?.chance ?? 0);
+        const random = generateRandomBetween(0, 100);
+        if (random >= chance) {
+            return;
+        }
+
+        return materialPerturbation;
+    }
+
+    isPerturbed(material: Material): MaterialPerturbation | undefined {
+        const { perturbation } = this._props.projectileRecipe;
+        const materialPerturbation = material.getPerturbation(PerturbationType.enum.entry);
+        if (!materialPerturbation) {
+            return;
+        }
+
+        const chance = perturbation * (materialPerturbation?.chance ?? 0);
+        const random = generateRandomBetween(0, 100);
+        if (random >= chance) {
+            return;
+        }
+
+        return materialPerturbation;
+    }
+
+    ricochet(normal: Vec2, perturbation: MaterialPerturbation) {
         const reflectedDir = this.directionVector.reflect(normal);
+        const perturbedReflectedDir = reflectedDir.perturbVector(
+            perturbation.angleInDegrees,
+            perturbation.angularFalloffPower
+        );
 
-        // Update and recalculate where we going...
-        // TODO: Recalculate the maxRange down...
-        // How far has we travelled so far?
-        const rangeSoFar = this.srcPos.sub(this.segments[0].pos).length;
-        const newMaxRange = this.maxRange - rangeSoFar;
+        this._dstPos = this.srcPos.add(perturbedReflectedDir.scale(this.maxRange));
+        this._directionVector = perturbedReflectedDir;
+    }
 
-        this._maxRange = Math.max(newMaxRange, 0);
-        this._dstPos = this.srcPos.add(reflectedDir.scale(this.maxRange));
-        this._directionVector = reflectedDir;
+    perturb(newDirection: Vec2, perturbation: MaterialPerturbation) {
+        const perturbedNewDirection = newDirection.perturbVector(
+            perturbation.angleInDegrees,
+            perturbation.angularFalloffPower
+        );
+
+        this._dstPos = this.srcPos.add(perturbedNewDirection.scale(this.maxRange));
+        this._directionVector = perturbedNewDirection;
     }
 
     calculateTimeTo(pos: Vec2): number {
@@ -249,8 +292,6 @@ export class Projectile implements IRayCast {
             return;
         }
 
-        const ricochet = true;
-
         // We now have an timed-based queue of events.
         let event: CollisionEvent;
 
@@ -272,9 +313,17 @@ export class Projectile implements IRayCast {
                     console.info("Collided with unit!", owner.id);
                 }
 
-                if (ricochet) {
+                const ricochetPerturbation = projectile.isRicocheted(material);
+                if (ricochetPerturbation) {
                     const normal = map.calcNormal(ImageManager.GetSingleton(), pos);
-                    projectile.ricochet(normal);
+                    if (normal) {
+                        projectile.ricochet(normal, ricochetPerturbation);
+                    }
+                } else {
+                    const entryPerturbation = projectile.isPerturbed(material);
+                    if (entryPerturbation) {
+                        projectile.perturb(projectile.directionVector, entryPerturbation);
+                    }
                 }
 
                 const nextChange = map.stepRay(projectile, material, debugGraphics);
@@ -306,7 +355,6 @@ export class Projectile implements IRayCast {
                 projectile.commitSegmentTo(atTime, pos);
 
                 const hitResult = map.castRay(projectile, debugGraphics);
-
                 if (hitResult) {
                     const timeTo = projectile.calculateTimeTo(hitResult.pos);
                     const cumulativeTime = atTime + timeTo;
@@ -317,7 +365,7 @@ export class Projectile implements IRayCast {
                     projectile.impact = { pos: hitResult.pos, time: cumulativeTime };
 
                     eventQueue.push({
-                        priority: timeTo,
+                        priority: cumulativeTime,
                         projectile,
                         ...hitResult
                     });

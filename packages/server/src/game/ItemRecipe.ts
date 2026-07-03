@@ -36,6 +36,7 @@ export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),
     maxRange: z.number().positive(),
     penetration: z.number().nonnegative(),
+    perturbation: z.number().min(0).max(100).default(0),
     visual: VisualRecipe,
     damage: DamageMap,
     explosion: Explosion.optional()
