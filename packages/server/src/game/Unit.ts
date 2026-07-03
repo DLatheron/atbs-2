@@ -703,7 +703,7 @@ export class Unit extends SceneObject {
                 });
             });
 
-            const showDebugGraphics = false;
+            const showDebugGraphics = config.showProjectileDebugGraphics;
             const debugGraphics: DebugGraphic[] = [];
 
             Projectile.ProcessProjectiles(projectiles, map, debugGraphics);

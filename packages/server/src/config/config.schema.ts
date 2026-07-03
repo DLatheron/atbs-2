@@ -8,6 +8,7 @@ const Config = z
         highlanderGameMode: z.boolean().optional().default(false),
         infiniteActionPoints: z.boolean().optional().default(false),
         infiniteAmmunition: z.boolean().optional().default(false),
+        showProjectileDebugGraphics: z.boolean().optional().default(false),
         logLevels: z
             .object({
                 itemManager: LogLevel.optional(),

@@ -221,6 +221,35 @@ export class Vec2
         }
     }
 
+    /** Picks the 8-way direction that best matches `direction`. */
+    static nearestOrientation(direction: Vec2): Orientation {
+        const orientations = [
+            Orientation.NORTH,
+            Orientation.NORTH_EAST,
+            Orientation.EAST,
+            Orientation.SOUTH_EAST,
+            Orientation.SOUTH,
+            Orientation.SOUTH_WEST,
+            Orientation.WEST,
+            Orientation.NORTH_WEST
+        ];
+
+        const unit = direction.normalise();
+        let bestOrientation = Orientation.NORTH;
+        let bestDot = Number.NEGATIVE_INFINITY;
+
+        for (const orientation of orientations) {
+            const step = Vec2.StepInDirection(orientation);
+            const dot = unit.dot(step);
+            if (dot > bestDot) {
+                bestDot = dot;
+                bestOrientation = orientation;
+            }
+        }
+
+        return bestOrientation;
+    }
+
     toString(): string {
         return `(${this.x}, ${this.y})`;
     }

@@ -11,7 +11,6 @@
     "weight": 0.368,
     "projectile": {
         "maxRange": 3000,
-        "penetration": 0,
         "perturbation": 0,
         "visual": {
             "velocityInPps": 600,
@@ -23,13 +22,13 @@
         },
         "damage": { "default": 1 },
 
-        "mass": 190,
+        "mass": 0.19,
         "velocity": 84,
         "diameter": 40,
         "hardness": 1,
         "shape": 0,
         "stability": 1,
-        "bounce": 0,
+        "bounce": 1,
         "integrity": 0,
 
         "explosion": {

@@ -4,6 +4,7 @@ export * from "./DebugGraphics.js";
 export * from "./DefaultMap.js";
 export * as Misc from "./Misc.js";
 export * from "./Maths.js";
+export * from "./Penetration.js";
 export * from "./Mat22.js";
 export * from "./Orientation.js";
 export * from "./TilePos.js";

@@ -306,6 +306,49 @@ export class WorldMap {
         return false;
     }
 
+    sampleMaterialAt(imageManager: ImageManager, worldPos: Vec2): Material | undefined {
+        const tilePos = this.worldToTile(worldPos);
+        if (this.isOutside(tilePos)) {
+            return undefined;
+        }
+
+        const tile = this.getTile(tilePos);
+        const subTilePos = this.worldToSubTile(tilePos, worldPos);
+        const collisionLayers = tile.getCollisionLayers(imageManager);
+
+        return Tile.SampleCollisionLayers(subTilePos, collisionLayers)?.material;
+    }
+
+    /**
+     * Measures material depth at a surface hit by stepping along the inward normal until
+     * the material changes or open space is reached. Uses 8-way integer steps to match
+     * the surface normal sampling grid.
+     */
+    calcMaterialThickness(
+        imageManager: ImageManager,
+        worldPos: Vec2,
+        normal: Vec2,
+        material: Material,
+        maxSamples = 256
+    ): number {
+        const intoMaterial = normal.scale(-1);
+        const step = Vec2.StepInDirection(Vec2.nearestOrientation(intoMaterial));
+        let thickness = 0;
+        let samplePos = new Vec2(Math.round(worldPos.x), Math.round(worldPos.y));
+
+        for (let i = 0; i < maxSamples; i++) {
+            samplePos = samplePos.add(step);
+            const sample = this.sampleMaterialAt(imageManager, samplePos);
+            if (!sample || sample.id !== material.id) {
+                break;
+            }
+
+            thickness++;
+        }
+
+        return Math.max(thickness, 1);
+    }
+
     calcNormal(imageManager: ImageManager, worldPos: Vec2): Vec2 | undefined {
         const directionSamples = [
             Orientation.NORTH,

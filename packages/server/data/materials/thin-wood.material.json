@@ -10,18 +10,10 @@
         "default": 3,
         "eyeball": 100
     },
-    "perturbation": {
-        "entry": {
-            "chance": 100,
-            "angleInDegrees": 30,
-            "angularFalloffPower": 10
-        }
-    },
 
-    "hardness": 0.2,
-    "toughness": 0.3,
-    "thickness": 1,
-    "roughness": 0.7,
-    "elasticity": 0.1,
-    "density": 0.05
+    "hardness": 0.15,
+    "toughness": 0.25,
+    "roughness": 0.8,
+    "elasticity": 0.05,
+    "density": 0.08
 }

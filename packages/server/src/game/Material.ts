@@ -82,7 +82,6 @@ export const MaterialRecipe = z
 
         hardness: z.number().describe("Resistance to indentation"),
         toughness: z.number().describe("Resistance to fracture"),
-        thickness: z.number().describe("In metres (to be calculated)"),
         roughness: z.number().describe("Affects ricochet randomness"),
         elasticity: z.number().describe("How much energy is returned"),
         density: z.number().describe("Affect penetration distance")
@@ -131,10 +130,6 @@ export class Material {
 
     get toughness(): number {
         return this._recipe.toughness;
-    }
-
-    get thickness(): number {
-        return this._recipe.thickness;
     }
 
     get roughness(): number {

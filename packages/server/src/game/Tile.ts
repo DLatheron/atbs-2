@@ -1,5 +1,6 @@
 import {
     Aabb,
+    calcPixelPenetrationCost,
     Colour,
     DebugGraphic,
     DebugGraphicType,
@@ -15,13 +16,7 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
-import {
-    FurnitureState,
-    MaterialDensityType,
-    RenderList,
-    RenderMode,
-    TileInfo
-} from "@atbs/shared-data";
+import { FurnitureState, RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
 import { FurnitureManager } from "./FurnitureManager.js";
@@ -391,11 +386,15 @@ export class Tile implements IRenderableEntity {
                 };
             }
 
-            // Affect the projectile's penetration based on the material it hit.
+            // Drain penetration energy for each pixel travelled inside material.
             const { material, owner } = collisionSample;
-            const density = material.getDensityForType(MaterialDensityType.enum.projectile);
+            const pixelCost = calcPixelPenetrationCost({
+                hardness: material.hardness,
+                toughness: material.toughness,
+                density: material.density
+            });
 
-            ray.life -= density;
+            ray.life -= pixelCost;
             if (!ray.isRayAlive) {
                 // Projectile ran out of penetration power.
                 this.logger.info(`Projectile ran out of penetration power in ${material.id}`);

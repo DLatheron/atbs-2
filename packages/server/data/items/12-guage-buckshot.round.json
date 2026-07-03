@@ -12,7 +12,6 @@
     "projectile": {
         "numProjectiles": 1,
         "maxRange": 2000,
-        "penetration": 10,
         "perturbation": 0,
         "visual": {
             "velocityInPps": 1000,
@@ -23,12 +22,12 @@
             "rangeFalloffPower": 10
         },
 
-        "mass": 3.4,
+        "mass": 0.0034,
         "velocity": 488,
-        "diameter": 5,
-        "hardness": 1,
+        "diameter": 8.4,
+        "hardness": 0.8,
         "shape": 0,
-        "stability": 0,
+        "stability": 0.2,
         "bounce": 0,
         "integrity": 0.1,
 
