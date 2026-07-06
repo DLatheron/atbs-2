@@ -1,8 +1,8 @@
 import { Container, SxProps } from "@mui/material";
-import { useImageCache } from "../../hooks/useImageCache";
 import { RenderList } from "@atbs/shared-data";
 import { Orientation, OrientationToCSSTransform, rotateOrientation } from "@atbs/maths";
 import { ReactNode } from "react";
+import { useImageSrc } from "../../hooks/useImageSrc";
 
 export interface ImageComponentProps {
     images: RenderList;
@@ -13,6 +13,45 @@ export interface ImageComponentProps {
     sx?: SxProps;
 }
 
+interface RenderImageLayerProps {
+    imageId: string;
+    orientation: Orientation;
+    opacity: number;
+    width: number;
+    height: number;
+    disabled: boolean;
+}
+
+function RenderImageLayer({
+    imageId,
+    orientation,
+    opacity,
+    width,
+    height,
+    disabled
+}: RenderImageLayerProps) {
+    const src = useImageSrc(imageId);
+
+    return (
+        <img
+            src={src}
+            width={width}
+            height={height}
+            alt={imageId}
+            style={{
+                gridArea: "images",
+                margin: "auto",
+                padding: 0,
+                opacity,
+                transform:
+                    OrientationToCSSTransform[rotateOrientation(Orientation.NORTH, orientation)],
+                ...(disabled && { filter: "grayscale(100%)", opacity: 0.5 })
+            }}
+            draggable={false}
+        />
+    );
+}
+
 export function ImageComponent({
     images,
     width = 100,
@@ -21,8 +60,6 @@ export function ImageComponent({
     disabled = false,
     sx
 }: ImageComponentProps) {
-    const { imageCache } = useImageCache();
-
     return (
         <Container
             data-testid="image-component"
@@ -35,24 +72,14 @@ export function ImageComponent({
             }}
         >
             {images.map(({ imageId, orientation = Orientation.NORTH, opacity = 1 }, index) => (
-                <img
+                <RenderImageLayer
                     key={`${imageId}-${index}`}
-                    src={imageCache.getDataSafe(imageId)}
+                    imageId={imageId}
+                    orientation={orientation}
+                    opacity={opacity}
                     width={width}
                     height={height}
-                    alt={imageId ?? "empty"}
-                    style={{
-                        gridArea: "images",
-                        margin: "auto",
-                        padding: 0,
-                        opacity,
-                        transform:
-                            OrientationToCSSTransform[
-                                rotateOrientation(Orientation.NORTH, orientation)
-                            ],
-                        ...(disabled && { filter: "grayscale(100%)", opacity: 0.5 })
-                    }}
-                    draggable={false}
+                    disabled={disabled}
                 />
             ))}
             {children}

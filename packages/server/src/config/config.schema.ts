@@ -43,7 +43,7 @@ const Config = z
                 game: LogLevel.enum.warn,
                 server: LogLevel.enum.warn,
                 tile: LogLevel.enum.warn,
-                unit: LogLevel.enum.warn
+                unit: LogLevel.enum.debug
             })
     })
     .strict();

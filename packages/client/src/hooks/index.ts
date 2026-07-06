@@ -1,3 +1,4 @@
+export * from "./useImageSrc.js";
 export * from "./useClientId.js";
 export * from "./useComponentSize.js";
 export * from "./useKeyboard.js";

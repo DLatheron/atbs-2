@@ -7,5 +7,6 @@ export * from "./Maths.js";
 export * from "./Penetration.js";
 export * from "./Mat22.js";
 export * from "./Orientation.js";
+export * from "./Path.js";
 export * from "./TilePos.js";
 export * from "./Vec2.js";

@@ -1,4 +1,4 @@
-import { Colour, DebugGraphic, DebugGraphicType, PathSegment, Vec2 } from "@atbs/maths";
+import { Colour, DebugGraphic, DebugGraphicType, minDistanceFromPointToPathSegments, PathSegment, Vec2 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";
@@ -187,18 +187,31 @@ export class Projectile implements IRayCast {
         return (length / this.velocity) * 1000;
     }
 
-    getTracer(): Tracer {
-        if (this.impact) {
-            Projectile.Logger.info(`Commit impact segment ${this.impact.time}:${this.impact.pos}`);
-            this.commitSegmentTo(this.impact.time, this.impact.pos);
-        } else {
-            const previousTime = this.segments[this.segments.length - 1].time;
-            const endPos = this.dstPos;
-            const timeAtEnd = this.calculateTimeTo(endPos);
+    passesNear(target: Vec2, thresholdPx = 1): boolean {
+        const path = this._buildCompletePath();
+        return minDistanceFromPointToPathSegments(target, path) <= thresholdPx;
+    }
 
-            Projectile.Logger.info(`Commit end segment ${timeAtEnd}:${endPos}`);
-            this.commitSegmentTo(previousTime + timeAtEnd, endPos);
+    private _buildCompletePath(): PathSegment[] {
+        const path = [...this._segments];
+
+        if (this.impact) {
+            path.push({ time: this.impact.time, pos: this.impact.pos });
+        } else {
+            const previousTime = path[path.length - 1].time;
+            const endPos = this.dstPos;
+            path.push({ time: previousTime + this.calculateTimeTo(endPos), pos: endPos });
         }
+
+        return path;
+    }
+
+    getTracer(): Tracer {
+        const path = this._buildCompletePath();
+        const lastSegment = path[path.length - 1];
+
+        Projectile.Logger.info(`Commit end segment ${lastSegment.time}:${lastSegment.pos}`);
+        this.commitSegmentTo(lastSegment.time, new Vec2(lastSegment.pos));
 
         const { velocity } = this;
         const {

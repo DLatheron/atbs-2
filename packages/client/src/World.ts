@@ -801,7 +801,12 @@ export class World {
         scale: Vec2;
         offset: Vec2;
     }): void {
-        renderList.forEach(({ imageId, orientation = Orientation.NORTH, opacity = 1 }) =>
+        renderList.forEach(({ imageId, orientation = Orientation.NORTH, opacity = 1 }) => {
+            this.imageCache.requestImage(imageId);
+            if (!this.imageCache.isLoaded(imageId)) {
+                return;
+            }
+
             this.drawImage({
                 context,
                 canvasPos,
@@ -811,8 +816,8 @@ export class World {
                 tileSize,
                 scale,
                 offset
-            })
-        );
+            });
+        });
     }
 
     drawImage({
