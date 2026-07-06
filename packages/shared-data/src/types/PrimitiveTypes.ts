@@ -455,7 +455,7 @@ export function getAccuracy(
 }
 
 export function shotsFired(timeDeltaInMS: number, rpm: number) {
-    return Math.floor((timeDeltaInMS * rpm) / MILLISECONDS_IN_A_MINUTE);
+    return Math.max(Math.floor((timeDeltaInMS * rpm) / MILLISECONDS_IN_A_MINUTE), 1);
 }
 
 export function getSingleFireMode(fireModes: FireModes): FireModeSingle {

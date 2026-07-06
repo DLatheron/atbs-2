@@ -7,7 +7,6 @@ import {
     FireDetails,
     FireModeItemSummary,
     FireSelector,
-    ImageId,
     ItemId,
     OnTarget,
     RenderMode,
@@ -16,8 +15,6 @@ import {
     TileInfo,
     UnitSummary
 } from "@atbs/shared-data";
-import { ImageCache } from "../../ImageCache";
-import { useImageCache } from "../../hooks/useImageCache";
 import { Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { MapMode } from "../../MapMode";
 
@@ -27,7 +24,6 @@ function delay(delayInMs: number): Promise<void> {
 
 export function useActionPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
-    const { imageCache } = useImageCache();
     const { world } = useWorld();
     const [sidePanelMode, setSidePanelMode] = useState<MapMode>(MapMode.enum["map-mode"]);
     const [side, setSide] = useState<SideSummary | null>(null);
@@ -44,39 +40,15 @@ export function useActionPage() {
         console.info("Mounting ActionPage Message Handlers");
 
         const handlerHandles = [
-            messageManager.registerHandler("server:map", async (_context, payload) => {
+            messageManager.registerHandler("server:map", (_context, payload) => {
                 console.info("$$$ Received map message $$$", payload.width, "x", payload.height);
-
-                const imageSet = ImageCache.CacheClientMapImages(payload);
-
-                // TEMPORARY:
-                imageSet.add("fireMode");
-                imageSet.add("throw");
-                imageSet.add("action");
-                imageSet.add("inventory");
-                imageSet.add("fireSingle");
-                imageSet.add("fireBurst");
-                imageSet.add("fireAuto");
-
-                await imageCache.waitForImagesToCache(imageSet);
 
                 world.map = payload;
                 setMap(payload);
-
-                await world._waitForRenderStart;
             }),
 
-            messageManager.registerHandler("server:unit:mode:move", async (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:move", (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
-
-                if (payload) {
-                    const imageSet = new Set<ImageId>();
-                    ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
-                    if (payload.itemInUse) {
-                        ImageCache.CacheRenderListImages(payload.itemInUse.uiImage, imageSet);
-                    }
-                    await imageCache.waitForImagesToCache(imageSet);
-                }
 
                 setUnit(payload);
                 world.unit = payload;
@@ -89,17 +61,8 @@ export function useActionPage() {
                 }
             }),
 
-            messageManager.registerHandler("server:unit:mode:fire", async (_context, payload) => {
+            messageManager.registerHandler("server:unit:mode:fire", (_context, payload) => {
                 console.info("$$$ Received unit message $$$", payload?.id);
-
-                if (payload) {
-                    const imageSet = new Set<ImageId>();
-                    ImageCache.CacheRenderListImages(payload.uiImage, imageSet);
-                    for (const weapon of payload.weapons) {
-                        ImageCache.CacheRenderListImages(weapon.uiImage, imageSet);
-                    }
-                    await imageCache.waitForImagesToCache(imageSet);
-                }
 
                 setUnitWeapon(payload);
                 world.unitWeapon = payload;
@@ -121,15 +84,7 @@ export function useActionPage() {
                 setSide(payload.side);
             }),
 
-            messageManager.registerHandler("server:game:tile:info", async (_context, payload) => {
-                const imageSet = new Set<ImageId>();
-                ImageCache.CacheRenderListImages(payload.terrain.uiImage, imageSet);
-                if (payload.unit) {
-                    ImageCache.CacheRenderListImages(payload.unit.uiImage, imageSet);
-                }
-
-                await imageCache.waitForImagesToCache(imageSet);
-
+            messageManager.registerHandler("server:game:tile:info", (_context, payload) => {
                 setTileInfo(payload);
             }),
 
@@ -159,22 +114,7 @@ export function useActionPage() {
                 }
             }),
 
-            messageManager.registerHandler("server:map:update", async (_context, payload) => {
-                const imageSet = new Set<ImageId>();
-
-                for (const update of payload) {
-                    ImageCache.CacheRenderListImages(
-                        update.tileByRenderMode[RenderMode.enum.MAP_MODE],
-                        imageSet
-                    );
-                    ImageCache.CacheRenderListImages(
-                        update.tileByRenderMode[RenderMode.enum.FIRE_MODE],
-                        imageSet
-                    );
-                }
-
-                await imageCache.waitForImagesToCache(imageSet);
-
+            messageManager.registerHandler("server:map:update", (_context, payload) => {
                 setMap((map: ClientMap | null) => {
                     if (!map) {
                         return null;
@@ -237,7 +177,7 @@ export function useActionPage() {
             console.info("Unmounting ActionPage Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
         };
-    }, [messageManager, sendMessage, world, imageCache]);
+    }, [messageManager, sendMessage, world]);
 
     const onMove = useCallback(
         (orientation: Orientation) => {

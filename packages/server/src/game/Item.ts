@@ -18,7 +18,7 @@ import {
     FireType
 } from "@atbs/shared-data";
 import { SceneContext, SceneObject } from "./SceneObject.js";
-import { degreesToRadians, TilePos } from "@atbs/maths";
+import { clamp, degreesToRadians, TilePos, Vec2 } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";
 import { SlotProps, ItemOverrides, ItemRecipe, SlotType, ProjectileRecipe } from "./ItemRecipe.js";
@@ -557,4 +557,43 @@ export class Item extends SceneObject {
             })
         };
     }
+
+    static CalcShotAccuracy(accuracy: number, offTargetPower = 2): number {
+        const skillThreshold = accuracy / 100;
+        const randomValue = Math.random();
+
+        if (randomValue <= skillThreshold) {
+            // On target.
+            return 0.5;
+        } else {
+            // Off target.
+            const difference = randomValue - skillThreshold;
+            const diffPow = 1.0 - Math.pow(1.0 - difference, offTargetPower);
+            const randomSign = Math.sign(Math.random() - 0.5);
+
+            return clamp(0.5 + (diffPow / 2) * randomSign, 0, 1);
+        }
+    }    
+
+    static PerturbAccuracy(dirVector: Vec2, overallAccuracy: number, inaccuracyAngle = 10): { dirVector: Vec2, accuracy: number } {
+        const accuracy = Item.CalcShotAccuracy(overallAccuracy);
+        if (accuracy === 0.5) {
+            return { dirVector, accuracy };
+        }
+
+        const inaccuracyHalfAngle = degreesToRadians(inaccuracyAngle / 2);
+
+        const angles = [dirVector.rotate(-inaccuracyHalfAngle), dirVector.rotate(inaccuracyHalfAngle)];
+
+        return {
+            dirVector: Vec2.Slerp(angles[0], angles[1], accuracy),
+            accuracy
+        };
+    }
+
+    static PerturbRange(range: number) {
+        // TODO: Implement.
+
+        return range;
+    }    
 }

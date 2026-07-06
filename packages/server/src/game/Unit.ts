@@ -38,12 +38,14 @@ import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
-import type { Item } from "./Item.js";
+import { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
+
+const MAX_DISORIENTATION = 100;
 
 const ROTATION_APT_COST = 1;
 
@@ -140,6 +142,8 @@ export class Unit extends SceneObject {
     private _location: TilePos | null;
     private _orientation: Orientation;
 
+    private _disorientation: number;
+
     constructor(
         recipe: Readonly<UnitRecipe>,
         overrides: Readonly<UnitOverrides>,
@@ -166,6 +170,7 @@ export class Unit extends SceneObject {
             ? (overrides.orientation ?? Orientation.NORTH)
             : (overrides.orientation ?? Orientation.CENTER);
         this._side = additionalData.side;
+        this._disorientation = 0;
     }
 
     get id(): UnitId {
@@ -220,6 +225,16 @@ export class Unit extends SceneObject {
         return this._recipe.isDirectional;
     }
 
+    get disorientated() {
+        return this.disorientation > 0;
+    }
+    get disorientation() {
+        return this._disorientation;
+    }
+    set disorientation(value: number) {
+        this._disorientation = clamp(value, 0, MAX_DISORIENTATION);
+    }    
+
     get isAlive(): boolean {
         return this.constitution > 0;
     }
@@ -259,6 +274,14 @@ export class Unit extends SceneObject {
 
     get canThrow(): boolean {
         return Action.enum.throw in this._recipe.actions && !!this.itemInUse;
+    }
+
+    get weaponInaccuracyAngle() {
+        return 10 + this.disorientation / 5;
+    }
+
+    get throwInaccuracyAngle() {
+        return 10 + this.disorientation / 5;
     }
 
     getActions(): Actions {
@@ -309,7 +332,7 @@ export class Unit extends SceneObject {
         }
 
         // Reduce the amount of disorientation based on the number of action points used.
-        // this._disorientation = Math.max(0, this._disorientation - aptCost);
+        this._disorientation = Math.max(0, this._disorientation - aptCost);
 
         if (!config.infiniteActionPoints) {
             this._attributes.actionPoints.value -= aptCost;
@@ -600,7 +623,7 @@ export class Unit extends SceneObject {
 
         // Generate world poses - we have a 1:1 correspondence with the number of shots fired.
         assert(
-            numShots !== worldPoses.length,
+            numShots === worldPoses.length,
             "Number of shots should equal the number of worldPoses we have been sent"
         );
         const targetWorldPoses = worldPoses.map(
@@ -626,18 +649,17 @@ export class Unit extends SceneObject {
                     : toWorldPos.sub(fromWorldPos).length;
             this.logger.dir({ range });
 
-            // TODO: Perturb the range based on the accuracy of this shot.
-            const perturbedRange = range * 1.0;
+            // Perturb the range of this shot based on accuracy.
+            const perturbedRange = Item.PerturbRange(range);
             this.logger.dir({ perturbedRange });
 
             // Calculate the direction of the shot.
             const dirVector = toWorldPos.sub(fromWorldPos).normalise();
             this.logger.dir({ dirVector });
 
-            // TODO: Perturn the direction based on the accuracy of this shot.
-            const perturbedDirVector = dirVector;
-            const onTarget = Math.random() < 0.5;
-            this.logger.dir({ perturbedDirVector, onTarget });
+            // Perturb the direction of this shot based on accuracy.
+            const { dirVector: perturbedDirVector, accuracy } = Item.PerturbAccuracy(dirVector, firstShotAccuracy, this.weaponInaccuracyAngle);
+            this.logger.dir({ perturbedDirVector, accuracy });
 
             const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
                 fireModes,
@@ -707,6 +729,10 @@ export class Unit extends SceneObject {
             const debugGraphics: DebugGraphic[] = [];
 
             Projectile.ProcessProjectiles(projectiles, map, debugGraphics);
+
+            const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
+            const onTarget = centerProjectile.passesNear(toWorldPos, 1);
+            this.logger.dir({ onTarget });
 
             if (showDebugGraphics && debugGraphics) {
                 messageRouter.send({
