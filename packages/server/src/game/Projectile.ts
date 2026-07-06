@@ -310,7 +310,7 @@ export class Projectile implements IRayCast {
         let event: CollisionEvent;
 
         while ((event = eventQueue.pop())) {
-            const { priority: atTime, material, owner, pos, projectile } = event;
+            const { priority: atTime, material, exitedMaterial, owner, pos, projectile } = event;
             Projectile.Logger.dir({ priority: atTime, pos });
 
             if (material) {
@@ -369,6 +369,17 @@ export class Projectile implements IRayCast {
             } else {
                 Projectile.Logger.info(`Commit material exit segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
+
+                if (exitedMaterial) {
+                    PenetrationSystem.resolveMaterialExit(
+                        map,
+                        imageManager,
+                        projectile,
+                        exitedMaterial,
+                        pos,
+                        debugGraphics
+                    );
+                }
 
                 const hitResult = map.castRay(projectile, debugGraphics);
                 if (hitResult) {

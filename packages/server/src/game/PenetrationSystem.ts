@@ -7,6 +7,7 @@ import {
     Colour,
     DebugGraphic,
     DebugGraphicType,
+    degreesToRadians,
     evaluateSurfacePenetration,
     isGrazingImpact,
     rollPenetrationDeflectionDegrees,
@@ -118,7 +119,7 @@ function resolveRicochet(
         projectile.stability,
         impactAngleDot
     );
-    projectile.changeDirection(reflectedDir.rotate(spreadDegrees));
+    projectile.changeDirection(reflectedDir.rotate(degreesToRadians(spreadDegrees)));
     projectile.nudgeFromSurface(2);
     return true;
 }
@@ -215,11 +216,23 @@ export class PenetrationSystem {
 
         projectile.life -= calcEntryEnergyCost(debugValues.surfaceResistance);
 
-        const deflectionDegrees = rollPenetrationDeflectionDegrees(
+        const entryDeflectionDegrees = rollPenetrationDeflectionDegrees(
             materialProps,
-            projectile.stability
+            projectile.stability,
+            thicknessPixels
         );
-        projectile.changeDirection(projectile.directionVector.rotate(deflectionDegrees));
+        projectile.changeDirection(
+            projectile.directionVector.rotate(degreesToRadians(entryDeflectionDegrees))
+        );
+
+        debugGraphics?.push({
+            type: DebugGraphicType.enum.text,
+            worldPos: worldPos.add(new Vec2(4, 4)),
+            text: `entry Δ${entryDeflectionDegrees.toFixed(1)}° t:${thicknessPixels}px`,
+            colour: Colour.Magenta,
+            fontSize: 9
+        });
+
         projectile.velocity = calcVelocityRetention(
             projectile.velocity,
             material.density,
@@ -227,5 +240,39 @@ export class PenetrationSystem {
         );
 
         return "penetrated";
+    }
+
+    static resolveMaterialExit(
+        map: WorldMap,
+        imageManager: ImageManager,
+        projectile: MutablePenetrationProjectile,
+        material: Material,
+        worldPos: Vec2,
+        debugGraphics?: DebugGraphic[]
+    ): void {
+        const normal = map.calcNormal(imageManager, worldPos);
+        const thicknessPixels = normal
+            ? map.calcMaterialThickness(imageManager, worldPos, normal, material)
+            : 5;
+        const materialProps = materialPenetrationProps(material);
+        const deflectionDegrees = rollPenetrationDeflectionDegrees(
+            materialProps,
+            projectile.stability,
+            thicknessPixels
+        );
+
+        if (deflectionDegrees !== 0) {
+            projectile.changeDirection(
+                projectile.directionVector.rotate(degreesToRadians(deflectionDegrees))
+            );
+        }
+
+        debugGraphics?.push({
+            type: DebugGraphicType.enum.text,
+            worldPos: worldPos.add(new Vec2(4, 4)),
+            text: `exit Δ${deflectionDegrees.toFixed(1)}° t:${thicknessPixels}px`,
+            colour: Colour.Magenta,
+            fontSize: 9
+        });
     }
 }

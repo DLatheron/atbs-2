@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    calcPenetrationDeflectionDegrees,
     calcPenetrationEnergy,
     calcPixelPenetrationCost,
     calcRicochetProbability,
@@ -118,6 +119,22 @@ describe("isGrazingImpact", () => {
     it("treats shallow angles as grazing", () => {
         expect(isGrazingImpact(0.2)).toBe(true);
         expect(isGrazingImpact(0.8)).toBe(false);
+    });
+});
+
+describe("calcPenetrationDeflectionDegrees", () => {
+    it("does not deflect high-stability projectiles", () => {
+        const spread = calcPenetrationDeflectionDegrees(THIN_WOOD, 1, 10);
+
+        expect(spread).toBe(0);
+    });
+
+    it("deflects low-stability projectiles more than moderate-stability ones", () => {
+        const moderate = calcPenetrationDeflectionDegrees(THIN_WOOD, 0.5, 10);
+        const unstable = calcPenetrationDeflectionDegrees(THIN_WOOD, 0.2, 10);
+
+        expect(moderate).toBeGreaterThan(4);
+        expect(unstable).toBeGreaterThan(moderate);
     });
 });
 

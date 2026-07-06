@@ -16,6 +16,8 @@ export interface GridRayTraceHitResult {
     pos: Vec2;
     tile: Tile;
     material?: Material;
+    /** Set when the ray leaves a material volume (exit point). */
+    exitedMaterial?: Material;
     owner?: Furniture | Unit;
 }
 export type GridRayTraceResult = GridRayTraceHitResult | undefined;

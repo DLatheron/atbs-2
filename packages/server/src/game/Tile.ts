@@ -382,7 +382,8 @@ export class Tile implements IRenderableEntity {
 
                 return {
                     pos: samplePos,
-                    tile: this
+                    tile: this,
+                    exitedMaterial: currentMaterial
                 };
             }
 

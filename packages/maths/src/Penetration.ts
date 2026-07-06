@@ -166,12 +166,15 @@ export function calcRicochetSpreadDegrees(
     return material.roughness * (1 - stability) * (1 - clamp(Math.abs(impactAngleDot), 0, 1)) * 45;
 }
 
-/** Random spread applied when entering a material, in degrees. */
+/** Random spread applied when entering or exiting a material, in degrees. */
 export function calcPenetrationDeflectionDegrees(
     material: MaterialPenetrationProps,
-    stability: number
+    stability: number,
+    thicknessPixels: number
 ): number {
-    return ((material.roughness * (1 - stability)) / Math.max(stability, 0.1)) * 5;
+    const thicknessFactor = Math.min(thicknessPixels / 4, 3);
+
+    return material.roughness * (1 - stability) * thicknessFactor * 10;
 }
 
 /** Velocity retained after passing through a material slab. */
@@ -215,8 +218,9 @@ export function rollRicochetSpreadDegrees(
 
 export function rollPenetrationDeflectionDegrees(
     material: MaterialPenetrationProps,
-    stability: number
+    stability: number,
+    thicknessPixels: number
 ): number {
-    const spread = calcPenetrationDeflectionDegrees(material, stability);
+    const spread = calcPenetrationDeflectionDegrees(material, stability, thicknessPixels);
     return generateRandomBetween(-spread, spread);
 }
