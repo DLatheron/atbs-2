@@ -1,4 +1,11 @@
-import { Colour, DebugGraphic, DebugGraphicType, minDistanceFromPointToPathSegments, PathSegment, Vec2 } from "@atbs/maths";
+import {
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    minDistanceFromPointToPathSegments,
+    PathSegment,
+    Vec2
+} from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";

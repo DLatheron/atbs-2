@@ -233,7 +233,7 @@ export class Unit extends SceneObject {
     }
     set disorientation(value: number) {
         this._disorientation = clamp(value, 0, MAX_DISORIENTATION);
-    }    
+    }
 
     get isAlive(): boolean {
         return this.constitution > 0;
@@ -658,7 +658,11 @@ export class Unit extends SceneObject {
             this.logger.dir({ dirVector });
 
             // Perturb the direction of this shot based on accuracy.
-            const { dirVector: perturbedDirVector, accuracy } = Item.PerturbAccuracy(dirVector, firstShotAccuracy, this.weaponInaccuracyAngle);
+            const { dirVector: perturbedDirVector, accuracy } = Item.PerturbAccuracy(
+                dirVector,
+                firstShotAccuracy,
+                this.weaponInaccuracyAngle
+            );
             this.logger.dir({ perturbedDirVector, accuracy });
 
             const { initialAptCost, perShotAptCost } = calcFireActionPointCost(

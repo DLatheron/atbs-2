@@ -17,10 +17,7 @@ export function distancePointToSegment(point: IVec2, a: IVec2, b: IVec2): number
     return new Vec2(point).sub(closest).length;
 }
 
-export function minDistanceFromPointToPathSegments(
-    point: IVec2,
-    segments: PathSegment[]
-): number {
+export function minDistanceFromPointToPathSegments(point: IVec2, segments: PathSegment[]): number {
     if (segments.length === 0) {
         return Number.POSITIVE_INFINITY;
     }

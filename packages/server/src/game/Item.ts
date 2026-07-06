@@ -573,9 +573,13 @@ export class Item extends SceneObject {
 
             return clamp(0.5 + (diffPow / 2) * randomSign, 0, 1);
         }
-    }    
+    }
 
-    static PerturbAccuracy(dirVector: Vec2, overallAccuracy: number, inaccuracyAngle = 10): { dirVector: Vec2, accuracy: number } {
+    static PerturbAccuracy(
+        dirVector: Vec2,
+        overallAccuracy: number,
+        inaccuracyAngle = 10
+    ): { dirVector: Vec2; accuracy: number } {
         const accuracy = Item.CalcShotAccuracy(overallAccuracy);
         if (accuracy === 0.5) {
             return { dirVector, accuracy };
@@ -583,7 +587,10 @@ export class Item extends SceneObject {
 
         const inaccuracyHalfAngle = degreesToRadians(inaccuracyAngle / 2);
 
-        const angles = [dirVector.rotate(-inaccuracyHalfAngle), dirVector.rotate(inaccuracyHalfAngle)];
+        const angles = [
+            dirVector.rotate(-inaccuracyHalfAngle),
+            dirVector.rotate(inaccuracyHalfAngle)
+        ];
 
         return {
             dirVector: Vec2.Slerp(angles[0], angles[1], accuracy),
@@ -595,5 +602,5 @@ export class Item extends SceneObject {
         // TODO: Implement.
 
         return range;
-    }    
+    }
 }

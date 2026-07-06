@@ -22,7 +22,9 @@ describe("distancePointToSegment", () => {
 
 describe("minDistanceFromPointToPathSegments", () => {
     it("returns infinity for an empty path", () => {
-        expect(minDistanceFromPointToPathSegments({ x: 0, y: 0 }, [])).toBe(Number.POSITIVE_INFINITY);
+        expect(minDistanceFromPointToPathSegments({ x: 0, y: 0 }, [])).toBe(
+            Number.POSITIVE_INFINITY
+        );
     });
 
     it("returns distance to a single point", () => {
