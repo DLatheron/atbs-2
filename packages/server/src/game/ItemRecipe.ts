@@ -10,7 +10,7 @@ import {
     DamageMap,
     FireSelector,
     FireType,
-    ProjectileVisual
+    VisualRecipe
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneNode } from "./SceneObject.js";
@@ -35,9 +35,23 @@ export type SlotProps = z.infer<typeof SlotProps>;
 export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),
     maxRange: z.number().positive(),
-    penetration: z.number().nonnegative(),
-    visual: ProjectileVisual,
+    perturbation: z.number().min(0).max(100).default(0),
+    visual: VisualRecipe,
     damage: DamageMap,
+
+    mass: z.number().positive().describe("Mass in kilograms"),
+    velocity: z.number().positive().describe("Velocity in metres per second"),
+    diameter: z.number().positive().describe("Diameter in millimeters"),
+    hardness: z.number().min(0).max(1).describe("Hardness: 0 - soft, 1 - hard"),
+    shape: z.number().min(0).max(1).describe("Shape: 0 - round, 1 - pointed/armour piercing"),
+    stability: z.number().min(0).max(1).describe("Resistance to random perturbation"),
+    bounce: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe("Ricochet tendency: 0 = never, 1 = always (e.g. thrown grenades)"),
+    integrity: z.number().nonnegative().describe("How easily the projectile breaks apart"),
+
     explosion: Explosion.optional()
 });
 export type ProjectileRecipe = z.infer<typeof ProjectileRecipe>;

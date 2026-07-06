@@ -2,10 +2,14 @@ import { TerrainId } from "@atbs/shared-data";
 import { Terrain, TerrainRecipe } from "./Terrain.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const TerrainDirectory = "./data/terrain";
 
 export class TerrainManager {
+    static readonly Logger: Logger = new Logger("TerrainManager", config.logLevels?.terrainManager);
+
     private readonly _terrainMap: Map<TerrainId, Terrain>;
 
     constructor() {
@@ -31,11 +35,11 @@ export class TerrainManager {
                 const recipe = TerrainRecipe.parse(rawRecipe);
                 const terrain = new Terrain(recipe);
 
-                console.info(`Loaded Terrain: ${fullPath}`);
+                TerrainManager.Logger.info(`Loaded Terrain: ${fullPath}`);
 
                 this.add(terrain);
             } catch (error) {
-                console.error(`ERROR Loading Terrain: ${file}`, error);
+                TerrainManager.Logger.error(`ERROR Loading Terrain: ${file}`, error);
                 throw error;
             }
         }

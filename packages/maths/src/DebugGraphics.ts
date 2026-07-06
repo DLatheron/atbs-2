@@ -3,9 +3,15 @@ import { IColour } from "./Colour.js";
 import { ITilePos } from "./TilePos.js";
 import { IVec2 } from "./Vec2.js";
 
-const debugGraphicType = ["tile", "box", "line", "arc", "point", "text"] as const;
+const debugGraphicType = ["tile", "box", "line", "arc", "point", "text", "path"] as const;
 export const DebugGraphicType = z.enum(debugGraphicType);
 export type DebugGraphicType = z.infer<typeof DebugGraphicType>;
+
+export const PathSegment = z.object({
+    pos: IVec2,
+    time: z.number().nonnegative()
+});
+export type PathSegment = z.infer<typeof PathSegment>;
 
 export const DebugTile = z.object({
     type: z.literal(DebugGraphicType.enum.tile),
@@ -32,7 +38,8 @@ export const DebugLine = z.object({
     srcWorldPos: IVec2,
     dstWorldPos: IVec2,
     strokeColour: IColour,
-    strokeThickness: z.number().positive().optional()
+    strokeThickness: z.number().positive().optional(),
+    lineDash: z.array(z.number()).optional()
 });
 export type DebugLine = z.infer<typeof DebugLine>;
 
@@ -67,12 +74,23 @@ export const DebugText = z.object({
 });
 export type DebugText = z.infer<typeof DebugText>;
 
+export const DebugPath = z.object({
+    type: z.literal(DebugGraphicType.enum.path),
+    segments: z.array(PathSegment).min(2),
+    strokeColour: IColour,
+    trail: z.tuple([z.number(), z.number(), z.number()]),
+    strokeThickness: z.number().positive().optional(),
+    lineDash: z.array(z.number()).optional()
+});
+export type DebugPath = z.infer<typeof DebugPath>;
+
 export const DebugGraphic = z.discriminatedUnion("type", [
     DebugTile,
     DebugBox,
     DebugLine,
     DebugArc,
     DebugPoint,
-    DebugText
+    DebugText,
+    DebugPath
 ]);
 export type DebugGraphic = z.infer<typeof DebugGraphic>;

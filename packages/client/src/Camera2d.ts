@@ -1,4 +1,4 @@
-import { Aabb, Maths, Vec2 } from "@atbs/maths";
+import { Aabb, clamp, Vec2 } from "@atbs/maths";
 import { TrackingSpeed } from "@atbs/shared-data";
 
 export class Camera2d {
@@ -37,7 +37,7 @@ export class Camera2d {
         return this._trackingSpeed;
     }
     private set trackingSpeed(trackingSpeed: number) {
-        this._trackingSpeed = Maths.Clamp(trackingSpeed, 0, 1);
+        this._trackingSpeed = clamp(trackingSpeed, 0, 1);
     }
 
     get hasWorldBounds() {

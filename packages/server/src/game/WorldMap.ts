@@ -1,21 +1,14 @@
 import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import {
-    Aabb,
-    Colour,
-    DebugGraphic,
-    DebugGraphicType,
-    ITilePos,
-    Maths,
-    TilePos,
-    Vec2
-} from "@atbs/maths";
+import { Aabb, clamp, DebugGraphic, ITilePos, Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { ItemManager } from "./ItemManager.js";
-import { Projectile } from "./Projectile.js";
 import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
+import { Material } from "./Material.js";
+import { IRayCast } from "./IRayCast.js";
+import { ImageManager } from "./ImageManager.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -147,8 +140,8 @@ export class WorldMap {
     }
 
     getTileClamped(tilePos: TilePos): Tile {
-        return this._tiles[Maths.Clamp(tilePos.row, 0, this.height - 1)][
-            Maths.Clamp(tilePos.col, 0, this.width - 1)
+        return this._tiles[clamp(tilePos.row, 0, this.height - 1)][
+            clamp(tilePos.col, 0, this.width - 1)
         ];
     }
 
@@ -218,38 +211,171 @@ export class WorldMap {
 
     /**
      * Cast a projectile through the map until its first collision.
-     * @param projectile The projectile to cast.
+     * @param ray The projectile to cast.
      * @param debugGraphics Optional array for recording intersections and collisions.
      * @returns The position and material first hit, or `undefined` if no collision occurs.
      */
-    castProjectile(projectile: Projectile, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
+    castRay(ray: IRayCast, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
         const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
-        let sampleOrder = 0;
+        // let sampleOrder = 0;
 
-        return traceGridRay(projectile.srcPos, projectile.dstPos, grid, (cellWalk) => {
+        return traceGridRay(ray.srcPos, ray.dstPos, grid, (cellWalk) => {
             const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
             const tile = this.sampleTile(tilePos);
             if (!tile) {
                 return undefined;
             }
 
-            debugGraphics?.push(
-                {
-                    type: DebugGraphicType.enum.tile,
-                    tilePos: tile.location,
-                    fillColour: new Colour({ ...Colour.Green, a: 0.25 }),
-                    strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
-                },
-                {
-                    type: DebugGraphicType.enum.text,
-                    worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
-                    text: `${sampleOrder++}: ${tile.location}`,
-                    colour: Colour.White,
-                    fontSize: 10
-                }
-            );
+            // debugGraphics?.push(
+            //     {
+            //         type: DebugGraphicType.enum.tile,
+            //         tilePos: tile.location,
+            //         fillColour: new Colour({ ...Colour.Green, a: 0.05 }),
+            //         strokeColour: new Colour({ ...Colour.Yellow, a: 0.05 })
+            //     },
+            //     {
+            //         type: DebugGraphicType.enum.text,
+            //         worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+            //         text: `${sampleOrder++}: ${tile.location}`,
+            //         colour: Colour.White,
+            //         fontSize: 10
+            //     }
+            // );
 
             return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics);
         });
+    }
+
+    stepRay(
+        ray: IRayCast,
+        currentMaterial: Material,
+        debugGraphics?: DebugGraphic[]
+    ): GridRayTraceResult {
+        const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
+        // let sampleOrder = 0;
+
+        return traceGridRay(ray.srcPos, ray.dstPos, grid, (cellWalk) => {
+            const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
+            const tile = this.sampleTile(tilePos);
+            if (!tile) {
+                return undefined;
+            }
+
+            // debugGraphics?.push(
+            //     {
+            //         type: DebugGraphicType.enum.tile,
+            //         tilePos: tile.location,
+            //         fillColour: new Colour({ ...Colour.Green, a: 0.05 }),
+            //         strokeColour: new Colour({ ...Colour.Yellow, a: 0.05 })
+            //     },
+            //     {
+            //         type: DebugGraphicType.enum.text,
+            //         worldPos: this.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
+            //         text: `${sampleOrder++}: ${tile.location}`,
+            //         colour: Colour.White,
+            //         fontSize: 10
+            //     }
+            // );
+
+            const collisionResult = tile.stepRay(
+                ray,
+                cellWalk.srcPos,
+                cellWalk.dstPos,
+                currentMaterial,
+                debugGraphics
+            );
+            if (collisionResult) {
+                return collisionResult;
+            }
+        });
+    }
+
+    private _sampleWorldPosForCollision(imageManager: ImageManager, worldPos: Vec2) {
+        const tilePos = this.worldToTile(worldPos);
+        const tile = this.getTile(tilePos);
+        const collisionImages = tile.getCollisionLayers(imageManager);
+        const subTilePos = this.worldToSubTile(tilePos, worldPos);
+
+        for (const { image, orientation } of collisionImages) {
+            const materialColour = image.getColour(subTilePos, orientation);
+            if (materialColour.a > 0.0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    sampleMaterialAt(imageManager: ImageManager, worldPos: Vec2): Material | undefined {
+        const tilePos = this.worldToTile(worldPos);
+        if (this.isOutside(tilePos)) {
+            return undefined;
+        }
+
+        const tile = this.getTile(tilePos);
+        const subTilePos = this.worldToSubTile(tilePos, worldPos);
+        const collisionLayers = tile.getCollisionLayers(imageManager);
+
+        return Tile.SampleCollisionLayers(subTilePos, collisionLayers)?.material;
+    }
+
+    /**
+     * Measures material depth at a surface hit by stepping along the inward normal until
+     * the material changes or open space is reached. Uses 8-way integer steps to match
+     * the surface normal sampling grid.
+     */
+    calcMaterialThickness(
+        imageManager: ImageManager,
+        worldPos: Vec2,
+        normal: Vec2,
+        material: Material,
+        maxSamples = 256
+    ): number {
+        const intoMaterial = normal.scale(-1);
+        const step = Vec2.StepInDirection(Vec2.nearestOrientation(intoMaterial));
+        let thickness = 0;
+        let samplePos = new Vec2(Math.round(worldPos.x), Math.round(worldPos.y));
+
+        for (let i = 0; i < maxSamples; i++) {
+            samplePos = samplePos.add(step);
+            const sample = this.sampleMaterialAt(imageManager, samplePos);
+            if (!sample || sample.id !== material.id) {
+                break;
+            }
+
+            thickness++;
+        }
+
+        return Math.max(thickness, 1);
+    }
+
+    calcNormal(imageManager: ImageManager, worldPos: Vec2): Vec2 | undefined {
+        const directionSamples = [
+            Orientation.NORTH,
+            Orientation.NORTH_EAST,
+            Orientation.EAST,
+            Orientation.SOUTH_EAST,
+            Orientation.SOUTH,
+            Orientation.SOUTH_WEST,
+            Orientation.WEST,
+            Orientation.NORTH_WEST
+        ];
+
+        const normal = directionSamples.reduce((normal, direction) => {
+            const samplePos = worldPos.add(Vec2.StepInDirection(direction));
+            const collision = this._sampleWorldPosForCollision(imageManager, samplePos);
+            if (!collision) {
+                normal = normal.add(Vec2.StepInDirection(direction));
+            }
+            return normal;
+        }, new Vec2());
+
+        if (normal.lengthSqrd === 0) {
+            return;
+        }
+
+        const resolvedNormal = normal.normalise();
+
+        return resolvedNormal;
     }
 }

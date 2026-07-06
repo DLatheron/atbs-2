@@ -10,18 +10,29 @@
     ],
     "weight": 0.01231,
     "projectile": {
-        "maxRange": 1000,
-        "penetration": 100,
+        "maxRange": 3000,
+        "perturbation": 100,
         "visual": {
-            "intensity": 1,
-            "velocity": 1000,
-            "length": 50,
-            "rangeFallOff": 10
+            "velocityInPps": 1000,
+            "headColour": { "r": 255, "g": 255, "b": 255, "a": 1 },
+            "headRadiusInPixels": 2,
+            "trailColour": { "r": 255, "g": 255, "b": 255, "a": 1 },
+            "trailLengthInPixels": 100,
+            "rangeFalloffPower": 20
         },
         "damage": {
             "human": 18,
             "default": 20
-        }
+        },
+
+        "mass": 0.004,
+        "velocity": 993,
+        "diameter": 5.56,
+        "hardness": 1,
+        "shape": 1,
+        "stability": 1.0,
+        "bounce": 0.75,
+        "integrity": 1
     },
     "renderable": {
         "default": [{ "imageId": "5.56mm-nato" }],

@@ -1,16 +1,30 @@
 import { FurnitureId, InstanceId, ItemId } from "@atbs/shared-data";
 import { Furniture, FurnitureOverrides } from "./Furniture.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
+import { MaterialManager } from "./MaterialManager.js";
+import { Logger } from "@atbs/misc";
+import { config } from "../config/config.schema.js";
 
 export class FurnitureManager {
+    static readonly Logger: Logger = new Logger(
+        "FurnitureManager",
+        config.logLevels?.furnitureManager
+    );
+
     private readonly _furnitureRecipeManager: FurnitureRecipeManager;
+    private readonly _materialManager: MaterialManager;
     private readonly _furnitureMap: Map<InstanceId, Furniture>;
     private readonly _instanceMap: Map<ItemId, number>;
 
-    constructor(furnitureRecipeManager: FurnitureRecipeManager) {
+    constructor(furnitureRecipeManager: FurnitureRecipeManager, materialManager: MaterialManager) {
         this._furnitureRecipeManager = furnitureRecipeManager;
+        this._materialManager = materialManager;
         this._furnitureMap = new Map<InstanceId, Furniture>();
         this._instanceMap = new Map<ItemId, number>();
+    }
+
+    get materialManager(): MaterialManager {
+        return this._materialManager;
     }
 
     private _getInstanceIndex(furnitureId: FurnitureId) {

@@ -2,10 +2,17 @@ import { MapId } from "@atbs/shared-data";
 import { readdir, readFile } from "fs/promises";
 import { MapRecipe } from "./WorldMap.js";
 import path from "path";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const WorldMapDirectory = "./data/maps";
 
 export class MapRecipeManager {
+    static readonly Logger: Logger = new Logger(
+        "MapRecipeManager",
+        config.logLevels?.mapRecipeManager
+    );
+
     private readonly _mapLookup: Map<MapId, MapRecipe>;
 
     constructor() {
@@ -30,11 +37,11 @@ export class MapRecipeManager {
                 const rawRecipe = JSON.parse(fileContents);
                 const mapRecipe = MapRecipe.parse(rawRecipe);
 
-                console.info(`Loaded Map recipe: ${fullPath}`);
+                MapRecipeManager.Logger.info(`Loaded Map recipe: ${fullPath}`);
 
                 this.add(mapRecipe);
             } catch (error) {
-                console.error(`ERROR Loading Map recipe: ${file}`, error);
+                MapRecipeManager.Logger.error(`ERROR Loading Map recipe: ${file}`, error);
                 throw error;
             }
         }

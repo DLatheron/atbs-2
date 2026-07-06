@@ -1,0 +1,41 @@
+{
+    "id": "spas-12.gun",
+    "type": "gun",
+    "name": "SPAS-12 Automatic Shotgun",
+    "shortName": "SPAS-12",
+    "description": [
+        {
+            "text": "Franchi SPAS-12 combat shotgun. The SPAS-12 is a dual-mode 12-gauge shotgun that can be fired in semi-automatic or pump-action mode."
+        }
+    ],
+    "weight": 4.4,
+    "renderable": {
+        "default": [{ "imageId": "spas-12" }],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["12-gauge-buckshot.round"]
+        }
+    },
+    "slots": { "ammo": { "id": "12-gauge-buckshot.round", "capacity": 7 } },
+    "fireSelector": "single",
+    "spreadAngle": 2.0,
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 60,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 40,
+                    "actionPoints": 13
+                }
+            }
+        }
+    }
+}

@@ -1,4 +1,4 @@
-import { Maths } from "@atbs/Maths";
+import { clamp, lerp } from "@atbs/maths";
 import { TrackingSpeed } from "@atbs/shared-data";
 
 const FREQUENCY_60HZ = 60;
@@ -39,7 +39,7 @@ export class Timer {
         return this._scaler;
     }
     set targetScaler(target: number) {
-        this._targetScaler = Maths.Clamp(target, 0, 1);
+        this._targetScaler = clamp(target, 0, 1);
     }
 
     get time() {
@@ -115,11 +115,7 @@ export class Timer {
         if (!this.paused) {
             ++this._frameNumber;
 
-            this._scaler = Maths.Lerp(
-                this._scaler,
-                this._targetScaler,
-                TrackingSpeed.enum.PRETTY_FAST
-            );
+            this._scaler = lerp(this._scaler, this._targetScaler, TrackingSpeed.enum.PRETTY_FAST);
 
             const newFrameTime = this.calcTimeOfFrame(this._frameNumber);
 

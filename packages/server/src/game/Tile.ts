@@ -1,10 +1,12 @@
 import {
     Aabb,
+    calcPixelPenetrationCost,
     Colour,
     DebugGraphic,
     DebugGraphicType,
     type DebugTile,
     type IColour,
+    IVec2,
     Orientation,
     TilePos,
     Vec2
@@ -22,6 +24,9 @@ import { Material } from "./Material.js";
 import { Image } from "./Image.js";
 import { ImageManager } from "./ImageManager.js";
 import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
+import { IRayCast } from "./IRayCast.js";
+import { Logger } from "@atbs/misc";
+import { config } from "../config/config.schema.js";
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -63,13 +68,15 @@ export const TileRecipe = z.object({
 export type TileRecipe = z.infer<typeof TileRecipe>;
 
 export interface LayerCollision {
-    owner?: Furniture | Unit;
+    owner: Furniture | Unit;
     image: Image;
     orientation: Orientation;
     materials: Material[];
 }
 
 export class Tile implements IRenderableEntity {
+    readonly logger: Logger;
+
     protected _location: TilePos;
     protected _aabb: Aabb;
     protected _tileSize: number;
@@ -83,6 +90,8 @@ export class Tile implements IRenderableEntity {
         recipe: Readonly<TileRecipe>,
         furnitureManager: FurnitureManager
     ) {
+        this.logger = new Logger(`Tile-${location}`, config.logLevels?.tile);
+
         this._location = location;
         this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
         this._tileSize = tileSize;
@@ -152,7 +161,7 @@ export class Tile implements IRenderableEntity {
 
     getRenderList(context: SceneContext): RenderList {
         if (this.units.length > 0) {
-            console.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
+            this.logger.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
                 depth: null,
                 colors: true
             });
@@ -276,16 +285,16 @@ export class Tile implements IRenderableEntity {
         subTileDstPos: Vec2,
         debugGraphics?: DebugGraphic[]
     ): GridRayTraceResult {
-        console.info(`Tile ${this.location}: Casting against tile`);
+        this.logger.info("Casting against tile");
 
         if (!this.anythingCollidable) {
-            console.info("  - Contains nothing collidable");
+            this.logger.info("  - Contains nothing collidable");
             return;
         }
 
         const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
         if (collisionLayers.length === 0) {
-            console.info("  - Has no collision layers (but is collidable?");
+            this.logger.info("  - Has no collision layers (but is collidable?");
             return;
         }
 
@@ -294,31 +303,165 @@ export class Tile implements IRenderableEntity {
             subTileDstPos,
             this._tileSize
         )) {
-            console.info(`  - ${samplePos} - sampling...`);
+            this.logger.info(`  - ${samplePos} - sampling...`);
 
-            for (const { image, orientation, materials } of collisionLayers) {
-                const materialColour = image.getColour(samplePos, orientation);
-                if (materialColour.a > 0.0) {
-                    const [material] = Material.DetermineMaterial(materialColour, materials);
-                    console.info(`    - hit material ${material.id}: ${material.rgb}`);
+            const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
+            if (collisionSample) {
+                const { material, owner } = collisionSample;
+                this.logger.info(`    - hit material ${material.id}: ${material.rgb}`);
 
-                    debugGraphics?.push(
-                        {
-                            type: DebugGraphicType.enum.point,
-                            worldPos: this.aabb.topLeft.add(samplePos),
-                            size: 8,
-                            colour: Colour.White
-                        },
-                        {
-                            type: DebugGraphicType.enum.point,
-                            worldPos: this.aabb.topLeft.add(samplePos),
-                            size: 6,
-                            colour: new Colour({ ...material.rgb!, a: 1 })
-                        }
-                    );
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 8,
+                        colour: Colour.White
+                    },
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 6,
+                        colour: new Colour({ ...material.rgb!, a: 1 })
+                    }
+                );
 
-                    return { pos: samplePos, material };
-                }
+                return { pos: samplePos, material, tile: this, owner };
+            }
+        }
+    }
+
+    stepRay(
+        ray: IRayCast,
+        subTileSrcPos: Vec2,
+        subTileDstPos: Vec2,
+        currentMaterial: Material,
+        debugGraphics?: DebugGraphic[]
+    ): GridRayTraceResult {
+        this.logger.info("Stepping projectile through tile");
+
+        if (!this.anythingCollidable) {
+            this.logger.info("  - Contains nothing collidable");
+            return;
+        }
+
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        if (collisionLayers.length === 0) {
+            this.logger.info("  - Has no collision layers (but is collidable?");
+            return;
+        }
+
+        for (const samplePos of walkCellBresenhamLine(
+            subTileSrcPos,
+            subTileDstPos,
+            this._tileSize
+        )) {
+            this.logger.info(`  - ${samplePos} - sampling...`);
+
+            const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
+
+            if (!collisionSample) {
+                // No material - so this is the exit point.
+                this.logger.info(
+                    `Projectile exited material ${currentMaterial.id} at ${samplePos}`
+                );
+
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 8,
+                        colour: Colour.White
+                    },
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 6,
+                        colour: new Colour({ ...currentMaterial.rgb!, a: 1 })
+                    }
+                );
+
+                return {
+                    pos: samplePos,
+                    tile: this,
+                    exitedMaterial: currentMaterial
+                };
+            }
+
+            // Drain penetration energy for each pixel travelled inside material.
+            const { material, owner } = collisionSample;
+            const pixelCost = calcPixelPenetrationCost({
+                hardness: material.hardness,
+                toughness: material.toughness,
+                density: material.density
+            });
+
+            ray.life -= pixelCost;
+            if (!ray.isRayAlive) {
+                // Projectile ran out of penetration power.
+                this.logger.info(`Projectile ran out of penetration power in ${material.id}`);
+
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 8,
+                        colour: Colour.White
+                    },
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 6,
+                        colour: new Colour({ ...Colour.Red, a: 1 })
+                    }
+                );
+
+                return {
+                    pos: samplePos,
+                    material,
+                    tile: this,
+                    owner
+                };
+            }
+
+            if (material !== currentMaterial) {
+                // Material is not longer in the list, so choose the top-most material as the new one.
+                this.logger.info(`Material changed to ${material.id}`);
+
+                // Material changed - so generate a new collision point to process from.
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 8,
+                        colour: Colour.White
+                    },
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 6,
+                        colour: new Colour({ ...currentMaterial.rgb!, a: 1 })
+                    }
+                );
+
+                return {
+                    pos: samplePos,
+                    material,
+                    tile: this,
+                    owner
+                };
+            }
+        }
+    }
+
+    static SampleCollisionLayers(
+        samplePos: IVec2,
+        collisionLayers: LayerCollision[]
+    ): { material: Material; owner: Furniture | Unit } | undefined {
+        for (const { image, orientation, owner, materials } of collisionLayers) {
+            const materialColour = image.getColour(samplePos, orientation);
+            if (materialColour.a > 0.0) {
+                const [material] = Material.DetermineMaterial(materialColour, materials);
+                return { material, owner };
             }
         }
     }

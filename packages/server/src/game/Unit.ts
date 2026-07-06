@@ -11,6 +11,7 @@ import {
     FireType,
     getAccuracy,
     getRpm,
+    OnTarget,
     RenderList,
     RenderMode,
     shotsFired,
@@ -22,11 +23,10 @@ import {
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
-    Colour,
+    clamp,
     DebugGraphic,
-    DebugGraphicType,
+    generateRandomBetween,
     ITilePos,
-    Maths,
     Orientation,
     relativeDirection,
     rotateOrientation,
@@ -36,7 +36,6 @@ import {
 import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
-import { Clamp } from "../../../maths/src/Maths.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { ItemManager } from "./ItemManager.js";
 import type { Item } from "./Item.js";
@@ -44,6 +43,7 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const ROTATION_APT_COST = 1;
 
@@ -117,7 +117,13 @@ function setDefaultAttribute(attributeDef: AttributeDef): Attribute {
     return { max: attributeDef.max, value: attributeDef.value ?? attributeDef.max };
 }
 
+export function isUnit(arg: unknown): arg is Unit {
+    return arg instanceof Unit;
+}
+
 export class Unit extends SceneObject {
+    readonly logger: Logger;
+
     private readonly _recipe: Readonly<UnitRecipe>;
     private readonly _attributes: {
         actionPoints: Attribute;
@@ -141,6 +147,8 @@ export class Unit extends SceneObject {
         itemManager: ItemManager
     ) {
         super(recipe.renderable);
+
+        this.logger = new Logger(`Unit-${recipe.id}`, config.logLevels.unit);
 
         this._recipe = recipe;
         this._attributes = {
@@ -262,7 +270,7 @@ export class Unit extends SceneObject {
             );
         }
 
-        console.dir({ actions });
+        this.logger.dir({ actions });
 
         return actions;
     }
@@ -331,7 +339,7 @@ export class Unit extends SceneObject {
     }
 
     startTurn() {
-        console.info("Starting turn for unit", this.id);
+        this.logger.info("Starting turn");
 
         // if (this.disorientated) {
         //     // Reduce the amount of disorientation based on the number of action points remaining...
@@ -348,14 +356,14 @@ export class Unit extends SceneObject {
     }
 
     rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
-        console.info("Rotating", this.name, "to orientation", orientation);
+        this.logger.info("Rotating", this.name, "to orientation", orientation);
 
         this._verifyDirectional();
 
         const { mapLocation } = this;
 
         let relativeRotation = relativeDirection(this.orientation, orientation);
-        if (Math.abs(relativeRotation) === 4 && Maths.Random(0, 1) > 0.5) {
+        if (Math.abs(relativeRotation) === 4 && generateRandomBetween(0, 1) > 0.5) {
             relativeRotation = -relativeRotation;
         }
 
@@ -572,7 +580,7 @@ export class Unit extends SceneObject {
 
         const { map } = game;
 
-        console.info("Fire", {
+        this.logger.info("Fire", {
             gameId: game.id,
             weaponId: weapon.id,
             fireSelector,
@@ -584,11 +592,11 @@ export class Unit extends SceneObject {
         const fireModes = weapon.getFireModes(this);
         const baseAccuracy = getAccuracy(fireModes, fireSelector, fireMode);
         const firstShotAccuracy = this.calcWeaponAccuracy(baseAccuracy);
-        console.dir({ firstShotAccuracy });
+        this.logger.dir({ firstShotAccuracy });
 
         const rpm = getRpm(fireModes, fireSelector);
         const numShots = shotsFired(triggerHeldTimeInMs, rpm);
-        console.dir({ numShotsFired: numShots });
+        this.logger.dir({ numShotsFired: numShots });
 
         // Generate world poses - we have a 1:1 correspondence with the number of shots fired.
         assert(
@@ -598,10 +606,10 @@ export class Unit extends SceneObject {
         const targetWorldPoses = worldPoses.map(
             (worldPos) => worldPos.add({ x: 0.5, y: 0.5 }) // Move to the center of the pixel for accuracy.
         );
-        console.dir({ targetWorldPoses });
+        this.logger.dir({ targetWorldPoses });
 
         const maxRange = weapon.loadedRound?.maxRange ?? 0; // TODO:
-        console.dir({ maxRange });
+        this.logger.dir({ maxRange });
 
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
         const collisionRadius = this._recipe.collision.radius;
@@ -610,26 +618,26 @@ export class Unit extends SceneObject {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
             const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
 
-            console.dir({ shot, srcWorldPos: fromWorldPos, tgtWorldPos: toWorldPos });
+            this.logger.dir({ shot, srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
 
             const range =
                 weapon.fireType === FireType.enum.indirect
                     ? maxRange
                     : toWorldPos.sub(fromWorldPos).length;
-            console.dir({ range });
+            this.logger.dir({ range });
 
             // TODO: Perturb the range based on the accuracy of this shot.
             const perturbedRange = range * 1.0;
-            console.dir({ perturbedRange });
+            this.logger.dir({ perturbedRange });
 
             // Calculate the direction of the shot.
             const dirVector = toWorldPos.sub(fromWorldPos).normalise();
-            console.dir({ dirVector });
+            this.logger.dir({ dirVector });
 
             // TODO: Perturn the direction based on the accuracy of this shot.
             const perturbedDirVector = dirVector;
             const onTarget = Math.random() < 0.5;
-            console.dir({ perturbedDirVector, onTarget });
+            this.logger.dir({ perturbedDirVector, onTarget });
 
             const { initialAptCost, perShotAptCost } = calcFireActionPointCost(
                 fireModes,
@@ -637,7 +645,7 @@ export class Unit extends SceneObject {
                 fireMode
             );
             const aptCost = shot === 0 ? initialAptCost : perShotAptCost;
-            console.dir({ shot, aptCost, initialAptCost, perShotAptCost });
+            this.logger.dir({ shot, aptCost, initialAptCost, perShotAptCost });
 
             if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
                 return;
@@ -655,7 +663,7 @@ export class Unit extends SceneObject {
             }
 
             const round = weapon.fire();
-            console.dir({ round });
+            this.logger.dir({ round });
 
             messageRouter.send(
                 {
@@ -672,13 +680,13 @@ export class Unit extends SceneObject {
             const angleScaler =
                 numProjectiles > 1 ? spreadAngleInRadians / (numProjectiles - 1) : 0;
 
-            console.dir({ numProjectiles });
+            this.logger.dir({ numProjectiles });
 
             const projectiles = [...Array(numProjectiles).keys()].map((index) => {
                 const perturbedAngle = startOfSpread + angleScaler * index;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
-                console.dir({ perturbedAngle, directionVector, fromWorldPos });
+                this.logger.dir({ perturbedAngle, directionVector, fromWorldPos });
 
                 return new Projectile({
                     game,
@@ -689,183 +697,50 @@ export class Unit extends SceneObject {
                     directionVector,
                     // TEMPORARY: Override the maxium range of the projectile to be the target position.
                     projectileRecipe: {
-                        ...projectileRecipe,
-                        maxRange: toWorldPos.sub(fromWorldPos).length
+                        ...projectileRecipe
+                        // maxRange: toWorldPos.sub(fromWorldPos).length
                     }
                 });
             });
 
-            // Sort so that fastest projectiles are first.
-            projectiles.sort((a, b) => b.velocity - a.velocity);
-            console.dir({ projectiles });
-
+            const showDebugGraphics = config.showProjectileDebugGraphics;
             const debugGraphics: DebugGraphic[] = [];
 
-            debugGraphics.push(
-                {
-                    type: DebugGraphicType.enum.line,
-                    srcWorldPos: projectiles[0].srcPos,
-                    dstWorldPos: projectiles[0].dstPos,
-                    strokeColour: Colour.White,
-                    strokeThickness: 2
-                },
-                {
-                    type: DebugGraphicType.enum.point,
-                    worldPos: projectiles[0].srcPos,
-                    size: 6,
-                    colour: Colour.Red
-                },
-                {
-                    type: DebugGraphicType.enum.point,
-                    worldPos: projectiles[0].dstPos,
-                    size: 6,
-                    colour: Colour.Blue
-                }
-            );
+            Projectile.ProcessProjectiles(projectiles, map, debugGraphics);
 
-            const hitResult = map.castProjectile(projectiles[0], debugGraphics);
-            console.dir({ hitResult }, { depth: null });
-
-            // const grid = { aabb: map.worldBounds, gridScale: map.tileSize, subGrid: true };
-            // let sampleOrder = 0;
-
-            // stepGrid(
-            //     projectiles[0],
-            //     grid,
-            //     (samplePos, sampleType) => {
-            //         console.info({ samplePos }, { depth: null });
-            //         const tile = map.sampleTile(map.worldToTile(samplePos));
-            //         if (tile === undefined) {
-            //             return undefined;
-            //         }
-            //         debugGraphics.push(
-            //             {
-            //                 type: DebugGraphicType.enum.tile,
-            //                 tilePos: tile.location,
-            //                 fillColour:
-            //                     sampleType === "major"
-            //                         ? new Colour({ ...Colour.Green, a: 0.25 })
-            //                         : sampleType === "minor-past"
-            //                           ? new Colour({ ...Colour.Red, a: 0.25 })
-            //                           : new Colour({ ...Colour.Blue, a: 0.25 }),
-            //                 strokeColour: new Colour({ ...Colour.Yellow, a: 0.25 })
-            //             },
-            //             {
-            //                 type: DebugGraphicType.enum.text,
-            //                 worldPos: map.tileOffsetToWorld(tile.location, new Vec2(2, 10)),
-            //                 text: `${sampleOrder++}`,
-            //                 colour: Colour.White,
-            //                 fontSize: 10
-            //             }
-            //         );
-
-            //         // const result = tile.stepTile(projectiles[0], debugGraphics);
-            //         // console.dir({ result });
-
-            //         return undefined;
-            //     },
-            //     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            //     (_collisionPos: Vec2, _material: Material) => {
-            //         return false;
-            //     },
-            //     debugGraphics
-            // );
-
-            messageRouter.send({
-                type: "server:debug:graphics",
-                payload: debugGraphics
-            });
+            if (showDebugGraphics && debugGraphics) {
+                messageRouter.send({
+                    type: "server:debug:graphics",
+                    payload: debugGraphics
+                });
+            }
 
             // TODO: Move the projectiles forward in time...
             // TODO: Psuedo tracers - how do we determine visibility?
-            // messageRouter.send([
-            //     {
-            //         type: "server:fire:trace",
-            //         payload: {
-            //             tracers: projectiles.map((projectile) => projectile.getTracer()),
-            //             isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
-            //         }
-            //     }
-            // ]);
+            messageRouter.send([
+                {
+                    type: "server:fire:trace",
+                    payload: {
+                        tracers: projectiles.map((projectile) => projectile.getTracer()),
+                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                    }
+                }
+            ]);
         }
-
-        /**
-            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
-                const perturbedAngle = startOfSpread + angleScaler * index;
-                const directionVector = perturbedDirVector.rotate(perturbedAngle);
-
-                return new Projectile(
-                    {
-                        game,
-                        firer: this,
-                        firerPos,
-                        directionVector,
-                        maxRange: perturbedRange,
-                        velocity: round.resolveVelocity,
-                        penetration: round.penetration,
-                        damage: round.damage
-                    },
-                    eventList
-                );
-            });
-
-            // Sort so that fastest projectiles are first.
-            projectiles.sort((a, b) => b.velocity - a.velocity);
-
-            // Set a checkpoint so everything is relative to the start of the checkpoint.
-            eventList.setCheckpoint({ relativeToEndOfLastEvent: 0 });
-            projectiles.forEach((projectile) => projectile.trace());
-
-            const maxProjectileTravelTime = projectiles.reduce((max, projectile) => Math.max(max, projectile.totalRangeTravelled), 0);
-            eventList.addEvents(
-                {
-                    relativeToCheckpointTime: 0,
-                    duration: maxProjectileTravelTime
-                },
-                eventList.allSideIds,
-                Event.TraceEvent(
-                    projectiles.map((projectile) => ({
-                        srcPos: projectile.srcPos,
-                        dstPos: projectile.finalPos,
-                        distanceTravelled: projectile.distanceTravelled,
-                        maxRange: projectile.maxRange,
-                        length: round.resolveLength,
-                        velocity: projectile.velocity,
-                        intensity: round.resolveIntensity,
-                        rangeFallOff: round.resolveRangeFallOff
-                    })),
-                    onTarget
-                ),
-                Event.UnitsChangeEvent(this)
-            );
-            eventList.addEvents(
-                {
-                    relativeToEndOfLastEvent: FIRE_ADDITIONAL_SIMULATION_TIME,
-                    duration: 1000
-                },
-                [this.sideId],
-                Event.CameraEvent(worldPoses[0])
-            );
-
-            projectiles.forEach((projectile) => {
-                round.explosion?.explode(game, projectile.finalPos, projectile.dirVec, eventList);
-            });
-        }T
-         */
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     throw(game: Game, worldPos: Vec2, _messageRouter: MessageRouter): void {
-        console.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
+        this.logger.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
-        return Clamp(baseAccuracy, 0, 100);
+        return clamp(baseAccuracy, 0, 100);
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 
     calcThrowAccuracy(baseAccuracy: number): number {
-        return Clamp(baseAccuracy, 0, 100);
+        return clamp(baseAccuracy, 0, 100);
         // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
     }
 

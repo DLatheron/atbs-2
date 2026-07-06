@@ -7,6 +7,7 @@ import { ImageManager } from "./game/ImageManager.js";
 import { UnitRecipeManager } from "./game/UnitRecipeManager.js";
 import { ItemRecipeManager } from "./game/ItemRecipeManager.js";
 import { FurnitureRecipeManager } from "./game/FurnitureRecipeManager.js";
+import { MaterialManager } from "./game/MaterialManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -20,6 +21,9 @@ export async function createApp(): Promise<Application> {
 
     const terrainManager = TerrainManager.GetSingleton();
     await terrainManager.loadTerrain();
+
+    const materialManager = MaterialManager.GetSingleton();
+    await materialManager.loadMaterials();
 
     const mapRecipeManager = MapRecipeManager.GetSingleton();
     await mapRecipeManager.loadWorldMaps();
@@ -38,38 +42,12 @@ export async function createApp(): Promise<Application> {
 
     app.locals.imageManager = imageManager;
     app.locals.terrainManager = terrainManager;
+    app.locals.materialManager = materialManager;
     app.locals.mapRecipeManager = mapRecipeManager;
     app.locals.unitRecipeManager = unitRecipeManager;
     app.locals.itemRecipeManager = itemRecipeManager;
     app.locals.furnitureRecipeManager = furnitureRecipeManager;
     app.locals.scenarioRecipeManager = scenarioRecipeManager;
-
-    /**
-     * Temporary Test Code
-     */
-    // const itemManager = new ItemManager(itemRecipeManager);
-    // const item = itemManager.createItem("m4+m203.gun", {});
-    // console.dir(item, { depth: null, colors: true });
-    // console.info(
-    //     "Sub Items",
-    //     item.subItems.map(({ quantity, id }) => `${quantity}x ${id}`)
-    // );
-    // console.info(
-    //     "All items",
-    //     item.allItems.map(({ quantity, id }) => `${quantity}x ${id}`)
-    // );
-    // console.info("Empty weight", item.emptyWeight, "kg");
-    // console.info("Total weight", item.weight, "kg");
-    // console.dir({ fireables: item.getFireables.map(({ quantity, id }) => `${quantity}x ${id}`) });
-    // console.dir({ compatibleAmmoIds: item.getSlotContents("0").compatibleAmmoIds });
-    // console.dir({ compatibleAmmoIds: item.getSlotContents("1").compatibleAmmoIds });
-
-    // const ammo = itemManager.createItem("m16-20.magazine", {});
-    // const removedAmmo = item.getSlotContents("0").load(ammo);
-    // console.info("Loading:", removedAmmo);
-    // console.info("Loading:", item.getSlotContents("0").load(removedAmmo!));
-
-    // console.info("Summary", item.getItemSummary());
 
     return app;
 }

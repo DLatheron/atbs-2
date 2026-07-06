@@ -1,10 +1,32 @@
-import { Vec2 } from "@atbs/maths";
+import { Colour, DebugGraphic, DebugGraphicType, PathSegment, Vec2 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
-import { Unit } from "./Unit.js";
+import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
 import { Tracer } from "@atbs/shared-data";
+import { Logger, LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
+import { isFurniture } from "./Furniture.js";
+import { GridRayTraceHitResult } from "./GridRayTrace.js";
+import { IRayCast } from "./IRayCast.js";
+import { ImageManager } from "./ImageManager.js";
+import { PenetrationSystem } from "./PenetrationSystem.js";
+import { config } from "../config/config.schema.js";
+
+interface CollisionEvent extends Priority, GridRayTraceHitResult {
+    projectile: Projectile;
+}
+
+export class CollisionEventQueue extends PriorityQueue<CollisionEvent> {
+    constructor() {
+        super(LowestFirst);
+    }
+}
+
+export interface Impact {
+    pos: Vec2;
+    time: number;
+}
 
 export interface ProjectileProps {
     game: Game;
@@ -17,24 +39,38 @@ export interface ProjectileProps {
     projectileRecipe: ProjectileRecipe;
 }
 
-export class Projectile {
+export class Projectile implements IRayCast {
+    static readonly Logger: Logger = new Logger("Projectile", config.logLevels?.projectile);
+
     private readonly _props: ProjectileProps;
 
     private _srcPos: Vec2;
     private _dstPos: Vec2;
+    private _maxRange: number;
+    private _directionVector: Vec2;
     private _velocity: number;
+    private _penetration: number;
+    private _segments: PathSegment[];
 
-    private _impact?: {
-        time: number;
-        position: Vec2;
-    };
+    private _impact?: Impact;
 
     constructor(props: ProjectileProps) {
         this._props = props;
 
         this._srcPos = new Vec2(props.srcPos);
-        this._dstPos = this.srcPos.add(this.directionVector.scale(this.maxRange));
-        this._velocity = props.projectileRecipe.visual.velocity;
+        this._dstPos = this.srcPos.add(
+            props.directionVector.scale(props.projectileRecipe.maxRange)
+        );
+        this._maxRange = props.projectileRecipe.maxRange;
+        this._directionVector = props.directionVector;
+        this._velocity = props.projectileRecipe.velocity;
+        this._penetration = PenetrationSystem.calcInitialEnergy(this);
+        this._segments = [
+            {
+                pos: props.srcPos,
+                time: 0
+            }
+        ];
 
         this._impact = undefined;
     }
@@ -68,37 +104,308 @@ export class Projectile {
     }
 
     get directionVector(): Vec2 {
-        return this._props.directionVector;
+        return this._directionVector;
     }
 
     get maxRange(): number {
-        return this._props.projectileRecipe.maxRange;
+        return this._maxRange;
     }
 
     get velocity(): number {
         return this._velocity;
     }
 
-    get maxPenetration(): number {
-        return this._props.projectileRecipe.penetration;
+    set velocity(value: number) {
+        this._velocity = value;
     }
 
-    get impact():
-        | {
-              time: number;
-              position: Vec2;
-          }
-        | undefined {
+    get penetration(): number {
+        return this._penetration;
+    }
+
+    set penetration(value: number) {
+        this._penetration = Math.max(value, 0);
+    }
+
+    get life(): number {
+        return this.penetration;
+    }
+
+    set life(value: number) {
+        this.penetration = value;
+    }
+
+    get isRayAlive(): boolean {
+        return this.penetration > 0;
+    }
+
+    get segments(): PathSegment[] {
+        return this._segments;
+    }
+
+    get impact(): Impact | undefined {
         return this._impact;
     }
 
+    set impact(value: Impact | undefined) {
+        this._impact = value;
+    }
+
+    get mass(): number {
+        return this._props.projectileRecipe.mass;
+    }
+
+    get hardness(): number {
+        return this._props.projectileRecipe.hardness;
+    }
+
+    get shape(): number {
+        return this._props.projectileRecipe.shape;
+    }
+
+    get stability(): number {
+        return this._props.projectileRecipe.stability;
+    }
+
+    get bounce(): number {
+        return this._props.projectileRecipe.bounce;
+    }
+
+    changeDirection(newDirection: Vec2) {
+        this._dstPos = this.srcPos.add(newDirection.scale(this.maxRange));
+        this._directionVector = newDirection;
+    }
+
+    /** Move the ray origin off a surface to avoid immediately re-hitting it after ricochet. */
+    nudgeFromSurface(distance: number) {
+        this._srcPos = this._srcPos.add(this._directionVector.scale(distance));
+        this._dstPos = this._srcPos.add(this._directionVector.scale(this.maxRange));
+    }
+
+    calculateTimeTo(pos: Vec2): number {
+        const length = pos.sub(this.srcPos).length;
+        return (length / this.velocity) * 1000;
+    }
+
     getTracer(): Tracer {
+        if (this.impact) {
+            Projectile.Logger.info(`Commit impact segment ${this.impact.time}:${this.impact.pos}`);
+            this.commitSegmentTo(this.impact.time, this.impact.pos);
+        } else {
+            const previousTime = this.segments[this.segments.length - 1].time;
+            const endPos = this.dstPos;
+            const timeAtEnd = this.calculateTimeTo(endPos);
+
+            Projectile.Logger.info(`Commit end segment ${timeAtEnd}:${endPos}`);
+            this.commitSegmentTo(previousTime + timeAtEnd, endPos);
+        }
+
+        const { velocity } = this;
+        const {
+            headColour,
+            headRadiusInPixels,
+            trailColour,
+            trailLengthInPixels,
+            rangeFalloffPower
+        } = this._props.projectileRecipe.visual;
+        const trailLengthInMs = (trailLengthInPixels / velocity) * 1000;
+        const maxRangeInMs = (this.maxRange / velocity) * 1000;
+
         return {
-            srcPos: this.srcPos,
-            dstPos: this.dstPos,
-            flightTimeInMs: (this.maxRange / this.velocity) * 1000,
-            maxRange: this.maxRange,
-            visual: this._props.projectileRecipe.visual
+            segments: this.segments,
+            headRadiusInPixels,
+            headColour,
+            trailLengthInMs,
+            trailColour,
+            maxRangeInMs,
+            rangeFalloffPower
         };
+    }
+
+    commitSegmentTo(time: number, pos: Vec2): void {
+        this._segments.push({ pos, time });
+
+        // Reset projectile for next segment.
+        this._srcPos = pos;
+        this._impact = undefined;
+    }
+
+    private static queueRicochetRay(
+        map: WorldMap,
+        projectile: Projectile,
+        atTime: number,
+        eventQueue: CollisionEventQueue,
+        debugGraphics?: DebugGraphic[]
+    ): void {
+        const hitResult = map.castRay(projectile, debugGraphics);
+        if (hitResult) {
+            const timeTo = projectile.calculateTimeTo(hitResult.pos);
+            const cumulativeTime = atTime + timeTo;
+
+            Projectile.Logger.dir(
+                `Projectile: ${projectile.index} ricocheted, next hit in ${timeTo}ms at ${hitResult.pos}`
+            );
+            projectile.impact = { pos: hitResult.pos, time: cumulativeTime };
+
+            eventQueue.push({
+                priority: cumulativeTime,
+                projectile,
+                ...hitResult
+            });
+        }
+
+        debugGraphics?.push({
+            type: DebugGraphicType.enum.line,
+            srcWorldPos: projectile.srcPos,
+            dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
+            strokeColour: Colour.Magenta,
+            strokeThickness: 2,
+            lineDash: [4, 2]
+        });
+    }
+
+    static ProcessProjectiles(
+        projectiles: Projectile[],
+        map: WorldMap,
+        debugGraphics?: DebugGraphic[]
+    ) {
+        const imageManager = ImageManager.GetSingleton();
+
+        // Sort so that fastest projectiles are first.
+        projectiles.sort((a, b) => b.velocity - a.velocity);
+
+        const eventQueue = new CollisionEventQueue();
+
+        // Determine the initial impact of every projectile.
+        for (const projectile of projectiles) {
+            const hitResult = map.castRay(projectile, debugGraphics);
+
+            if (hitResult) {
+                const timeTo = projectile.calculateTimeTo(hitResult.pos);
+                Projectile.Logger.dir(
+                    `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
+                );
+                projectile.impact = { pos: hitResult.pos, time: timeTo };
+
+                eventQueue.push({
+                    priority: timeTo,
+                    projectile,
+                    ...hitResult
+                });
+            }
+
+            debugGraphics?.push({
+                type: DebugGraphicType.enum.line,
+                srcWorldPos: projectile.srcPos,
+                dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
+                strokeColour: Colour.White,
+                strokeThickness: 2
+            });
+        }
+
+        if (eventQueue.isEmpty) {
+            return;
+        }
+
+        let event: CollisionEvent;
+
+        while ((event = eventQueue.pop())) {
+            const { priority: atTime, material, exitedMaterial, owner, pos, projectile } = event;
+            Projectile.Logger.dir({ priority: atTime, pos });
+
+            if (material) {
+                Projectile.Logger.info(`Commit material entry segment ${atTime}:${pos}`);
+                projectile.commitSegmentTo(atTime, pos);
+
+                if (isFurniture(owner)) {
+                    Projectile.Logger.info("Collided with furniture!", owner.id);
+                } else if (isUnit(owner)) {
+                    Projectile.Logger.info("Collided with unit!", owner.id);
+                }
+
+                const entryOutcome = PenetrationSystem.resolveMaterialEntry(
+                    map,
+                    imageManager,
+                    projectile,
+                    material,
+                    pos,
+                    debugGraphics
+                );
+
+                if (entryOutcome === "stopped") {
+                    projectile.impact = { pos, time: atTime };
+                    continue;
+                }
+
+                if (entryOutcome === "ricocheted") {
+                    Projectile.queueRicochetRay(map, projectile, atTime, eventQueue, debugGraphics);
+                    continue;
+                }
+
+                const nextChange = map.stepRay(projectile, material, debugGraphics);
+                if (nextChange) {
+                    debugGraphics?.push({
+                        type: DebugGraphicType.enum.line,
+                        srcWorldPos: pos,
+                        dstWorldPos: nextChange.pos,
+                        strokeColour: Colour.Red,
+                        strokeThickness: 2,
+                        lineDash: [2, 2]
+                    });
+
+                    const timeTo = projectile.calculateTimeTo(nextChange.pos);
+                    const cumulativeTime = atTime + timeTo;
+
+                    if (projectile.life > 0) {
+                        eventQueue.push({
+                            priority: cumulativeTime,
+                            projectile,
+                            ...nextChange
+                        });
+                    } else {
+                        projectile.impact = { pos: nextChange.pos, time: cumulativeTime };
+                    }
+                }
+            } else {
+                Projectile.Logger.info(`Commit material exit segment ${atTime}:${pos}`);
+                projectile.commitSegmentTo(atTime, pos);
+
+                if (exitedMaterial) {
+                    PenetrationSystem.resolveMaterialExit(
+                        map,
+                        imageManager,
+                        projectile,
+                        exitedMaterial,
+                        pos,
+                        debugGraphics
+                    );
+                }
+
+                const hitResult = map.castRay(projectile, debugGraphics);
+                if (hitResult) {
+                    const timeTo = projectile.calculateTimeTo(hitResult.pos);
+                    const cumulativeTime = atTime + timeTo;
+
+                    Projectile.Logger.dir(
+                        `Projectile: ${projectile.index} took ${timeTo}ms to hit ${hitResult.pos}`
+                    );
+                    projectile.impact = { pos: hitResult.pos, time: cumulativeTime };
+
+                    eventQueue.push({
+                        priority: cumulativeTime,
+                        projectile,
+                        ...hitResult
+                    });
+                }
+
+                debugGraphics?.push({
+                    type: DebugGraphicType.enum.line,
+                    srcWorldPos: projectile.srcPos,
+                    dstWorldPos: projectile.impact?.pos ?? projectile.dstPos,
+                    strokeColour: Colour.White,
+                    strokeThickness: 2
+                });
+            }
+        }
     }
 }

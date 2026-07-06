@@ -60,13 +60,31 @@ function rgbToHsl({ r, g, b }: RGBColor): HSLColor {
     };
 }
 
+const perturbationType = ["ricochet", "entry"] as const;
+export const PerturbationType = z.enum(perturbationType);
+export type PerturbationType = z.infer<typeof PerturbationType>;
+
+export const MaterialPerturbation = z.object({
+    chance: z.number().min(0).max(100),
+    angleInDegrees: z.number().min(0).max(90),
+    angularFalloffPower: z.number().positive()
+});
+export type MaterialPerturbation = z.infer<typeof MaterialPerturbation>;
+
 export const MaterialRecipe = z
     .object({
         id: MaterialId,
         category: z.string().nonempty(),
         rgb: RGBColor.optional(),
         hsl: HSLColor.optional(),
-        densityMap: MaterialDensityMap
+        densityMap: MaterialDensityMap,
+        perturbation: z.partialRecord(PerturbationType, MaterialPerturbation).optional(),
+
+        hardness: z.number().describe("Resistance to indentation"),
+        toughness: z.number().describe("Resistance to fracture"),
+        roughness: z.number().describe("Affects ricochet randomness"),
+        elasticity: z.number().describe("How much energy is returned"),
+        density: z.number().describe("Affect penetration distance")
     })
     .refine((data) => data.rgb != null || data.hsl != null, {
         error: "Provide at least one of rgb or hsl"
@@ -104,6 +122,30 @@ export class Material {
 
     get densityMap(): MaterialDensityMap {
         return this._recipe.densityMap;
+    }
+
+    get hardness(): number {
+        return this._recipe.hardness;
+    }
+
+    get toughness(): number {
+        return this._recipe.toughness;
+    }
+
+    get roughness(): number {
+        return this._recipe.roughness;
+    }
+
+    get elasticity(): number {
+        return this._recipe.elasticity;
+    }
+
+    get density(): number {
+        return this._recipe.density;
+    }
+
+    getPerturbation(type: PerturbationType): MaterialPerturbation | undefined {
+        return this._recipe?.perturbation?.[type];
     }
 
     getDensityForType(type?: MaterialDensityType): number {

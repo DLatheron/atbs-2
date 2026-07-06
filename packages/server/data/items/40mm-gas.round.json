@@ -11,14 +11,26 @@
     "weight": 0.368,
     "projectile": {
         "maxRange": 3000,
-        "penetration": 0,
+        "perturbation": 100,
         "visual": {
-            "intensity": 1,
-            "velocity": 400,
-            "length": 10,
-            "rangeFallOff": 10
+            "velocityInPps": 600,
+            "headColour": { "r": 0, "g": 255, "b": 0, "a": 1 },
+            "headRadiusInPixels": 4,
+            "trailColour": { "r": 0, "g": 255, "b": 0, "a": 1 },
+            "trailLengthInPixels": 20,
+            "rangeFalloffPower": 10
         },
         "damage": { "default": 1 },
+
+        "mass": 0.19,
+        "velocity": 84,
+        "diameter": 40,
+        "hardness": 1,
+        "shape": 0,
+        "stability": 0.25,
+        "bounce": 1,
+        "integrity": 0.2,
+
         "explosion": {
             "type": "gas",
             "particles": [12, 8, 4],

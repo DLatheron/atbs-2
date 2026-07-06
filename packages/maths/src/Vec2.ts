@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Z } from "zod-class";
-import { Clamp, Lerp } from "./Maths.js";
-import { Orientation } from "./Orientation.js";
+import { clamp, lerp, generateRandomBetween } from "./Maths.js";
+import { degreesToRadians, Orientation } from "./Orientation.js";
 import { TilePos } from "./TilePos.js";
 
 export const IVec2 = z.object({
@@ -142,6 +142,27 @@ export class Vec2
         });
     }
 
+    reflect(n: Vec2): Vec2 {
+        const dot = this.dot(n) * 2;
+
+        return this.sub(n.scale(dot));
+    }
+
+    perturbVector(angleInDegrees: number, power: number = 1): Vec2 {
+        const random = generateRandomBetween(-1, 1);
+        const randomPower =
+            power !== 1 ? Math.pow(Math.abs(random), power) * Math.sign(random) : random;
+        const angleInRadians = degreesToRadians(angleInDegrees);
+        const randomAngleInRadians = angleInRadians * randomPower;
+        console.info({ random, randomPower, angleInRadians, randomAngleInRadians });
+
+        return this.rotate(randomAngleInRadians);
+    }
+
+    calcImpactAngle(normal: Vec2): number {
+        return -this.dot(normal);
+    }
+
     /**
      * Clamps a vector between the specified limits.
      * @param limits Min/max limits.
@@ -149,8 +170,8 @@ export class Vec2
      */
     clamp(limits: { min: IVec2; max: IVec2 }, upperThreshold = 1): Vec2 {
         return new Vec2(
-            Clamp(this.x, limits.min.x, limits.max.x - upperThreshold),
-            Clamp(this.y, limits.min.y, limits.max.y - upperThreshold)
+            clamp(this.x, limits.min.x, limits.max.x - upperThreshold),
+            clamp(this.y, limits.min.y, limits.max.y - upperThreshold)
         );
     }
 
@@ -200,6 +221,35 @@ export class Vec2
         }
     }
 
+    /** Picks the 8-way direction that best matches `direction`. */
+    static nearestOrientation(direction: Vec2): Orientation {
+        const orientations = [
+            Orientation.NORTH,
+            Orientation.NORTH_EAST,
+            Orientation.EAST,
+            Orientation.SOUTH_EAST,
+            Orientation.SOUTH,
+            Orientation.SOUTH_WEST,
+            Orientation.WEST,
+            Orientation.NORTH_WEST
+        ];
+
+        const unit = direction.normalise();
+        let bestOrientation = Orientation.NORTH;
+        let bestDot = Number.NEGATIVE_INFINITY;
+
+        for (const orientation of orientations) {
+            const step = Vec2.StepInDirection(orientation);
+            const dot = unit.dot(step);
+            if (dot > bestDot) {
+                bestDot = dot;
+                bestOrientation = orientation;
+            }
+        }
+
+        return bestOrientation;
+    }
+
     toString(): string {
         return `(${this.x}, ${this.y})`;
     }
@@ -218,8 +268,8 @@ export class Vec2
         }
     }
 
-    static Interpolate(a: IVec2, b: IVec2, t: number, interpolateFn = Lerp): Vec2 {
-        t = Clamp(t, 0, 1);
+    static Interpolate(a: IVec2, b: IVec2, t: number, interpolateFn = lerp): Vec2 {
+        t = clamp(t, 0, 1);
 
         return new Vec2(interpolateFn(a.x, b.x, t), interpolateFn(a.y, b.y, t));
     }
@@ -229,7 +279,7 @@ export class Vec2
             return a;
         }
 
-        const dot = Clamp(a.dot(b), -1.0, 1.0);
+        const dot = clamp(a.dot(b), -1.0, 1.0);
 
         const theta = Math.acos(dot) * t;
         const relativeVec = b.sub(a.scale(dot)).normalise();

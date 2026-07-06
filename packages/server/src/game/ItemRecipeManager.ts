@@ -2,10 +2,14 @@ import { ItemId } from "@atbs/shared-data";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 import { ItemRecipe } from "./ItemRecipe.js";
+import { config } from "../config/config.schema.js";
+import { Logger } from "@atbs/misc";
 
 const ItemDirectory = "./data/items";
 
 export class ItemRecipeManager {
+    static readonly Logger: Logger = new Logger("ItemRecipeManager", config.logLevels?.itemManager);
+
     private readonly _itemRecipeMap = new Map<ItemId, ItemRecipe>();
 
     constructor() {
@@ -30,11 +34,11 @@ export class ItemRecipeManager {
                 const rawRecipe = JSON.parse(fileContents);
                 const recipe = ItemRecipe.parse(rawRecipe);
 
-                console.info(`Loaded Item recipe: ${fullPath}`);
+                ItemRecipeManager.Logger.info(`Loaded Item recipe: ${fullPath}`);
 
                 this.addRecipe(recipe);
             } catch (error) {
-                console.error(`ERROR Loading Item recipe: ${file}`, error);
+                ItemRecipeManager.Logger.error(`ERROR Loading Item recipe: ${file}`, error);
                 throw error;
             }
         }

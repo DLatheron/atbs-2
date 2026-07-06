@@ -1,5 +1,8 @@
 import { Aabb, Vec2 } from "@atbs/maths";
-import { Material } from "./Material.js";
+import type { Material } from "./Material.js";
+import type { Furniture } from "./Furniture.js";
+import type { Unit } from "./Unit.js";
+import type { Tile } from "./Tile.js";
 
 const EPSILON = 1e-9;
 
@@ -11,7 +14,11 @@ export interface Grid {
 
 export interface GridRayTraceHitResult {
     pos: Vec2;
-    material: Material;
+    tile: Tile;
+    material?: Material;
+    /** Set when the ray leaves a material volume (exit point). */
+    exitedMaterial?: Material;
+    owner?: Furniture | Unit;
 }
 export type GridRayTraceResult = GridRayTraceHitResult | undefined;
 
@@ -294,8 +301,8 @@ export function traceGridRay(
         const hit = cellHandler(cellWalk);
         if (hit) {
             return {
-                pos: cellWalk.cellOrigin.add(hit.pos).add(topLeft),
-                material: hit.material
+                ...hit,
+                pos: cellWalk.cellOrigin.add(hit.pos).add(topLeft)
             };
         }
     }

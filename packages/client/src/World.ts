@@ -20,7 +20,13 @@ import { CanvasLoopProps } from "./components/CanvasLoop";
 import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
-import { DebugGraphic, DebugGraphicType, Orientation, OrientationToRadians } from "@atbs/maths";
+import {
+    DebugGraphic,
+    DebugGraphicType,
+    Orientation,
+    OrientationToRadians,
+    PathSegment
+} from "@atbs/maths";
 import { ImageCache } from "./ImageCache";
 import { Timer } from "./Timer";
 import { IInteractionHandler } from "./IInteractionHandler";
@@ -32,6 +38,7 @@ import {
     DebugDrawArc,
     DebugDrawBox,
     DebugDrawLine,
+    DebugDrawPath,
     DebugDrawPoint,
     DebugDrawText,
     DrawLaserSight,
@@ -39,7 +46,6 @@ import {
     DrawRangeSight
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
-import { VisualTracer } from "./Tracer";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -87,7 +93,6 @@ export class World {
     private _throwCallback: ThrowCallback;
     private _fireModeEx: FireModeEx;
     private _frameTime: number;
-    private _tracers?: Tracer[];
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
     private _debugGraphics: DebugGraphic[] | null;
@@ -128,7 +133,6 @@ export class World {
         };
         this._fireModeEx = FireModeEx.enum.aimed;
         this._frameTime = 0;
-        this._tracers = undefined;
         this._renderPlugins = [];
         this._drawSights = false;
         this._debugGraphics = null;
@@ -186,7 +190,10 @@ export class World {
 
     set unitWeapon(value: FireModeItemSummary | null) {
         this._unitWeapon = value;
-        this._unitWeaponIndex = 0;
+
+        if (this.unitWeaponIndex > (this._unitWeapon?.weapons.length ?? 0)) {
+            this._unitWeaponIndex = 0;
+        }
     }
 
     get unitWeaponIndex(): number {
@@ -347,16 +354,22 @@ export class World {
 
     set debugGraphics(value: DebugGraphic[] | null) {
         this._debugGraphics = value;
+
+        // Sort out base time of path segments
+        value?.forEach((graphic) => {
+            if (graphic.type === DebugGraphicType.enum.path) {
+                graphic.segments.forEach((segment: PathSegment) => ({
+                    ...segment,
+                    time: segment.time + this.frameTime
+                }));
+            }
+        });
     }
 
     setTracers(tracers: Tracer[], completeCallback: () => void): void {
         // TODO: Reset the simulation time.
 
-        this._tracers = tracers;
-
-        const visualTracers = this._tracers.map(
-            (trace) => new VisualTracer(this._timer.time, trace)
-        );
+        const { time: startTime } = this._timer;
 
         this._timer.resume();
 
@@ -375,43 +388,16 @@ export class World {
                 return "Tracers";
             },
 
-            update({ time }: RenderPluginUpdateProps) {
-                if (visualTracers) {
-                    // Work backwards through the list so we can delete them safely whilst iterating.
-                    for (let i = visualTracers.length - 1; i >= 0; i--) {
-                        const projectile = visualTracers[i];
+            render({ camera, context, time }: RenderPluginRenderProps) {
+                let allComplete = true;
 
-                        const projectileAlive = projectile.update({
-                            simulationTime: time
-                        });
-
-                        if (!projectileAlive) {
-                            visualTracers.splice(i, 1);
-                        }
+                for (const tracer of tracers) {
+                    if (!DrawProjectile(camera, context, startTime, time, tracer)) {
+                        allComplete = false;
                     }
                 }
 
-                // // Only track the average position of the projectiles if it is the initial tracked trace event.
-                // if (projectiles.length && onTarget !== undefined) {
-                //     const averagePos = projectiles
-                //         .reduce((cumulativePos, projectile) => {
-                //             cumulativePos = cumulativePos.add(projectile.headPos);
-                //             return cumulativePos;
-                //         }, Vec2.Zero())
-                //         .divide(projectiles.length);
-
-                //     gameWorld.camera.interpolateToWorldPos(averagePos);
-                // }
-
-                return false;
-            },
-
-            render({ camera, context }: RenderPluginRenderProps) {
-                if (visualTracers.length > 0) {
-                    for (const { headPos, tailPos, intensity } of visualTracers) {
-                        DrawProjectile(camera, context, headPos, tailPos, intensity);
-                    }
-                } else {
+                if (allComplete) {
                     completionCallback();
                     return true;
                 }
@@ -591,7 +577,6 @@ export class World {
         const offset = new Vec2(tileSize / 2, tileSize / 2);
 
         this.renderTerrainAndFurniture(context, tileSize, scale, offset);
-        this.renderSight(context, time);
 
         // TODO: Render tracers...
         const renderProps: RenderPluginRenderProps = {
@@ -607,6 +592,7 @@ export class World {
         this._interactionHandler?.render?.(canvasLoopProps);
 
         this._renderDebugGraphics(renderProps);
+        this.renderSight(context, time);
 
         if (this._renderStarted) {
             this._renderStarted();
@@ -654,7 +640,21 @@ export class World {
                         graphic.srcWorldPos,
                         graphic.dstWorldPos,
                         graphic.strokeColour,
-                        graphic.strokeThickness
+                        graphic.strokeThickness,
+                        graphic.lineDash
+                    );
+                    break;
+
+                case DebugGraphicType.enum.path:
+                    DebugDrawPath(
+                        renderProps.camera,
+                        renderProps.context,
+                        renderProps.time,
+                        graphic.segments,
+                        graphic.trail,
+                        graphic.strokeColour,
+                        graphic.strokeThickness,
+                        graphic.lineDash
                     );
                     break;
 

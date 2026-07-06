@@ -1,0 +1,19 @@
+{
+    "id": "concrete.material",
+    "category": "furniture",
+    "rgb": {
+        "r": 128,
+        "g": 128,
+        "b": 128
+    },
+    "densityMap": {
+        "default": 10,
+        "eyeball": 100
+    },
+
+    "hardness": 0.85,
+    "toughness": 0.65,
+    "roughness": 0.4,
+    "elasticity": 0.25,
+    "density": 0.75
+}
