@@ -19,6 +19,9 @@ export class GameSocket {
     private readonly _clientId: ClientId;
 
     private _ws: WebSocket | null;
+    private _onClose: (() => void) | null = null;
+    private _intentionalClose = false;
+    private _abortCleanup: (() => void) | null = null;
 
     constructor(gameId: GameId, clientId: ClientId) {
         this._gameId = gameId;
@@ -47,8 +50,18 @@ export class GameSocket {
         );
         const ws = new WebSocket(url);
         this._ws = ws;
+        this._onClose = options?.onClose ?? null;
+        this._intentionalClose = false;
 
-        // const ctx: LobbySocketClientContext = { send };
+        if (options?.signal) {
+            const onAbort = () => this.disconnect();
+            if (options.signal.aborted) {
+                onAbort();
+                return this;
+            }
+            options.signal.addEventListener("abort", onAbort, { once: true });
+            this._abortCleanup = () => options.signal?.removeEventListener("abort", onAbort);
+        }
 
         ws.onopen = () => {
             options?.onOpen?.();
@@ -59,7 +72,13 @@ export class GameSocket {
         };
 
         ws.onclose = () => {
-            options?.onClose?.();
+            if (this._intentionalClose) {
+                return;
+            }
+
+            this._cleanupConnectionState();
+            this._onClose?.();
+            this._onClose = null;
         };
 
         ws.onerror = (error) => {
@@ -73,13 +92,28 @@ export class GameSocket {
     }
 
     disconnect(): void {
-        if (this._ws) {
-            this._ws.onopen = null;
-            this._ws.onmessage = null;
-            this._ws.onclose = null;
-            this._ws.close();
-            this._ws = null;
+        if (!this._ws) {
+            return;
         }
+
+        this._intentionalClose = true;
+        const ws = this._ws;
+        this._ws = null;
+
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        ws.close();
+
+        this._cleanupConnectionState();
+        this._onClose?.();
+        this._onClose = null;
+    }
+
+    private _cleanupConnectionState(): void {
+        this._abortCleanup?.();
+        this._abortCleanup = null;
     }
 
     send(message: ClientToServerMessage) {

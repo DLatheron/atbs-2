@@ -10,6 +10,7 @@ import {
 
 import { Client } from "./Client.js";
 import { ClientManager } from "./ClientManager.js";
+import { gameManager } from "./GameManager.js";
 import type { PhaseHandler } from "./phaseHandlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phaseHandlers/LobbyPhaseHandler.js";
 import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
@@ -72,6 +73,7 @@ export class Game {
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
     private _scenario: Scenario | null;
+    private _isDestroying = false;
 
     private readonly _playState: {
         sides: Side[];
@@ -375,7 +377,14 @@ export class Game {
      * Returns `true` if the client was removed, otherwise `false`.
      */
     removeClient(clientId: ClientId): boolean {
-        return this._clientManager.removeClient(clientId);
+        const removed = this._clientManager.removeClient(clientId);
+
+        if (removed && this.numClients === 0 && !this._isDestroying) {
+            this.destroyGame();
+            gameManager.removeGame(this.gameId);
+        }
+
+        return removed;
     }
 
     getClient(clientId: ClientId) {
@@ -444,6 +453,11 @@ export class Game {
     }
 
     destroyGame() {
+        if (this._isDestroying) {
+            return;
+        }
+
+        this._isDestroying = true;
         this.logger.info("DDD Destroying game", this.gameId);
 
         if (config.cleanupDamageCacheOnGameDestroy) {
@@ -455,7 +469,7 @@ export class Game {
 
             client.forceDisconnect();
 
-            this.removeClient(client.id);
+            this._clientManager.removeClient(client.id);
         }
     }
 

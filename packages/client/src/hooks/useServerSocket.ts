@@ -131,14 +131,46 @@ export function useServerSocket(options: ServerSocketOptions) {
 
     const gameSocketRef = useRef<GameSocket>(null);
     const abortControllerRef = useRef<AbortController>(null);
+    const connectionGenerationRef = useRef(0);
+    const connectAttemptInFlightRef = useRef(false);
+
+    const handleCreateGameRef = useRef<(clientId: ClientId) => Promise<void>>(async () => {});
+    const handleJoinGameRef =
+        useRef<(gameId: GameId, clientId: ClientId) => Promise<void>>(async () => {});
+
+    const isCurrentConnection = useCallback((generation: number) => {
+        return generation === connectionGenerationRef.current;
+    }, []);
+
+    const beginConnectAttempt = useCallback(() => {
+        connectionGenerationRef.current += 1;
+        connectAttemptInFlightRef.current = true;
+
+        abortControllerRef.current?.abort();
+        gameSocketRef.current?.disconnect();
+        gameSocketRef.current = null;
+        setConnected(false);
+
+        return connectionGenerationRef.current;
+    }, []);
+
+    const clearConnectAttemptInFlight = useCallback(
+        (generation: number) => {
+            if (isCurrentConnection(generation)) {
+                connectAttemptInFlightRef.current = false;
+            }
+        },
+        [isCurrentConnection]
+    );
 
     /**
      * Create a socket to the server.
      */
     const createSocket = useCallback(
-        async ({
+        ({
             gameId,
             clientId,
+            generation,
             onOpen,
             onClose,
             onMessage,
@@ -146,11 +178,12 @@ export function useServerSocket(options: ServerSocketOptions) {
         }: {
             gameId: GameId;
             clientId: ClientId;
+            generation: number;
             onOpen: (gameSocket: GameSocket) => void;
             onClose: (unexpected: boolean) => void;
             onMessage: (data: unknown) => void;
             signal?: AbortSignal;
-        }): Promise<GameSocket | null> => {
+        }): GameSocket => {
             if (!gameId || !clientId) {
                 throw new Error("gameId and clientId must set to create a socket");
             }
@@ -160,24 +193,36 @@ export function useServerSocket(options: ServerSocketOptions) {
 
             gameSocket.connect({
                 onOpen: () => {
-                    if (!signal?.aborted) {
-                        onOpen?.(gameSocket);
+                    if (!isCurrentConnection(generation) || signal?.aborted) {
+                        return;
                     }
+
+                    onOpen(gameSocket);
                 },
                 onClose: () => {
+                    if (!isCurrentConnection(generation)) {
+                        return;
+                    }
+
                     if (signal?.aborted) {
-                        onClose?.(false);
+                        onClose(false);
                     } else {
-                        onClose?.(true);
+                        onClose(true);
                     }
                 },
-                onMessage,
+                onMessage: (data) => {
+                    if (!isCurrentConnection(generation)) {
+                        return;
+                    }
+
+                    onMessage(data);
+                },
                 signal
             });
 
             return gameSocket;
         },
-        []
+        [isCurrentConnection]
     );
 
     /**
@@ -186,6 +231,8 @@ export function useServerSocket(options: ServerSocketOptions) {
     const handleCreateGame = useCallback(
         async (clientId: ClientId) => {
             console.info("Attempting to create game");
+
+            const generation = beginConnectAttempt();
 
             const abortController = new AbortController();
             abortControllerRef.current = abortController;
@@ -196,60 +243,96 @@ export function useServerSocket(options: ServerSocketOptions) {
                     name: clientName,
                     options: { signal: abortController.signal }
                 });
+
+                if (!isCurrentConnection(generation)) {
+                    return;
+                }
+
                 setSearchParams((searchParams) => {
                     searchParams.set("game-id", createdGameId);
                     return searchParams;
                 });
                 console.info(`Created game with id: ${createdGameId}`);
 
-                const gameSocket = await createSocket({
+                const gameSocket = createSocket({
                     gameId: createdGameId,
                     clientId,
+                    generation,
                     onOpen: (gameSocket: GameSocket) => {
                         console.info("Socket connected");
                         setConnected(true);
+                        clearConnectAttemptInFlight(generation);
                         onConnected?.(gameSocket);
                     },
                     onClose: (unexpected) => {
                         console.info("Socket closed", unexpected && "unexpectedly");
                         setConnected(false);
+                        clearConnectAttemptInFlight(generation);
                         onDisconnected?.(unexpected);
                     },
                     onMessage: (data: unknown) => onMessage?.(data),
                     signal: abortController.signal
                 });
+
+                if (!isCurrentConnection(generation)) {
+                    gameSocket.disconnect();
+                    return;
+                }
+
                 gameSocketRef.current = gameSocket;
             } catch (error) {
-                console.error("Failed to create game because:", error);
+                clearConnectAttemptInFlight(generation);
+                if (isCurrentConnection(generation)) {
+                    console.error("Failed to create game because:", error);
+                }
                 throw error;
             }
         },
-        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage, clientName]
+        [
+            beginConnectAttempt,
+            clearConnectAttemptInFlight,
+            createSocket,
+            isCurrentConnection,
+            setSearchParams,
+            onConnected,
+            onDisconnected,
+            onMessage,
+            clientName
+        ]
     );
+
+    handleCreateGameRef.current = handleCreateGame;
 
     /**
      * Retry logic for creating a new game.
      */
     useEffect(() => {
-        let createGameTimer: number;
-
-        if (!connected && mode === "create" && clientId) {
-            const createGame = () =>
-                handleCreateGame(clientId).then(() => {
-                    clearInterval(createGameTimer);
-                });
-
-            createGameTimer = window.setInterval(() => {
-                createGame();
-            }, createGameRetryIntervalInMs);
-
-            createGame();
+        if (connected || mode !== "create" || !clientId) {
+            return;
         }
 
+        let cancelled = false;
+
+        const tryCreateGame = () => {
+            if (cancelled || connectAttemptInFlightRef.current) {
+                return;
+            }
+
+            handleCreateGameRef
+                .current(clientId)
+                .catch((error) => {
+                    console.error("Create failed with", error);
+                });
+        };
+
+        const createGameTimer = window.setInterval(tryCreateGame, createGameRetryIntervalInMs);
+        tryCreateGame();
+
         return () => {
+            cancelled = true;
             clearInterval(createGameTimer);
         };
-    }, [connected, clientId, mode, handleCreateGame, createGameRetryIntervalInMs]);
+    }, [connected, clientId, mode, createGameRetryIntervalInMs]);
 
     /**
      * Handle joining an existing game.
@@ -257,6 +340,8 @@ export function useServerSocket(options: ServerSocketOptions) {
     const handleJoinGame = useCallback(
         async (gameId: GameId, clientId: ClientId) => {
             console.info("Attempting to join game");
+
+            const generation = beginConnectAttempt();
 
             const abortController = new AbortController();
             abortControllerRef.current = abortController;
@@ -268,77 +353,132 @@ export function useServerSocket(options: ServerSocketOptions) {
                     name: clientName,
                     options: { signal: abortController.signal }
                 });
+
+                if (!isCurrentConnection(generation)) {
+                    return;
+                }
+
                 setSearchParams((searchParams) => {
                     searchParams.set("game-id", joinedGameId);
                     return searchParams;
                 });
                 console.info(`Joined game with id: ${joinedGameId}`);
 
-                const gameSocket = await createSocket({
+                const gameSocket = createSocket({
                     gameId: joinedGameId,
                     clientId,
+                    generation,
                     onOpen: (gameSocket: GameSocket) => {
                         console.info("Socket connected");
                         setConnected(true);
+                        clearConnectAttemptInFlight(generation);
                         onConnected?.(gameSocket);
                     },
                     onClose: (unexpected) => {
                         console.info("Socket closed", unexpected && "unexpectedly");
                         setConnected(false);
+                        clearConnectAttemptInFlight(generation);
                         onDisconnected?.(unexpected);
                     },
                     onMessage: (data: unknown) => onMessage?.(data),
                     signal: abortController.signal
                 });
+
+                if (!isCurrentConnection(generation)) {
+                    gameSocket.disconnect();
+                    return;
+                }
+
                 gameSocketRef.current = gameSocket;
             } catch (error) {
-                console.error(`Failed to join game ${gameId} because:`, error);
+                clearConnectAttemptInFlight(generation);
+                if (isCurrentConnection(generation)) {
+                    console.error(`Failed to join game ${gameId} because:`, error);
+                }
                 throw error;
             }
         },
-        [createSocket, setSearchParams, onConnected, onDisconnected, onMessage, clientName]
+        [
+            beginConnectAttempt,
+            clearConnectAttemptInFlight,
+            createSocket,
+            isCurrentConnection,
+            setSearchParams,
+            onConnected,
+            onDisconnected,
+            onMessage,
+            clientName
+        ]
     );
+
+    handleJoinGameRef.current = handleJoinGame;
 
     /**
      * Retry logic for joining an existing game.
      */
     useEffect(() => {
-        let joinGameTimer: number;
-
-        if (!connected && mode === "join" && clientId && gameId) {
-            const joinGame = () => {
-                handleJoinGame(gameId, clientId)
-                    .then(() => {
-                        clearInterval(joinGameTimer);
-                    })
-                    .catch((error) => {
-                        console.error("Join failed with", error);
-                    });
-            };
-
-            joinGameTimer = window.setInterval(() => {
-                joinGame();
-            }, joinGameRetryIntervalInMs);
-
-            joinGame();
+        if (connected || mode !== "join" || !clientId || !gameId) {
+            return;
         }
 
+        let cancelled = false;
+
+        const tryJoinGame = () => {
+            if (cancelled || connectAttemptInFlightRef.current) {
+                return;
+            }
+
+            handleJoinGameRef
+                .current(gameId, clientId)
+                .catch((error) => {
+                    console.error("Join failed with", error);
+                });
+        };
+
+        const joinGameTimer = window.setInterval(tryJoinGame, joinGameRetryIntervalInMs);
+        tryJoinGame();
+
         return () => {
+            cancelled = true;
             clearInterval(joinGameTimer);
         };
-    }, [connected, gameId, clientId, mode, handleJoinGame, joinGameRetryIntervalInMs]);
+    }, [connected, gameId, clientId, mode, joinGameRetryIntervalInMs]);
 
     /**
      * On component unmount: close down the socket safely.
      */
     useEffect(() => {
         return () => {
+            connectionGenerationRef.current += 1;
             abortControllerRef.current?.abort();
 
             gameSocketRef.current?.disconnect();
             gameSocketRef.current = null;
         };
     }, []);
+
+    const leaveGame = useCallback(() => {
+        connectionGenerationRef.current += 1;
+        connectAttemptInFlightRef.current = false;
+
+        const hadSocket = gameSocketRef.current !== null;
+
+        abortControllerRef.current?.abort();
+        gameSocketRef.current?.disconnect();
+        gameSocketRef.current = null;
+
+        setSearchParams((searchParams) => {
+            searchParams.delete("mode");
+            searchParams.delete("game-id");
+            return searchParams;
+        });
+
+        setConnected(false);
+
+        if (!hadSocket) {
+            onDisconnected?.(false);
+        }
+    }, [onDisconnected, setSearchParams]);
 
     return {
         connected,
@@ -358,11 +498,6 @@ export function useServerSocket(options: ServerSocketOptions) {
             },
             [clientId, handleJoinGame]
         ),
-        leaveGame: () => {
-            abortControllerRef.current?.abort();
-            gameSocketRef.current?.disconnect();
-            setConnected(false);
-            onDisconnected?.(false);
-        }
+        leaveGame
     };
 }

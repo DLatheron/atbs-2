@@ -89,6 +89,11 @@ export class DamageCacheManager {
 
         const filePath = path.join(this._cacheDir, `${damagedImageId}.png`);
         writeFileSync(filePath, PNG.sync.write(clonedImage.png));
+
+        if (imageManager.exists(damagedImageId)) {
+            imageManager.removeImage(damagedImageId);
+        }
+
         imageManager.addImage(damagedImageId, this._cacheDir, clonedImage);
 
         return {
@@ -184,6 +189,10 @@ export class DamageCacheManager {
         const filePath = path.join(this._cacheDir, `${damagedImageId}.png`);
         writeFileSync(filePath, PNG.sync.write(clonedImage.png));
 
+        if (imageManager.exists(damagedImageId)) {
+            imageManager.removeImage(damagedImageId);
+        }
+
         imageManager.addImage(damagedImageId, this._cacheDir, clonedImage);
 
         const layerState: LayerDamageState = {
@@ -262,6 +271,28 @@ export class DamageCacheManager {
 
     hasTileCache(tilePos: TilePos): boolean {
         return this._tileStates.has(this.tileKey(tilePos));
+    }
+
+    /**
+     * Release round-scoped damage images after they have been merged into the game cache.
+     * Only applies to round instances (those with an instance id suffix).
+     */
+    disposeRoundInstance(imageManager: ImageManager): void {
+        if (this._instanceId === undefined) {
+            return;
+        }
+
+        for (const tileState of this._tileStates.values()) {
+            for (const { damagedImageId, filePath } of tileState.layers.values()) {
+                imageManager.removeImage(damagedImageId);
+
+                if (existsSync(filePath)) {
+                    rmSync(filePath);
+                }
+            }
+        }
+
+        this._tileStates.clear();
     }
 
     cleanup(imageManager: ImageManager): void {

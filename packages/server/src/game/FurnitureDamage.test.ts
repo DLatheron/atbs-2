@@ -632,6 +632,57 @@ describe("FurnitureDamageSystem", () => {
         expect(round1Image.getColour({ x: 55, y: 50 }, Orientation.NORTH).a).toBe(0);
     });
 
+    it("allows a second fire command to recreate round 0 snapshots after disposal", () => {
+        const furniture = createFurniture(createDoorRecipe());
+        const tile = createTile(createDoorRecipe());
+        const sample = {
+            owner: furniture,
+            imageId: "door-cl",
+            layerIndex: 1,
+            material: furniture.materials[0],
+            orientation: Orientation.NORTH
+        };
+
+        const firstFireRound0 = damageCache.createRoundInstance(0, imageManager);
+        const firstFireSystem = new FurnitureDamageSystem(firstFireRound0, imageSize);
+        firstFireSystem.onMaterialPixel(
+            createMockPixelProjectile(),
+            tile,
+            { x: 50, y: 50 },
+            sample,
+            100
+        );
+
+        const firstRoundImageId = firstFireRound0.getImageIdOverride("door-cl", tilePos);
+        expect(firstRoundImageId).toBe(`${gameId}-2-3-door-cl-i0`);
+        expect(imageManager.exists(firstRoundImageId)).toBe(true);
+
+        firstFireRound0.adoptInto(damageCache, imageManager);
+        firstFireRound0.disposeRoundInstance(imageManager);
+
+        expect(imageManager.exists(firstRoundImageId)).toBe(false);
+
+        const secondFireRound0 = damageCache.createRoundInstance(0, imageManager);
+        const secondFireSystem = new FurnitureDamageSystem(secondFireRound0, imageSize);
+
+        expect(() => {
+            secondFireSystem.onMaterialPixel(
+                createMockPixelProjectile(),
+                tile,
+                { x: 55, y: 50 },
+                sample,
+                200
+            );
+        }).not.toThrow();
+
+        const secondRoundImageId = secondFireRound0.getImageIdOverride("door-cl", tilePos);
+        expect(secondRoundImageId).toBe(firstRoundImageId);
+        expect(imageManager.exists(secondRoundImageId)).toBe(true);
+
+        secondFireRound0.adoptInto(damageCache, imageManager);
+        secondFireRound0.disposeRoundInstance(imageManager);
+    });
+
     it("clears paired visual and collision pixels together for doors", () => {
         const furniture = createFurniture(createDoorRecipe());
         const tile = createTile(createDoorRecipe());

@@ -201,44 +201,80 @@ export class LobbyPhaseHandler extends PhaseHandler {
         }
 
         //
-        // Temporary Hack: Scenario loading is non-fatal.
+        // Temporary Hack: auto-configure scenario, sides, ready state, and start when possible.
         //
         if (autoSetupGame) {
-            const scenarioId = "test.scenario";
-            const scenario = this.game.scenarioRecipeManager.get(scenarioId);
-            const { sides } = scenario;
+            this.tryAutoSetupGame();
+        }
+    }
 
-            if (clientIsOwner) {
-                this.game.queueMessage(
-                    {
-                        type: "client:scenario:change",
-                        payload: { scenarioId }
-                    },
-                    client
-                );
+    /**
+     * Configure the lobby for the test scenario and start the game when all clients are ready.
+     * Runs synchronously so message ordering cannot leave the queue stuck.
+     */
+    private tryAutoSetupGame(): void {
+        const scenarioId = "test.scenario";
+        const scenarioRecipe = this.game.scenarioRecipeManager.get(scenarioId);
+        const { sides } = scenarioRecipe;
+
+        if (!this.game.scenario) {
+            const owner = this.game.owner;
+            this.game.scenario = new Scenario(
+                scenarioRecipe,
+                this.game.itemManager,
+                this.game.furnitureManager
+            );
+
+            this.game.broadcastMessage({
+                type: "server:lobby:scenario:changed",
+                payload: {
+                    client: { id: owner.id, name: owner.name },
+                    oldScenario: undefined,
+                    newScenario: { id: scenarioRecipe.id, name: scenarioRecipe.name }
+                }
+            });
+        }
+
+        const scenario = this.game.scenario;
+
+        for (const client of this.game.clients) {
+            const sideIndex = client.id === this.game.ownerId ? 0 : 1;
+            const newSideId = sides[sideIndex].id;
+
+            if (client.sideId !== newSideId) {
+                const oldSideId = client.sideId;
+                client.sideId = newSideId;
+
+                this.game.broadcastMessage({
+                    type: "server:lobby:client:side:changed",
+                    payload: {
+                        client: { id: client.id, name: client.name },
+                        oldSide: oldSideId ? scenario.getSide(oldSideId).toSummary() : undefined,
+                        newSide: scenario.getSide(newSideId).toSummary()
+                    }
+                });
             }
 
-            this.game.queueMessage(
-                {
-                    type: "client:side:change",
-                    payload: { clientId: client.id, sideId: sides[clientIsOwner ? 0 : 1].id }
-                },
-                client
-            );
-            this.game.queueMessage(
-                {
-                    type: "client:ready",
-                    payload: { ready: true }
-                },
-                client
-            );
-            this.game.queueMessage(
-                {
-                    type: "client:lobby:game:start",
-                    payload: null
-                },
-                client
-            );
+            if (!client.ready) {
+                client.ready = true;
+
+                this.game.broadcastMessage({
+                    type: "server:lobby:client:ready",
+                    payload: {
+                        client: { id: client.id, name: client.name },
+                        ready: true
+                    }
+                });
+            }
+        }
+
+        this.game.broadcastMessage({
+            type: "server:lobby:state",
+            payload: this._buildLobbyState()
+        });
+
+        if (this.game.canStartGame) {
+            void this.game.nextPhase();
         }
     }
 

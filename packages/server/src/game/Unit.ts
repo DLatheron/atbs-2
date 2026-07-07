@@ -763,6 +763,34 @@ export class Unit extends SceneObject {
                 (a, b) => a.timeMs - b.timeMs
             );
 
+            roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
+
+            const canonicalTileUpdates = tileUpdates.map((update) => {
+                const tile = map.getTile(update.tilePos);
+
+                return {
+                    ...update,
+                    tileByRenderMode: {
+                        [RenderMode.enum.MAP_MODE]: tile.getRenderList(
+                            {
+                                renderMode: RenderMode.enum.MAP_MODE,
+                                states: []
+                            },
+                            game.damageCacheManager
+                        ),
+                        [RenderMode.enum.FIRE_MODE]: tile.getRenderList(
+                            {
+                                renderMode: RenderMode.enum.FIRE_MODE,
+                                states: []
+                            },
+                            game.damageCacheManager
+                        )
+                    }
+                };
+            });
+
+            roundDamageCache.disposeRoundInstance(imageManager);
+
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
             this.logger.dir({ onTarget });
@@ -782,12 +810,10 @@ export class Unit extends SceneObject {
                     payload: {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                        tileUpdates
+                        tileUpdates: canonicalTileUpdates
                     }
                 }
             ]);
-
-            roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
         }
     }
 
