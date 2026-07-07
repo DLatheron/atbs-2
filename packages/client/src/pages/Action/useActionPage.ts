@@ -158,10 +158,17 @@ export function useActionPage() {
                 const block = new Promise((resolve) => (resolver = resolve));
 
                 setIsOnTarget(payload.isOnTarget);
-                world.setTracers(payload.tracers, () => {
-                    setIsOnTarget(OnTarget.enum.none);
-                    resolver(undefined);
-                });
+                world.setTracers(
+                    payload.tracers,
+                    payload.tileUpdates,
+                    () => {
+                        setMap((map) => map);
+                    },
+                    () => {
+                        setIsOnTarget(OnTarget.enum.none);
+                        resolver(undefined);
+                    }
+                );
 
                 console.info("!!! Queue blocked");
                 await block;

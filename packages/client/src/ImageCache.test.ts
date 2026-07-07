@@ -31,7 +31,8 @@ describe("ImageCache", () => {
         }));
         vi.stubGlobal("fetch", fetchMock);
         vi.stubGlobal("URL", {
-            createObjectURL: vi.fn(() => "blob:test-url")
+            createObjectURL: vi.fn(() => "blob:test-url"),
+            revokeObjectURL: vi.fn()
         });
 
         cache = new ImageCache();
@@ -101,5 +102,20 @@ describe("ImageCache", () => {
     it("getImage never throws for unknown ids", () => {
         expect(() => cache.getImage("unknown")).not.toThrow();
         expect(cache.getImage("unknown")).toBe(cache.placeholderImage);
+    });
+
+    it("reloadImage refetches an already loaded image with cache busting", async () => {
+        cache.requestImage("grass");
+        await cache.waitForLoad("grass");
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock.mock.calls[0][0]).toBe("/api/image/grass");
+
+        cache.reloadImage("grass");
+        await cache.waitForLoad("grass");
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(fetchMock.mock.calls[1][0]).toMatch(/^\/api\/image\/grass\?t=\d+$/);
+        expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith("blob:test-url");
     });
 });

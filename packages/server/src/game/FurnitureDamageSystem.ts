@@ -1,22 +1,27 @@
 import { IVec2, Orientation, TilePos, Vec2 } from "@atbs/maths";
-import { FurnitureState } from "@atbs/shared-data";
+import { FurnitureState, RenderMode, TimedTileUpdate } from "@atbs/shared-data";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Furniture, isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
 import { ImageManager } from "./ImageManager.js";
 import { Projectile } from "./Projectile.js";
-import { CollisionSample } from "./Tile.js";
+import { CollisionSample, Tile } from "./Tile.js";
 
 export class FurnitureDamageSystem {
     private readonly _damageCache: DamageCacheManager;
     private readonly _imageManager: ImageManager;
     private readonly _tileSize: number;
     private readonly _hpDamageApplied = new Set<string>();
+    private readonly _timedUpdates: TimedTileUpdate[] = [];
 
     constructor(damageCache: DamageCacheManager, tileSize: number) {
         this._damageCache = damageCache;
         this._imageManager = ImageManager.GetSingleton();
         this._tileSize = tileSize;
+    }
+
+    get timedUpdates(): readonly TimedTileUpdate[] {
+        return this._timedUpdates;
     }
 
     private hpDamageKey(projectile: Projectile, furniture: Furniture): string {
@@ -27,10 +32,44 @@ export class FurnitureDamageSystem {
         return Math.max(1, Math.round((projectile.diameter / 2) * (this._tileSize / 1000)));
     }
 
+    private recordTileUpdate(timeMs: number, tile: Tile): void {
+        const tilePos = tile.location;
+        const existingIndex = this._timedUpdates.findIndex(
+            (update) => update.timeMs === timeMs && TilePos.IsEqual(update.tilePos, tilePos)
+        );
+
+        const update: TimedTileUpdate = {
+            timeMs,
+            tilePos,
+            tileByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: tile.getRenderList(
+                    {
+                        renderMode: RenderMode.enum.MAP_MODE,
+                        states: []
+                    },
+                    this._damageCache
+                ),
+                [RenderMode.enum.FIRE_MODE]: tile.getRenderList(
+                    {
+                        renderMode: RenderMode.enum.FIRE_MODE,
+                        states: []
+                    },
+                    this._damageCache
+                )
+            }
+        };
+
+        if (existingIndex >= 0) {
+            this._timedUpdates[existingIndex] = update;
+        } else {
+            this._timedUpdates.push(update);
+        }
+    }
+
     onMaterialEntry(
         projectile: Projectile,
         event: GridRayTraceHitResult,
-        dirtyTiles: Set<TilePos>
+        timeMs: number
     ): void {
         const { owner, tile, pos } = event;
         if (!owner || !isFurniture(owner) || !tile) {
@@ -42,22 +81,25 @@ export class FurnitureDamageSystem {
             return;
         }
 
+        let tileChanged = false;
+
         const hpKey = this.hpDamageKey(projectile, furniture);
         if (!this._hpDamageApplied.has(hpKey)) {
             this._hpDamageApplied.add(hpKey);
 
             const destroyed = furniture.takeDamage(projectile.furnitureDamage);
-            dirtyTiles.add(tile.location);
+            tileChanged = true;
 
             if (destroyed) {
                 this._damageCache.removeTileCache(tile.location, this._imageManager);
+                this.recordTileUpdate(timeMs, tile);
                 return;
             }
         }
 
         if (furniture.pixelDestruction && event.imageId) {
             const localPos = projectile.map.worldToSubTile(tile.location, pos);
-            this._applyPixelWear(
+            const pixelsCleared = this._applyPixelWear(
                 projectile,
                 furniture,
                 tile.location,
@@ -65,16 +107,20 @@ export class FurnitureDamageSystem {
                 event.imageId,
                 event.orientation ?? furniture.orientation
             );
-            dirtyTiles.add(tile.location);
+            tileChanged ||= pixelsCleared;
+        }
+
+        if (tileChanged) {
+            this.recordTileUpdate(timeMs, tile);
         }
     }
 
     onMaterialPixel(
         projectile: Projectile,
-        tileLocation: TilePos,
+        tile: Tile,
         samplePos: Vec2,
         sample: CollisionSample,
-        dirtyTiles: Set<TilePos>
+        timeMs: number
     ): void {
         const { owner, imageId } = sample;
         if (!isFurniture(owner) || !owner.pixelDestruction) {
@@ -85,15 +131,18 @@ export class FurnitureDamageSystem {
             return;
         }
 
-        this._applyPixelWear(
+        const pixelsCleared = this._applyPixelWear(
             projectile,
             owner,
-            tileLocation,
+            tile.location,
             samplePos,
             imageId,
             sample.orientation
         );
-        dirtyTiles.add(tileLocation);
+
+        if (pixelsCleared) {
+            this.recordTileUpdate(timeMs, tile);
+        }
     }
 
     private _applyPixelWear(
@@ -103,7 +152,7 @@ export class FurnitureDamageSystem {
         centerPos: IVec2,
         collisionImageId: string,
         orientation: Orientation
-    ): void {
+    ): boolean {
         const radiusPixels = this.radiusPixels(projectile);
         const originalCollisionId = this._damageCache.resolveOriginalImageId(
             collisionImageId,
@@ -113,7 +162,7 @@ export class FurnitureDamageSystem {
         const pair = pairedLayers.find(({ collisionId }) => collisionId === originalCollisionId);
 
         if (!pair) {
-            return;
+            return false;
         }
 
         this._damageCache.clearPixels(
@@ -137,5 +186,7 @@ export class FurnitureDamageSystem {
                 this._imageManager
             );
         }
+
+        return true;
     }
 }

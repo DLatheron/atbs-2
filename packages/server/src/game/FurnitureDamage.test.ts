@@ -332,12 +332,15 @@ describe("FurnitureDamageSystem", () => {
         );
     }
 
+    function hasTimedUpdateForTile(damageSystem: FurnitureDamageSystem, at: TilePos): boolean {
+        return damageSystem.timedUpdates.some((update) => TilePos.IsEqual(update.tilePos, at));
+    }
+
     it("applies HP damage once per material entry and destroys at zero", () => {
         const round = itemManager.newItem(ROUND_RECIPE.id, { quantity: 1 });
         const furniture = createFurniture(createWallRecipe(false));
         const tile = createTile(createWallRecipe(false));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
 
         const entryEvent = {
             pos: new Vec2(50, 50),
@@ -345,13 +348,14 @@ describe("FurnitureDamageSystem", () => {
             material: furniture.materials[0],
             owner: furniture,
             imageId: "wall-cl",
-            layerIndex: 0
+            layerIndex: 0,
+            orientation: Orientation.NORTH
         };
 
         damageSystem.onMaterialEntry(
             createMockProjectile(round, gameId, damageCache, imageSize, 0),
             entryEvent,
-            dirtyTiles
+            100
         );
         expect(furniture.hitPoints).toBe(30);
         expect(furniture.state).not.toBe(FurnitureState.enum.destroyed);
@@ -359,18 +363,19 @@ describe("FurnitureDamageSystem", () => {
         damageSystem.onMaterialEntry(
             createMockProjectile(round, gameId, damageCache, imageSize, 1),
             entryEvent,
-            dirtyTiles
+            200
         );
         expect(furniture.hitPoints).toBe(10);
 
         damageSystem.onMaterialEntry(
             createMockProjectile(round, gameId, damageCache, imageSize, 2),
             entryEvent,
-            dirtyTiles
+            300
         );
         expect(furniture.hitPoints).toBe(0);
         expect(furniture.state).toBe(FurnitureState.enum.destroyed);
-        expect(dirtyTiles.has(tilePos)).toBe(true);
+        expect(hasTimedUpdateForTile(damageSystem, tilePos)).toBe(true);
+        expect(damageSystem.timedUpdates.at(-1)?.timeMs).toBe(300);
     });
 
     it("does not duplicate HP damage on ricochet re-entry for the same projectile", () => {
@@ -378,7 +383,6 @@ describe("FurnitureDamageSystem", () => {
         const furniture = createFurniture(createWallRecipe(false));
         const tile = createTile(createWallRecipe(false));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
         const projectile = createMockProjectile(round, gameId, damageCache, imageSize);
 
         const entryEvent = {
@@ -387,13 +391,15 @@ describe("FurnitureDamageSystem", () => {
             material: furniture.materials[0],
             owner: furniture,
             imageId: "wall-cl",
-            layerIndex: 0
+            layerIndex: 0,
+            orientation: Orientation.NORTH
         };
 
-        damageSystem.onMaterialEntry(projectile, entryEvent, dirtyTiles);
-        damageSystem.onMaterialEntry(projectile, entryEvent, dirtyTiles);
+        damageSystem.onMaterialEntry(projectile, entryEvent, 100);
+        damageSystem.onMaterialEntry(projectile, entryEvent, 150);
 
         expect(furniture.hitPoints).toBe(30);
+        expect(damageSystem.timedUpdates).toHaveLength(1);
     });
 
     it("uses the fired round recipe when the weapon is a gun without a projectile recipe", () => {
@@ -405,7 +411,6 @@ describe("FurnitureDamageSystem", () => {
         const furniture = createFurniture(createWallRecipe(true));
         const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
         const projectile = createUnitFireProjectile(
             round,
             gun,
@@ -426,12 +431,13 @@ describe("FurnitureDamageSystem", () => {
                     layerIndex: 0,
                     orientation: Orientation.NORTH
                 },
-                dirtyTiles
+                250
             )
         ).not.toThrow();
 
         expect(furniture.hitPoints).toBe(30);
         expect(damageCache.hasTileCache(tilePos)).toBe(true);
+        expect(damageSystem.timedUpdates[0]?.timeMs).toBe(250);
     });
 
     it("clears pixels when material entry position is in world coordinates", () => {
@@ -439,7 +445,6 @@ describe("FurnitureDamageSystem", () => {
         const furniture = createFurniture(createWallRecipe(true));
         const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
         const projectile = createMockProjectile(round, gameId, damageCache, imageSize);
         const samplePos = { x: 50, y: 50 };
         const worldPos = new Vec2(
@@ -458,7 +463,7 @@ describe("FurnitureDamageSystem", () => {
                 layerIndex: 0,
                 orientation: Orientation.NORTH
             },
-            dirtyTiles
+            400
         );
 
         const damagedCollision = damageCache.getLayerImage("wall-cl", tilePos)!;
@@ -467,14 +472,14 @@ describe("FurnitureDamageSystem", () => {
 
     it("continues clearing pixels when collision layers report damaged image ids", () => {
         const furniture = createFurniture(createWallRecipe(true));
+        const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
         const samplePos = { x: 50, y: 50 };
         const damagedId = `${gameId}-2-3-wall-cl`;
 
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
-            tilePos,
+            tile,
             new Vec2(samplePos.x, samplePos.y),
             {
                 owner: furniture,
@@ -483,7 +488,7 @@ describe("FurnitureDamageSystem", () => {
                 material: furniture.materials[0],
                 orientation: Orientation.NORTH
             },
-            dirtyTiles
+            500
         );
 
         const damagedCollision = damageCache.getLayerImage("wall-cl", tilePos)!;
@@ -509,12 +514,12 @@ describe("FurnitureDamageSystem", () => {
 
     it("creates and reuses a per-tile damage cache entry for pixel destruction", () => {
         const furniture = createFurniture(createWallRecipe(true));
+        const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
 
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
-            tilePos,
+            tile,
             { x: 50, y: 50 },
             {
                 owner: furniture,
@@ -523,7 +528,7 @@ describe("FurnitureDamageSystem", () => {
                 material: furniture.materials[0],
                 orientation: Orientation.NORTH
             },
-            dirtyTiles
+            600
         );
 
         const damagedId = `${gameId}-2-3-wall-cl`;
@@ -538,7 +543,7 @@ describe("FurnitureDamageSystem", () => {
 
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
-            tilePos,
+            tile,
             { x: 55, y: 50 },
             {
                 owner: furniture,
@@ -547,17 +552,18 @@ describe("FurnitureDamageSystem", () => {
                 material: furniture.materials[0],
                 orientation: Orientation.NORTH
             },
-            dirtyTiles
+            650
         );
 
         expect(renderList[0].imageId).toBe(damagedId);
-        expect(dirtyTiles.has(tilePos)).toBe(true);
+        expect(hasTimedUpdateForTile(damageSystem, tilePos)).toBe(true);
+        expect(damageSystem.timedUpdates.map((update) => update.timeMs)).toEqual([600, 650]);
     });
 
     it("clears paired visual and collision pixels together for doors", () => {
         const furniture = createFurniture(createDoorRecipe());
+        const tile = createTile(createDoorRecipe());
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
         const samplePos = { x: 50, y: 50 };
 
         expect(furniture.getPairedImageIds()).toEqual([
@@ -567,7 +573,7 @@ describe("FurnitureDamageSystem", () => {
 
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
-            tilePos,
+            tile,
             samplePos,
             {
                 owner: furniture,
@@ -576,7 +582,7 @@ describe("FurnitureDamageSystem", () => {
                 material: furniture.materials[0],
                 orientation: Orientation.NORTH
             },
-            dirtyTiles
+            700
         );
 
         const damagedCollision = damageCache.getLayerImage("door-cl", tilePos)!;
@@ -588,12 +594,12 @@ describe("FurnitureDamageSystem", () => {
 
     it("cleans up cache files and ImageManager entries", () => {
         const furniture = createFurniture(createWallRecipe(true));
+        const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const dirtyTiles = new Set<TilePos>();
 
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
-            tilePos,
+            tile,
             { x: 50, y: 50 },
             {
                 owner: furniture,
@@ -602,7 +608,7 @@ describe("FurnitureDamageSystem", () => {
                 material: furniture.materials[0],
                 orientation: Orientation.NORTH
             },
-            dirtyTiles
+            800
         );
 
         const damagedId = `${gameId}-2-3-wall-cl`;

@@ -737,7 +737,6 @@ export class Unit extends SceneObject {
                 game.damageCacheManager,
                 map.tileSize
             );
-            const dirtyTiles = new Set<TilePos>();
 
             Projectile.ProcessProjectiles(
                 projectiles,
@@ -745,51 +744,20 @@ export class Unit extends SceneObject {
                 debugGraphics,
                 game.damageCacheManager,
                 furnitureDamageSystem,
-                dirtyTiles,
-                (projectile, tile, samplePos, sample) => {
+                (projectile, tile, samplePos, sample, timeMs) => {
                     furnitureDamageSystem.onMaterialPixel(
                         projectile,
-                        tile.location,
+                        tile,
                         samplePos,
                         sample,
-                        dirtyTiles
+                        timeMs
                     );
                 }
             );
 
-            for (const tilePos of dirtyTiles) {
-                const tile = map.getTile(tilePos);
-
-                messageRouter.sendIfVisible(
-                    [
-                        {
-                            type: "server:map:update",
-                            payload: [
-                                {
-                                    tilePos,
-                                    tileByRenderMode: {
-                                        [RenderMode.enum.MAP_MODE]: tile.getRenderList(
-                                            {
-                                                renderMode: RenderMode.enum.MAP_MODE,
-                                                states: []
-                                            },
-                                            game.damageCacheManager
-                                        ),
-                                        [RenderMode.enum.FIRE_MODE]: tile.getRenderList(
-                                            {
-                                                renderMode: RenderMode.enum.FIRE_MODE,
-                                                states: []
-                                            },
-                                            game.damageCacheManager
-                                        )
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    tilePos
-                );
-            }
+            const tileUpdates = [...furnitureDamageSystem.timedUpdates].sort(
+                (a, b) => a.timeMs - b.timeMs
+            );
 
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
@@ -809,7 +777,8 @@ export class Unit extends SceneObject {
                     type: "server:fire:trace",
                     payload: {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
-                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
+                        tileUpdates
                     }
                 }
             ]);

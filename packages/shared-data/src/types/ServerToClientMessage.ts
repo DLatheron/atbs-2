@@ -13,6 +13,7 @@ import {
     SideSummary,
     TileInfo,
     Tracer,
+    TimedTileUpdate,
     UnitSummary,
     WaitingFor
 } from "./PrimitiveTypes.js";
@@ -183,7 +184,8 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         type: z.literal("server:fire:trace"),
         payload: z.object({
             tracers: z.array(Tracer),
-            isOnTarget: OnTarget
+            isOnTarget: OnTarget,
+            tileUpdates: z.array(TimedTileUpdate).optional().default([])
         })
     }),
     z.object({

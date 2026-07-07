@@ -16,7 +16,7 @@
     },
     "state": "closed",
     "materials": ["thin-wood.material", "thick-wood.material"],
-    "hitPoints": { "max": 50 },
+    "hitPoints": { "max": 200 },
     "pixelDestruction": true,
     "movementObstruction": {
         "default": { "default": 100 },

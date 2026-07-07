@@ -740,3 +740,13 @@ export const Tracer = z.object({
     rangeFalloffPower: z.number().positive()
 });
 export type Tracer = z.infer<typeof Tracer>;
+
+export const TimedTileUpdate = z.object({
+    timeMs: z.number().nonnegative(),
+    tilePos: ITilePos,
+    tileByRenderMode: z.object({
+        [RenderMode.enum.MAP_MODE]: RenderList,
+        [RenderMode.enum.FIRE_MODE]: RenderList
+    })
+});
+export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;

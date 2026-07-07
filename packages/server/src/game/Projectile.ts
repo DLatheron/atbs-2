@@ -21,8 +21,7 @@ import { PenetrationSystem } from "./PenetrationSystem.js";
 import { config } from "../config/config.schema.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
-import { CollisionSample } from "./Tile.js";
-import { TilePos } from "@atbs/maths";
+import { CollisionSample, Tile } from "./Tile.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -307,14 +306,14 @@ export class Projectile implements IRayCast {
         debugGraphics?: DebugGraphic[],
         damageCache?: DamageCacheManager,
         furnitureDamageSystem?: FurnitureDamageSystem,
-        dirtyTiles: Set<TilePos> = new Set(),
         onMaterialPixel?: (
             projectile: Projectile,
-            tile: GridRayTraceHitResult["tile"],
+            tile: Tile,
             samplePos: Vec2,
-            sample: CollisionSample
+            sample: CollisionSample,
+            timeMs: number
         ) => void
-    ): Set<TilePos> {
+    ): void {
         const imageManager = ImageManager.GetSingleton();
 
         // Sort so that fastest projectiles are first.
@@ -350,7 +349,7 @@ export class Projectile implements IRayCast {
         }
 
         if (eventQueue.isEmpty) {
-            return dirtyTiles;
+            return;
         }
 
         let event: CollisionEvent;
@@ -365,7 +364,7 @@ export class Projectile implements IRayCast {
 
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
-                    furnitureDamageSystem?.onMaterialEntry(projectile, event, dirtyTiles);
+                    furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                 }
@@ -402,8 +401,11 @@ export class Projectile implements IRayCast {
                     debugGraphics,
                     damageCache,
                     onMaterialPixel
-                        ? (tile, samplePos, sample) =>
-                              onMaterialPixel(projectile, tile, samplePos, sample)
+                        ? (tile, samplePos, sample) => {
+                              const worldPos = map.tileOffsetToWorld(tile.location, samplePos);
+                              const timeMs = atTime + projectile.calculateTimeTo(worldPos);
+                              onMaterialPixel(projectile, tile, samplePos, sample, timeMs);
+                          }
                         : undefined
                 );
                 if (nextChange) {
@@ -470,7 +472,5 @@ export class Projectile implements IRayCast {
                 });
             }
         }
-
-        return dirtyTiles;
     }
 }
