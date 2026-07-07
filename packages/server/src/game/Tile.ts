@@ -27,6 +27,15 @@ import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
 import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+
+export interface CollisionSample {
+    material: Material;
+    owner: Furniture | Unit;
+    imageId: string;
+    layerIndex: number;
+    orientation: Orientation;
+}
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -70,6 +79,8 @@ export type TileRecipe = z.infer<typeof TileRecipe>;
 export interface LayerCollision {
     owner: Furniture | Unit;
     image: Image;
+    imageId: string;
+    layerIndex: number;
     orientation: Orientation;
     materials: Material[];
 }
@@ -159,7 +170,7 @@ export class Tile implements IRenderableEntity {
         this._units = this._units.filter(({ id }) => id !== unit.id);
     }
 
-    getRenderList(context: SceneContext): RenderList {
+    getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
         if (this.units.length > 0) {
             this.logger.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
                 depth: null,
@@ -169,7 +180,7 @@ export class Tile implements IRenderableEntity {
 
         return [
             ...this.terrain.getRenderList(context),
-            ...(this.furniture?.getRenderList(context) ?? []),
+            ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.units.map((unit) => unit.getRenderList(context)).flat()
         ];
     }
@@ -218,7 +229,10 @@ export class Tile implements IRenderableEntity {
         };
     }
 
-    getCollisionLayers(imageManager: ImageManager): LayerCollision[] {
+    getCollisionLayers(
+        imageManager: ImageManager,
+        damageCache?: DamageCacheManager
+    ): LayerCollision[] {
         const collisionLayers: LayerCollision[] = [];
 
         const context: SceneContext = {
@@ -229,11 +243,18 @@ export class Tile implements IRenderableEntity {
         if (this.furniture) {
             const { materials } = this.furniture;
 
-            this.furniture.getRenderList(context).forEach((layerImage) => {
+            this.furniture.getRenderList(context).forEach((layerImage, layerIndex) => {
                 if (layerImage.imageId) {
+                    const originalImageId = layerImage.imageId;
+                    const displayImageId = damageCache
+                        ? damageCache.getImageIdOverride(originalImageId, this.location)
+                        : originalImageId;
+
                     collisionLayers.push({
                         owner: this.furniture!,
-                        image: imageManager.getImage(layerImage.imageId),
+                        image: imageManager.getImage(displayImageId),
+                        imageId: originalImageId,
+                        layerIndex,
                         orientation: layerImage.orientation ?? Orientation.NORTH,
                         materials
                     });
@@ -244,11 +265,13 @@ export class Tile implements IRenderableEntity {
         this.units.forEach((unit) => {
             // const { materials } = unit; // TODO: Unit materials?
 
-            unit.getRenderList(context).forEach((layerImage) => {
+            unit.getRenderList(context).forEach((layerImage, layerIndex) => {
                 if (layerImage.imageId) {
                     collisionLayers.push({
                         owner: unit,
                         image: imageManager.getImage(layerImage.imageId),
+                        imageId: layerImage.imageId,
+                        layerIndex,
                         orientation: layerImage.orientation ?? Orientation.NORTH,
                         materials: []
                     });
@@ -283,7 +306,8 @@ export class Tile implements IRenderableEntity {
     castRay(
         subTileSrcPos: Vec2,
         subTileDstPos: Vec2,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager
     ): GridRayTraceResult {
         this.logger.info("Casting against tile");
 
@@ -292,7 +316,7 @@ export class Tile implements IRenderableEntity {
             return;
         }
 
-        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton(), damageCache);
         if (collisionLayers.length === 0) {
             this.logger.info("  - Has no collision layers (but is collidable?");
             return;
@@ -307,7 +331,7 @@ export class Tile implements IRenderableEntity {
 
             const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
             if (collisionSample) {
-                const { material, owner } = collisionSample;
+                const { material, owner, imageId, layerIndex } = collisionSample;
                 this.logger.info(`    - hit material ${material.id}: ${material.rgb}`);
 
                 debugGraphics?.push(
@@ -325,7 +349,15 @@ export class Tile implements IRenderableEntity {
                     }
                 );
 
-                return { pos: samplePos, material, tile: this, owner };
+                return {
+                    pos: samplePos,
+                    material,
+                    tile: this,
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation: collisionSample.orientation
+                };
             }
         }
     }
@@ -335,7 +367,9 @@ export class Tile implements IRenderableEntity {
         subTileSrcPos: Vec2,
         subTileDstPos: Vec2,
         currentMaterial: Material,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        onMaterialPixel?: (samplePos: Vec2, sample: CollisionSample) => void
     ): GridRayTraceResult {
         this.logger.info("Stepping projectile through tile");
 
@@ -344,7 +378,7 @@ export class Tile implements IRenderableEntity {
             return;
         }
 
-        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton(), damageCache);
         if (collisionLayers.length === 0) {
             this.logger.info("  - Has no collision layers (but is collidable?");
             return;
@@ -388,7 +422,12 @@ export class Tile implements IRenderableEntity {
             }
 
             // Drain penetration energy for each pixel travelled inside material.
-            const { material, owner } = collisionSample;
+            const { material, owner, imageId, layerIndex, orientation } = collisionSample;
+
+            if (material === currentMaterial) {
+                onMaterialPixel?.(samplePos, collisionSample);
+            }
+
             const pixelCost = calcPixelPenetrationCost({
                 hardness: material.hardness,
                 toughness: material.toughness,
@@ -419,7 +458,10 @@ export class Tile implements IRenderableEntity {
                     pos: samplePos,
                     material,
                     tile: this,
-                    owner
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation
                 };
             }
 
@@ -447,7 +489,10 @@ export class Tile implements IRenderableEntity {
                     pos: samplePos,
                     material,
                     tile: this,
-                    owner
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation
                 };
             }
         }
@@ -456,12 +501,19 @@ export class Tile implements IRenderableEntity {
     static SampleCollisionLayers(
         samplePos: IVec2,
         collisionLayers: LayerCollision[]
-    ): { material: Material; owner: Furniture | Unit } | undefined {
-        for (const { image, orientation, owner, materials } of collisionLayers) {
+    ): CollisionSample | undefined {
+        for (const {
+            image,
+            orientation,
+            owner,
+            materials,
+            imageId,
+            layerIndex
+        } of collisionLayers) {
             const materialColour = image.getColour(samplePos, orientation);
             if (materialColour.a > 0.0) {
                 const [material] = Material.DetermineMaterial(materialColour, materials);
-                return { material, owner };
+                return { material, owner, imageId, layerIndex, orientation };
             }
         }
     }

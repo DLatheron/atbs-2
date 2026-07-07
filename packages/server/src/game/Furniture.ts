@@ -5,7 +5,8 @@ import {
     FurnitureState,
     FurnitureStateMovementObstructionMap,
     InstanceId,
-    RenderList
+    RenderList,
+    RenderMode
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
@@ -13,6 +14,7 @@ import { Orientation, TilePos } from "@atbs/maths";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
 
 export const FurnitureRecipe = z.object({
     id: FurnitureId,
@@ -21,7 +23,8 @@ export const FurnitureRecipe = z.object({
     renderable: SceneNode,
     hitPoints: AttributeDef.optional(),
     movementObstruction: FurnitureStateMovementObstructionMap,
-    materials: z.array(z.string())
+    materials: z.array(z.string()),
+    pixelDestruction: z.boolean().optional().default(false)
     // action: z.record(z.string().nonempty(), z.unknown()).optional()
 });
 export type FurnitureRecipe = z.infer<typeof FurnitureRecipe>;
@@ -93,6 +96,10 @@ export class Furniture extends SceneObject {
         return this._hitPoints;
     }
 
+    get pixelDestruction(): boolean {
+        return this._recipe.pixelDestruction;
+    }
+
     set hitPoints(value: number) {
         if (this.hitPoints > 0 && value === 0) {
             this._state = FurnitureState.enum.destroyed;
@@ -116,13 +123,69 @@ export class Furniture extends SceneObject {
         return this.furnitureManager.materialManager;
     }
 
-    getRenderList(context: SceneContext): RenderList {
+    takeDamage(amount: number): boolean {
+        if (this.state === FurnitureState.enum.destroyed) {
+            return false;
+        }
+
+        const previousHitPoints = this.hitPoints;
+        this.hitPoints = Math.max(0, previousHitPoints - amount);
+
+        return previousHitPoints > 0 && this.hitPoints === 0;
+    }
+
+    getPairedImageIds(): { visualId: string; collisionId: string; layerIndex: number }[] {
+        const mapContext: SceneContext = {
+            renderMode: RenderMode.enum.MAP_MODE,
+            states: [this.state],
+            orientation: this.orientation
+        };
+        const fireContext: SceneContext = {
+            renderMode: RenderMode.enum.FIRE_MODE,
+            states: [this.state],
+            orientation: this.orientation
+        };
+
+        const visualList = super.getRenderList(mapContext);
+        const collisionList = super.getRenderList(fireContext);
+
+        return visualList.flatMap((visual, layerIndex) => {
+            if (!visual.imageId) {
+                return [];
+            }
+
+            const collisionId = collisionList[layerIndex]?.imageId ?? visual.imageId;
+
+            return [{ visualId: visual.imageId, collisionId, layerIndex }];
+        });
+    }
+
+    applyDamageImageOverrides(renderList: RenderList, damageCache: DamageCacheManager): RenderList {
+        return renderList.map((renderImage) => {
+            if (!renderImage.imageId) {
+                return renderImage;
+            }
+
+            return {
+                ...renderImage,
+                imageId: damageCache.getImageIdOverride(renderImage.imageId, this.location)
+            };
+        });
+    }
+
+    getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
         const unitContext = {
             ...context,
             states: [this.state],
             orientation: this.orientation
         };
 
-        return super.getRenderList(unitContext);
+        const renderList = super.getRenderList(unitContext);
+
+        if (damageCache) {
+            return this.applyDamageImageOverrides(renderList, damageCache);
+        }
+
+        return renderList;
     }
 }

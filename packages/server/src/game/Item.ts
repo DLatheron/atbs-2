@@ -387,13 +387,17 @@ export class Item extends SceneObject {
         return ammo;
     }
 
-    calcDamage(unitType: UnitType): number {
+    calcDamage(target: "furniture" | UnitType): number {
         if (!("projectile" in this._recipe)) {
             return 0;
         }
 
         const { damage: damageMap } = this._recipe.projectile;
-        const damage = unitType in damageMap ? damageMap[unitType] : undefined;
+        if (target === "furniture") {
+            return damageMap.default;
+        }
+
+        const damage = target in damageMap ? damageMap[target] : undefined;
         return damage ?? damageMap.default;
     }
 
@@ -461,7 +465,7 @@ export class Item extends SceneObject {
             );
         }
 
-        console.info({ id: this.id, fireModes: this._recipe.fireModes });
+        // console.info({ id: this.id, fireModes: this._recipe.fireModes });
 
         return fireModes;
     }

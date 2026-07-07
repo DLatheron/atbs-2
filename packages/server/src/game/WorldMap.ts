@@ -9,6 +9,8 @@ import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 import { Material } from "./Material.js";
 import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+import { CollisionSample } from "./Tile.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -215,7 +217,11 @@ export class WorldMap {
      * @param debugGraphics Optional array for recording intersections and collisions.
      * @returns The position and material first hit, or `undefined` if no collision occurs.
      */
-    castRay(ray: IRayCast, debugGraphics?: DebugGraphic[]): GridRayTraceResult {
+    castRay(
+        ray: IRayCast,
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager
+    ): GridRayTraceResult {
         const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
         // let sampleOrder = 0;
 
@@ -242,14 +248,16 @@ export class WorldMap {
             //     }
             // );
 
-            return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics);
+            return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics, damageCache);
         });
     }
 
     stepRay(
         ray: IRayCast,
         currentMaterial: Material,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        onMaterialPixel?: (tile: Tile, samplePos: Vec2, sample: CollisionSample) => void
     ): GridRayTraceResult {
         const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
         // let sampleOrder = 0;
@@ -282,7 +290,11 @@ export class WorldMap {
                 cellWalk.srcPos,
                 cellWalk.dstPos,
                 currentMaterial,
-                debugGraphics
+                debugGraphics,
+                damageCache,
+                onMaterialPixel
+                    ? (samplePos, sample) => onMaterialPixel(tile, samplePos, sample)
+                    : undefined
             );
             if (collisionResult) {
                 return collisionResult;

@@ -19,6 +19,10 @@ import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { PenetrationSystem } from "./PenetrationSystem.js";
 import { config } from "../config/config.schema.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
+import { CollisionSample } from "./Tile.js";
+import { TilePos } from "@atbs/maths";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -178,6 +182,18 @@ export class Projectile implements IRayCast {
         return this._props.projectileRecipe.bounce;
     }
 
+    get projectileRecipe(): ProjectileRecipe {
+        return this._props.projectileRecipe;
+    }
+
+    get diameter(): number {
+        return this._props.projectileRecipe.diameter;
+    }
+
+    get furnitureDamage(): number {
+        return this._props.projectileRecipe.damage.default;
+    }
+
     changeDirection(newDirection: Vec2) {
         this._dstPos = this.srcPos.add(newDirection.scale(this.maxRange));
         this._directionVector = newDirection;
@@ -255,9 +271,10 @@ export class Projectile implements IRayCast {
         projectile: Projectile,
         atTime: number,
         eventQueue: CollisionEventQueue,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager
     ): void {
-        const hitResult = map.castRay(projectile, debugGraphics);
+        const hitResult = map.castRay(projectile, debugGraphics, damageCache);
         if (hitResult) {
             const timeTo = projectile.calculateTimeTo(hitResult.pos);
             const cumulativeTime = atTime + timeTo;
@@ -287,8 +304,17 @@ export class Projectile implements IRayCast {
     static ProcessProjectiles(
         projectiles: Projectile[],
         map: WorldMap,
-        debugGraphics?: DebugGraphic[]
-    ) {
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        furnitureDamageSystem?: FurnitureDamageSystem,
+        dirtyTiles: Set<TilePos> = new Set(),
+        onMaterialPixel?: (
+            projectile: Projectile,
+            tile: GridRayTraceHitResult["tile"],
+            samplePos: Vec2,
+            sample: CollisionSample
+        ) => void
+    ): Set<TilePos> {
         const imageManager = ImageManager.GetSingleton();
 
         // Sort so that fastest projectiles are first.
@@ -298,7 +324,7 @@ export class Projectile implements IRayCast {
 
         // Determine the initial impact of every projectile.
         for (const projectile of projectiles) {
-            const hitResult = map.castRay(projectile, debugGraphics);
+            const hitResult = map.castRay(projectile, debugGraphics, damageCache);
 
             if (hitResult) {
                 const timeTo = projectile.calculateTimeTo(hitResult.pos);
@@ -324,7 +350,7 @@ export class Projectile implements IRayCast {
         }
 
         if (eventQueue.isEmpty) {
-            return;
+            return dirtyTiles;
         }
 
         let event: CollisionEvent;
@@ -339,6 +365,7 @@ export class Projectile implements IRayCast {
 
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
+                    furnitureDamageSystem?.onMaterialEntry(projectile, event, dirtyTiles);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                 }
@@ -358,11 +385,27 @@ export class Projectile implements IRayCast {
                 }
 
                 if (entryOutcome === "ricocheted") {
-                    Projectile.queueRicochetRay(map, projectile, atTime, eventQueue, debugGraphics);
+                    Projectile.queueRicochetRay(
+                        map,
+                        projectile,
+                        atTime,
+                        eventQueue,
+                        debugGraphics,
+                        damageCache
+                    );
                     continue;
                 }
 
-                const nextChange = map.stepRay(projectile, material, debugGraphics);
+                const nextChange = map.stepRay(
+                    projectile,
+                    material,
+                    debugGraphics,
+                    damageCache,
+                    onMaterialPixel
+                        ? (tile, samplePos, sample) =>
+                              onMaterialPixel(projectile, tile, samplePos, sample)
+                        : undefined
+                );
                 if (nextChange) {
                     debugGraphics?.push({
                         type: DebugGraphicType.enum.line,
@@ -401,7 +444,7 @@ export class Projectile implements IRayCast {
                     );
                 }
 
-                const hitResult = map.castRay(projectile, debugGraphics);
+                const hitResult = map.castRay(projectile, debugGraphics, damageCache);
                 if (hitResult) {
                     const timeTo = projectile.calculateTimeTo(hitResult.pos);
                     const cumulativeTime = atTime + timeTo;
@@ -427,5 +470,7 @@ export class Projectile implements IRayCast {
                 });
             }
         }
+
+        return dirtyTiles;
     }
 }

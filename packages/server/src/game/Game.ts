@@ -27,6 +27,8 @@ import { ItemRecipeManager } from "./ItemRecipeManager.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
 import { MaterialManager } from "./MaterialManager.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -65,6 +67,7 @@ export class Game {
     private readonly _messageManager: ClientMessageManager;
     private readonly _itemManager: ItemManager;
     private readonly _furnitureManager: FurnitureManager;
+    private readonly _damageCacheManager: DamageCacheManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -93,6 +96,7 @@ export class Game {
         this._clientManager = new ClientManager();
         this._itemManager = new ItemManager(itemRecipeManager);
         this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
+        this._damageCacheManager = new DamageCacheManager(gameId);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -302,6 +306,10 @@ export class Game {
         return this._furnitureManager;
     }
 
+    get damageCacheManager(): DamageCacheManager {
+        return this._damageCacheManager;
+    }
+
     set scenario(value: Scenario | null) {
         if (this.phase !== Phase.enum.lobby) {
             throw new Error(`Scenario cannot be changed whilst in ${this.phase} phase`);
@@ -437,6 +445,10 @@ export class Game {
 
     destroyGame() {
         this.logger.info("DDD Destroying game", this.gameId);
+
+        if (config.cleanupDamageCacheOnGameDestroy) {
+            this._damageCacheManager.cleanup(ImageManager.GetSingleton());
+        }
 
         while (this.clients.length > 0) {
             const client = this.clients[0];

@@ -42,6 +42,7 @@ import { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
+import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
 
@@ -732,7 +733,63 @@ export class Unit extends SceneObject {
             const showDebugGraphics = config.showProjectileDebugGraphics;
             const debugGraphics: DebugGraphic[] = [];
 
-            Projectile.ProcessProjectiles(projectiles, map, debugGraphics);
+            const furnitureDamageSystem = new FurnitureDamageSystem(
+                game.damageCacheManager,
+                map.tileSize
+            );
+            const dirtyTiles = new Set<TilePos>();
+
+            Projectile.ProcessProjectiles(
+                projectiles,
+                map,
+                debugGraphics,
+                game.damageCacheManager,
+                furnitureDamageSystem,
+                dirtyTiles,
+                (projectile, tile, samplePos, sample) => {
+                    furnitureDamageSystem.onMaterialPixel(
+                        projectile,
+                        tile.location,
+                        samplePos,
+                        sample,
+                        dirtyTiles
+                    );
+                }
+            );
+
+            for (const tilePos of dirtyTiles) {
+                const tile = map.getTile(tilePos);
+
+                messageRouter.sendIfVisible(
+                    [
+                        {
+                            type: "server:map:update",
+                            payload: [
+                                {
+                                    tilePos,
+                                    tileByRenderMode: {
+                                        [RenderMode.enum.MAP_MODE]: tile.getRenderList(
+                                            {
+                                                renderMode: RenderMode.enum.MAP_MODE,
+                                                states: []
+                                            },
+                                            game.damageCacheManager
+                                        ),
+                                        [RenderMode.enum.FIRE_MODE]: tile.getRenderList(
+                                            {
+                                                renderMode: RenderMode.enum.FIRE_MODE,
+                                                states: []
+                                            },
+                                            game.damageCacheManager
+                                        )
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    tilePos
+                );
+            }
 
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
