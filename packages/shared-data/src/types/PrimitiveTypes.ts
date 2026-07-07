@@ -234,6 +234,14 @@ export const TileInfo = z.object({
         uiImage: RenderList,
         description: Description
     }),
+    furniture: z
+        .object({
+            name: z.string(),
+            uiImage: RenderList,
+            description: Description,
+            integrity: z.number().min(0).max(100).optional()
+        })
+        .optional(),
     unit: z
         .object({
             name: z.string(),

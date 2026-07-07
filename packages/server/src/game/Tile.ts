@@ -186,7 +186,7 @@ export class Tile implements IRenderableEntity {
     }
 
     getTileInfo(): TileInfo {
-        const { terrain, topmostUnit } = this;
+        const { terrain, furniture, topmostUnit } = this;
 
         return {
             tilePos: this._location,
@@ -198,6 +198,17 @@ export class Tile implements IRenderableEntity {
                 }),
                 description: terrain.description
             },
+            ...(furniture && {
+                furniture: {
+                    name: furniture.name,
+                    uiImage: furniture.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: [furniture.state]
+                    }),
+                    description: furniture.description,
+                    integrity: furniture.integrity
+                }
+            }),
             ...(topmostUnit && {
                 unit: {
                     name: topmostUnit.name,

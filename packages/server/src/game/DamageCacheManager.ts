@@ -21,10 +21,12 @@ interface TileDamageState {
 export class DamageCacheManager {
     private readonly _gameId: GameId;
     private readonly _cacheDir: string;
+    private readonly _instanceId?: number;
     private readonly _tileStates = new Map<string, TileDamageState>();
 
-    constructor(gameId: GameId) {
+    constructor(gameId: GameId, instanceId?: number) {
         this._gameId = gameId;
+        this._instanceId = instanceId;
         this._cacheDir = `./public/cache/damage/${gameId}/`;
     }
 
@@ -37,7 +39,116 @@ export class DamageCacheManager {
     }
 
     private damagedImageId(tilePos: TilePos, originalImageId: string): string {
-        return `${this._gameId}-${tilePos.col}-${tilePos.row}-${originalImageId}`;
+        const base = `${this._gameId}-${tilePos.col}-${tilePos.row}-${originalImageId}`;
+        return this._instanceId === undefined ? base : `${base}-i${this._instanceId}`;
+    }
+
+    private static stripInstanceSuffix(imageSuffix: string): string {
+        return imageSuffix.replace(/-i\d+$/, "");
+    }
+
+    createRoundInstance(instanceId: number, imageManager: ImageManager): DamageCacheManager {
+        const roundCache = new DamageCacheManager(this._gameId, instanceId);
+        roundCache.copyFrom(this, imageManager);
+        return roundCache;
+    }
+
+    private copyFrom(source: DamageCacheManager, imageManager: ImageManager): void {
+        for (const [tileKey, sourceTileState] of source._tileStates) {
+            const [col, row] = tileKey.split(",").map(Number);
+            const tilePos = new TilePos(col, row);
+
+            const tileState: TileDamageState = {
+                furnitureId: sourceTileState.furnitureId,
+                layers: new Map()
+            };
+
+            for (const [originalImageId, sourceLayer] of sourceTileState.layers) {
+                tileState.layers.set(
+                    originalImageId,
+                    this.cloneLayerState(tilePos, originalImageId, sourceLayer.image, imageManager)
+                );
+            }
+
+            this._tileStates.set(tileKey, tileState);
+        }
+    }
+
+    private cloneLayerState(
+        tilePos: TilePos,
+        originalImageId: string,
+        sourceImage: Image,
+        imageManager: ImageManager
+    ): LayerDamageState {
+        const damagedImageId = this.damagedImageId(tilePos, originalImageId);
+        const clonedImage = sourceImage.clone(damagedImageId);
+
+        if (!existsSync(this._cacheDir)) {
+            mkdirSync(this._cacheDir, { recursive: true });
+        }
+
+        const filePath = path.join(this._cacheDir, `${damagedImageId}.png`);
+        writeFileSync(filePath, PNG.sync.write(clonedImage.png));
+        imageManager.addImage(damagedImageId, this._cacheDir, clonedImage);
+
+        return {
+            damagedImageId,
+            image: clonedImage,
+            filePath
+        };
+    }
+
+    adoptInto(gameCache: DamageCacheManager, imageManager: ImageManager): void {
+        for (const [tileKey, roundTileState] of this._tileStates) {
+            const [col, row] = tileKey.split(",").map(Number);
+            const tilePos = new TilePos(col, row);
+
+            for (const [originalImageId, roundLayer] of roundTileState.layers) {
+                const furnitureStub = { id: roundTileState.furnitureId } as Furniture;
+                const gameLayer = gameCache.getLayerState(tilePos, originalImageId);
+
+                if (gameLayer) {
+                    roundLayer.image.png.data.copy(gameLayer.image.png.data);
+                    writeFileSync(gameLayer.filePath, PNG.sync.write(gameLayer.image.png));
+                } else {
+                    gameCache.importLayerFromImage(
+                        tilePos,
+                        furnitureStub,
+                        originalImageId,
+                        roundLayer.image,
+                        imageManager
+                    );
+                }
+            }
+        }
+    }
+
+    private importLayerFromImage(
+        tilePos: TilePos,
+        furniture: Furniture,
+        originalImageId: string,
+        sourceImage: Image,
+        imageManager: ImageManager
+    ): void {
+        const key = this.tileKey(tilePos);
+        let tileState = this._tileStates.get(key);
+
+        if (!tileState) {
+            tileState = {
+                furnitureId: furniture.id,
+                layers: new Map()
+            };
+            this._tileStates.set(key, tileState);
+        }
+
+        tileState.layers.set(
+            originalImageId,
+            this.cloneLayerState(tilePos, originalImageId, sourceImage, imageManager)
+        );
+    }
+
+    private getLayerState(tilePos: TilePos, originalImageId: string): LayerDamageState | undefined {
+        return this._tileStates.get(this.tileKey(tilePos))?.layers.get(originalImageId);
     }
 
     ensureLayer(
@@ -95,7 +206,7 @@ export class DamageCacheManager {
     resolveOriginalImageId(imageId: string, tilePos: TilePos): string {
         const prefix = `${this._gameId}-${tilePos.col}-${tilePos.row}-`;
         if (imageId.startsWith(prefix)) {
-            return imageId.slice(prefix.length);
+            return DamageCacheManager.stripInstanceSuffix(imageId.slice(prefix.length));
         }
 
         return imageId;

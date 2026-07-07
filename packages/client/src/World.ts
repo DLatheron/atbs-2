@@ -386,6 +386,7 @@ export class World {
         this._drawSights = false;
 
         const appliedUpdateIndices = new Set<number>();
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
         const world = this;
 
         const finish = () => {

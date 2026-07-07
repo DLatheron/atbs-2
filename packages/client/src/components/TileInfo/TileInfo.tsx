@@ -3,6 +3,9 @@ import { Container, Stack, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../Description/Description";
 import { ImageComponent } from "../Image/Image";
 import { UnitDetailsComponent } from "../UnitDetails";
+import { AttributeComponent } from "../Attribute";
+import { formatPercentage } from "../../helpers/formattingHelpers";
+import { AttributesComponent } from "../Attributes";
 
 export interface TileInfoComponentProps {
     tileInfo: TileInfo | null;
@@ -12,6 +15,7 @@ export interface TileInfoComponentProps {
 export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
     const unit = tileInfo?.unit;
     const terrain = tileInfo?.terrain;
+    const furniture = tileInfo?.furniture;
 
     return (
         <Container data-testid="tile-info-component" disableGutters maxWidth={false} sx={sx}>
@@ -32,6 +36,26 @@ export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
                             </Typography>
                             <ImageComponent images={terrain.uiImage} />
                             <DescriptionComponent description={terrain.description} />
+                            {furniture && (
+                                <>
+                                    <Typography variant="h5" sx={{ textAlign: "center" }}>
+                                        {furniture.name}{" "}
+                                    </Typography>
+                                    <ImageComponent images={furniture.uiImage} />
+                                    <DescriptionComponent description={furniture.description} />
+                                    {furniture.integrity && (
+                                        <AttributesComponent
+                                            attributes={[
+                                                {
+                                                    id: "integrity",
+                                                    label: "Integrity",
+                                                    value: formatPercentage(furniture.integrity)
+                                                }
+                                            ]}
+                                        />
+                                    )}
+                                </>
+                            )}
                         </Stack>
                     )}
                     {unit && <UnitDetailsComponent unit={unit} />}

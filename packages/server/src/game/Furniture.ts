@@ -84,6 +84,14 @@ export class Furniture extends SceneObject {
         return this._recipe.id;
     }
 
+    get name(): string {
+        return this._recipe.name;
+    }
+
+    get description(): Description {
+        return this._recipe.description;
+    }
+
     get location(): TilePos {
         return this._location;
     }
@@ -94,6 +102,10 @@ export class Furniture extends SceneObject {
 
     get hitPoints(): number {
         return this._hitPoints;
+    }
+
+    get maxHitPoints(): number {
+        return this._recipe.hitPoints?.max ?? 0;
     }
 
     get pixelDestruction(): boolean {
@@ -113,6 +125,16 @@ export class Furniture extends SceneObject {
 
     get materials(): Material[] {
         return this._materials;
+    }
+
+    get integrity(): number | undefined {
+        const { maxHitPoints } = this;
+
+        if (maxHitPoints === 0) {
+            return undefined;
+        }
+
+        return this._hitPoints / maxHitPoints;
     }
 
     private get furnitureManager(): FurnitureManager {

@@ -25,7 +25,7 @@ export class FurnitureDamageSystem {
     }
 
     private hpDamageKey(projectile: Projectile, furniture: Furniture): string {
-        return `${projectile.index}-${furniture.id}`;
+        return `${projectile.roundIndex}-${projectile.index}-${furniture.id}`;
     }
 
     private radiusPixels(projectile: Projectile): number {
@@ -66,11 +66,7 @@ export class FurnitureDamageSystem {
         }
     }
 
-    onMaterialEntry(
-        projectile: Projectile,
-        event: GridRayTraceHitResult,
-        timeMs: number
-    ): void {
+    onMaterialEntry(projectile: Projectile, event: GridRayTraceHitResult, timeMs: number): void {
         const { owner, tile, pos } = event;
         if (!owner || !isFurniture(owner) || !tile) {
             return;

@@ -43,6 +43,7 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
+import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
 
@@ -720,6 +721,7 @@ export class Unit extends SceneObject {
                     firingUnit: this,
                     firingWeapon: weapon,
                     index,
+                    roundIndex: shot,
                     srcPos: fromWorldPos,
                     directionVector,
                     // TEMPORARY: Override the maxium range of the projectile to be the target position.
@@ -732,17 +734,19 @@ export class Unit extends SceneObject {
 
             const showDebugGraphics = config.showProjectileDebugGraphics;
             const debugGraphics: DebugGraphic[] = [];
-
-            const furnitureDamageSystem = new FurnitureDamageSystem(
-                game.damageCacheManager,
-                map.tileSize
+            const imageManager = ImageManager.GetSingleton();
+            const roundDamageCache = game.damageCacheManager.createRoundInstance(
+                shot,
+                imageManager
             );
+
+            const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
             Projectile.ProcessProjectiles(
                 projectiles,
                 map,
                 debugGraphics,
-                game.damageCacheManager,
+                roundDamageCache,
                 furnitureDamageSystem,
                 (projectile, tile, samplePos, sample, timeMs) => {
                     furnitureDamageSystem.onMaterialPixel(
@@ -782,6 +786,8 @@ export class Unit extends SceneObject {
                     }
                 }
             ]);
+
+            roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
         }
     }
 

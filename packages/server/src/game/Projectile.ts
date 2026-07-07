@@ -44,6 +44,7 @@ export interface ProjectileProps {
     firingWeapon: Item;
 
     index: number;
+    roundIndex?: number;
     srcPos: Vec2;
     directionVector: Vec2;
     projectileRecipe: ProjectileRecipe;
@@ -103,6 +104,10 @@ export class Projectile implements IRayCast {
 
     get index(): number {
         return this._props.index;
+    }
+
+    get roundIndex(): number {
+        return this._props.roundIndex ?? 0;
     }
 
     get srcPos(): Vec2 {

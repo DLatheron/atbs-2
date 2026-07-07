@@ -163,7 +163,8 @@ function createMockProjectile(
     gameId: string,
     damageCache: DamageCacheManager,
     tileSize: number,
-    index = 0
+    index = 0,
+    roundIndex = 0
 ): Projectile {
     const mockGame = {
         id: gameId,
@@ -176,6 +177,7 @@ function createMockProjectile(
         firingUnit: { side: { id: "side-1" } } as Projectile["firingUnit"],
         firingWeapon: round,
         index,
+        roundIndex,
         srcPos: new Vec2(0, 50),
         directionVector: new Vec2(100, 0),
         projectileRecipe: round.projectileRecipe
@@ -402,6 +404,36 @@ describe("FurnitureDamageSystem", () => {
         expect(damageSystem.timedUpdates).toHaveLength(1);
     });
 
+    it("applies HP damage once per round for the same projectile index", () => {
+        const round = itemManager.newItem(ROUND_RECIPE.id, { quantity: 1 });
+        const furniture = createFurniture(createWallRecipe(false));
+        const tile = createTile(createWallRecipe(false));
+        const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
+
+        const entryEvent = {
+            pos: new Vec2(50, 50),
+            tile,
+            material: furniture.materials[0],
+            owner: furniture,
+            imageId: "wall-cl",
+            layerIndex: 0,
+            orientation: Orientation.NORTH
+        };
+
+        damageSystem.onMaterialEntry(
+            createMockProjectile(round, gameId, damageCache, imageSize, 0, 0),
+            entryEvent,
+            100
+        );
+        damageSystem.onMaterialEntry(
+            createMockProjectile(round, gameId, damageCache, imageSize, 0, 1),
+            entryEvent,
+            200
+        );
+
+        expect(furniture.hitPoints).toBe(10);
+    });
+
     it("uses the fired round recipe when the weapon is a gun without a projectile recipe", () => {
         const round = itemManager.newItem(ROUND_RECIPE.id, { quantity: 1 });
         const gun = {
@@ -411,13 +443,7 @@ describe("FurnitureDamageSystem", () => {
         const furniture = createFurniture(createWallRecipe(true));
         const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
-        const projectile = createUnitFireProjectile(
-            round,
-            gun,
-            gameId,
-            damageCache,
-            imageSize
-        );
+        const projectile = createUnitFireProjectile(round, gun, gameId, damageCache, imageSize);
 
         expect(() =>
             damageSystem.onMaterialEntry(
@@ -558,6 +584,52 @@ describe("FurnitureDamageSystem", () => {
         expect(renderList[0].imageId).toBe(damagedId);
         expect(hasTimedUpdateForTile(damageSystem, tilePos)).toBe(true);
         expect(damageSystem.timedUpdates.map((update) => update.timeMs)).toEqual([600, 650]);
+    });
+
+    it("keeps each fire round damage snapshot isolated from later rounds", () => {
+        const furniture = createFurniture(createWallRecipe(true));
+        const tile = createTile(createWallRecipe(true));
+        const sample = {
+            owner: furniture,
+            imageId: "wall-cl",
+            layerIndex: 0,
+            material: furniture.materials[0],
+            orientation: Orientation.NORTH
+        };
+
+        const round0Cache = damageCache.createRoundInstance(0, imageManager);
+        const round0System = new FurnitureDamageSystem(round0Cache, imageSize);
+        round0System.onMaterialPixel(
+            createMockPixelProjectile(),
+            tile,
+            { x: 50, y: 50 },
+            sample,
+            100
+        );
+
+        const round0ImageId = round0Cache.getImageIdOverride("wall-cl", tilePos);
+        const round0Image = imageManager.getImage(round0ImageId);
+        expect(round0Image.getColour({ x: 50, y: 50 }, Orientation.NORTH).a).toBe(0);
+
+        round0Cache.adoptInto(damageCache, imageManager);
+
+        const round1Cache = damageCache.createRoundInstance(1, imageManager);
+        const round1System = new FurnitureDamageSystem(round1Cache, imageSize);
+        round1System.onMaterialPixel(
+            createMockPixelProjectile(),
+            tile,
+            { x: 55, y: 50 },
+            sample,
+            200
+        );
+
+        expect(round0Image.getColour({ x: 50, y: 50 }, Orientation.NORTH).a).toBe(0);
+        expect(round0Image.getColour({ x: 55, y: 50 }, Orientation.NORTH).a).not.toBe(0);
+
+        const round1ImageId = round1Cache.getImageIdOverride("wall-cl", tilePos);
+        const round1Image = imageManager.getImage(round1ImageId);
+        expect(round1Image.getColour({ x: 50, y: 50 }, Orientation.NORTH).a).toBe(0);
+        expect(round1Image.getColour({ x: 55, y: 50 }, Orientation.NORTH).a).toBe(0);
     });
 
     it("clears paired visual and collision pixels together for doors", () => {

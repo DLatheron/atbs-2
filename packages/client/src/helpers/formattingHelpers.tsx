@@ -147,6 +147,10 @@ export function formatItemName({ quantity, name }: { quantity: number; name: str
     return quantity > 1 ? `${quantity}x ${name}` : name;
 }
 
+export function formatPercentage(percentage: number): string {
+    return `${Math.round(percentage * 100)}%`;
+}
+
 // export function formatCost({ item, cost, batchSize = 1 }: { item: IBaseItem; cost: number; batchSize?: number }) {
 //     function formatCurrency(cost: number) {
 //         return `$${cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

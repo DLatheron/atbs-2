@@ -162,7 +162,7 @@ export function useActionPage() {
                     payload.tracers,
                     payload.tileUpdates,
                     () => {
-                        setMap((map) => map);
+                        setMap((map: ClientMap | null) => map);
                     },
                     () => {
                         setIsOnTarget(OnTarget.enum.none);
