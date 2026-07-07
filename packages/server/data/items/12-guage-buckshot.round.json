@@ -10,7 +10,7 @@
     ],
     "weight": 0.028,
     "projectile": {
-        "numProjectiles": 1,
+        "numProjectiles": 20,
         "maxRange": 2000,
         "perturbation": 0,
         "visual": {
@@ -24,8 +24,8 @@
 
         "mass": 0.0034,
         "velocity": 488,
-        "diameter": 8.4,
-        "hardness": 0.8,
+        "diameter": 1.0,
+        "hardness": 0.2,
         "shape": 0,
         "stability": 0.2,
         "bounce": 0,

@@ -17,10 +17,11 @@
     "fireType": "direct",
     "slotProps": {
         "ammo": {
-            "compatibleIds": ["12-gauge-buckshot.round"]
+            "compatibleIds": ["12-gauge-buckshot.round"],
+            "maxQuantity": 7
         }
     },
-    "slots": { "ammo": { "id": "12-gauge-buckshot.round", "capacity": 7 } },
+    "slots": { "ammo": { "id": "12-gauge-buckshot.round", "quantity": 7 } },
     "fireSelector": "single",
     "spreadAngle": 2.0,
     "fireModes": {
