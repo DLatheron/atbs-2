@@ -23,6 +23,7 @@ export class DamageCacheManager {
     private readonly _cacheDir: string;
     private readonly _instanceId?: number;
     private readonly _tileStates = new Map<string, TileDamageState>();
+    private _nextInstanceId = 0;
 
     constructor(gameId: GameId, instanceId?: number) {
         this._gameId = gameId;
@@ -47,10 +48,19 @@ export class DamageCacheManager {
         return imageSuffix.replace(/-i\d+$/, "");
     }
 
-    createRoundInstance(instanceId: number, imageManager: ImageManager): DamageCacheManager {
+    createRoundInstance(imageManager: ImageManager): DamageCacheManager {
+        if (this._instanceId !== undefined) {
+            throw new Error("Round instances cannot create nested round instances");
+        }
+
+        const instanceId = this._nextInstanceId++;
         const roundCache = new DamageCacheManager(this._gameId, instanceId);
         roundCache.copyFrom(this, imageManager);
         return roundCache;
+    }
+
+    get instanceId(): number | undefined {
+        return this._instanceId;
     }
 
     private copyFrom(source: DamageCacheManager, imageManager: ImageManager): void {
@@ -103,6 +113,9 @@ export class DamageCacheManager {
         };
     }
 
+    /**
+     * Merge this round snapshot into the live game cache while preserving round-scoped images on disk.
+     */
     adoptInto(gameCache: DamageCacheManager, imageManager: ImageManager): void {
         for (const [tileKey, roundTileState] of this._tileStates) {
             const [col, row] = tileKey.split(",").map(Number);
@@ -271,28 +284,6 @@ export class DamageCacheManager {
 
     hasTileCache(tilePos: TilePos): boolean {
         return this._tileStates.has(this.tileKey(tilePos));
-    }
-
-    /**
-     * Release round-scoped damage images after they have been merged into the game cache.
-     * Only applies to round instances (those with an instance id suffix).
-     */
-    disposeRoundInstance(imageManager: ImageManager): void {
-        if (this._instanceId === undefined) {
-            return;
-        }
-
-        for (const tileState of this._tileStates.values()) {
-            for (const { damagedImageId, filePath } of tileState.layers.values()) {
-                imageManager.removeImage(damagedImageId);
-
-                if (existsSync(filePath)) {
-                    rmSync(filePath);
-                }
-            }
-        }
-
-        this._tileStates.clear();
     }
 
     cleanup(imageManager: ImageManager): void {

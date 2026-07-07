@@ -597,7 +597,7 @@ describe("FurnitureDamageSystem", () => {
             orientation: Orientation.NORTH
         };
 
-        const round0Cache = damageCache.createRoundInstance(0, imageManager);
+        const round0Cache = damageCache.createRoundInstance(imageManager);
         const round0System = new FurnitureDamageSystem(round0Cache, imageSize);
         round0System.onMaterialPixel(
             createMockPixelProjectile(),
@@ -613,7 +613,7 @@ describe("FurnitureDamageSystem", () => {
 
         round0Cache.adoptInto(damageCache, imageManager);
 
-        const round1Cache = damageCache.createRoundInstance(1, imageManager);
+        const round1Cache = damageCache.createRoundInstance(imageManager);
         const round1System = new FurnitureDamageSystem(round1Cache, imageSize);
         round1System.onMaterialPixel(
             createMockPixelProjectile(),
@@ -632,7 +632,7 @@ describe("FurnitureDamageSystem", () => {
         expect(round1Image.getColour({ x: 55, y: 50 }, Orientation.NORTH).a).toBe(0);
     });
 
-    it("allows a second fire command to recreate round 0 snapshots after disposal", () => {
+    it("preserves each fire command damage snapshot for replay", () => {
         const furniture = createFurniture(createDoorRecipe());
         const tile = createTile(createDoorRecipe());
         const sample = {
@@ -643,8 +643,8 @@ describe("FurnitureDamageSystem", () => {
             orientation: Orientation.NORTH
         };
 
-        const firstFireRound0 = damageCache.createRoundInstance(0, imageManager);
-        const firstFireSystem = new FurnitureDamageSystem(firstFireRound0, imageSize);
+        const firstFireRound = damageCache.createRoundInstance(imageManager);
+        const firstFireSystem = new FurnitureDamageSystem(firstFireRound, imageSize);
         firstFireSystem.onMaterialPixel(
             createMockPixelProjectile(),
             tile,
@@ -653,17 +653,18 @@ describe("FurnitureDamageSystem", () => {
             100
         );
 
-        const firstRoundImageId = firstFireRound0.getImageIdOverride("door-cl", tilePos);
+        const firstRoundImageId = firstFireRound.getImageIdOverride("door-cl", tilePos);
         expect(firstRoundImageId).toBe(`${gameId}-2-3-door-cl-i0`);
         expect(imageManager.exists(firstRoundImageId)).toBe(true);
+        expect(existsSync(`./public/cache/damage/${gameId}/${firstRoundImageId}.png`)).toBe(true);
 
-        firstFireRound0.adoptInto(damageCache, imageManager);
-        firstFireRound0.disposeRoundInstance(imageManager);
+        firstFireRound.adoptInto(damageCache, imageManager);
 
-        expect(imageManager.exists(firstRoundImageId)).toBe(false);
+        expect(imageManager.exists(firstRoundImageId)).toBe(true);
+        expect(existsSync(`./public/cache/damage/${gameId}/${firstRoundImageId}.png`)).toBe(true);
 
-        const secondFireRound0 = damageCache.createRoundInstance(0, imageManager);
-        const secondFireSystem = new FurnitureDamageSystem(secondFireRound0, imageSize);
+        const secondFireRound = damageCache.createRoundInstance(imageManager);
+        const secondFireSystem = new FurnitureDamageSystem(secondFireRound, imageSize);
 
         expect(() => {
             secondFireSystem.onMaterialPixel(
@@ -675,12 +676,16 @@ describe("FurnitureDamageSystem", () => {
             );
         }).not.toThrow();
 
-        const secondRoundImageId = secondFireRound0.getImageIdOverride("door-cl", tilePos);
-        expect(secondRoundImageId).toBe(firstRoundImageId);
+        const secondRoundImageId = secondFireRound.getImageIdOverride("door-cl", tilePos);
+        expect(secondRoundImageId).toBe(`${gameId}-2-3-door-cl-i1`);
+        expect(imageManager.exists(firstRoundImageId)).toBe(true);
         expect(imageManager.exists(secondRoundImageId)).toBe(true);
+        expect(existsSync(`./public/cache/damage/${gameId}/${secondRoundImageId}.png`)).toBe(true);
 
-        secondFireRound0.adoptInto(damageCache, imageManager);
-        secondFireRound0.disposeRoundInstance(imageManager);
+        secondFireRound.adoptInto(damageCache, imageManager);
+
+        expect(imageManager.exists(firstRoundImageId)).toBe(true);
+        expect(imageManager.exists(secondRoundImageId)).toBe(true);
     });
 
     it("clears paired visual and collision pixels together for doors", () => {
