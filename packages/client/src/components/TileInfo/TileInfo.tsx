@@ -3,7 +3,6 @@ import { Container, Stack, SxProps, Typography } from "@mui/material";
 import { DescriptionComponent } from "../Description/Description";
 import { ImageComponent } from "../Image/Image";
 import { UnitDetailsComponent } from "../UnitDetails";
-import { AttributeComponent } from "../Attribute";
 import { formatPercentage } from "../../helpers/formattingHelpers";
 import { AttributesComponent } from "../Attributes";
 
