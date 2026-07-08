@@ -15,6 +15,7 @@ import { FurnitureManager } from "./FurnitureManager.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
+import { calcMovementObstruction } from "./Obstruction.js";
 
 export const FurnitureRecipe = z.object({
     id: FurnitureId,
@@ -151,7 +152,7 @@ export class Furniture extends SceneObject {
         }
 
         const previousHitPoints = this.hitPoints;
-        this.hitPoints = Math.max(0, previousHitPoints - amount);
+        this.hitPoints -= amount;
 
         return previousHitPoints > 0 && this.hitPoints === 0;
     }
@@ -209,5 +210,9 @@ export class Furniture extends SceneObject {
         }
 
         return renderList;
+    }
+
+    getMovementObstruction(type: string) {
+        return calcMovementObstruction(this._recipe.movementObstruction, this.state, type);
     }
 }

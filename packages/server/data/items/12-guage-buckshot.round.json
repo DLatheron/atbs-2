@@ -11,10 +11,10 @@
     "weight": 0.028,
     "projectile": {
         "numProjectiles": 20,
+        "variability": { "min": 0.95, "max": 1.05 },
         "maxRange": 2000,
         "perturbation": 0,
         "visual": {
-            "velocityInPps": 1000,
             "headColour": { "r": 255, "g": 255, "b": 255, "a": 1 },
             "headRadiusInPixels": 1,
             "trailColour": { "r": 255, "g": 255, "b": 255, "a": 1 },

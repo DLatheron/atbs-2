@@ -509,6 +509,10 @@ export class Tile implements IRenderableEntity {
         }
     }
 
+    getMovementObstruction(type: string) {
+        return this.furniture?.getMovementObstruction(type) ?? 0;
+    }
+
     static SampleCollisionLayers(
         samplePos: IVec2,
         collisionLayers: LayerCollision[]

@@ -716,10 +716,6 @@ export const ThrowDetails = z.object({
 export type ThrowDetails = z.infer<typeof ThrowDetails>;
 
 export const VisualRecipe = z.object({
-    velocityInPps: z
-        .number()
-        .positive()
-        .describe("Velocity of the projectile in pixels per second"),
     headColour: IColour.default(Colour.White),
     headRadiusInPixels: z.number().nonnegative(),
     trailColour: IColour.default(Colour.White),

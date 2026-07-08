@@ -46,6 +46,7 @@ import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
+import { IMPENETRABLE } from "./Obstruction.js";
 
 const MAX_DISORIENTATION = 100;
 
@@ -485,11 +486,14 @@ export class Unit extends SceneObject {
             return;
         }
 
-        // const movementObstruction = dstTile.getMovementObstruction(this.unitType);
-        // if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
-        //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.UNABLE_TO_MOVE_THERE));
-        //     return false;
-        // }
+        const movementObstruction = dstTile.getMovementObstruction(this.type);
+        if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
+            messageRouter.send(
+                { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MOVE_THERE },
+                this.side.id
+            );
+            return;
+        }
 
         aptCost *= 1 /* + movementObstruction */;
         if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
@@ -710,8 +714,8 @@ export class Unit extends SceneObject {
 
             this.logger.dir({ numProjectiles });
 
-            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
-                const perturbedAngle = startOfSpread + angleScaler * index;
+            const projectiles = [...Array(numProjectiles).keys()].map((projectileIndex) => {
+                const perturbedAngle = startOfSpread + angleScaler * projectileIndex;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
                 this.logger.dir({ perturbedAngle, directionVector, fromWorldPos });
@@ -720,7 +724,7 @@ export class Unit extends SceneObject {
                     game,
                     firingUnit: this,
                     firingWeapon: weapon,
-                    index,
+                    projectileIndex,
                     roundIndex: shot,
                     srcPos: fromWorldPos,
                     directionVector,

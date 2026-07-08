@@ -37,7 +37,6 @@ const ROUND_RECIPE = {
         maxRange: 3000,
         perturbation: 100,
         visual: {
-            velocityInPps: 1000,
             headColour: { r: 255, g: 255, b: 255, a: 1 },
             headRadiusInPixels: 2,
             trailColour: { r: 255, g: 255, b: 255, a: 1 },
@@ -176,7 +175,7 @@ function createMockProjectile(
         game: mockGame,
         firingUnit: { side: { id: "side-1" } } as Projectile["firingUnit"],
         firingWeapon: round,
-        index,
+        projectileIndex: index,
         roundIndex,
         srcPos: new Vec2(0, 50),
         directionVector: new Vec2(100, 0),
@@ -214,7 +213,7 @@ function createUnitFireProjectile(
         game: mockGame,
         firingUnit: { side: { id: "side-1" } } as Projectile["firingUnit"],
         firingWeapon: gun,
-        index,
+        projectileIndex: index,
         srcPos: new Vec2(0, 50),
         directionVector: new Vec2(100, 0),
         projectileRecipe: round.projectileRecipe

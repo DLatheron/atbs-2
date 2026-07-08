@@ -270,6 +270,10 @@ export function useActionPage() {
 
     const onFire = useCallback(
         (details: FireDetails) => {
+            if (disabled) {
+                return;
+            }
+
             setDisabled(true);
 
             sendMessage({
@@ -277,7 +281,7 @@ export function useActionPage() {
                 payload: details
             });
         },
-        [sendMessage]
+        [disabled, sendMessage]
     );
 
     useEffect(() => {
@@ -286,6 +290,10 @@ export function useActionPage() {
 
     const onThrow = useCallback(
         (details: ThrowDetails) => {
+            if (disabled) {
+                return;
+            }
+
             setDisabled(true);
 
             sendMessage({
@@ -293,7 +301,7 @@ export function useActionPage() {
                 payload: details
             });
         },
-        [sendMessage]
+        [disabled, sendMessage]
     );
 
     useEffect(() => {

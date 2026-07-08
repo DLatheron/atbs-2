@@ -34,6 +34,16 @@ export type SlotProps = z.infer<typeof SlotProps>;
 
 export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),
+    variability: z
+        .object({
+            min: z.number().positive().max(2).default(1),
+            max: z.number().positive().max(2).default(1)
+        })
+        .refine((data) => data.min <= data.max, {
+            message: "Variability 'max' must be greater than 'min'"
+        })
+        .describe("Variability applied to each projectile in a multiple projectile spread")
+        .optional(),
     maxRange: z.number().positive(),
     perturbation: z.number().min(0).max(100).default(0),
     visual: VisualRecipe,

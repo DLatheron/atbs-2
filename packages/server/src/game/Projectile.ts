@@ -2,6 +2,7 @@ import {
     Colour,
     DebugGraphic,
     DebugGraphicType,
+    generateRandomBetween,
     minDistanceFromPointToPathSegments,
     PathSegment,
     Vec2
@@ -43,8 +44,8 @@ export interface ProjectileProps {
     firingUnit: Unit;
     firingWeapon: Item;
 
-    index: number;
-    roundIndex?: number;
+    projectileIndex: number;
+    roundIndex: number;
     srcPos: Vec2;
     directionVector: Vec2;
     projectileRecipe: ProjectileRecipe;
@@ -66,15 +67,27 @@ export class Projectile implements IRayCast {
     private _impact?: Impact;
 
     constructor(props: ProjectileProps) {
+        const variability =
+            props.projectileIndex === 0 || !props.projectileRecipe.variability
+                ? 1
+                : generateRandomBetween(
+                      props.projectileRecipe.variability.min,
+                      props.projectileRecipe.variability.max
+                  );
+        console.info(
+            `Projectile: ${props.projectileIndex} variability: ${variability}`,
+            props.projectileRecipe.variability
+        );
+
         this._props = props;
 
         this._srcPos = new Vec2(props.srcPos);
         this._dstPos = this.srcPos.add(
             props.directionVector.scale(props.projectileRecipe.maxRange)
         );
-        this._maxRange = props.projectileRecipe.maxRange;
+        this._maxRange = props.projectileRecipe.maxRange * variability;
         this._directionVector = props.directionVector;
-        this._velocity = props.projectileRecipe.velocity;
+        this._velocity = props.projectileRecipe.velocity * variability;
         this._penetration = PenetrationSystem.calcInitialEnergy(this);
         this._segments = [
             {
@@ -103,7 +116,7 @@ export class Projectile implements IRayCast {
     }
 
     get index(): number {
-        return this._props.index;
+        return this._props.projectileIndex;
     }
 
     get roundIndex(): number {

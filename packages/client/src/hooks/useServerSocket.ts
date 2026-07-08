@@ -135,8 +135,9 @@ export function useServerSocket(options: ServerSocketOptions) {
     const connectAttemptInFlightRef = useRef(false);
 
     const handleCreateGameRef = useRef<(clientId: ClientId) => Promise<void>>(async () => {});
-    const handleJoinGameRef =
-        useRef<(gameId: GameId, clientId: ClientId) => Promise<void>>(async () => {});
+    const handleJoinGameRef = useRef<(gameId: GameId, clientId: ClientId) => Promise<void>>(
+        async () => {}
+    );
 
     const isCurrentConnection = useCallback((generation: number) => {
         return generation === connectionGenerationRef.current;
@@ -318,11 +319,9 @@ export function useServerSocket(options: ServerSocketOptions) {
                 return;
             }
 
-            handleCreateGameRef
-                .current(clientId)
-                .catch((error) => {
-                    console.error("Create failed with", error);
-                });
+            handleCreateGameRef.current(clientId).catch((error) => {
+                console.error("Create failed with", error);
+            });
         };
 
         const createGameTimer = window.setInterval(tryCreateGame, createGameRetryIntervalInMs);
@@ -428,11 +427,9 @@ export function useServerSocket(options: ServerSocketOptions) {
                 return;
             }
 
-            handleJoinGameRef
-                .current(gameId, clientId)
-                .catch((error) => {
-                    console.error("Join failed with", error);
-                });
+            handleJoinGameRef.current(gameId, clientId).catch((error) => {
+                console.error("Join failed with", error);
+            });
         };
 
         const joinGameTimer = window.setInterval(tryJoinGame, joinGameRetryIntervalInMs);
