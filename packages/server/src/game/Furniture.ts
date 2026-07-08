@@ -10,7 +10,7 @@ import {
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
-import { Orientation, TilePos } from "@atbs/maths";
+import { clamp, Orientation, TilePos } from "@atbs/maths";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
@@ -114,6 +114,8 @@ export class Furniture extends SceneObject {
     }
 
     set hitPoints(value: number) {
+        value = clamp(value, 0, this.maxHitPoints);
+
         if (this.hitPoints > 0 && value === 0) {
             this._state = FurnitureState.enum.destroyed;
         }

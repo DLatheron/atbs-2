@@ -24,6 +24,7 @@ import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
     clamp,
+    Colour,
     DebugGraphic,
     generateRandomBetween,
     ITilePos,
@@ -294,6 +295,7 @@ export class Unit extends SceneObject {
             actions[Action.enum.throw].accuracy = this.calcThrowAccuracy(
                 actions[Action.enum.throw].accuracy
             );
+            actions[Action.enum.throw].actionPoints = this.itemInUse?.throwActionPointCost ?? 0;
         }
 
         this.logger.dir({ actions });
@@ -601,7 +603,7 @@ export class Unit extends SceneObject {
         messageRouter: MessageRouter
     ): void {
         if (!this.itemInUse) {
-            throw new Error("No item in use - but on was expected");
+            throw new Error("No item in use - but one was expected");
         }
         if (this.itemInUse.findByItemId(weapon.id) !== weapon) {
             throw new Error(`Weapon ${weapon.id} is not part of item in use ${this.itemInUse?.id}`);
@@ -792,9 +794,170 @@ export class Unit extends SceneObject {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    throw(game: Game, worldPos: Vec2, _messageRouter: MessageRouter): void {
-        this.logger.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
+    throw(game: Game, worldPos: Vec2, messageRouter: MessageRouter): void {
+        const { itemInUse: itemToThrow } = this;
+
+        if (!itemToThrow) {
+            throw new Error("No item in use - but one was expected");
+        }
+
+        const { map } = game;
+
+        this.logger.info("Throw", {
+            gameId: game.id,
+            itemId: itemToThrow.id,
+            worldPos
+        });
+
+        const aptCost = itemToThrow.throwActionPointCost;
+        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        const toWorldPos = worldPos;
+        console.info(
+            "Unit",
+            this.id,
+            "attempting to throw",
+            itemToThrow.name,
+            "to",
+            toWorldPos.toString()
+        );
+
+        const { accuracy: baseAccuracy } = this._recipe.actions.throw;
+        const throwAccuracy = this.calcThrowAccuracy(baseAccuracy);
+        console.info({ baseAccuracy, throwAccuracy });
+
+        const maxThrowDistance = this.calcThrowMaxRange(itemToThrow);
+        console.info({ maxThrowDistance });
+
+        const unitPos = map.tileOffsetToWorld(this.mapLocation);
+        console.info({ unitPos: unitPos.toString() });
+
+        const throwVec = toWorldPos.sub(unitPos);
+        const throwDir = throwVec.normalise();
+        const throwDistance = throwVec.length;
+        console.info({
+            throwVec: throwVec.toString(),
+            throwDir: throwDir.toString(),
+            throwDistance
+        });
+
+        const {
+            dirVector: perturbedDir,
+            accuracy,
+            onTarget
+        } = Item.PerturbAccuracy(throwDir, throwAccuracy, this.throwInaccuracyAngle);
+        console.info({
+            perturbedDir: perturbedDir.toString(),
+            targeting: onTarget ? "OnTarget" : `OffTarget(${accuracy}%)`
+        });
+
+        const perturbedDistance = Item.PerturbRange(throwDistance);
+        console.info({ perturbedDistance });
+
+        const limitedPerturbedDistance = Math.min(perturbedDistance, maxThrowDistance);
+        console.info({ limitedPerturbedDistance });
+
+        const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
+        const dir = toWorldPos.sub(unitWorldPos).normalise();
+        const { radius: collisionRadius } = this._recipe.collision;
+        const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
+        this.logger.dir({ srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
+
+        const perturbedTargetWorldPos = fromWorldPos.add(
+            perturbedDir.scale(limitedPerturbedDistance)
+        );
+        console.info({
+            perturbedTargetWorldPos: perturbedTargetWorldPos.toString()
+        });
+
+        if (!this._useActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        // this.inventory.removeItem(itemToThrow);
+
+        const projectile = new Projectile({
+            game,
+            firingUnit: this,
+            firingWeapon: itemToThrow,
+            projectileIndex: 0,
+            roundIndex: 0,
+            srcPos: fromWorldPos,
+            directionVector: perturbedDir.scale(limitedPerturbedDistance),
+            projectileRecipe: {
+                numProjectiles: 1,
+                maxRange: limitedPerturbedDistance,
+                perturbation: 0,
+                visual: {
+                    headColour: Colour.White,
+                    headRadiusInPixels: 2,
+                    trailColour: Colour.White,
+                    trailLengthInPixels: 100,
+                    rangeFalloffPower: 20
+                },
+                damage: { default: 1, type: "default" },
+                mass: itemToThrow.weight * 1000,
+                velocity: 500,
+                diameter: 0,
+                hardness: 0,
+                shape: 0,
+                stability: 0,
+                bounce: 1,
+                integrity: 0
+            }
+        });
+
+        const showDebugGraphics = config.showProjectileDebugGraphics;
+        const debugGraphics: DebugGraphic[] = [];
+        const imageManager = ImageManager.GetSingleton();
+        const roundDamageCache = game.damageCacheManager.createRoundInstance(imageManager);
+
+        const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
+
+        Projectile.ProcessProjectiles(
+            [projectile],
+            map,
+            debugGraphics,
+            roundDamageCache,
+            furnitureDamageSystem,
+            (projectile, tile, samplePos, sample, timeMs) => {
+                // TODO: Work out what to do with the item when it hits a surface.
+                furnitureDamageSystem.onMaterialPixel(projectile, tile, samplePos, sample, timeMs);
+            }
+        );
+
+        // TODO:
+        // - Update the unit so they are not holding.
+        // - Position the item on the ground (rounded).
+        // - Update the
+
+        if (showDebugGraphics && debugGraphics) {
+            messageRouter.send({
+                type: "server:debug:graphics",
+                payload: debugGraphics
+            });
+        }
+
+        const tileUpdates = [...furnitureDamageSystem.timedUpdates].sort(
+            (a, b) => a.timeMs - b.timeMs
+        );
+
+        roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
+
+        // TODO: Move the projectiles forward in time...
+        // TODO: Psuedo tracers - how do we determine visibility?
+        messageRouter.send([
+            {
+                type: "server:fire:trace",
+                payload: {
+                    tracers: [projectile.getTracer()],
+                    isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
+                    tileUpdates
+                }
+            }
+        ]);
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {

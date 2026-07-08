@@ -243,6 +243,10 @@ export class Item extends SceneObject {
         return this._recipe.projectile;
     }
 
+    get throwActionPointCost(): number {
+        return Math.floor(clamp(this.weight * 5, 10, 30));
+    }
+
     hasSlot(slot: SlotType): boolean {
         return !!this.findSlotContents(slot);
     }
@@ -583,10 +587,10 @@ export class Item extends SceneObject {
         dirVector: Vec2,
         overallAccuracy: number,
         inaccuracyAngle = 10
-    ): { dirVector: Vec2; accuracy: number } {
+    ): { dirVector: Vec2; accuracy: number; onTarget: boolean } {
         const accuracy = Item.CalcShotAccuracy(overallAccuracy);
         if (accuracy === 0.5) {
-            return { dirVector, accuracy };
+            return { dirVector, accuracy, onTarget: true };
         }
 
         const inaccuracyHalfAngle = degreesToRadians(inaccuracyAngle / 2);
@@ -598,7 +602,8 @@ export class Item extends SceneObject {
 
         return {
             dirVector: Vec2.Slerp(angles[0], angles[1], accuracy),
-            accuracy
+            accuracy,
+            onTarget: false
         };
     }
 
