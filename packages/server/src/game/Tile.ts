@@ -28,6 +28,7 @@ import { IRayCast } from "./IRayCast.js";
 import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
+import { Item } from "./Item.js";
 
 export interface CollisionSample {
     material: Material;
@@ -93,6 +94,7 @@ export class Tile implements IRenderableEntity {
     protected _tileSize: number;
     protected readonly _terrain: Terrain;
     protected readonly _furniture?: Furniture;
+    protected _items: Item[];
     protected _units: Unit[];
 
     constructor(
@@ -114,6 +116,7 @@ export class Tile implements IRenderableEntity {
                   state: recipe.furniture.state
               })
             : undefined;
+        this._items = [];
         this._units = [];
     }
 
@@ -129,8 +132,16 @@ export class Tile implements IRenderableEntity {
         return this._units;
     }
 
+    get items(): Item[] {
+        return this._items;
+    }
+
     get topmostUnit(): Unit | null {
         return this._units[0] ?? null;
+    }
+
+    get topmostItem(): Item | null {
+        return this._items[0] ?? null;
     }
 
     get location(): TilePos {
@@ -166,8 +177,40 @@ export class Tile implements IRenderableEntity {
         if (!unit.location) {
             throw new Error(`Unit ${unit.id} does not have an assigned location`);
         }
+        if (!TilePos.IsEqual(unit.location, this.location)) {
+            throw new Error(
+                `Unit ${unit.id} has location ${unit.location} but is attempting to be removed from ${this.location}!`
+            );
+        }
 
         this._units = this._units.filter(({ id }) => id !== unit.id);
+    }
+
+    addItem(item: Item): void {
+        if (!item.location) {
+            throw new Error(`Item ${item.id} does not have an assigned location`);
+        }
+        if (!TilePos.IsEqual(item.location, this.location)) {
+            throw new Error(
+                `Item ${item.id} has location ${item.location} but is attempting to be added to ${this.location}!`
+            );
+        }
+
+        this._items.unshift(item);
+        this._items.sort((a, b) => a.weight - b.weight);
+    }
+
+    removeItem(item: Item): void {
+        if (!item.location) {
+            throw new Error(`Item ${item.id} does not have an assigned location`);
+        }
+        if (!TilePos.IsEqual(item.location, this.location)) {
+            throw new Error(
+                `Item ${item.id} has location ${item.location} but is attempting to be removed from ${this.location}!`
+            );
+        }
+
+        this._items = this._items.filter(({ id }) => id !== item.id);
     }
 
     getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
@@ -181,12 +224,13 @@ export class Tile implements IRenderableEntity {
         return [
             ...this.terrain.getRenderList(context),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
+            ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.units.map((unit) => unit.getRenderList(context)).flat()
         ];
     }
 
     getTileInfo(): TileInfo {
-        const { terrain, furniture, topmostUnit } = this;
+        const { terrain, furniture, topmostItem, topmostUnit } = this;
 
         return {
             tilePos: this._location,
@@ -207,6 +251,16 @@ export class Tile implements IRenderableEntity {
                     }),
                     description: furniture.description,
                     integrity: furniture.integrity
+                }
+            }),
+            ...(topmostItem && {
+                item: {
+                    name: topmostItem.name,
+                    uiImage: topmostItem.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: []
+                    }),
+                    description: topmostItem.description
                 }
             }),
             ...(topmostUnit && {

@@ -39,6 +39,9 @@ export interface Impact {
     time: number;
 }
 
+/** Travel speed shared by fired rounds for consistent projectile animation timing. */
+export const DEFAULT_PROJECTILE_TRAVEL_VELOCITY = 600;
+
 export interface ProjectileProps {
     game: Game;
     firingUnit: Unit;
@@ -61,6 +64,8 @@ export class Projectile implements IRayCast {
     private _maxRange: number;
     private _directionVector: Vec2;
     private _velocity: number;
+    private _impactVelocity: number;
+    private readonly _syncAnimationToImpact: boolean;
     private _penetration: number;
     private _segments: PathSegment[];
 
@@ -88,6 +93,10 @@ export class Projectile implements IRayCast {
         this._maxRange = props.projectileRecipe.maxRange * variability;
         this._directionVector = props.directionVector;
         this._velocity = props.projectileRecipe.velocity * variability;
+        this._syncAnimationToImpact = props.projectileRecipe.impactVelocity == null;
+        this._impactVelocity =
+            (props.projectileRecipe.impactVelocity ?? props.projectileRecipe.velocity) *
+            variability;
         this._penetration = PenetrationSystem.calcInitialEnergy(this);
         this._segments = [
             {
@@ -147,6 +156,21 @@ export class Projectile implements IRayCast {
         this._velocity = value;
     }
 
+    get impactVelocity(): number {
+        return this._impactVelocity;
+    }
+
+    set impactVelocity(value: number) {
+        this._impactVelocity = Math.max(value, 0);
+    }
+
+    retainImpactVelocity(value: number): void {
+        this._impactVelocity = value;
+        if (this._syncAnimationToImpact) {
+            this._velocity = value;
+        }
+    }
+
     get penetration(): number {
         return this._penetration;
     }
@@ -179,6 +203,13 @@ export class Projectile implements IRayCast {
         this._impact = value;
     }
 
+    get finalPostionAndTime(): { pos: Vec2; time: number } {
+        const pos = this.impact?.pos ?? this.dstPos;
+        const time = this.impact?.time ?? this.calculateTimeTo(this.dstPos);
+
+        return { pos, time };
+    }
+
     get mass(): number {
         return this._props.projectileRecipe.mass;
     }
@@ -197,6 +228,10 @@ export class Projectile implements IRayCast {
 
     get bounce(): number {
         return this._props.projectileRecipe.bounce;
+    }
+
+    get delivery(): ProjectileRecipe["delivery"] {
+        return this._props.projectileRecipe.delivery;
     }
 
     get projectileRecipe(): ProjectileRecipe {

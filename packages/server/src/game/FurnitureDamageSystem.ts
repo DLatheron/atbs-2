@@ -67,6 +67,10 @@ export class FurnitureDamageSystem {
     }
 
     onMaterialEntry(projectile: Projectile, event: GridRayTraceHitResult, timeMs: number): void {
+        if (projectile.delivery === "thrown") {
+            return;
+        }
+
         const { owner, tile, pos } = event;
         if (!owner || !isFurniture(owner) || !tile) {
             return;

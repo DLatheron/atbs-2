@@ -136,6 +136,13 @@ export function useActionPage() {
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
                 setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
                 world.unit = merge({}, world.unit, payload);
+
+                if (world.unit.itemInUse === null) {
+                    setSidePanelMode(MapMode.enum["unit-mode"]);
+                    world.mapMode = MapMode.enum["map-mode"];
+                    setUnitWeapon(null);
+                    world.unitWeapon = null;
+                }
             }),
 
             messageManager.registerHandler("server:unit:weapon:update", (_context, payload) => {
@@ -159,6 +166,7 @@ export function useActionPage() {
 
                 setIsOnTarget(payload.isOnTarget);
                 world.setTracers(
+                    payload.mode,
                     payload.tracers,
                     payload.tileUpdates,
                     () => {

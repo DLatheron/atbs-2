@@ -42,7 +42,7 @@ import { ItemManager } from "./ItemManager.js";
 import { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
-import { Projectile } from "./Projectile.js";
+import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
@@ -278,6 +278,14 @@ export class Unit extends SceneObject {
 
     get canThrow(): boolean {
         return Action.enum.throw in this._recipe.actions && !!this.itemInUse;
+    }
+
+    get canAction(): boolean {
+        return false;
+    }
+
+    get canInventory(): boolean {
+        return false;
     }
 
     get weaponInaccuracyAngle() {
@@ -785,6 +793,7 @@ export class Unit extends SceneObject {
                 {
                     type: "server:fire:trace",
                     payload: {
+                        mode: "fire",
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                         tileUpdates
@@ -876,7 +885,10 @@ export class Unit extends SceneObject {
             return;
         }
 
-        // this.inventory.removeItem(itemToThrow);
+        const throwImpactVelocityMps = Math.min(
+            30,
+            Math.max(6, Math.sqrt(this.strength / itemToThrow.weight) * 4)
+        );
 
         const projectile = new Projectile({
             game,
@@ -885,7 +897,7 @@ export class Unit extends SceneObject {
             projectileIndex: 0,
             roundIndex: 0,
             srcPos: fromWorldPos,
-            directionVector: perturbedDir.scale(limitedPerturbedDistance),
+            directionVector: perturbedDir,
             projectileRecipe: {
                 numProjectiles: 1,
                 maxRange: limitedPerturbedDistance,
@@ -897,14 +909,16 @@ export class Unit extends SceneObject {
                     trailLengthInPixels: 100,
                     rangeFalloffPower: 20
                 },
-                damage: { default: 1, type: "default" },
-                mass: itemToThrow.weight * 1000,
-                velocity: 500,
-                diameter: 0,
+                damage: { default: 0, type: "default" },
+                mass: itemToThrow.weight,
+                velocity: DEFAULT_PROJECTILE_TRAVEL_VELOCITY,
+                impactVelocity: throwImpactVelocityMps,
+                diameter: 40,
                 hardness: 0,
                 shape: 0,
-                stability: 0,
+                stability: 0.2,
                 bounce: 1,
+                delivery: "thrown",
                 integrity: 0
             }
         });
@@ -946,18 +960,62 @@ export class Unit extends SceneObject {
 
         roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
 
+        const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
+
+        // Work out which tile the item landed in.
+        const landingTilePos = map.worldToTile(finalWorldPos);
+        console.info({ landingTile: landingTilePos });
+
+        const landingTile = map.getTile(landingTilePos);
+
+        itemToThrow.location = landingTilePos;
+        landingTile.addItem(itemToThrow);
+        this.inventory.removeItem(itemToThrow);
+
+        tileUpdates.push({
+            timeMs: finalTime,
+            tilePos: landingTilePos,
+            tileByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: landingTile.getRenderList({
+                    renderMode: RenderMode.enum.MAP_MODE,
+                    states: []
+                }),
+                [RenderMode.enum.FIRE_MODE]: landingTile.getRenderList({
+                    renderMode: RenderMode.enum.FIRE_MODE,
+                    states: []
+                })
+            }
+        });
+
         // TODO: Move the projectiles forward in time...
         // TODO: Psuedo tracers - how do we determine visibility?
         messageRouter.send([
             {
                 type: "server:fire:trace",
                 payload: {
+                    mode: "throw",
                     tracers: [projectile.getTracer()],
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                     tileUpdates
                 }
             }
         ]);
+
+        messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    interactions: {
+                        canFire: this.canFire,
+                        canThrow: this.canThrow,
+                        canAction: this.canAction,
+                        canInventory: this.canInventory
+                    },
+                    itemInUse: null
+                }
+            },
+            this.side.id
+        );
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
@@ -1002,8 +1060,8 @@ export class Unit extends SceneObject {
             interactions: {
                 canFire: this.canFire,
                 canThrow: this.canThrow,
-                canAction: false,
-                canInventory: false
+                canAction: this.canAction,
+                canInventory: this.canInventory
             },
             itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
             actions: this.getActions()

@@ -81,6 +81,10 @@ export class Inventory {
         this._items.splice(atIndex, 1);
         this._itemsMap.delete(item.id);
 
+        if (this._inUse === atIndex) {
+            this._inUse = -1;
+        }
+
         return item;
     }
 
@@ -99,10 +103,13 @@ export class Inventory {
     dropAllItem(): Item[] {
         const droppedItems = this._items;
         this._itemsMap.clear();
+        this._inUse = -1;
         return droppedItems;
     }
 
     reorderItem(fromIndex: number, toIndex: number) {
+        const previousInUseItemId = this.itemInUse?.id;
+
         function arrayMove<T>(items: T[], fromIndex: number, toIndex: number): T[] {
             const before = fromIndex < toIndex;
 
@@ -113,5 +120,9 @@ export class Inventory {
         }
 
         arrayMove(this._items, fromIndex, toIndex);
+
+        if (previousInUseItemId !== undefined) {
+            this._inUse = this._items.findIndex(({ id }) => previousInUseItemId === id);
+        }
     }
 }

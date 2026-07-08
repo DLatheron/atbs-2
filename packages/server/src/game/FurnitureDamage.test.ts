@@ -17,7 +17,7 @@ import { ItemManager } from "./ItemManager.js";
 import { ItemRecipeManager } from "./ItemRecipeManager.js";
 import { Material, MaterialRecipe } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
-import { Projectile } from "./Projectile.js";
+import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
@@ -193,6 +193,51 @@ function createMockPixelProjectile(diameter = 5.56): Projectile {
             calcDamage: () => 20
         } as Item
     } as Projectile;
+}
+
+function createThrownProjectile(
+    gameId: string,
+    damageCache: DamageCacheManager,
+    tileSize: number
+): Projectile {
+    const mockGame = {
+        id: gameId,
+        damageCacheManager: damageCache,
+        map: createMockMap(tileSize)
+    } as Game;
+
+    return new Projectile({
+        game: mockGame,
+        firingUnit: { side: { id: "side-1" } } as Projectile["firingUnit"],
+        firingWeapon: { weight: 1 } as Item,
+        projectileIndex: 0,
+        roundIndex: 0,
+        srcPos: new Vec2(0, 50),
+        directionVector: new Vec2(1, 0),
+        projectileRecipe: {
+            numProjectiles: 1,
+            maxRange: 500,
+            perturbation: 0,
+            visual: {
+                headColour: { r: 255, g: 255, b: 255, a: 1 },
+                headRadiusInPixels: 2,
+                trailColour: { r: 255, g: 255, b: 255, a: 1 },
+                trailLengthInPixels: 100,
+                rangeFalloffPower: 20
+            },
+            damage: { default: 0, type: "default" as const },
+            mass: 1,
+            velocity: DEFAULT_PROJECTILE_TRAVEL_VELOCITY,
+            impactVelocity: 12,
+            diameter: 40,
+            hardness: 0,
+            shape: 0,
+            stability: 0.2,
+            bounce: 1,
+            delivery: "thrown",
+            integrity: 0
+        }
+    });
 }
 
 function createUnitFireProjectile(
@@ -377,6 +422,31 @@ describe("FurnitureDamageSystem", () => {
         expect(furniture.state).toBe(FurnitureState.enum.destroyed);
         expect(hasTimedUpdateForTile(damageSystem, tilePos)).toBe(true);
         expect(damageSystem.timedUpdates.at(-1)?.timeMs).toBe(300);
+    });
+
+    it("does not apply HP damage for thrown projectiles", () => {
+        const furniture = createFurniture(createWallRecipe(false));
+        const tile = createTile(createWallRecipe(false));
+        const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
+
+        const entryEvent = {
+            pos: new Vec2(50, 50),
+            tile,
+            material: furniture.materials[0],
+            owner: furniture,
+            imageId: "wall-cl",
+            layerIndex: 0,
+            orientation: Orientation.NORTH
+        };
+
+        damageSystem.onMaterialEntry(
+            createThrownProjectile(gameId, damageCache, imageSize),
+            entryEvent,
+            100
+        );
+
+        expect(furniture.hitPoints).toBe(50);
+        expect(damageSystem.timedUpdates).toHaveLength(0);
     });
 
     it("does not duplicate HP damage on ricochet re-entry for the same projectile", () => {

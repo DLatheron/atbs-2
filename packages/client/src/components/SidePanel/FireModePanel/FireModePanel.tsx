@@ -1,4 +1,5 @@
 import {
+    FireModeEx,
     FireModeItemSummary,
     FireSelector,
     ItemId,
@@ -21,9 +22,10 @@ import { DirectionComponent } from "../../Direction";
 import { Orientation, rotateOrientation } from "@atbs/maths";
 import { UnitDetailsComponent } from "../../UnitDetails";
 import { FireModesComponent } from "../../FireModes";
-import { useKeyboard } from "../../../hooks";
-import { useMemo } from "react";
+import { useKeyboard, useWorld } from "../../../hooks";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnTargetComponent } from "../../OnTarget";
+import { getModeHelper, isModeAvailable } from "../../../helpers/fireModeHelpers";
 
 export interface FireModePanelProps {
     visible: boolean;
@@ -50,13 +52,69 @@ export function FireModePanel({
     onEndFireMode,
     sx
 }: FireModePanelProps) {
+    const initialWeaponIndex = 0;
+    const [weaponIndex, setWeaponIndex] = useState(initialWeaponIndex);
+
+    const weapon = unitWeapon?.weapons?.[weaponIndex] || null;
+
+    const [fireModeEx, setFireModeEx] = useState<FireModeEx>(FireModeEx.enum.none);
+    const { world } = useWorld();
+
+    useEffect(() => {
+        if (unit && weapon && !isModeAvailable(fireModeEx, unit, weapon)) {
+            const newMode = getModeHelper(unit, weapon);
+            setFireModeEx(newMode);
+            world.fireModeEx = newMode;
+        }
+    }, [fireModeEx, unit, weapon, world]);
+
+    const onSetFireModeEx = useCallback(
+        (fireModeEx: FireModeEx) => {
+            setFireModeEx(fireModeEx);
+            world.fireModeEx = fireModeEx;
+        },
+        [world]
+    );
+
     const keyMap = useMemo(
         () => ({
             KeyA: () => unit && onRotateTo(rotateOrientation(unit.orientation, -1)),
             KeyD: () => unit && onRotateTo(rotateOrientation(unit.orientation, 1)),
+
+            KeyT: () => unit && onSetFireModeEx(FireModeEx.enum.throw),
+
+            Digit1: () => unitWeapon && unitWeapon.weapons?.length > 0 && setWeaponIndex(0),
+            Digit2: () => unitWeapon && unitWeapon.weapons?.length > 1 && setWeaponIndex(1),
+            Digit3: () => unitWeapon && unitWeapon.weapons?.length > 2 && setWeaponIndex(2),
+
+            Digit5: () =>
+                unitWeapon &&
+                FireSelector.enum.single in unitWeapon.weapons[weaponIndex].fireModes &&
+                onChangeFireSelector(unitWeapon.id, FireSelector.enum.single),
+            Digit6: () =>
+                unitWeapon &&
+                FireSelector.enum.burst in unitWeapon.weapons[weaponIndex].fireModes &&
+                onChangeFireSelector(unitWeapon.id, FireSelector.enum.burst),
+            Digit7: () =>
+                unitWeapon &&
+                FireSelector.enum.auto in unitWeapon.weapons[weaponIndex].fireModes &&
+                onChangeFireSelector(unitWeapon.id, FireSelector.enum.auto),
+
+            Digit9: () => unitWeapon && onSetFireModeEx(FireModeEx.enum.aimed),
+            Digit0: () => unitWeapon && onSetFireModeEx(FireModeEx.enum.snapshot),
+
             Escape: () => onEndFireMode()
         }),
-        [unit, onRotateTo, onEndFireMode]
+        [
+            unit,
+            onRotateTo,
+            onEndFireMode,
+            unitWeapon,
+            weaponIndex,
+            onChangeFireSelector,
+            onSetFireModeEx,
+            setWeaponIndex
+        ]
     );
 
     useKeyboard({
@@ -154,6 +212,10 @@ export function FireModePanel({
                 <FireModesComponent
                     unit={unit}
                     unitWeapon={unitWeapon}
+                    weaponIndex={weaponIndex}
+                    setWeaponIndex={setWeaponIndex}
+                    fireModeEx={fireModeEx}
+                    setFireModeEx={onSetFireModeEx}
                     disabled={disabled}
                     onChangeFireSelector={onChangeFireSelector}
                 />

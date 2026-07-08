@@ -12,6 +12,7 @@ export interface TileInfoComponentProps {
 }
 
 export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
+    const item = tileInfo?.item;
     const unit = tileInfo?.unit;
     const terrain = tileInfo?.terrain;
     const furniture = tileInfo?.furniture;
@@ -53,6 +54,15 @@ export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
                                             ]}
                                         />
                                     )}
+                                </>
+                            )}
+                            {item && (
+                                <>
+                                    <Typography variant="h5" sx={{ textAlign: "center" }}>
+                                        {item.name}{" "}
+                                    </Typography>
+                                    <ImageComponent images={item.uiImage} />
+                                    <DescriptionComponent description={item.description} />
                                 </>
                             )}
                         </Stack>
