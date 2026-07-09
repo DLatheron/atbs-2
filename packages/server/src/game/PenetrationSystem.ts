@@ -10,6 +10,7 @@ import {
     degreesToRadians,
     evaluateSurfacePenetration,
     isGrazingImpact,
+    isMaterialFragileForThrow,
     rollPenetrationDeflectionDegrees,
     rollRicochetSpreadDegrees,
     Vec2
@@ -21,21 +22,25 @@ import { WorldMap } from "./WorldMap.js";
 
 export type MaterialEntryOutcome = "penetrated" | "ricocheted" | "stopped";
 
+export type ProjectileDelivery = "fired" | "thrown";
+
 export interface PenetrationProjectile {
     mass: number;
-    velocity: number;
+    impactVelocity: number;
     hardness: number;
     shape: number;
     stability: number;
     bounce: number;
+    delivery: ProjectileDelivery;
     life: number;
     directionVector: Vec2;
     changeDirection(direction: Vec2): void;
     nudgeFromSurface(distance: number): void;
+    retainImpactVelocity(value: number): void;
 }
 
 interface MutablePenetrationProjectile extends PenetrationProjectile {
-    velocity: number;
+    impactVelocity: number;
     life: number;
 }
 
@@ -128,7 +133,7 @@ export class PenetrationSystem {
     static calcInitialEnergy(projectile: PenetrationProjectile): number {
         return calcPenetrationEnergy({
             massKg: projectile.mass,
-            velocityMps: projectile.velocity,
+            velocityMps: projectile.impactVelocity,
             hardness: projectile.hardness,
             shape: projectile.shape
         });
@@ -160,6 +165,22 @@ export class PenetrationSystem {
             thicknessPixels,
             impactAngleDot
         );
+
+        if (
+            projectile.delivery === "thrown" &&
+            !isMaterialFragileForThrow(materialProps) &&
+            resolveRicochet(projectile, materialProps, normal, impactAngleDot)
+        ) {
+            pushPenetrationDebugGraphics(
+                debugGraphics,
+                worldPos,
+                normal,
+                thicknessPixels,
+                debugValues,
+                "ricocheted"
+            );
+            return "ricocheted";
+        }
 
         if (projectile.bounce > 0 && isGrazingImpact(impactAngleDot)) {
             if (resolveRicochet(projectile, materialProps, normal, impactAngleDot)) {
@@ -233,10 +254,8 @@ export class PenetrationSystem {
             fontSize: 9
         });
 
-        projectile.velocity = calcVelocityRetention(
-            projectile.velocity,
-            material.density,
-            thicknessPixels
+        projectile.retainImpactVelocity(
+            calcVelocityRetention(projectile.impactVelocity, material.density, thicknessPixels)
         );
 
         return "penetrated";

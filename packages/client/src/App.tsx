@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ClientQueryParams,
     parseURLSearchParams,
@@ -15,6 +15,10 @@ import { useSearchParams } from "react-router-dom";
 import { WaitModal } from "./modals";
 import { Container } from "@mui/material";
 
+function isTerminalPhase(phase: Phase): boolean {
+    return phase === Phase.enum.main_menu || phase === Phase.enum.game_over;
+}
+
 export function App() {
     const { clientId } = useClientId();
     const [searchParams] = useSearchParams();
@@ -24,44 +28,10 @@ export function App() {
     const [waitingFor, setWaitingFor] = useState<WaitingFor | null>(null);
 
     const [phase, setPhase] = useState<Phase>(Phase.enum.main_menu);
+    const phaseRef = useRef<Phase>(Phase.enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
 
     const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
-
-    useEffect(() => {
-        console.info("Mounting App Message Handlers");
-        const handlerHandles = [
-            messageManager.registerHandler("server:hello", (context, payload) => {
-                console.info({ context, payload });
-            }),
-            messageManager.registerHandler("server:pong", (context, payload) => {
-                console.info({ context, payload });
-
-                // gameSocketRef.current?.send({
-                //     type: "client:ping",
-                //     payload: { nonce: payload.nonce++ }
-                // });
-            }),
-            messageManager.registerHandler("server:phase", (_context, payload) => {
-                console.info("Setting Phase", payload.phase);
-                setPhase(payload.phase);
-            }),
-            messageManager.registerHandler("server:client:connected", (_context, { client }) => {
-                console.info(`Client '${client.name} (${client.id}) connected`);
-            }),
-            messageManager.registerHandler("server:client:disconnected", (_context, { client }) => {
-                console.info(`Client '${client.name} (${client.id}) disconnected`);
-            }),
-            messageManager.registerHandler("server:wait", (_context, payload) => {
-                setWaitingFor(payload);
-            })
-        ];
-
-        return () => {
-            console.info("Unmounting App Message Handlers");
-            messageManager.unregisterHandlers(handlerHandles);
-        };
-    }, [messageManager]);
 
     const onConnected = useCallback(
         (gameSocket: GameSocket) => {
@@ -72,6 +42,7 @@ export function App() {
 
     const onDisconnected = useCallback(() => {
         setGameSocket(null);
+        phaseRef.current = Phase.enum.main_menu;
         setPhase(Phase.enum.main_menu);
     }, [setGameSocket]);
 
@@ -101,6 +72,48 @@ export function App() {
         onDisconnected,
         onMessage
     });
+
+    useEffect(() => {
+        console.info("Mounting App Message Handlers");
+        const handlerHandles = [
+            messageManager.registerHandler("server:hello", (context, payload) => {
+                console.info({ context, payload });
+            }),
+            messageManager.registerHandler("server:pong", (context, payload) => {
+                console.info({ context, payload });
+
+                // gameSocketRef.current?.send({
+                //     type: "client:ping",
+                //     payload: { nonce: payload.nonce++ }
+                // });
+            }),
+            messageManager.registerHandler("server:phase", (_context, payload) => {
+                console.info("Setting Phase", payload.phase);
+
+                const previousPhase = phaseRef.current;
+                phaseRef.current = payload.phase;
+                setPhase(payload.phase);
+
+                if (isTerminalPhase(payload.phase) && !isTerminalPhase(previousPhase)) {
+                    leaveGame();
+                }
+            }),
+            messageManager.registerHandler("server:client:connected", (_context, { client }) => {
+                console.info(`Client '${client.name} (${client.id}) connected`);
+            }),
+            messageManager.registerHandler("server:client:disconnected", (_context, { client }) => {
+                console.info(`Client '${client.name} (${client.id}) disconnected`);
+            }),
+            messageManager.registerHandler("server:wait", (_context, payload) => {
+                setWaitingFor(payload);
+            })
+        ];
+
+        return () => {
+            console.info("Unmounting App Message Handlers");
+            messageManager.unregisterHandlers(handlerHandles);
+        };
+    }, [messageManager, leaveGame]);
 
     if (!clientId) {
         return null;
@@ -133,6 +146,7 @@ export function App() {
                 }}
                 onLeaveGame={() => {
                     leaveGame();
+                    phaseRef.current = Phase.enum.main_menu;
                     setPhase(Phase.enum.main_menu);
                 }}
             />

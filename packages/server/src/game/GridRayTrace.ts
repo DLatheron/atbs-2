@@ -1,4 +1,4 @@
-import { Aabb, Vec2 } from "@atbs/maths";
+import { Aabb, Orientation, Vec2 } from "@atbs/maths";
 import type { Material } from "./Material.js";
 import type { Furniture } from "./Furniture.js";
 import type { Unit } from "./Unit.js";
@@ -19,6 +19,9 @@ export interface GridRayTraceHitResult {
     /** Set when the ray leaves a material volume (exit point). */
     exitedMaterial?: Material;
     owner?: Furniture | Unit;
+    imageId?: string;
+    layerIndex?: number;
+    orientation?: Orientation;
 }
 export type GridRayTraceResult = GridRayTraceHitResult | undefined;
 

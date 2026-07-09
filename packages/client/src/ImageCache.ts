@@ -19,9 +19,10 @@ interface ImageEntry {
     blob?: Blob;
 }
 
-async function fetchImage(id: string): Promise<Blob> {
-    const url = `/api/image/${id}`;
-    const res = await fetch(url, { method: "GET" });
+async function fetchImage(id: string, cacheBust?: number): Promise<Blob> {
+    const cacheQuery = cacheBust === undefined ? "" : `?t=${cacheBust}`;
+    const url = `/api/image/${id}${cacheQuery}`;
+    const res = await fetch(url, { method: "GET", cache: "no-store" });
     if (!res.ok) {
         throw new Error(`Failed to fetch image "${id}": ${res.status}`);
     }
@@ -74,18 +75,42 @@ export class ImageCache {
             return;
         }
 
+        this._startLoad(id);
+    }
+
+    /** Force a fresh fetch when server-side image bytes change but the id stays the same. */
+    reloadImage(id: string): void {
+        if (!id) {
+            return;
+        }
+
+        this._revokeEntry(id);
+        delete this._entries[id];
+        this._startLoad(id, Date.now());
+    }
+
+    private _revokeEntry(id: string): void {
+        const dataString = this._entries[id]?.dataString;
+        if (dataString) {
+            URL.revokeObjectURL(dataString);
+        }
+    }
+
+    private _startLoad(id: string, cacheBust?: number): void {
         this._entries[id] = { state: "loading" };
 
-        const loadPromise = this._load(id);
+        const loadPromise = this._load(id, cacheBust);
         this._inFlight.set(id, loadPromise);
         void loadPromise.finally(() => {
-            this._inFlight.delete(id);
+            if (this._inFlight.get(id) === loadPromise) {
+                this._inFlight.delete(id);
+            }
         });
     }
 
-    private async _load(id: string): Promise<void> {
+    private async _load(id: string, cacheBust?: number): Promise<void> {
         try {
-            const blob = await fetchImage(id);
+            const blob = await fetchImage(id, cacheBust);
             const dataString = URL.createObjectURL(blob);
             const image = new Image();
 

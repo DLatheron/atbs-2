@@ -12,6 +12,7 @@ import {
     RenderMode,
     SightType,
     ThrowDetails,
+    TimedTileUpdate,
     Tracer,
     UnitSummary
 } from "@atbs/shared-data";
@@ -46,6 +47,7 @@ import {
     DrawRangeSight
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
+import { applyTimedTileUpdate } from "./mapUpdates.js";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -366,21 +368,35 @@ export class World {
         });
     }
 
-    setTracers(tracers: Tracer[], completeCallback: () => void): void {
-        // TODO: Reset the simulation time.
-
-        const { time: startTime } = this._timer;
-
-        this._timer.resume();
-
-        // TODO: Trigger the simulation time...
-        // TODO: Should be do a renderer plugin thing here???
+    setTracers(
+        tracers: Tracer[],
+        tileUpdates: TimedTileUpdate[],
+        onMapUpdated: () => void,
+        completeCallback: () => void
+    ): void {
+        const tracerTimer = new Timer();
 
         this._drawSights = false;
 
-        const completionCallback = () => {
+        const appliedUpdateIndices = new Set<number>();
+
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const world = this;
+
+        const finish = () => {
+            for (let index = 0; index < tileUpdates.length; index++) {
+                if (!appliedUpdateIndices.has(index)) {
+                    applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                    appliedUpdateIndices.add(index);
+                }
+            }
+
+            if (appliedUpdateIndices.size > 0) {
+                onMapUpdated();
+            }
+
+            world._drawSights = true;
             completeCallback();
-            this._drawSights = true;
         };
 
         this.addRenderPlugin({
@@ -388,17 +404,47 @@ export class World {
                 return "Tracers";
             },
 
-            render({ camera, context, time }: RenderPluginRenderProps) {
+            update() {
+                if (!tileUpdates.length) {
+                    return false;
+                }
+
+                const { time } = tracerTimer.tick();
+
+                const elapsedMs = Math.max(time, 0);
+                let applied = false;
+
+                for (let index = 0; index < tileUpdates.length; index++) {
+                    if (appliedUpdateIndices.has(index)) {
+                        continue;
+                    }
+
+                    if (tileUpdates[index].timeMs <= elapsedMs) {
+                        applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                        appliedUpdateIndices.add(index);
+                        applied = true;
+                    }
+                }
+
+                if (applied) {
+                    onMapUpdated();
+                }
+
+                return false;
+            },
+
+            render({ camera, context }: RenderPluginRenderProps) {
+                const { time } = tracerTimer;
                 let allComplete = true;
 
                 for (const tracer of tracers) {
-                    if (!DrawProjectile(camera, context, startTime, time, tracer)) {
+                    if (!DrawProjectile(camera, context, 0, time, tracer)) {
                         allComplete = false;
                     }
                 }
 
                 if (allComplete) {
-                    completionCallback();
+                    finish();
                     return true;
                 }
 

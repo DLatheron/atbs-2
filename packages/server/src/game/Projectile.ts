@@ -2,6 +2,7 @@ import {
     Colour,
     DebugGraphic,
     DebugGraphicType,
+    generateRandomBetween,
     minDistanceFromPointToPathSegments,
     PathSegment,
     Vec2
@@ -19,6 +20,9 @@ import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { PenetrationSystem } from "./PenetrationSystem.js";
 import { config } from "../config/config.schema.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
+import { CollisionSample, Tile } from "./Tile.js";
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -35,12 +39,16 @@ export interface Impact {
     time: number;
 }
 
+/** Travel speed shared by fired rounds for consistent projectile animation timing. */
+export const DEFAULT_PROJECTILE_TRAVEL_VELOCITY = 600;
+
 export interface ProjectileProps {
     game: Game;
     firingUnit: Unit;
     firingWeapon: Item;
 
-    index: number;
+    projectileIndex: number;
+    roundIndex: number;
     srcPos: Vec2;
     directionVector: Vec2;
     projectileRecipe: ProjectileRecipe;
@@ -56,21 +64,39 @@ export class Projectile implements IRayCast {
     private _maxRange: number;
     private _directionVector: Vec2;
     private _velocity: number;
+    private _impactVelocity: number;
+    private readonly _syncAnimationToImpact: boolean;
     private _penetration: number;
     private _segments: PathSegment[];
 
     private _impact?: Impact;
 
     constructor(props: ProjectileProps) {
+        const variability =
+            props.projectileIndex === 0 || !props.projectileRecipe.variability
+                ? 1
+                : generateRandomBetween(
+                      props.projectileRecipe.variability.min,
+                      props.projectileRecipe.variability.max
+                  );
+        console.info(
+            `Projectile: ${props.projectileIndex} variability: ${variability}`,
+            props.projectileRecipe.variability
+        );
+
         this._props = props;
 
         this._srcPos = new Vec2(props.srcPos);
         this._dstPos = this.srcPos.add(
             props.directionVector.scale(props.projectileRecipe.maxRange)
         );
-        this._maxRange = props.projectileRecipe.maxRange;
+        this._maxRange = props.projectileRecipe.maxRange * variability;
         this._directionVector = props.directionVector;
-        this._velocity = props.projectileRecipe.velocity;
+        this._velocity = props.projectileRecipe.velocity * variability;
+        this._syncAnimationToImpact = props.projectileRecipe.impactVelocity == null;
+        this._impactVelocity =
+            (props.projectileRecipe.impactVelocity ?? props.projectileRecipe.velocity) *
+            variability;
         this._penetration = PenetrationSystem.calcInitialEnergy(this);
         this._segments = [
             {
@@ -99,7 +125,11 @@ export class Projectile implements IRayCast {
     }
 
     get index(): number {
-        return this._props.index;
+        return this._props.projectileIndex;
+    }
+
+    get roundIndex(): number {
+        return this._props.roundIndex ?? 0;
     }
 
     get srcPos(): Vec2 {
@@ -124,6 +154,21 @@ export class Projectile implements IRayCast {
 
     set velocity(value: number) {
         this._velocity = value;
+    }
+
+    get impactVelocity(): number {
+        return this._impactVelocity;
+    }
+
+    set impactVelocity(value: number) {
+        this._impactVelocity = Math.max(value, 0);
+    }
+
+    retainImpactVelocity(value: number): void {
+        this._impactVelocity = value;
+        if (this._syncAnimationToImpact) {
+            this._velocity = value;
+        }
     }
 
     get penetration(): number {
@@ -158,6 +203,13 @@ export class Projectile implements IRayCast {
         this._impact = value;
     }
 
+    get finalPostionAndTime(): { pos: Vec2; time: number } {
+        const pos = this.impact?.pos ?? this.dstPos;
+        const time = this.impact?.time ?? this.calculateTimeTo(this.dstPos);
+
+        return { pos, time };
+    }
+
     get mass(): number {
         return this._props.projectileRecipe.mass;
     }
@@ -176,6 +228,22 @@ export class Projectile implements IRayCast {
 
     get bounce(): number {
         return this._props.projectileRecipe.bounce;
+    }
+
+    get delivery(): ProjectileRecipe["delivery"] {
+        return this._props.projectileRecipe.delivery;
+    }
+
+    get projectileRecipe(): ProjectileRecipe {
+        return this._props.projectileRecipe;
+    }
+
+    get diameter(): number {
+        return this._props.projectileRecipe.diameter;
+    }
+
+    get furnitureDamage(): number {
+        return this._props.projectileRecipe.damage.default;
     }
 
     changeDirection(newDirection: Vec2) {
@@ -255,9 +323,10 @@ export class Projectile implements IRayCast {
         projectile: Projectile,
         atTime: number,
         eventQueue: CollisionEventQueue,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager
     ): void {
-        const hitResult = map.castRay(projectile, debugGraphics);
+        const hitResult = map.castRay(projectile, debugGraphics, damageCache);
         if (hitResult) {
             const timeTo = projectile.calculateTimeTo(hitResult.pos);
             const cumulativeTime = atTime + timeTo;
@@ -287,8 +356,17 @@ export class Projectile implements IRayCast {
     static ProcessProjectiles(
         projectiles: Projectile[],
         map: WorldMap,
-        debugGraphics?: DebugGraphic[]
-    ) {
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        furnitureDamageSystem?: FurnitureDamageSystem,
+        onMaterialPixel?: (
+            projectile: Projectile,
+            tile: Tile,
+            samplePos: Vec2,
+            sample: CollisionSample,
+            timeMs: number
+        ) => void
+    ): void {
         const imageManager = ImageManager.GetSingleton();
 
         // Sort so that fastest projectiles are first.
@@ -298,7 +376,7 @@ export class Projectile implements IRayCast {
 
         // Determine the initial impact of every projectile.
         for (const projectile of projectiles) {
-            const hitResult = map.castRay(projectile, debugGraphics);
+            const hitResult = map.castRay(projectile, debugGraphics, damageCache);
 
             if (hitResult) {
                 const timeTo = projectile.calculateTimeTo(hitResult.pos);
@@ -339,6 +417,7 @@ export class Projectile implements IRayCast {
 
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
+                    furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                 }
@@ -358,11 +437,30 @@ export class Projectile implements IRayCast {
                 }
 
                 if (entryOutcome === "ricocheted") {
-                    Projectile.queueRicochetRay(map, projectile, atTime, eventQueue, debugGraphics);
+                    Projectile.queueRicochetRay(
+                        map,
+                        projectile,
+                        atTime,
+                        eventQueue,
+                        debugGraphics,
+                        damageCache
+                    );
                     continue;
                 }
 
-                const nextChange = map.stepRay(projectile, material, debugGraphics);
+                const nextChange = map.stepRay(
+                    projectile,
+                    material,
+                    debugGraphics,
+                    damageCache,
+                    onMaterialPixel
+                        ? (tile, samplePos, sample) => {
+                              const worldPos = map.tileOffsetToWorld(tile.location, samplePos);
+                              const timeMs = atTime + projectile.calculateTimeTo(worldPos);
+                              onMaterialPixel(projectile, tile, samplePos, sample, timeMs);
+                          }
+                        : undefined
+                );
                 if (nextChange) {
                     debugGraphics?.push({
                         type: DebugGraphicType.enum.line,
@@ -401,7 +499,7 @@ export class Projectile implements IRayCast {
                     );
                 }
 
-                const hitResult = map.castRay(projectile, debugGraphics);
+                const hitResult = map.castRay(projectile, debugGraphics, damageCache);
                 if (hitResult) {
                     const timeTo = projectile.calculateTimeTo(hitResult.pos);
                     const cumulativeTime = atTime + timeTo;

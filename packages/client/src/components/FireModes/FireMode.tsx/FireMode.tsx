@@ -1,11 +1,7 @@
 import {
     FireModeWeaponSummary,
     FireSelector,
-    FireMode,
     ItemId,
-    FireModeDetails,
-    FireModeExtendedDetails,
-    FireModes,
     FireModeEx,
     FireModeItemSummary,
     UnitSummary,
@@ -20,90 +16,24 @@ import {
     toggleButtonGroupClasses,
     Stack
 } from "@mui/material";
-import { startCase } from "lodash";
 import {
+    FIRE_MODE_EX_LOOKUP,
     formatAccuracy,
     formatActionPoints,
     formatWeight
 } from "../../../helpers/formattingHelpers";
 import { AttributesComponent } from "../../Attributes";
 import { ImageComponent } from "../../Image";
-import { useEffect, useState } from "react";
-import { useWorld } from "../../../hooks";
+import { getFireModeDetailsHelper } from "../../../helpers/fireModeHelpers";
 
 export interface FireModeComponentProps {
     unit: UnitSummary;
     unitWeapon: FireModeItemSummary;
     weapon: FireModeWeaponSummary | null;
+    fireModeEx: FireModeEx;
+    setFireModeEx: (fireModeEx: FireModeEx) => void;
     disabled: boolean;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
-}
-
-function getFireModeDetailsHelper(
-    fireModes: FireModes,
-    fireSelector: FireSelector
-): FireModeDetails | FireModeExtendedDetails {
-    if (fireSelector === FireSelector.enum.single && fireSelector in fireModes) {
-        return fireModes[FireSelector.enum.single].fireModeDetails;
-    } else if (fireSelector === FireSelector.enum.burst && fireSelector in fireModes) {
-        return fireModes[FireSelector.enum.burst].fireModeDetails;
-    } else if (fireSelector === FireSelector.enum.auto && fireSelector in fireModes) {
-        return fireModes[FireSelector.enum.auto].fireModeDetails;
-    }
-
-    throw new Error(
-        `Failed to get fire mode details for ${fireSelector} from ${JSON.stringify(fireModes)}`
-    );
-}
-
-/**
- * Determine the base fire/throw mode.
- */
-function getModeHelper(unit: UnitSummary, weapon: FireModeWeaponSummary | null): FireModeEx {
-    const { value: actionPoints } = unit.attributes.actionPoints;
-    if (weapon) {
-        const fireModeDetails = getFireModeDetailsHelper(weapon.fireModes, weapon.fireSelector);
-
-        if (actionPoints >= fireModeDetails[FireMode.enum.aimed].actionPoints) {
-            return FireModeEx.enum.aimed;
-        } else if (actionPoints >= fireModeDetails[FireMode.enum.snapshot].actionPoints) {
-            return FireModeEx.enum.snapshot;
-        }
-    } else if (actionPoints >= unit.actions[Action.enum.throw].actionPoints) {
-        return FireModeEx.enum.throw;
-    }
-
-    return FireModeEx.enum.none;
-}
-
-/**
- * Check if the currently selected mode is available.
- */
-function isModeAvailable(
-    mode: FireModeEx,
-    unit: UnitSummary,
-    weapon: FireModeWeaponSummary | null
-): boolean {
-    const { value: actionPoints } = unit.attributes.actionPoints;
-
-    switch (mode) {
-        case FireModeEx.enum.none:
-            return true;
-
-        case FireModeEx.enum.throw:
-            return actionPoints >= unit.actions[Action.enum.throw].actionPoints;
-
-        case FireModeEx.enum.aimed:
-        case FireModeEx.enum.snapshot: {
-            if (!weapon) {
-                return false;
-            }
-
-            const fireModeDetails = getFireModeDetailsHelper(weapon.fireModes, weapon.fireSelector);
-
-            return actionPoints >= fireModeDetails[mode].actionPoints;
-        }
-    }
 }
 
 const StyledToggleButtonGroup = styled(ToggleButtonGroup)(({ theme }) => ({
@@ -127,21 +57,12 @@ export function FireModeComponent({
     unit,
     unitWeapon,
     weapon,
+    fireModeEx,
+    setFireModeEx,
     disabled,
     onChangeFireSelector
 }: FireModeComponentProps) {
     const { value: actionPoints } = unit.attributes.actionPoints;
-
-    const { world } = useWorld();
-    const [mode, setFireModeEx] = useState<FireModeEx>(getModeHelper(unit, weapon));
-
-    useEffect(() => {
-        if (!isModeAvailable(mode, unit, weapon)) {
-            const newMode = getModeHelper(unit, weapon);
-            setFireModeEx(newMode);
-            world.fireModeEx = newMode;
-        }
-    }, [mode, unit, weapon, world]);
 
     return (
         <Stack spacing={1}>
@@ -200,7 +121,7 @@ export function FireModeComponent({
                         </ToggleButton>
                         <ToggleButton
                             id="full-auto"
-                            title="Fulauto"
+                            title="Full auto"
                             value={FireSelector.enum.auto}
                             disabled={disabled || !("auto" in weapon.fireModes)}
                         >
@@ -216,10 +137,9 @@ export function FireModeComponent({
             )}
             <StyledToggleButtonGroup
                 orientation="vertical"
-                value={mode}
+                value={fireModeEx}
                 onChange={(_event, fireModeEx) => {
                     setFireModeEx(fireModeEx);
-                    world.fireModeEx = fireModeEx;
                 }}
                 exclusive
                 sx={{ gap: 2 }}
@@ -245,11 +165,11 @@ export function FireModeComponent({
                             <Stack key={fireMode} spacing={1}>
                                 <ToggleButton
                                     id={fireMode}
-                                    title={startCase(fireMode)}
+                                    title={FIRE_MODE_EX_LOOKUP[fireMode]}
                                     value={fireMode}
                                     disabled={disabled || actionPoints < actionPointCost}
                                 >
-                                    {startCase(fireMode)}
+                                    {FIRE_MODE_EX_LOOKUP[fireMode]}
                                 </ToggleButton>
                                 <AttributesComponent
                                     attributes={[
@@ -269,17 +189,17 @@ export function FireModeComponent({
                         );
                     })}
                 {FireModeEx.enum.throw in unit.actions && (
-                    <Stack key={mode} spacing={1}>
+                    <Stack key={fireModeEx} spacing={1}>
                         <ToggleButton
                             id={FireModeEx.enum.throw}
-                            title={startCase(FireModeEx.enum.throw)}
+                            title={FIRE_MODE_EX_LOOKUP[FireModeEx.enum.throw]}
                             value={FireModeEx.enum.throw}
                             disabled={
                                 disabled ||
                                 actionPoints < unit.actions[Action.enum.throw].actionPoints
                             }
                         >
-                            {startCase(FireModeEx.enum.throw)}
+                            {FIRE_MODE_EX_LOOKUP[FireModeEx.enum.throw]}
                         </ToggleButton>
                         <AttributesComponent
                             attributes={[

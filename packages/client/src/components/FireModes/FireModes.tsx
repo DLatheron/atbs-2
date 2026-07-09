@@ -1,4 +1,5 @@
 import {
+    FireModeEx,
     FireModeItemSummary,
     FireModeWeaponSummary,
     FireSelector,
@@ -6,13 +7,16 @@ import {
     UnitSummary
 } from "@atbs/shared-data";
 import { Box, SxProps, Tab, Tabs, Typography } from "@mui/material";
-import { useState } from "react";
 import { FireModeComponent } from "./FireMode.tsx/FireMode";
 import { useWorld } from "../../hooks";
 
 export interface FireModesComponentProps {
     unit: UnitSummary;
     unitWeapon: FireModeItemSummary;
+    weaponIndex: number;
+    setWeaponIndex: (weaponIndex: number) => void;
+    fireModeEx: FireModeEx;
+    setFireModeEx: (fireModeEx: FireModeEx) => void;
     disabled: boolean;
 
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
@@ -23,6 +27,10 @@ export interface FireModesComponentProps {
 export function FireModesComponent({
     unit,
     unitWeapon,
+    weaponIndex,
+    setWeaponIndex,
+    fireModeEx,
+    setFireModeEx,
     disabled,
     onChangeFireSelector,
     sx
@@ -34,9 +42,6 @@ export function FireModesComponent({
         backgroundColor: "beige",
         p: 0
     };
-
-    const initialWeaponIndex = 0;
-    const [weaponIndex, setWeaponIndex] = useState(initialWeaponIndex);
 
     return (
         <Box
@@ -73,6 +78,8 @@ export function FireModesComponent({
                                         unit={unit}
                                         unitWeapon={unitWeapon}
                                         weapon={weapon}
+                                        fireModeEx={fireModeEx}
+                                        setFireModeEx={setFireModeEx}
                                         disabled={disabled}
                                         onChangeFireSelector={onChangeFireSelector}
                                     />
@@ -87,6 +94,8 @@ export function FireModesComponent({
                         unit={unit}
                         unitWeapon={unitWeapon}
                         weapon={null}
+                        fireModeEx={fireModeEx}
+                        setFireModeEx={setFireModeEx}
                         disabled={disabled}
                         onChangeFireSelector={onChangeFireSelector}
                     />

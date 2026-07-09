@@ -83,7 +83,11 @@ export class MessageManager<
 
             console.info("+++ Processing message", message.type, message.payload);
             for (const { handler } of messageHandlerEntries) {
-                await handler(this._context, message.payload, from);
+                try {
+                    await handler(this._context, message.payload, from);
+                } catch (error) {
+                    console.error("Error processing message", message.type, message.payload, error);
+                }
             }
             console.info("--- Processed message", message.type, message.payload);
         }

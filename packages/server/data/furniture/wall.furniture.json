@@ -13,7 +13,8 @@
         }
     },
     "materials": ["concrete.material"],
-    "hitPoints": { "max": 200 },
+    "hitPoints": { "max": 2000 },
+    "pixelDestruction": true,
     "movementObstruction": {
         "default": { "default": 100 },
         "destroyed": { "default": 0 }

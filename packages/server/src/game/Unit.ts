@@ -24,6 +24,7 @@ import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
     clamp,
+    Colour,
     DebugGraphic,
     generateRandomBetween,
     ITilePos,
@@ -41,9 +42,12 @@ import { ItemManager } from "./ItemManager.js";
 import { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
-import { Projectile } from "./Projectile.js";
+import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
+import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
+import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
+import { IMPENETRABLE } from "./Obstruction.js";
 
 const MAX_DISORIENTATION = 100;
 
@@ -276,6 +280,14 @@ export class Unit extends SceneObject {
         return Action.enum.throw in this._recipe.actions && !!this.itemInUse;
     }
 
+    get canAction(): boolean {
+        return false;
+    }
+
+    get canInventory(): boolean {
+        return false;
+    }
+
     get weaponInaccuracyAngle() {
         return 10 + this.disorientation / 5;
     }
@@ -291,6 +303,7 @@ export class Unit extends SceneObject {
             actions[Action.enum.throw].accuracy = this.calcThrowAccuracy(
                 actions[Action.enum.throw].accuracy
             );
+            actions[Action.enum.throw].actionPoints = this.itemInUse?.throwActionPointCost ?? 0;
         }
 
         this.logger.dir({ actions });
@@ -301,7 +314,7 @@ export class Unit extends SceneObject {
     getRenderList(context: SceneContext): RenderList {
         const unitContext = {
             ...context,
-            states: [this.isAlive ? "alive" : "dead"],
+            states: [this.isAlive ? "alive" : "dead", this.itemInUse ? "item-in-use" : "default"],
             orientation: this.orientation
         };
 
@@ -433,21 +446,7 @@ export class Unit extends SceneObject {
                     { type: "server:wait:time", payload: 300 },
                     {
                         type: "server:map:update",
-                        payload: [
-                            {
-                                tilePos: mapLocation,
-                                tileByRenderMode: {
-                                    [RenderMode.enum.MAP_MODE]: tile.getRenderList({
-                                        renderMode: RenderMode.enum.MAP_MODE,
-                                        states: []
-                                    }),
-                                    [RenderMode.enum.FIRE_MODE]: tile.getRenderList({
-                                        renderMode: RenderMode.enum.FIRE_MODE,
-                                        states: []
-                                    })
-                                }
-                            }
-                        ]
+                        payload: [tile.generateTileUpdate()]
                     }
                 ],
                 mapLocation
@@ -483,11 +482,14 @@ export class Unit extends SceneObject {
             return;
         }
 
-        // const movementObstruction = dstTile.getMovementObstruction(this.unitType);
-        // if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
-        //     eventList.addEvents({ relativeToStartTime: 0 }, [this.sideId], Event.ErrorEvent(ErrorType.UNABLE_TO_MOVE_THERE));
-        //     return false;
-        // }
+        const movementObstruction = dstTile.getMovementObstruction(this.type);
+        if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
+            messageRouter.send(
+                { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MOVE_THERE },
+                this.side.id
+            );
+            return;
+        }
 
         aptCost *= 1 /* + movementObstruction */;
         if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
@@ -505,24 +507,7 @@ export class Unit extends SceneObject {
         messageRouter.sendIfVisible(
             [
                 { type: "server:wait:time", payload: 300 },
-                {
-                    type: "server:map:update",
-                    payload: [
-                        {
-                            tilePos: srcPos,
-                            tileByRenderMode: {
-                                [RenderMode.enum.MAP_MODE]: srcTile.getRenderList({
-                                    renderMode: RenderMode.enum.MAP_MODE,
-                                    states: []
-                                }),
-                                [RenderMode.enum.FIRE_MODE]: srcTile.getRenderList({
-                                    renderMode: RenderMode.enum.FIRE_MODE,
-                                    states: []
-                                })
-                            }
-                        }
-                    ]
-                }
+                { type: "server:map:update", payload: [srcTile.generateTileUpdate()] }
             ],
             srcPos
         );
@@ -539,24 +524,7 @@ export class Unit extends SceneObject {
         dstTile.addUnit(this);
         messageRouter.sendIfVisible(
             [
-                {
-                    type: "server:map:update",
-                    payload: [
-                        {
-                            tilePos: dstPos,
-                            tileByRenderMode: {
-                                [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
-                                    renderMode: RenderMode.enum.MAP_MODE,
-                                    states: []
-                                }),
-                                [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
-                                    renderMode: RenderMode.enum.FIRE_MODE,
-                                    states: []
-                                })
-                            }
-                        }
-                    ]
-                },
+                { type: "server:map:update", payload: [dstTile.generateTileUpdate()] },
                 {
                     type: "server:camera:move:to",
                     payload: {
@@ -595,7 +563,7 @@ export class Unit extends SceneObject {
         messageRouter: MessageRouter
     ): void {
         if (!this.itemInUse) {
-            throw new Error("No item in use - but on was expected");
+            throw new Error("No item in use - but one was expected");
         }
         if (this.itemInUse.findByItemId(weapon.id) !== weapon) {
             throw new Error(`Weapon ${weapon.id} is not part of item in use ${this.itemInUse?.id}`);
@@ -708,8 +676,8 @@ export class Unit extends SceneObject {
 
             this.logger.dir({ numProjectiles });
 
-            const projectiles = [...Array(numProjectiles).keys()].map((index) => {
-                const perturbedAngle = startOfSpread + angleScaler * index;
+            const projectiles = [...Array(numProjectiles).keys()].map((projectileIndex) => {
+                const perturbedAngle = startOfSpread + angleScaler * projectileIndex;
                 const directionVector = perturbedDirVector.rotate(perturbedAngle);
 
                 this.logger.dir({ perturbedAngle, directionVector, fromWorldPos });
@@ -718,7 +686,8 @@ export class Unit extends SceneObject {
                     game,
                     firingUnit: this,
                     firingWeapon: weapon,
-                    index,
+                    projectileIndex,
+                    roundIndex: shot,
                     srcPos: fromWorldPos,
                     directionVector,
                     // TEMPORARY: Override the maxium range of the projectile to be the target position.
@@ -731,8 +700,33 @@ export class Unit extends SceneObject {
 
             const showDebugGraphics = config.showProjectileDebugGraphics;
             const debugGraphics: DebugGraphic[] = [];
+            const imageManager = ImageManager.GetSingleton();
+            const roundDamageCache = game.damageCacheManager.createRoundInstance(imageManager);
 
-            Projectile.ProcessProjectiles(projectiles, map, debugGraphics);
+            const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
+
+            Projectile.ProcessProjectiles(
+                projectiles,
+                map,
+                debugGraphics,
+                roundDamageCache,
+                furnitureDamageSystem,
+                (projectile, tile, samplePos, sample, timeMs) => {
+                    furnitureDamageSystem.onMaterialPixel(
+                        projectile,
+                        tile,
+                        samplePos,
+                        sample,
+                        timeMs
+                    );
+                }
+            );
+
+            const tileUpdates = [...furnitureDamageSystem.timedUpdates].sort(
+                (a, b) => a.timeMs - b.timeMs
+            );
+
+            roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
 
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
@@ -752,16 +746,217 @@ export class Unit extends SceneObject {
                     type: "server:fire:trace",
                     payload: {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
-                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget
+                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
+                        tileUpdates
                     }
                 }
             ]);
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    throw(game: Game, worldPos: Vec2, _messageRouter: MessageRouter): void {
-        this.logger.info("Throw", { gameId: game.id, itemId: this.itemInUse!.id, worldPos });
+    throw(game: Game, worldPos: Vec2, messageRouter: MessageRouter): void {
+        const { itemInUse: itemToThrow } = this;
+
+        if (!itemToThrow) {
+            throw new Error("No item in use - but one was expected");
+        }
+
+        const { map } = game;
+
+        this.logger.info("Throw", {
+            gameId: game.id,
+            itemId: itemToThrow.id,
+            worldPos
+        });
+
+        const aptCost = itemToThrow.throwActionPointCost;
+        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        const toWorldPos = worldPos;
+        console.info(
+            "Unit",
+            this.id,
+            "attempting to throw",
+            itemToThrow.name,
+            "to",
+            toWorldPos.toString()
+        );
+
+        const { accuracy: baseAccuracy } = this._recipe.actions.throw;
+        const throwAccuracy = this.calcThrowAccuracy(baseAccuracy);
+        console.info({ baseAccuracy, throwAccuracy });
+
+        const maxThrowDistance = this.calcThrowMaxRange(itemToThrow);
+        console.info({ maxThrowDistance });
+
+        const unitPos = map.tileOffsetToWorld(this.mapLocation);
+        console.info({ unitPos: unitPos.toString() });
+
+        const throwVec = toWorldPos.sub(unitPos);
+        const throwDir = throwVec.normalise();
+        const throwDistance = throwVec.length;
+        console.info({
+            throwVec: throwVec.toString(),
+            throwDir: throwDir.toString(),
+            throwDistance
+        });
+
+        const {
+            dirVector: perturbedDir,
+            accuracy,
+            onTarget
+        } = Item.PerturbAccuracy(throwDir, throwAccuracy, this.throwInaccuracyAngle);
+        console.info({
+            perturbedDir: perturbedDir.toString(),
+            targeting: onTarget ? "OnTarget" : `OffTarget(${accuracy}%)`
+        });
+
+        const perturbedDistance = Item.PerturbRange(throwDistance);
+        console.info({ perturbedDistance });
+
+        const limitedPerturbedDistance = Math.min(perturbedDistance, maxThrowDistance);
+        console.info({ limitedPerturbedDistance });
+
+        const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
+        const dir = toWorldPos.sub(unitWorldPos).normalise();
+        const { radius: collisionRadius } = this._recipe.collision;
+        const fromWorldPos = unitWorldPos.add(dir.scale(collisionRadius));
+        this.logger.dir({ srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
+
+        const perturbedTargetWorldPos = fromWorldPos.add(
+            perturbedDir.scale(limitedPerturbedDistance)
+        );
+        console.info({
+            perturbedTargetWorldPos: perturbedTargetWorldPos.toString()
+        });
+
+        if (!this._useActionPoints(game, aptCost, messageRouter)) {
+            return;
+        }
+
+        const throwImpactVelocityMps = Math.min(
+            30,
+            Math.max(6, Math.sqrt(this.strength / itemToThrow.weight) * 4)
+        );
+
+        const projectile = new Projectile({
+            game,
+            firingUnit: this,
+            firingWeapon: itemToThrow,
+            projectileIndex: 0,
+            roundIndex: 0,
+            srcPos: fromWorldPos,
+            directionVector: perturbedDir,
+            projectileRecipe: {
+                numProjectiles: 1,
+                maxRange: limitedPerturbedDistance,
+                perturbation: 0,
+                visual: {
+                    headColour: Colour.White,
+                    headRadiusInPixels: 2,
+                    trailColour: Colour.White,
+                    trailLengthInPixels: 100,
+                    rangeFalloffPower: 20
+                },
+                damage: { default: 0, type: "default" },
+                mass: itemToThrow.weight,
+                velocity: DEFAULT_PROJECTILE_TRAVEL_VELOCITY,
+                impactVelocity: throwImpactVelocityMps,
+                diameter: 40,
+                hardness: 0,
+                shape: 0,
+                stability: 0.2,
+                bounce: 1,
+                delivery: "thrown",
+                integrity: 0
+            }
+        });
+
+        const showDebugGraphics = config.showProjectileDebugGraphics;
+        const debugGraphics: DebugGraphic[] = [];
+        const imageManager = ImageManager.GetSingleton();
+        const roundDamageCache = game.damageCacheManager.createRoundInstance(imageManager);
+
+        const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
+
+        Projectile.ProcessProjectiles(
+            [projectile],
+            map,
+            debugGraphics,
+            roundDamageCache,
+            furnitureDamageSystem,
+            (projectile, tile, samplePos, sample, timeMs) => {
+                // TODO: Work out what to do with the item when it hits a surface.
+                furnitureDamageSystem.onMaterialPixel(projectile, tile, samplePos, sample, timeMs);
+            }
+        );
+
+        // TODO:
+        // - Update the unit so they are not holding.
+        // - Position the item on the ground (rounded).
+        // - Update the
+
+        if (showDebugGraphics && debugGraphics) {
+            messageRouter.send({
+                type: "server:debug:graphics",
+                payload: debugGraphics
+            });
+        }
+
+        const tileUpdates = [...furnitureDamageSystem.timedUpdates].sort(
+            (a, b) => a.timeMs - b.timeMs
+        );
+
+        roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
+
+        const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
+
+        // Work out which tile the item landed in.
+        const landingTilePos = map.worldToTile(finalWorldPos);
+        console.info({ landingTile: landingTilePos });
+
+        const landingTile = map.getTile(landingTilePos);
+
+        itemToThrow.location = landingTilePos;
+        landingTile.addItem(itemToThrow);
+        this.inventory.removeItem(itemToThrow);
+
+        // Update the unit's tile, because they are no longer holding the item.
+        tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(finalTime));
+
+        // Update the landing tile, because the item is now on the ground.
+        tileUpdates.push(landingTile.generateTimedTileUpdate(finalTime));
+
+        // TODO: Move the projectiles forward in time...
+        // TODO: Psuedo tracers - how do we determine visibility?
+        messageRouter.send([
+            {
+                type: "server:fire:trace",
+                payload: {
+                    tracers: [projectile.getTracer()],
+                    isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
+                    tileUpdates
+                }
+            }
+        ]);
+
+        messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    interactions: {
+                        canFire: this.canFire,
+                        canThrow: this.canThrow,
+                        canAction: this.canAction,
+                        canInventory: this.canInventory
+                    },
+                    itemInUse: null
+                }
+            },
+            this.side.id
+        );
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
@@ -806,8 +1001,8 @@ export class Unit extends SceneObject {
             interactions: {
                 canFire: this.canFire,
                 canThrow: this.canThrow,
-                canAction: false,
-                canInventory: false
+                canAction: this.canAction,
+                canInventory: this.canInventory
             },
             itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
             actions: this.getActions()

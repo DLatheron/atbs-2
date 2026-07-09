@@ -7,18 +7,18 @@ import {
     FireModeItemSummary,
     ItemSummary,
     OnTarget,
-    RenderList,
     ScenarioId,
     ScenarioSummary,
     SideSummary,
     TileInfo,
     Tracer,
+    TimedTileUpdate,
     UnitSummary,
-    WaitingFor
+    WaitingFor,
+    TileUpdate
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
-import { RenderMode } from "./RenderMode.js";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
@@ -165,15 +165,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:map:update"),
-        payload: z.array(
-            z.object({
-                tilePos: ITilePos,
-                tileByRenderMode: z.object({
-                    [RenderMode.enum.MAP_MODE]: RenderList,
-                    [RenderMode.enum.FIRE_MODE]: RenderList
-                })
-            })
-        )
+        payload: z.array(TileUpdate)
     }),
     z.object({
         type: z.literal("server:ui:disabled"),
@@ -183,7 +175,8 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         type: z.literal("server:fire:trace"),
         payload: z.object({
             tracers: z.array(Tracer),
-            isOnTarget: OnTarget
+            isOnTarget: OnTarget,
+            tileUpdates: z.array(TimedTileUpdate).optional().default([])
         })
     }),
     z.object({

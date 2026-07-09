@@ -16,7 +16,14 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
-import { FurnitureState, RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
+import {
+    FurnitureState,
+    RenderList,
+    RenderMode,
+    TileInfo,
+    TileUpdate,
+    TimedTileUpdate
+} from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
 import { FurnitureManager } from "./FurnitureManager.js";
@@ -27,6 +34,16 @@ import { GridRayTraceResult, walkCellBresenhamLine } from "./GridRayTrace.js";
 import { IRayCast } from "./IRayCast.js";
 import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+import { Item } from "./Item.js";
+
+export interface CollisionSample {
+    material: Material;
+    owner: Furniture | Unit;
+    imageId: string;
+    layerIndex: number;
+    orientation: Orientation;
+}
 
 export const TileRecipe = z.object({
     terrain: z.object({
@@ -70,6 +87,8 @@ export type TileRecipe = z.infer<typeof TileRecipe>;
 export interface LayerCollision {
     owner: Furniture | Unit;
     image: Image;
+    imageId: string;
+    layerIndex: number;
     orientation: Orientation;
     materials: Material[];
 }
@@ -82,6 +101,7 @@ export class Tile implements IRenderableEntity {
     protected _tileSize: number;
     protected readonly _terrain: Terrain;
     protected readonly _furniture?: Furniture;
+    protected _items: Item[];
     protected _units: Unit[];
 
     constructor(
@@ -103,6 +123,7 @@ export class Tile implements IRenderableEntity {
                   state: recipe.furniture.state
               })
             : undefined;
+        this._items = [];
         this._units = [];
     }
 
@@ -118,8 +139,16 @@ export class Tile implements IRenderableEntity {
         return this._units;
     }
 
+    get items(): Item[] {
+        return this._items;
+    }
+
     get topmostUnit(): Unit | null {
         return this._units[0] ?? null;
+    }
+
+    get topmostItem(): Item | null {
+        return this._items[0] ?? null;
     }
 
     get location(): TilePos {
@@ -155,11 +184,43 @@ export class Tile implements IRenderableEntity {
         if (!unit.location) {
             throw new Error(`Unit ${unit.id} does not have an assigned location`);
         }
+        if (!TilePos.IsEqual(unit.location, this.location)) {
+            throw new Error(
+                `Unit ${unit.id} has location ${unit.location} but is attempting to be removed from ${this.location}!`
+            );
+        }
 
         this._units = this._units.filter(({ id }) => id !== unit.id);
     }
 
-    getRenderList(context: SceneContext): RenderList {
+    addItem(item: Item): void {
+        if (!item.location) {
+            throw new Error(`Item ${item.id} does not have an assigned location`);
+        }
+        if (!TilePos.IsEqual(item.location, this.location)) {
+            throw new Error(
+                `Item ${item.id} has location ${item.location} but is attempting to be added to ${this.location}!`
+            );
+        }
+
+        this._items.unshift(item);
+        this._items.sort((a, b) => a.weight - b.weight);
+    }
+
+    removeItem(item: Item): void {
+        if (!item.location) {
+            throw new Error(`Item ${item.id} does not have an assigned location`);
+        }
+        if (!TilePos.IsEqual(item.location, this.location)) {
+            throw new Error(
+                `Item ${item.id} has location ${item.location} but is attempting to be removed from ${this.location}!`
+            );
+        }
+
+        this._items = this._items.filter(({ id }) => id !== item.id);
+    }
+
+    getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
         if (this.units.length > 0) {
             this.logger.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
                 depth: null,
@@ -169,13 +230,14 @@ export class Tile implements IRenderableEntity {
 
         return [
             ...this.terrain.getRenderList(context),
-            ...(this.furniture?.getRenderList(context) ?? []),
+            ...(this.furniture?.getRenderList(context, damageCache) ?? []),
+            ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.units.map((unit) => unit.getRenderList(context)).flat()
         ];
     }
 
     getTileInfo(): TileInfo {
-        const { terrain, topmostUnit } = this;
+        const { terrain, furniture, topmostItem, topmostUnit } = this;
 
         return {
             tilePos: this._location,
@@ -187,6 +249,27 @@ export class Tile implements IRenderableEntity {
                 }),
                 description: terrain.description
             },
+            ...(furniture && {
+                furniture: {
+                    name: furniture.name,
+                    uiImage: furniture.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: [furniture.state]
+                    }),
+                    description: furniture.description,
+                    integrity: furniture.integrity
+                }
+            }),
+            ...(topmostItem && {
+                item: {
+                    name: topmostItem.name,
+                    uiImage: topmostItem.getRenderList({
+                        renderMode: RenderMode.enum.UI_MODE,
+                        states: []
+                    }),
+                    description: topmostItem.description
+                }
+            }),
             ...(topmostUnit && {
                 unit: {
                     name: topmostUnit.name,
@@ -195,7 +278,17 @@ export class Tile implements IRenderableEntity {
                         states: []
                     }),
                     description: topmostUnit.description
-                }
+                },
+                ...(topmostUnit.itemInUse && {
+                    unitUsing: {
+                        name: topmostUnit.itemInUse.name,
+                        uiImage: topmostUnit.itemInUse.getRenderList({
+                            renderMode: RenderMode.enum.UI_MODE,
+                            states: []
+                        }),
+                        description: topmostUnit.itemInUse.description
+                    }
+                })
             })
         };
     }
@@ -218,7 +311,10 @@ export class Tile implements IRenderableEntity {
         };
     }
 
-    getCollisionLayers(imageManager: ImageManager): LayerCollision[] {
+    getCollisionLayers(
+        imageManager: ImageManager,
+        damageCache?: DamageCacheManager
+    ): LayerCollision[] {
         const collisionLayers: LayerCollision[] = [];
 
         const context: SceneContext = {
@@ -229,11 +325,18 @@ export class Tile implements IRenderableEntity {
         if (this.furniture) {
             const { materials } = this.furniture;
 
-            this.furniture.getRenderList(context).forEach((layerImage) => {
+            this.furniture.getRenderList(context).forEach((layerImage, layerIndex) => {
                 if (layerImage.imageId) {
+                    const originalImageId = layerImage.imageId;
+                    const displayImageId = damageCache
+                        ? damageCache.getImageIdOverride(originalImageId, this.location)
+                        : originalImageId;
+
                     collisionLayers.push({
                         owner: this.furniture!,
-                        image: imageManager.getImage(layerImage.imageId),
+                        image: imageManager.getImage(displayImageId),
+                        imageId: originalImageId,
+                        layerIndex,
                         orientation: layerImage.orientation ?? Orientation.NORTH,
                         materials
                     });
@@ -244,11 +347,13 @@ export class Tile implements IRenderableEntity {
         this.units.forEach((unit) => {
             // const { materials } = unit; // TODO: Unit materials?
 
-            unit.getRenderList(context).forEach((layerImage) => {
+            unit.getRenderList(context).forEach((layerImage, layerIndex) => {
                 if (layerImage.imageId) {
                     collisionLayers.push({
                         owner: unit,
                         image: imageManager.getImage(layerImage.imageId),
+                        imageId: layerImage.imageId,
+                        layerIndex,
                         orientation: layerImage.orientation ?? Orientation.NORTH,
                         materials: []
                     });
@@ -283,7 +388,8 @@ export class Tile implements IRenderableEntity {
     castRay(
         subTileSrcPos: Vec2,
         subTileDstPos: Vec2,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager
     ): GridRayTraceResult {
         this.logger.info("Casting against tile");
 
@@ -292,7 +398,7 @@ export class Tile implements IRenderableEntity {
             return;
         }
 
-        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton(), damageCache);
         if (collisionLayers.length === 0) {
             this.logger.info("  - Has no collision layers (but is collidable?");
             return;
@@ -307,7 +413,7 @@ export class Tile implements IRenderableEntity {
 
             const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
             if (collisionSample) {
-                const { material, owner } = collisionSample;
+                const { material, owner, imageId, layerIndex } = collisionSample;
                 this.logger.info(`    - hit material ${material.id}: ${material.rgb}`);
 
                 debugGraphics?.push(
@@ -325,7 +431,15 @@ export class Tile implements IRenderableEntity {
                     }
                 );
 
-                return { pos: samplePos, material, tile: this, owner };
+                return {
+                    pos: samplePos,
+                    material,
+                    tile: this,
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation: collisionSample.orientation
+                };
             }
         }
     }
@@ -335,7 +449,9 @@ export class Tile implements IRenderableEntity {
         subTileSrcPos: Vec2,
         subTileDstPos: Vec2,
         currentMaterial: Material,
-        debugGraphics?: DebugGraphic[]
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        onMaterialPixel?: (samplePos: Vec2, sample: CollisionSample) => void
     ): GridRayTraceResult {
         this.logger.info("Stepping projectile through tile");
 
@@ -344,7 +460,7 @@ export class Tile implements IRenderableEntity {
             return;
         }
 
-        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton(), damageCache);
         if (collisionLayers.length === 0) {
             this.logger.info("  - Has no collision layers (but is collidable?");
             return;
@@ -388,7 +504,12 @@ export class Tile implements IRenderableEntity {
             }
 
             // Drain penetration energy for each pixel travelled inside material.
-            const { material, owner } = collisionSample;
+            const { material, owner, imageId, layerIndex, orientation } = collisionSample;
+
+            if (material === currentMaterial) {
+                onMaterialPixel?.(samplePos, collisionSample);
+            }
+
             const pixelCost = calcPixelPenetrationCost({
                 hardness: material.hardness,
                 toughness: material.toughness,
@@ -419,7 +540,10 @@ export class Tile implements IRenderableEntity {
                     pos: samplePos,
                     material,
                     tile: this,
-                    owner
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation
                 };
             }
 
@@ -447,21 +571,58 @@ export class Tile implements IRenderableEntity {
                     pos: samplePos,
                     material,
                     tile: this,
-                    owner
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation
                 };
             }
         }
     }
 
+    getMovementObstruction(type: string) {
+        return this.furniture?.getMovementObstruction(type) ?? 0;
+    }
+
+    generateTileUpdate(): TileUpdate {
+        return {
+            tilePos: this.location,
+            tileByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: this.getRenderList({
+                    renderMode: RenderMode.enum.MAP_MODE,
+                    states: []
+                }),
+                [RenderMode.enum.FIRE_MODE]: this.getRenderList({
+                    renderMode: RenderMode.enum.FIRE_MODE,
+                    states: []
+                })
+            }
+        };
+    }
+
+    generateTimedTileUpdate(timeMs: number): TimedTileUpdate {
+        return {
+            timeMs,
+            ...this.generateTileUpdate()
+        };
+    }
+
     static SampleCollisionLayers(
         samplePos: IVec2,
         collisionLayers: LayerCollision[]
-    ): { material: Material; owner: Furniture | Unit } | undefined {
-        for (const { image, orientation, owner, materials } of collisionLayers) {
+    ): CollisionSample | undefined {
+        for (const {
+            image,
+            orientation,
+            owner,
+            materials,
+            imageId,
+            layerIndex
+        } of collisionLayers) {
             const materialColour = image.getColour(samplePos, orientation);
             if (materialColour.a > 0.0) {
                 const [material] = Material.DetermineMaterial(materialColour, materials);
-                return { material, owner };
+                return { material, owner, imageId, layerIndex, orientation };
             }
         }
     }

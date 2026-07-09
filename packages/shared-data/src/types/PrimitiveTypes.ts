@@ -234,7 +234,29 @@ export const TileInfo = z.object({
         uiImage: RenderList,
         description: Description
     }),
+    furniture: z
+        .object({
+            name: z.string(),
+            uiImage: RenderList,
+            description: Description,
+            integrity: z.number().min(0).max(100).optional()
+        })
+        .optional(),
+    item: z
+        .object({
+            name: z.string(),
+            uiImage: RenderList,
+            description: Description
+        })
+        .optional(),
     unit: z
+        .object({
+            name: z.string(),
+            uiImage: RenderList,
+            description: Description
+        })
+        .optional(),
+    unitUsing: z
         .object({
             name: z.string(),
             uiImage: RenderList,
@@ -708,10 +730,6 @@ export const ThrowDetails = z.object({
 export type ThrowDetails = z.infer<typeof ThrowDetails>;
 
 export const VisualRecipe = z.object({
-    velocityInPps: z
-        .number()
-        .positive()
-        .describe("Velocity of the projectile in pixels per second"),
     headColour: IColour.default(Colour.White),
     headRadiusInPixels: z.number().nonnegative(),
     trailColour: IColour.default(Colour.White),
@@ -740,3 +758,17 @@ export const Tracer = z.object({
     rangeFalloffPower: z.number().positive()
 });
 export type Tracer = z.infer<typeof Tracer>;
+
+export const TileUpdate = z.object({
+    tilePos: ITilePos,
+    tileByRenderMode: z.object({
+        [RenderMode.enum.MAP_MODE]: RenderList,
+        [RenderMode.enum.FIRE_MODE]: RenderList
+    })
+});
+export type TileUpdate = z.infer<typeof TileUpdate>;
+
+export const TimedTileUpdate = TileUpdate.extend({
+    timeMs: z.number().nonnegative()
+});
+export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;

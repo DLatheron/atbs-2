@@ -3,6 +3,7 @@ import { WebSocket } from "ws";
 import type { Game } from "./Game.js";
 
 export const SOCKET_CLOSED_DUE_TO_GAME_DELETION = 4000;
+export const SOCKET_REPLACED_BY_NEW_CONNECTION = 4001;
 
 export class Client {
     private readonly _game: Game;
@@ -59,9 +60,10 @@ export class Client {
     }
 
     assignSocket(value: WebSocket) {
-        // if (this._socket) {
-        //     throw new Error("Socket already assigned for this client");
-        // }
+        if (this._socket && this._socket !== value) {
+            this._socket.removeAllListeners();
+            this._socket.close(SOCKET_REPLACED_BY_NEW_CONNECTION, "Replaced by new connection");
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-this-alias -- needs aliasing to prevent errors inside lambdas.
         const client = this;
@@ -74,6 +76,11 @@ export class Client {
         });
 
         value.on("close", function close() {
+            if (client._socket !== value) {
+                return;
+            }
+
+            client._socket = null;
             game.clientDisconnected(client);
             game.removeClient(id);
         });
@@ -97,6 +104,11 @@ export class Client {
     }
 
     forceDisconnect() {
-        this._socket?.close(SOCKET_CLOSED_DUE_TO_GAME_DELETION);
+        if (!this._socket) {
+            return;
+        }
+
+        this._socket.close(SOCKET_CLOSED_DUE_TO_GAME_DELETION);
+        this._socket = null;
     }
 }

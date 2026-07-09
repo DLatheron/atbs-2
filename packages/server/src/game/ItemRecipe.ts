@@ -34,13 +34,31 @@ export type SlotProps = z.infer<typeof SlotProps>;
 
 export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),
+    variability: z
+        .object({
+            min: z.number().positive().max(2).default(1),
+            max: z.number().positive().max(2).default(1)
+        })
+        .refine((data) => data.min <= data.max, {
+            message: "Variability 'max' must be greater than 'min'"
+        })
+        .describe("Variability applied to each projectile in a multiple projectile spread")
+        .optional(),
     maxRange: z.number().positive(),
     perturbation: z.number().min(0).max(100).default(0),
     visual: VisualRecipe,
     damage: DamageMap,
 
     mass: z.number().positive().describe("Mass in kilograms"),
-    velocity: z.number().positive().describe("Velocity in metres per second"),
+    velocity: z
+        .number()
+        .positive()
+        .describe("Travel speed used for animation timing (world-units per second)"),
+    impactVelocity: z
+        .number()
+        .positive()
+        .optional()
+        .describe("Physical impact speed for penetration (m/s); defaults to velocity"),
     diameter: z.number().positive().describe("Diameter in millimeters"),
     hardness: z.number().min(0).max(1).describe("Hardness: 0 - soft, 1 - hard"),
     shape: z.number().min(0).max(1).describe("Shape: 0 - round, 1 - pointed/armour piercing"),
@@ -50,6 +68,10 @@ export const ProjectileRecipe = z.object({
         .min(0)
         .max(1)
         .describe("Ricochet tendency: 0 = never, 1 = always (e.g. thrown grenades)"),
+    delivery: z
+        .enum(["fired", "thrown"])
+        .default("fired")
+        .describe("How the projectile was launched; thrown objects ricochet off most materials"),
     integrity: z.number().nonnegative().describe("How easily the projectile breaks apart"),
 
     explosion: Explosion.optional()

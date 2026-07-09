@@ -6,7 +6,9 @@ import {
     calcRicochetProbability,
     calcSurfacePenetrationResistance,
     evaluateSurfacePenetration,
-    isGrazingImpact
+    isGrazingImpact,
+    isMaterialFragileForThrow,
+    THROWN_FRAGILE_TOUGHNESS_MAX
 } from "./Penetration.js";
 
 const NATO_556 = {
@@ -119,6 +121,26 @@ describe("isGrazingImpact", () => {
     it("treats shallow angles as grazing", () => {
         expect(isGrazingImpact(0.2)).toBe(true);
         expect(isGrazingImpact(0.8)).toBe(false);
+    });
+});
+
+describe("isMaterialFragileForThrow", () => {
+    it("treats low-toughness materials as fragile", () => {
+        expect(isMaterialFragileForThrow({ ...THIN_WOOD, toughness: 0.08 })).toBe(true);
+        expect(isMaterialFragileForThrow(THIN_WOOD)).toBe(false);
+        expect(isMaterialFragileForThrow(CONCRETE)).toBe(false);
+    });
+
+    it("uses the documented toughness threshold", () => {
+        expect(
+            isMaterialFragileForThrow({
+                ...THIN_WOOD,
+                toughness: THROWN_FRAGILE_TOUGHNESS_MAX - 0.01
+            })
+        ).toBe(true);
+        expect(
+            isMaterialFragileForThrow({ ...THIN_WOOD, toughness: THROWN_FRAGILE_TOUGHNESS_MAX })
+        ).toBe(false);
     });
 });
 

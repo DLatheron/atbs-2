@@ -1,5 +1,5 @@
 import { Aabb, Colour, IVec2, Orientation, Vec2 } from "@atbs/maths";
-import { createReadStream, createWriteStream } from "fs";
+import { createReadStream, createWriteStream, writeFileSync } from "fs";
 import path from "path";
 import { PNG } from "pngjs";
 
@@ -25,6 +25,10 @@ export class Image {
     }
     get data(): Buffer {
         return this._png.data;
+    }
+
+    get png(): PNG {
+        return this._png;
     }
 
     get tileBounds() {
@@ -126,6 +130,16 @@ export class Image {
                 .on("finish", resolve)
                 .on("error", reject)
         );
+    }
+
+    saveSync(fullPath: string): void {
+        writeFileSync(fullPath, PNG.sync.write(this._png));
+    }
+
+    clone(name?: string): Image {
+        const clonedPng = new PNG({ width: this._png.width, height: this._png.height });
+        this._png.data.copy(clonedPng.data);
+        return new Image(name ?? this._name, clonedPng);
     }
 
     static async Load(fullPath: string): Promise<Image> {

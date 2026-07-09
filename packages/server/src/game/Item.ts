@@ -243,6 +243,10 @@ export class Item extends SceneObject {
         return this._recipe.projectile;
     }
 
+    get throwActionPointCost(): number {
+        return Math.floor(clamp(this.weight * 5, 10, 30));
+    }
+
     hasSlot(slot: SlotType): boolean {
         return !!this.findSlotContents(slot);
     }
@@ -387,13 +391,17 @@ export class Item extends SceneObject {
         return ammo;
     }
 
-    calcDamage(unitType: UnitType): number {
+    calcDamage(target: "furniture" | UnitType): number {
         if (!("projectile" in this._recipe)) {
             return 0;
         }
 
         const { damage: damageMap } = this._recipe.projectile;
-        const damage = unitType in damageMap ? damageMap[unitType] : undefined;
+        if (target === "furniture") {
+            return damageMap.default;
+        }
+
+        const damage = target in damageMap ? damageMap[target] : undefined;
         return damage ?? damageMap.default;
     }
 
@@ -461,7 +469,7 @@ export class Item extends SceneObject {
             );
         }
 
-        console.info({ id: this.id, fireModes: this._recipe.fireModes });
+        // console.info({ id: this.id, fireModes: this._recipe.fireModes });
 
         return fireModes;
     }
@@ -579,10 +587,10 @@ export class Item extends SceneObject {
         dirVector: Vec2,
         overallAccuracy: number,
         inaccuracyAngle = 10
-    ): { dirVector: Vec2; accuracy: number } {
+    ): { dirVector: Vec2; accuracy: number; onTarget: boolean } {
         const accuracy = Item.CalcShotAccuracy(overallAccuracy);
         if (accuracy === 0.5) {
-            return { dirVector, accuracy };
+            return { dirVector, accuracy, onTarget: true };
         }
 
         const inaccuracyHalfAngle = degreesToRadians(inaccuracyAngle / 2);
@@ -594,7 +602,8 @@ export class Item extends SceneObject {
 
         return {
             dirVector: Vec2.Slerp(angles[0], angles[1], accuracy),
-            accuracy
+            accuracy,
+            onTarget: false
         };
     }
 

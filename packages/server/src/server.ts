@@ -49,26 +49,34 @@ async function startServer() {
     });
 
     wss.on("connection", function connection(socket: WebSocket, req: IncomingMessage) {
-        const host = req.headers.host ?? "localhost";
-        const url = new URL(req.url ?? "", `http://${host}`);
-        const validatedQueryParams = parseURLSearchParams(
-            ConnectSocketQueryParams,
-            url.searchParams
-        );
-        const { clientId, gameId } = validatedQueryParams;
+        try {
+            const host = req.headers.host ?? "localhost";
+            const url = new URL(req.url ?? "", `http://${host}`);
+            const validatedQueryParams = parseURLSearchParams(
+                ConnectSocketQueryParams,
+                url.searchParams
+            );
+            const { clientId, gameId } = validatedQueryParams;
 
-        const game = gameManager.findGame(gameId);
-        if (!game) {
-            logger.error(`Connection from client: ${clientId}, failed to find game: ${gameId}`);
-            return;
-        }
+            const game = gameManager.findGame(gameId);
+            if (!game) {
+                logger.error(`Connection from client: ${clientId}, failed to find game: ${gameId}`);
+                socket.close(4004, "Game not found");
+                return;
+            }
 
-        const client = game.findClient(clientId);
-        if (!client) {
-            logger.error(`Client: ${clientId}, not found in game: ${gameId}`);
-            return;
+            const client = game.findClient(clientId);
+            if (!client) {
+                logger.error(`Client: ${clientId}, not found in game: ${gameId}`);
+                socket.close(4005, "Client not found");
+                return;
+            }
+
+            client.assignSocket(socket);
+        } catch (error) {
+            logger.error("WebSocket connection error - closing socket", error);
+            socket.close(4003, "Connection rejected");
         }
-        client.assignSocket(socket);
     });
 
     server.listen(port, () => {

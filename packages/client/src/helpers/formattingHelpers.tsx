@@ -1,5 +1,5 @@
 import { Misc } from "@atbs/maths";
-import { ErrorType } from "@atbs/shared-data";
+import { ErrorType, FireModeEx } from "@atbs/shared-data";
 
 export interface LevelThreshold {
     threshold: number;
@@ -93,11 +93,12 @@ export const SPEED_LEVELS: LevelThreshold[] = [
     { threshold: 0, text: "Statuesque" }
 ];
 
-// export const FIRE_MODE_LOOKUP: Record<string, string> = {
-//     [FireMode.AIMED]: "Aimed",
-//     [FireMode.SNAPSHOT]: "Snapshot",
-//     [FireMode.THROW]: "Throw"
-// };
+export const FIRE_MODE_EX_LOOKUP: Record<FireModeEx, string> = {
+    [FireModeEx.enum.aimed]: "Aimed",
+    [FireModeEx.enum.snapshot]: "Snapshot",
+    [FireModeEx.enum.throw]: "Throw",
+    [FireModeEx.enum.none]: "None"
+};
 
 export function levelToText(value: number, levels: LevelThreshold[]): string {
     value = Math.max(value, 0);
@@ -145,6 +146,10 @@ export function formatWeight(weight: number) {
 
 export function formatItemName({ quantity, name }: { quantity: number; name: string }) {
     return quantity > 1 ? `${quantity}x ${name}` : name;
+}
+
+export function formatPercentage(percentage: number): string {
+    return `${Math.round(percentage * 100)}%`;
 }
 
 // export function formatCost({ item, cost, batchSize = 1 }: { item: IBaseItem; cost: number; batchSize?: number }) {

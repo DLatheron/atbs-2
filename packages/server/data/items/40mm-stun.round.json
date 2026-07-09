@@ -13,7 +13,6 @@
         "maxRange": 3000,
         "perturbation": 0,
         "visual": {
-            "velocityInPps": 600,
             "headColour": { "r": 255, "g": 255, "b": 255, "a": 1 },
             "headRadiusInPixels": 4,
             "trailColour": { "r": 255, "g": 255, "b": 255, "a": 1 },

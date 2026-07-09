@@ -18,6 +18,9 @@ export const MIN_IMPACT_ANGLE_DOT = 0.05;
 /** Impact angles below this dot product prefer ricochet over penetration (when bounce > 0). */
 export const GRAZE_RICOCHET_DOT = 0.45;
 
+/** Thrown objects ricochet off materials at or above this toughness (e.g. wood, metal, concrete). */
+export const THROWN_FRAGILE_TOUGHNESS_MAX = 0.15;
+
 /** Fraction of surface resistance paid as energy when entering a material. */
 export const ENTRY_ENERGY_FRACTION = 0.5;
 
@@ -60,6 +63,11 @@ export function calcEntryEnergyCost(surfaceResistance: number): number {
 
 export function isGrazingImpact(impactAngleDot: number): boolean {
     return calcImpactIncidenceDot(impactAngleDot) < GRAZE_RICOCHET_DOT;
+}
+
+/** True for brittle materials such as glass that a thrown object may break through. */
+export function isMaterialFragileForThrow(material: MaterialResistanceProps): boolean {
+    return material.toughness < THROWN_FRAGILE_TOUGHNESS_MAX;
 }
 
 /**

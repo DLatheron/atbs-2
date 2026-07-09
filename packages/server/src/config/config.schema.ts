@@ -9,6 +9,7 @@ const Config = z
         infiniteActionPoints: z.boolean().optional().default(false),
         infiniteAmmunition: z.boolean().optional().default(false),
         showProjectileDebugGraphics: z.boolean().optional().default(false),
+        cleanupDamageCacheOnGameDestroy: z.boolean().optional().default(true),
         logLevels: z
             .object({
                 itemManager: LogLevel.optional(),
@@ -43,7 +44,7 @@ const Config = z
                 game: LogLevel.enum.warn,
                 server: LogLevel.enum.warn,
                 tile: LogLevel.enum.warn,
-                unit: LogLevel.enum.debug
+                unit: LogLevel.enum.warn
             })
     })
     .strict();

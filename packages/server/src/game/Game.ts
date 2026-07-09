@@ -10,6 +10,7 @@ import {
 
 import { Client } from "./Client.js";
 import { ClientManager } from "./ClientManager.js";
+import { gameManager } from "./GameManager.js";
 import type { PhaseHandler } from "./phaseHandlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phaseHandlers/LobbyPhaseHandler.js";
 import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
@@ -27,6 +28,8 @@ import { ItemRecipeManager } from "./ItemRecipeManager.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
 import { MaterialManager } from "./MaterialManager.js";
+import { DamageCacheManager } from "./DamageCacheManager.js";
+import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -65,10 +68,12 @@ export class Game {
     private readonly _messageManager: ClientMessageManager;
     private readonly _itemManager: ItemManager;
     private readonly _furnitureManager: FurnitureManager;
+    private readonly _damageCacheManager: DamageCacheManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
     private _scenario: Scenario | null;
+    private _isDestroying = false;
 
     private readonly _playState: {
         sides: Side[];
@@ -93,6 +98,7 @@ export class Game {
         this._clientManager = new ClientManager();
         this._itemManager = new ItemManager(itemRecipeManager);
         this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
+        this._damageCacheManager = new DamageCacheManager(gameId);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -302,6 +308,10 @@ export class Game {
         return this._furnitureManager;
     }
 
+    get damageCacheManager(): DamageCacheManager {
+        return this._damageCacheManager;
+    }
+
     set scenario(value: Scenario | null) {
         if (this.phase !== Phase.enum.lobby) {
             throw new Error(`Scenario cannot be changed whilst in ${this.phase} phase`);
@@ -367,7 +377,14 @@ export class Game {
      * Returns `true` if the client was removed, otherwise `false`.
      */
     removeClient(clientId: ClientId): boolean {
-        return this._clientManager.removeClient(clientId);
+        const removed = this._clientManager.removeClient(clientId);
+
+        if (removed && this.numClients === 0 && !this._isDestroying) {
+            this.destroyGame();
+            gameManager.removeGame(this.gameId);
+        }
+
+        return removed;
     }
 
     getClient(clientId: ClientId) {
@@ -436,14 +453,23 @@ export class Game {
     }
 
     destroyGame() {
+        if (this._isDestroying) {
+            return;
+        }
+
+        this._isDestroying = true;
         this.logger.info("DDD Destroying game", this.gameId);
+
+        if (config.cleanupDamageCacheOnGameDestroy) {
+            this._damageCacheManager.cleanup(ImageManager.GetSingleton());
+        }
 
         while (this.clients.length > 0) {
             const client = this.clients[0];
 
             client.forceDisconnect();
 
-            this.removeClient(client.id);
+            this._clientManager.removeClient(client.id);
         }
     }
 

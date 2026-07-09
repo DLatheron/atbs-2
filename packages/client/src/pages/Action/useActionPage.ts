@@ -136,6 +136,13 @@ export function useActionPage() {
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
                 setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
                 world.unit = merge({}, world.unit, payload);
+
+                if (world.unit.itemInUse === null) {
+                    setSidePanelMode(MapMode.enum["unit-mode"]);
+                    world.mapMode = MapMode.enum["map-mode"];
+                    setUnitWeapon(null);
+                    world.unitWeapon = null;
+                }
             }),
 
             messageManager.registerHandler("server:unit:weapon:update", (_context, payload) => {
@@ -158,10 +165,17 @@ export function useActionPage() {
                 const block = new Promise((resolve) => (resolver = resolve));
 
                 setIsOnTarget(payload.isOnTarget);
-                world.setTracers(payload.tracers, () => {
-                    setIsOnTarget(OnTarget.enum.none);
-                    resolver(undefined);
-                });
+                world.setTracers(
+                    payload.tracers,
+                    payload.tileUpdates,
+                    () => {
+                        setMap((map: ClientMap | null) => map);
+                    },
+                    () => {
+                        setIsOnTarget(OnTarget.enum.none);
+                        resolver(undefined);
+                    }
+                );
 
                 console.info("!!! Queue blocked");
                 await block;
@@ -263,6 +277,10 @@ export function useActionPage() {
 
     const onFire = useCallback(
         (details: FireDetails) => {
+            if (disabled) {
+                return;
+            }
+
             setDisabled(true);
 
             sendMessage({
@@ -270,7 +288,7 @@ export function useActionPage() {
                 payload: details
             });
         },
-        [sendMessage]
+        [disabled, sendMessage]
     );
 
     useEffect(() => {
@@ -279,6 +297,10 @@ export function useActionPage() {
 
     const onThrow = useCallback(
         (details: ThrowDetails) => {
+            if (disabled) {
+                return;
+            }
+
             setDisabled(true);
 
             sendMessage({
@@ -286,7 +308,7 @@ export function useActionPage() {
                 payload: details
             });
         },
-        [sendMessage]
+        [disabled, sendMessage]
     );
 
     useEffect(() => {
