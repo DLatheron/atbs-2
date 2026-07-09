@@ -166,7 +166,6 @@ export function useActionPage() {
 
                 setIsOnTarget(payload.isOnTarget);
                 world.setTracers(
-                    payload.mode,
                     payload.tracers,
                     payload.tileUpdates,
                     () => {

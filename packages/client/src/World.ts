@@ -369,7 +369,6 @@ export class World {
     }
 
     setTracers(
-        mode: "fire" | "throw",
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
         onMapUpdated: () => void,
@@ -396,7 +395,7 @@ export class World {
                 onMapUpdated();
             }
 
-            world._drawSights = mode === "fire";
+            world._drawSights = true;
             completeCallback();
         };
 

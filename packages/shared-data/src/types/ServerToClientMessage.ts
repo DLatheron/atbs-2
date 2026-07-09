@@ -174,7 +174,6 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:fire:trace"),
         payload: z.object({
-            mode: z.union([z.literal("fire"), z.literal("throw")]),
             tracers: z.array(Tracer),
             isOnTarget: OnTarget,
             tileUpdates: z.array(TimedTileUpdate).optional().default([])

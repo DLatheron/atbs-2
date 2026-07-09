@@ -745,7 +745,6 @@ export class Unit extends SceneObject {
                 {
                     type: "server:fire:trace",
                     payload: {
-                        mode: "fire",
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                         tileUpdates
@@ -936,7 +935,6 @@ export class Unit extends SceneObject {
             {
                 type: "server:fire:trace",
                 payload: {
-                    mode: "throw",
                     tracers: [projectile.getTracer()],
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                     tileUpdates

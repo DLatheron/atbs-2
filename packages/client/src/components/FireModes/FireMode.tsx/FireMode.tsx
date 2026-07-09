@@ -16,8 +16,8 @@ import {
     toggleButtonGroupClasses,
     Stack
 } from "@mui/material";
-import { startCase } from "lodash";
 import {
+    FIRE_MODE_EX_LOOKUP,
     formatAccuracy,
     formatActionPoints,
     formatWeight
@@ -121,7 +121,7 @@ export function FireModeComponent({
                         </ToggleButton>
                         <ToggleButton
                             id="full-auto"
-                            title="Fulauto"
+                            title="Full auto"
                             value={FireSelector.enum.auto}
                             disabled={disabled || !("auto" in weapon.fireModes)}
                         >
@@ -165,11 +165,11 @@ export function FireModeComponent({
                             <Stack key={fireMode} spacing={1}>
                                 <ToggleButton
                                     id={fireMode}
-                                    title={startCase(fireMode)}
+                                    title={FIRE_MODE_EX_LOOKUP[fireMode]}
                                     value={fireMode}
                                     disabled={disabled || actionPoints < actionPointCost}
                                 >
-                                    {startCase(fireMode)}
+                                    {FIRE_MODE_EX_LOOKUP[fireMode]}
                                 </ToggleButton>
                                 <AttributesComponent
                                     attributes={[
@@ -192,14 +192,14 @@ export function FireModeComponent({
                     <Stack key={fireModeEx} spacing={1}>
                         <ToggleButton
                             id={FireModeEx.enum.throw}
-                            title={startCase(FireModeEx.enum.throw)}
+                            title={FIRE_MODE_EX_LOOKUP[FireModeEx.enum.throw]}
                             value={FireModeEx.enum.throw}
                             disabled={
                                 disabled ||
                                 actionPoints < unit.actions[Action.enum.throw].actionPoints
                             }
                         >
-                            {startCase(FireModeEx.enum.throw)}
+                            {FIRE_MODE_EX_LOOKUP[FireModeEx.enum.throw]}
                         </ToggleButton>
                         <AttributesComponent
                             attributes={[
