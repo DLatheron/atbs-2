@@ -14,6 +14,7 @@ export interface TileInfoComponentProps {
 export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
     const item = tileInfo?.item;
     const unit = tileInfo?.unit;
+    const unitUsing = tileInfo?.unitUsing;
     const terrain = tileInfo?.terrain;
     const furniture = tileInfo?.furniture;
 
@@ -43,13 +44,16 @@ export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
                                     </Typography>
                                     <ImageComponent images={furniture.uiImage} />
                                     <DescriptionComponent description={furniture.description} />
-                                    {furniture.integrity && (
+                                    {furniture.integrity !== undefined && (
                                         <AttributesComponent
                                             attributes={[
                                                 {
                                                     id: "integrity",
                                                     label: "Integrity",
-                                                    value: formatPercentage(furniture.integrity)
+                                                    value:
+                                                        furniture.integrity > 0
+                                                            ? formatPercentage(furniture.integrity)
+                                                            : "Destroyed"
                                                 }
                                             ]}
                                         />
@@ -67,7 +71,7 @@ export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
                             )}
                         </Stack>
                     )}
-                    {unit && <UnitDetailsComponent unit={unit} />}
+                    {unit && <UnitDetailsComponent unit={unit} item={unitUsing} />}
                 </Stack>
             )}
         </Container>

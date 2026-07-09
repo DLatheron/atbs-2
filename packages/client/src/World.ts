@@ -375,18 +375,12 @@ export class World {
         onMapUpdated: () => void,
         completeCallback: () => void
     ): void {
-        // TODO: Reset the simulation time.
-
-        const { time: startTime } = this._timer;
-
-        this._timer.resume();
-
-        // TODO: Trigger the simulation time...
-        // TODO: Should be do a renderer plugin thing here???
+        const tracerTimer = new Timer();
 
         this._drawSights = false;
 
         const appliedUpdateIndices = new Set<number>();
+
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const world = this;
 
@@ -411,12 +405,14 @@ export class World {
                 return "Tracers";
             },
 
-            update({ time }: RenderPluginUpdateProps) {
+            update() {
                 if (!tileUpdates.length) {
                     return false;
                 }
 
-                const elapsedMs = Math.max(time - startTime, 0);
+                const { time } = tracerTimer.tick();
+
+                const elapsedMs = Math.max(time, 0);
                 let applied = false;
 
                 for (let index = 0; index < tileUpdates.length; index++) {
@@ -438,11 +434,12 @@ export class World {
                 return false;
             },
 
-            render({ camera, context, time }: RenderPluginRenderProps) {
+            render({ camera, context }: RenderPluginRenderProps) {
+                const { time } = tracerTimer;
                 let allComplete = true;
 
                 for (const tracer of tracers) {
-                    if (!DrawProjectile(camera, context, startTime, time, tracer)) {
+                    if (!DrawProjectile(camera, context, 0, time, tracer)) {
                         allComplete = false;
                     }
                 }

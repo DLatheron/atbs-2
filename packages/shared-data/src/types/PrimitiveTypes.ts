@@ -255,6 +255,13 @@ export const TileInfo = z.object({
             uiImage: RenderList,
             description: Description
         })
+        .optional(),
+    unitUsing: z
+        .object({
+            name: z.string(),
+            uiImage: RenderList,
+            description: Description
+        })
         .optional()
 });
 export type TileInfo = z.infer<typeof TileInfo>;
@@ -752,12 +759,16 @@ export const Tracer = z.object({
 });
 export type Tracer = z.infer<typeof Tracer>;
 
-export const TimedTileUpdate = z.object({
-    timeMs: z.number().nonnegative(),
+export const TileUpdate = z.object({
     tilePos: ITilePos,
     tileByRenderMode: z.object({
         [RenderMode.enum.MAP_MODE]: RenderList,
         [RenderMode.enum.FIRE_MODE]: RenderList
     })
+});
+export type TileUpdate = z.infer<typeof TileUpdate>;
+
+export const TimedTileUpdate = TileUpdate.extend({
+    timeMs: z.number().nonnegative()
 });
 export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;

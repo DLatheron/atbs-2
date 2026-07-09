@@ -16,7 +16,14 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
-import { FurnitureState, RenderList, RenderMode, TileInfo } from "@atbs/shared-data";
+import {
+    FurnitureState,
+    RenderList,
+    RenderMode,
+    TileInfo,
+    TileUpdate,
+    TimedTileUpdate
+} from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
 import { FurnitureManager } from "./FurnitureManager.js";
@@ -271,7 +278,17 @@ export class Tile implements IRenderableEntity {
                         states: []
                     }),
                     description: topmostUnit.description
-                }
+                },
+                ...(topmostUnit.itemInUse && {
+                    unitUsing: {
+                        name: topmostUnit.itemInUse.name,
+                        uiImage: topmostUnit.itemInUse.getRenderList({
+                            renderMode: RenderMode.enum.UI_MODE,
+                            states: []
+                        }),
+                        description: topmostUnit.itemInUse.description
+                    }
+                })
             })
         };
     }
@@ -565,6 +582,29 @@ export class Tile implements IRenderableEntity {
 
     getMovementObstruction(type: string) {
         return this.furniture?.getMovementObstruction(type) ?? 0;
+    }
+
+    generateTileUpdate(): TileUpdate {
+        return {
+            tilePos: this.location,
+            tileByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: this.getRenderList({
+                    renderMode: RenderMode.enum.MAP_MODE,
+                    states: []
+                }),
+                [RenderMode.enum.FIRE_MODE]: this.getRenderList({
+                    renderMode: RenderMode.enum.FIRE_MODE,
+                    states: []
+                })
+            }
+        };
+    }
+
+    generateTimedTileUpdate(timeMs: number): TimedTileUpdate {
+        return {
+            timeMs,
+            ...this.generateTileUpdate()
+        };
     }
 
     static SampleCollisionLayers(

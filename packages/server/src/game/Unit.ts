@@ -314,7 +314,7 @@ export class Unit extends SceneObject {
     getRenderList(context: SceneContext): RenderList {
         const unitContext = {
             ...context,
-            states: [this.isAlive ? "alive" : "dead"],
+            states: [this.isAlive ? "alive" : "dead", this.itemInUse ? "item-in-use" : "default"],
             orientation: this.orientation
         };
 
@@ -446,21 +446,7 @@ export class Unit extends SceneObject {
                     { type: "server:wait:time", payload: 300 },
                     {
                         type: "server:map:update",
-                        payload: [
-                            {
-                                tilePos: mapLocation,
-                                tileByRenderMode: {
-                                    [RenderMode.enum.MAP_MODE]: tile.getRenderList({
-                                        renderMode: RenderMode.enum.MAP_MODE,
-                                        states: []
-                                    }),
-                                    [RenderMode.enum.FIRE_MODE]: tile.getRenderList({
-                                        renderMode: RenderMode.enum.FIRE_MODE,
-                                        states: []
-                                    })
-                                }
-                            }
-                        ]
+                        payload: [tile.generateTileUpdate()]
                     }
                 ],
                 mapLocation
@@ -521,24 +507,7 @@ export class Unit extends SceneObject {
         messageRouter.sendIfVisible(
             [
                 { type: "server:wait:time", payload: 300 },
-                {
-                    type: "server:map:update",
-                    payload: [
-                        {
-                            tilePos: srcPos,
-                            tileByRenderMode: {
-                                [RenderMode.enum.MAP_MODE]: srcTile.getRenderList({
-                                    renderMode: RenderMode.enum.MAP_MODE,
-                                    states: []
-                                }),
-                                [RenderMode.enum.FIRE_MODE]: srcTile.getRenderList({
-                                    renderMode: RenderMode.enum.FIRE_MODE,
-                                    states: []
-                                })
-                            }
-                        }
-                    ]
-                }
+                { type: "server:map:update", payload: [srcTile.generateTileUpdate()] }
             ],
             srcPos
         );
@@ -555,24 +524,7 @@ export class Unit extends SceneObject {
         dstTile.addUnit(this);
         messageRouter.sendIfVisible(
             [
-                {
-                    type: "server:map:update",
-                    payload: [
-                        {
-                            tilePos: dstPos,
-                            tileByRenderMode: {
-                                [RenderMode.enum.MAP_MODE]: dstTile.getRenderList({
-                                    renderMode: RenderMode.enum.MAP_MODE,
-                                    states: []
-                                }),
-                                [RenderMode.enum.FIRE_MODE]: dstTile.getRenderList({
-                                    renderMode: RenderMode.enum.FIRE_MODE,
-                                    states: []
-                                })
-                            }
-                        }
-                    ]
-                },
+                { type: "server:map:update", payload: [dstTile.generateTileUpdate()] },
                 {
                     type: "server:camera:move:to",
                     payload: {
@@ -972,20 +924,11 @@ export class Unit extends SceneObject {
         landingTile.addItem(itemToThrow);
         this.inventory.removeItem(itemToThrow);
 
-        tileUpdates.push({
-            timeMs: finalTime,
-            tilePos: landingTilePos,
-            tileByRenderMode: {
-                [RenderMode.enum.MAP_MODE]: landingTile.getRenderList({
-                    renderMode: RenderMode.enum.MAP_MODE,
-                    states: []
-                }),
-                [RenderMode.enum.FIRE_MODE]: landingTile.getRenderList({
-                    renderMode: RenderMode.enum.FIRE_MODE,
-                    states: []
-                })
-            }
-        });
+        // Update the unit's tile, because they are no longer holding the item.
+        tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(finalTime));
+
+        // Update the landing tile, because the item is now on the ground.
+        tileUpdates.push(landingTile.generateTimedTileUpdate(finalTime));
 
         // TODO: Move the projectiles forward in time...
         // TODO: Psuedo tracers - how do we determine visibility?
