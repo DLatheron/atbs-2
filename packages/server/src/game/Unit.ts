@@ -4,6 +4,7 @@ import {
     Attribute,
     AttributeDef,
     calcFireActionPointCost,
+    DamageType,
     Description,
     ErrorType,
     FireMode,
@@ -50,6 +51,7 @@ import { Logger } from "@atbs/misc";
 import { IMPENETRABLE } from "./Obstruction.js";
 
 const MAX_DISORIENTATION = 100;
+const DISORIENTATION_REDUCTION_PER_TURN = 10;
 
 const ROTATION_APT_COST = 1;
 
@@ -174,7 +176,7 @@ export class Unit extends SceneObject {
             ? (overrides.orientation ?? Orientation.NORTH)
             : (overrides.orientation ?? Orientation.CENTER);
         this._side = additionalData.side;
-        this._disorientation = 0;
+        this._disorientation = 100;
     }
 
     get id(): UnitId {
@@ -229,13 +231,16 @@ export class Unit extends SceneObject {
         return this._recipe.isDirectional;
     }
 
-    get disorientated() {
+    get disorientated(): boolean {
         return this.disorientation > 0;
     }
-    get disorientation() {
+
+    get disorientation(): number {
         return this._disorientation;
     }
+
     set disorientation(value: number) {
+        console.info("Setting disorientation to", value);
         this._disorientation = clamp(value, 0, MAX_DISORIENTATION);
     }
 
@@ -266,6 +271,10 @@ export class Unit extends SceneObject {
 
     get constitution(): number {
         return this._attributes.constitution.value;
+    }
+
+    set constitution(value: number) {
+        this._attributes.constitution.value = clamp(value, 0, this.maxConstitution);
     }
 
     get strength(): number {
@@ -345,7 +354,7 @@ export class Unit extends SceneObject {
         }
 
         // Reduce the amount of disorientation based on the number of action points used.
-        this._disorientation = Math.max(0, this._disorientation - aptCost);
+        this.disorientation -= aptCost;
 
         if (!config.infiniteActionPoints) {
             this._attributes.actionPoints.value -= aptCost;
@@ -377,10 +386,10 @@ export class Unit extends SceneObject {
     startTurn() {
         this.logger.info("Starting turn");
 
-        // if (this.disorientated) {
-        //     // Reduce the amount of disorientation based on the number of action points remaining...
-        //     this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
-        // }
+        if (this.disorientated) {
+            // Reduce the amount of disorientation based on the number of action points remaining...
+            this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
+        }
 
         if (this.isAlive) {
             // TODO: Restore action points based on burden and wounds.
@@ -959,19 +968,51 @@ export class Unit extends SceneObject {
         );
     }
 
+    get disorientationScaler() {
+        const disorientationProportion = this.disorientation / MAX_DISORIENTATION;
+        const invDisorientationProportion = 1 - disorientationProportion;
+        const power = 2;
+        const invDisorientationProportionRaisedToPower = Math.pow(
+            invDisorientationProportion,
+            power
+        );
+        const clampedDisorientationScaler = clamp(invDisorientationProportionRaisedToPower, 0.1, 1);
+
+        return clampedDisorientationScaler;
+    }
+
     calcWeaponAccuracy(baseAccuracy: number): number {
-        return clamp(baseAccuracy, 0, 100);
-        // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
+        return clamp(Math.floor(baseAccuracy * this.disorientationScaler * 0.5), 0, 100);
     }
 
     calcThrowAccuracy(baseAccuracy: number): number {
-        return clamp(baseAccuracy, 0, 100);
-        // return Math.floor(baseAccuracy * this.disorientationScaler * 0.5);
+        return clamp(Math.floor(baseAccuracy * this.disorientationScaler * 0.5), 0, 100);
     }
 
     calcThrowMaxRange(item: Item) {
         // TODO: Validate that this is good enough...
         return Math.floor(this.strength / Math.pow(item.weight, 2)) * 400;
+    }
+
+    inflictDamage(_worldPos: Vec2, projectile: Projectile): boolean {
+        if (!this.isAlive) {
+            return false;
+        }
+
+        const { type: damageType, amount: damageAmount } = projectile.calcDamage(this.type);
+
+        switch (damageType) {
+            case DamageType.enum.default: {
+                this.constitution -= damageAmount;
+                break;
+            }
+
+            case DamageType.enum.disorientation:
+                this.disorientation += damageAmount;
+                break;
+        }
+
+        return this.isAlive;
     }
 
     toSummary(): UnitSummary {
@@ -982,6 +1023,7 @@ export class Unit extends SceneObject {
             location: this.mapLocation,
             isDirectional: this.isDirectional,
             orientation: this.orientation,
+            disorientation: this.disorientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
             collisionRadius: this._recipe.collision.radius,
             attributes: {

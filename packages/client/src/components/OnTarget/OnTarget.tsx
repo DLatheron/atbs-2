@@ -19,7 +19,7 @@ export function OnTargetComponent({ isOnTarget, sx }: OnTargetComponentProps) {
     }, [isOnTarget]);
 
     return (
-        <Box>
+        <Box data-testid="on-target-component" sx={{ m: 0, p: 0 }}>
             <Collapse in={isOnTarget !== OnTarget.enum.none}>
                 <Box
                     sx={{

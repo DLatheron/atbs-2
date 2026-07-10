@@ -11,7 +11,6 @@ import {
     ItemType,
     Quantity,
     RenderList,
-    UnitType,
     Weight,
     RenderMode,
     SightType,
@@ -389,20 +388,6 @@ export class Item extends SceneObject {
         this.emptySlot(SlotType.enum.ammo);
 
         return ammo;
-    }
-
-    calcDamage(target: "furniture" | UnitType): number {
-        if (!("projectile" in this._recipe)) {
-            return 0;
-        }
-
-        const { damage: damageMap } = this._recipe.projectile;
-        if (target === "furniture") {
-            return damageMap.default;
-        }
-
-        const damage = target in damageMap ? damageMap[target] : undefined;
-        return damage ?? damageMap.default;
     }
 
     getRenderList(context: SceneContext): RenderList {

@@ -26,6 +26,7 @@ import { useKeyboard, useWorld } from "../../../hooks";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnTargetComponent } from "../../OnTarget";
 import { getModeHelper, isModeAvailable } from "../../../helpers/fireModeHelpers";
+import { DisorientedComponent } from "../../Disoriented/Disoriented";
 
 export interface FireModePanelProps {
     visible: boolean;
@@ -154,7 +155,8 @@ export function FireModePanel({
                     onDirectionChange={onRotateTo}
                 />
                 <Box>
-                    <OnTargetComponent isOnTarget={isOnTarget} sx={{ mb: 1 }} />
+                    <OnTargetComponent isOnTarget={isOnTarget} />
+                    <DisorientedComponent disorientation={unit.disorientation} />
                     <AttributesComponent
                         title="Attributes"
                         attributes={[

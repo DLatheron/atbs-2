@@ -660,6 +660,7 @@ export const UnitSummary = z.object({
     description: Description,
     location: ITilePos,
     orientation: z.enum(Orientation),
+    disorientation: z.int().nonnegative(),
     viewAngleInDegrees: z.int().positive(),
     collisionRadius: z.number().positive(),
     isDirectional: z.boolean().optional().default(true),
