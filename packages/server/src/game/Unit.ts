@@ -49,6 +49,8 @@ import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
 import { IMPENETRABLE } from "./Obstruction.js";
+import { Material } from "./Material.js";
+import { MaterialManager } from "./MaterialManager.js";
 
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
@@ -102,7 +104,8 @@ export const UnitRecipe = z.object({
     inventory: InventoryRecipe,
     collision: z.object({
         shape: z.literal("circle"),
-        radius: z.number().positive()
+        radius: z.number().positive(),
+        materials: z.array(z.string()).nonempty().default(["human.material"])
     }),
     renderable: SceneNode,
     actions: Actions
@@ -142,6 +145,7 @@ export class Unit extends SceneObject {
         speed: Attribute;
         strength: Attribute;
     };
+    private readonly _materials: Material[];
     private readonly _inventory: Inventory;
     private readonly _side: Side;
 
@@ -176,7 +180,10 @@ export class Unit extends SceneObject {
             ? (overrides.orientation ?? Orientation.NORTH)
             : (overrides.orientation ?? Orientation.CENTER);
         this._side = additionalData.side;
-        this._disorientation = 100;
+        this._disorientation = 0;
+        this._materials = recipe.collision.materials.map((materialId) =>
+            MaterialManager.GetSingleton().getMaterial(materialId)
+        );
     }
 
     get id(): UnitId {
@@ -209,6 +216,10 @@ export class Unit extends SceneObject {
 
     get location(): TilePos | null {
         return this._location;
+    }
+
+    get materials(): Material[] {
+        return this._materials;
     }
 
     get mapLocation(): TilePos {
@@ -274,7 +285,7 @@ export class Unit extends SceneObject {
     }
 
     set constitution(value: number) {
-        this._attributes.constitution.value = clamp(value, 0, this.maxConstitution);
+        this._attributes.constitution.value = clamp(Math.floor(value), 0, this.maxConstitution);
     }
 
     get strength(): number {

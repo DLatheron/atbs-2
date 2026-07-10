@@ -7,11 +7,37 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Debug Server",
+            "runtimeExecutable": "${workspaceFolder}/packages/server/node_modules/.bin/nodemon",
+            "runtimeArgs": [
+                "--watch",
+                "src",
+                "--watch",
+                "data",
+                "--watch",
+                "../maths/dist",
+                "--watch",
+                "../misc/dist",
+                "--watch",
+                "../shared-data/dist",
+                "--ext",
+                "ts,js,json",
+                "--delay",
+                "300",
+                "--exec",
+                "node --import tsx"
+            ],
+            "args": ["src/server.ts"],
+            "cwd": "${workspaceFolder}/packages/server",
+            "restart": true,
+            "timeout": 60000,
+            "console": "internalConsole",
+            "internalConsoleOptions": "neverOpen",
             "skipFiles": ["<node_internals>/**"],
-            "cwd": "${workspaceFolder}/packages/server/",
-            "program": "${workspaceFolder}/packages/server/dist/server.js",
-            "outFiles": ["${workspaceFolder}/**/*.js"]
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "!**/node_modules/**"
+            ]
         }
     ]
 }

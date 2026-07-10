@@ -3,8 +3,8 @@ import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
 import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
-import { ItemManager } from "./ItemManager.js";
-import { FurnitureManager } from "./FurnitureManager.js";
+import type { ItemManager } from "./ItemManager.js";
+import type { FurnitureManager } from "./FurnitureManager.js";
 
 export const ScenarioRecipe = z.object({
     id: ScenarioId,

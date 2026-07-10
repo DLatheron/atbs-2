@@ -138,6 +138,8 @@ export class ActionPhaseHandler extends PhaseHandler {
                 const tile = worldMap.getTile(tilePos);
                 const unit = tile.topmostUnit;
 
+                console.log(unit?.side.id, from.sideId);
+
                 if (unit && unit.side.id === from.sideId) {
                     game.selectedUnit = unit;
 

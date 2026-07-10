@@ -43,7 +43,12 @@
             "name": "Baddies",
             "description": [{ "text": "The baddies.", "pb": 2 }],
             "oppositionSideIds": ["goodies"],
-            "units": [],
+            "units": [
+                {
+                    "id": "hans-gruber.unit",
+                    "overrides": { "location": { "col": 14, "row": 10 }, "orientation": 6 }
+                }
+            ],
             "phases": {
                 "armament": {
                     "type": "fixed"

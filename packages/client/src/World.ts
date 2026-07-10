@@ -405,11 +405,11 @@ export class World {
             },
 
             update() {
+                const { time } = tracerTimer.tick();
+
                 if (!tileUpdates.length) {
                     return false;
                 }
-
-                const { time } = tracerTimer.tick();
 
                 const elapsedMs = Math.max(time, 0);
                 let applied = false;
@@ -758,7 +758,7 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         time: number
     ) {
-        if (!this.hasUnitWeapon || !this._drawSights) {
+        if (this.renderMode !== RenderMode.enum.FIRE_MODE || !this.hasUnit || !this.hasUnitWeapon || !this._drawSights) {
             return;
         }
 
