@@ -442,7 +442,13 @@ export class Projectile implements IRayCast {
                     furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
-                    owner.inflictDamage(pos, projectile);
+                    const died = owner.inflictDamage(pos, projectile);
+                    if (died) {
+                        furnitureDamageSystem?.onUnitDeath(
+                            map.getTile(owner.mapLocation),
+                            atTime
+                        );
+                    }
                 }
 
                 const entryOutcome = PenetrationSystem.resolveMaterialEntry(

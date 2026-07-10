@@ -1010,6 +1010,7 @@ export class Unit extends SceneObject {
             return false;
         }
 
+        const previousConstitution = this.constitution;
         const { type: damageType, amount: damageAmount } = projectile.calcDamage(this.type);
 
         switch (damageType) {
@@ -1023,7 +1024,7 @@ export class Unit extends SceneObject {
                 break;
         }
 
-        return this.isAlive;
+        return previousConstitution > 0 && this.constitution === 0;
     }
 
     toSummary(): UnitSummary {
