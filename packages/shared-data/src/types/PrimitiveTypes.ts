@@ -773,3 +773,6 @@ export const TimedTileUpdate = TileUpdate.extend({
     timeMs: z.number().nonnegative()
 });
 export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;
+
+export const InterestMask = z.union([z.literal("items"), z.literal("vfx"), z.string()]);
+export type InterestMask = z.infer<typeof InterestMask>;

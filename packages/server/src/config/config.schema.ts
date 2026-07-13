@@ -26,7 +26,8 @@ const Config = z
                 game: LogLevel.optional(),
                 server: LogLevel.optional(),
                 tile: LogLevel.optional(),
-                unit: LogLevel.optional()
+                unit: LogLevel.optional(),
+                visibilityManager: LogLevel.optional()
             })
             .optional()
             .default({
@@ -44,7 +45,8 @@ const Config = z
                 game: LogLevel.enum.warn,
                 server: LogLevel.enum.warn,
                 tile: LogLevel.enum.warn,
-                unit: LogLevel.enum.warn
+                unit: LogLevel.enum.warn,
+                visibilityManager: LogLevel.enum.info
             })
     })
     .strict();

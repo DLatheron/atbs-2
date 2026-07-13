@@ -18,6 +18,7 @@ import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
 import {
     FurnitureState,
+    InterestMask,
     RenderList,
     RenderMode,
     TileInfo,
@@ -36,6 +37,8 @@ import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Item } from "./Item.js";
+import type { VisibilityPoi } from "./VisibilityPoi.js";
+import type { VisibilityRay } from "./VisibilityRay.js";
 
 export interface CollisionSample {
     material: Material;
@@ -93,7 +96,7 @@ export interface LayerCollision {
     materials: Material[];
 }
 
-export class Tile implements IRenderableEntity {
+export class Tile implements IRenderableEntity, VisibilityPoi {
     readonly logger: Logger;
 
     protected _location: TilePos;
@@ -155,6 +158,15 @@ export class Tile implements IRenderableEntity {
         return this._location;
     }
 
+    get interestMasks(): InterestMask[] {
+        return [
+            ...(this.topmostItem ? ["items"] : []),
+            ...(this.topmostUnit ? [this.topmostUnit.side.id] : [])
+            // TODO: VFX
+            // ...(this.vfx.length > 0 ? ["vfx"] : [])
+        ];
+    }
+
     get aabb(): Aabb {
         return this._aabb;
     }
@@ -165,6 +177,10 @@ export class Tile implements IRenderableEntity {
 
     get orientation(): Orientation {
         return Orientation.NORTH;
+    }
+
+    intersectsRay(ray: VisibilityRay): Vec2 | undefined {
+        return this._aabb.intersectRay(ray.srcPos, ray.dstPos);
     }
 
     addUnit(unit: Unit): void {

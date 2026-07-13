@@ -5,6 +5,7 @@ import path from "path";
 import { ItemManager } from "./ItemManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
+import { VisibilityManager } from "./VisibilityManager.js";
 
 const UnitDirectory = "./data/units";
 
@@ -24,11 +25,12 @@ export class UnitRecipeManager {
         unitId: UnitId,
         overrides: UnitOverrides,
         additionalData: UnitAdditionalData,
-        itemManager: ItemManager
+        itemManager: ItemManager,
+        visibilityManager: VisibilityManager
     ): Unit {
         const unitRecipe = this.getRecipe(unitId);
 
-        return new Unit(unitRecipe, overrides, additionalData, itemManager);
+        return new Unit(unitRecipe, overrides, additionalData, itemManager, visibilityManager);
     }
 
     async loadUnitRecipes(directory = UnitDirectory): Promise<void> {

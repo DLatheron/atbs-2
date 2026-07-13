@@ -12,6 +12,7 @@ import {
     FireType,
     getAccuracy,
     getRpm,
+    InterestMask,
     OnTarget,
     RenderList,
     RenderMode,
@@ -51,6 +52,9 @@ import { Logger } from "@atbs/misc";
 import { IMPENETRABLE } from "./Obstruction.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
+import type { VisibilityViewer } from "./VisibilityViewer.js";
+import type { VisibilityManager } from "./VisibilityManager.js";
+import type { VisibilityPoi } from "./VisibilityPoi.js";
 
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
@@ -132,7 +136,7 @@ export function isUnit(arg: unknown): arg is Unit {
     return arg instanceof Unit;
 }
 
-export class Unit extends SceneObject {
+export class Unit extends SceneObject implements VisibilityViewer {
     readonly logger: Logger;
 
     private readonly _recipe: Readonly<UnitRecipe>;
@@ -154,11 +158,14 @@ export class Unit extends SceneObject {
 
     private _disorientation: number;
 
+    private readonly _visibilityManager: VisibilityManager;
+
     constructor(
         recipe: Readonly<UnitRecipe>,
         overrides: Readonly<UnitOverrides>,
         additionalData: Readonly<UnitAdditionalData>,
-        itemManager: ItemManager
+        itemManager: ItemManager,
+        visibilityManager: VisibilityManager
     ) {
         super(recipe.renderable);
 
@@ -184,6 +191,7 @@ export class Unit extends SceneObject {
         this._materials = recipe.collision.materials.map((materialId) =>
             MaterialManager.GetSingleton().getMaterial(materialId)
         );
+        this._visibilityManager = visibilityManager;
     }
 
     get id(): UnitId {
@@ -1061,5 +1069,13 @@ export class Unit extends SceneObject {
             itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
             actions: this.getActions()
         };
+    }
+
+    get interestMasks(): InterestMask[] {
+        return ["items", "vfx", ...this.side.oppositionSideIds];
+    }
+
+    get pois(): VisibilityPoi[] {
+        return this._visibilityManager.getPois(this.interestMasks);
     }
 }

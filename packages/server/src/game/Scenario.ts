@@ -5,6 +5,7 @@ import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
 import type { ItemManager } from "./ItemManager.js";
 import type { FurnitureManager } from "./FurnitureManager.js";
+import type { VisibilityManager } from "./VisibilityManager.js";
 
 export const ScenarioRecipe = z.object({
     id: ScenarioId,
@@ -24,11 +25,14 @@ export class Scenario {
     constructor(
         recipe: Readonly<ScenarioRecipe>,
         itemManager: ItemManager,
-        furnitureManager: FurnitureManager
+        furnitureManager: FurnitureManager,
+        visibilityManager: VisibilityManager
     ) {
         this._recipe = recipe;
 
-        this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe, itemManager));
+        this._sides = recipe.sides.map(
+            (sideRecipe) => new Side(sideRecipe, itemManager, visibilityManager)
+        );
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
 
         const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);

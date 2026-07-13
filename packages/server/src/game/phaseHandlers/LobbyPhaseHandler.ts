@@ -129,7 +129,8 @@ export class LobbyPhaseHandler extends PhaseHandler {
                         game.scenario = new Scenario(
                             scenarioRecipe,
                             game.itemManager,
-                            game.furnitureManager
+                            game.furnitureManager,
+                            game.visibilityManager
                         );
 
                         game.broadcastMessage({
@@ -222,7 +223,8 @@ export class LobbyPhaseHandler extends PhaseHandler {
             this.game.scenario = new Scenario(
                 scenarioRecipe,
                 this.game.itemManager,
-                this.game.furnitureManager
+                this.game.furnitureManager,
+                this.game.visibilityManager
             );
 
             this.game.broadcastMessage({

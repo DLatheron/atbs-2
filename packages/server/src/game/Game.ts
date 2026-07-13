@@ -31,6 +31,7 @@ import { MaterialManager } from "./MaterialManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
+import { VisibilityManager } from "./VisibilityManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -69,6 +70,7 @@ export class Game {
     private readonly _itemManager: ItemManager;
     private readonly _furnitureManager: FurnitureManager;
     private readonly _damageCacheManager: DamageCacheManager;
+    private readonly _visibilityManager: VisibilityManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -99,6 +101,7 @@ export class Game {
         this._itemManager = new ItemManager(itemRecipeManager);
         this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
         this._damageCacheManager = new DamageCacheManager(gameId);
+        this._visibilityManager = new VisibilityManager(this);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -310,6 +313,10 @@ export class Game {
 
     get damageCacheManager(): DamageCacheManager {
         return this._damageCacheManager;
+    }
+
+    get visibilityManager(): VisibilityManager {
+        return this._visibilityManager;
     }
 
     set scenario(value: Scenario | null) {

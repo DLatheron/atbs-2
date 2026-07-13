@@ -758,7 +758,12 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         time: number
     ) {
-        if (this.renderMode !== RenderMode.enum.FIRE_MODE || !this.hasUnit || !this.hasUnitWeapon || !this._drawSights) {
+        if (
+            this.renderMode !== RenderMode.enum.FIRE_MODE ||
+            !this.hasUnit ||
+            !this.hasUnitWeapon ||
+            !this._drawSights
+        ) {
             return;
         }
 
