@@ -1,20 +1,19 @@
 {
-    "id": "captain-smith.unit",
-    "name": "Captain Smith",
+    "id": "hans-gruber.unit",
+    "name": "Hans Grüber",
     "description": [
         {
-            "text": "The relatively inexperienced leader of the Hostage Rescue Team, but Smith is a crack shot with almost any weapon."
-        },
-        { "text": "Smith has smelly feet." }
+            "text": "The infamous criminal mastermind behind the multi-million dollar heist of the Nakatomi Corporation. Grüber is not acting as a mercenary leader for hire."
+        }
     ],
     "attributes": {
-        "weight": 85,
+        "weight": 72,
         "actionPoints": { "max": 47 },
         "constitution": { "max": 50 },
         "fitness": { "max": 80 },
         "morale": { "max": 82 },
         "stamina": { "max": 60 },
-        "speed": { "max": 70 },
+        "speed": { "max": 50 },
         "strength": { "max": 52 }
     },
     "inventory": {

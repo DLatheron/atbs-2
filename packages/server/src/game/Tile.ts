@@ -345,7 +345,7 @@ export class Tile implements IRenderableEntity {
         }
 
         this.units.forEach((unit) => {
-            // const { materials } = unit; // TODO: Unit materials?
+            const { materials } = unit;
 
             unit.getRenderList(context).forEach((layerImage, layerIndex) => {
                 if (layerImage.imageId) {
@@ -355,7 +355,7 @@ export class Tile implements IRenderableEntity {
                         imageId: layerImage.imageId,
                         layerIndex,
                         orientation: layerImage.orientation ?? Orientation.NORTH,
-                        materials: []
+                        materials
                     });
                 }
             });

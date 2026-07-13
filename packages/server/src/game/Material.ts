@@ -163,6 +163,10 @@ export class Material {
         rgb: Colour,
         materials: Material[]
     ): [material: Material, marginOfError: number] {
+        if (materials.length === 0) {
+            throw new Error("No materials provided");
+        }
+
         const hsl = rgbToHsl(rgb);
 
         let hitMaterial = materials.find(

@@ -1,4 +1,5 @@
 import {
+    clamp,
     Colour,
     DebugGraphic,
     DebugGraphicType,
@@ -12,7 +13,7 @@ import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
-import { Tracer } from "@atbs/shared-data";
+import { DamageType, Tracer, UnitType } from "@atbs/shared-data";
 import { Logger, LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
@@ -243,7 +244,13 @@ export class Projectile implements IRayCast {
     }
 
     get furnitureDamage(): number {
-        return this._props.projectileRecipe.damage.default;
+        const { type, amount } = this.calcDamage("default");
+
+        return type === DamageType.enum.default ? amount : 0;
+    }
+
+    get projectileEffectiveness(): number {
+        return clamp(this.velocity / this.projectileRecipe.velocity, 0, 1);
     }
 
     changeDirection(newDirection: Vec2) {
@@ -316,6 +323,21 @@ export class Projectile implements IRayCast {
         // Reset projectile for next segment.
         this._srcPos = pos;
         this._impact = undefined;
+    }
+
+    calcDamage(target: "default" | UnitType): { type: DamageType; amount: number } {
+        const { damage: damageMap } = this.projectileRecipe;
+        const { type } = damageMap;
+        let amount: number;
+        if (target === "default") {
+            amount = damageMap.default;
+        } else {
+            amount = damageMap[target] ?? damageMap.default;
+        }
+
+        amount *= this.projectileEffectiveness;
+
+        return { type, amount };
     }
 
     private static queueRicochetRay(
@@ -420,6 +442,13 @@ export class Projectile implements IRayCast {
                     furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
+                    const died = owner.inflictDamage(pos, projectile);
+                    if (died) {
+                        furnitureDamageSystem?.onUnitDeath(
+                            map.getTile(owner.mapLocation),
+                            atTime
+                        );
+                    }
                 }
 
                 const entryOutcome = PenetrationSystem.resolveMaterialEntry(

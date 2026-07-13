@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import { Colour, Orientation, TilePos, Vec2 } from "@atbs/maths";
-import { FurnitureState, RenderMode } from "@atbs/shared-data";
+import { DamageType, FurnitureState, RenderMode } from "@atbs/shared-data";
 import { PNG } from "pngjs";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Furniture, FurnitureRecipe } from "./Furniture.js";
@@ -43,7 +43,7 @@ const ROUND_RECIPE = {
             trailLengthInPixels: 100,
             rangeFalloffPower: 20
         },
-        damage: { human: 18, default: 20 },
+        damage: { type: DamageType.enum.default, human: 18, default: 20 },
         mass: 0.004,
         velocity: 993,
         diameter: 5.56,
@@ -188,10 +188,7 @@ function createMockPixelProjectile(diameter = 5.56): Projectile {
         index: 0,
         diameter,
         furnitureDamage: 20,
-        firingWeapon: {
-            projectileRecipe: { diameter },
-            calcDamage: () => 20
-        } as Item
+        firingWeapon: { projectileRecipe: { diameter } } as Item
     } as Projectile;
 }
 
@@ -259,6 +256,7 @@ function createUnitFireProjectile(
         firingUnit: { side: { id: "side-1" } } as Projectile["firingUnit"],
         firingWeapon: gun,
         projectileIndex: index,
+        roundIndex: 0,
         srcPos: new Vec2(0, 50),
         directionVector: new Vec2(100, 0),
         projectileRecipe: round.projectileRecipe
@@ -505,10 +503,7 @@ describe("FurnitureDamageSystem", () => {
 
     it("uses the fired round recipe when the weapon is a gun without a projectile recipe", () => {
         const round = itemManager.newItem(ROUND_RECIPE.id, { quantity: 1 });
-        const gun = {
-            id: "test-gun.gun",
-            calcDamage: Item.prototype.calcDamage
-        } as Item;
+        const gun = { id: "test-gun.gun" } as Item;
         const furniture = createFurniture(createWallRecipe(true));
         const tile = createTile(createWallRecipe(true));
         const damageSystem = new FurnitureDamageSystem(damageCache, imageSize);
@@ -615,7 +610,7 @@ describe("FurnitureDamageSystem", () => {
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
             tile,
-            { x: 50, y: 50 },
+            new Vec2(50, 50),
             {
                 owner: furniture,
                 imageId: "wall-cl",
@@ -639,7 +634,7 @@ describe("FurnitureDamageSystem", () => {
         damageSystem.onMaterialPixel(
             createMockPixelProjectile(),
             tile,
-            { x: 55, y: 50 },
+            new Vec2(55, 50),
             {
                 owner: furniture,
                 imageId: "wall-cl",
@@ -671,7 +666,7 @@ describe("FurnitureDamageSystem", () => {
         round0System.onMaterialPixel(
             createMockPixelProjectile(),
             tile,
-            { x: 50, y: 50 },
+            new Vec2(50, 50),
             sample,
             100
         );
@@ -687,7 +682,7 @@ describe("FurnitureDamageSystem", () => {
         round1System.onMaterialPixel(
             createMockPixelProjectile(),
             tile,
-            { x: 55, y: 50 },
+            new Vec2(55, 50),
             sample,
             200
         );
@@ -717,7 +712,7 @@ describe("FurnitureDamageSystem", () => {
         firstFireSystem.onMaterialPixel(
             createMockPixelProjectile(),
             tile,
-            { x: 50, y: 50 },
+            new Vec2(50, 50),
             sample,
             100
         );
@@ -739,7 +734,7 @@ describe("FurnitureDamageSystem", () => {
             secondFireSystem.onMaterialPixel(
                 createMockPixelProjectile(),
                 tile,
-                { x: 55, y: 50 },
+                new Vec2(55, 50),
                 sample,
                 200
             );

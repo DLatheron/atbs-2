@@ -66,6 +66,10 @@ export class FurnitureDamageSystem {
         }
     }
 
+    onUnitDeath(tile: Tile, timeMs: number): void {
+        this.recordTileUpdate(timeMs, tile);
+    }
+
     onMaterialEntry(projectile: Projectile, event: GridRayTraceHitResult, timeMs: number): void {
         if (projectile.delivery === "thrown") {
             return;

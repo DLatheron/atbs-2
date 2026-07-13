@@ -1,5 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Button, Container, Grid, Stack, SxProps } from "@mui/material";
+import { Box, Button, Container, Grid, Stack, SxProps } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -18,6 +18,7 @@ import { useKeyboard } from "../../../hooks";
 import { UnitDetailsComponent } from "../../UnitDetails";
 import { ItemDetailsComponent } from "../../ItemDetails";
 import { ImageComponent } from "../../Image";
+import { DisorientedComponent } from "../../Disoriented/Disoriented";
 
 export interface UnitModePanelProps {
     visible: boolean;
@@ -92,56 +93,62 @@ export function UnitModePanel({
                     viewAngleInDegrees={unit.viewAngleInDegrees}
                     onDirectionChange={onRotateTo}
                 />
-                <AttributesComponent
-                    title="Attributes"
-                    attributes={[
-                        {
-                            id: "action-points",
-                            label: "Action Points",
-                            value: getAttributeValue(unit.attributes.actionPoints)
-                        },
-                        {
-                            id: "constitution",
-                            label: "Constitution",
-                            text: getAttributeString(
-                                unit.attributes.constitution,
-                                CONSTITUTION_LEVELS
-                            ),
-                            value: getAttributeValue(unit.attributes.constitution)
-                        },
-                        {
-                            id: "fitness",
-                            label: "Fitness",
-                            text: getAttributeString(unit.attributes.constitution, FITNESS_LEVELS),
-                            value: getAttributeValue(unit.attributes.fitness)
-                        },
-                        {
-                            id: "strength",
-                            label: "Strength",
-                            text: getAttributeString(unit.attributes.strength, STRENGTH_LEVELS),
-                            value: getAttributeValue(unit.attributes.strength)
-                        },
-                        {
-                            id: "speed",
-                            label: "Speed",
-                            text: getAttributeString(unit.attributes.speed, SPEED_LEVELS),
-                            value: getAttributeValue(unit.attributes.speed)
-                        },
-                        {
-                            id: "stamina",
-                            label: "Stamina",
-                            text: getAttributeString(unit.attributes.stamina, STAMINA_LEVELS),
-                            value: getAttributeValue(unit.attributes.stamina)
-                        },
-                        {
-                            id: "morale",
-                            label: "Morale",
-                            text: getAttributeString(unit.attributes.morale, MORALE_LEVELS),
-                            value: getAttributeValue(unit.attributes.morale)
-                        }
-                    ]}
-                    surround
-                />
+                <Box>
+                    <DisorientedComponent disorientation={unit.disorientation} />
+                    <AttributesComponent
+                        title="Attributes"
+                        attributes={[
+                            {
+                                id: "action-points",
+                                label: "Action Points",
+                                value: getAttributeValue(unit.attributes.actionPoints)
+                            },
+                            {
+                                id: "constitution",
+                                label: "Constitution",
+                                text: getAttributeString(
+                                    unit.attributes.constitution,
+                                    CONSTITUTION_LEVELS
+                                ),
+                                value: getAttributeValue(unit.attributes.constitution)
+                            },
+                            {
+                                id: "fitness",
+                                label: "Fitness",
+                                text: getAttributeString(
+                                    unit.attributes.constitution,
+                                    FITNESS_LEVELS
+                                ),
+                                value: getAttributeValue(unit.attributes.fitness)
+                            },
+                            {
+                                id: "strength",
+                                label: "Strength",
+                                text: getAttributeString(unit.attributes.strength, STRENGTH_LEVELS),
+                                value: getAttributeValue(unit.attributes.strength)
+                            },
+                            {
+                                id: "speed",
+                                label: "Speed",
+                                text: getAttributeString(unit.attributes.speed, SPEED_LEVELS),
+                                value: getAttributeValue(unit.attributes.speed)
+                            },
+                            {
+                                id: "stamina",
+                                label: "Stamina",
+                                text: getAttributeString(unit.attributes.stamina, STAMINA_LEVELS),
+                                value: getAttributeValue(unit.attributes.stamina)
+                            },
+                            {
+                                id: "morale",
+                                label: "Morale",
+                                text: getAttributeString(unit.attributes.morale, MORALE_LEVELS),
+                                value: getAttributeValue(unit.attributes.morale)
+                            }
+                        ]}
+                        surround
+                    />
+                </Box>
                 <ItemDetailsComponent title="Item in Use" item={unit.itemInUse} />
             </Stack>
             <Stack spacing={1} sx={{ gridArea: "bottom-bar", px: 1, pb: 1 }}>
