@@ -9,6 +9,7 @@ const Config = z
         infiniteActionPoints: z.boolean().optional().default(false),
         infiniteAmmunition: z.boolean().optional().default(false),
         showProjectileDebugGraphics: z.boolean().optional().default(false),
+        showVisibilityDebugGraphics: z.boolean().optional().default(false),
         cleanupDamageCacheOnGameDestroy: z.boolean().optional().default(true),
         logLevels: z
             .object({

@@ -20,7 +20,8 @@ import {
     TrackingSpeed,
     UnitId,
     UnitSummary,
-    UnitType
+    UnitType,
+    VisualType
 } from "@atbs/shared-data";
 import z from "zod";
 import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
@@ -111,6 +112,7 @@ export const UnitRecipe = z.object({
         radius: z.number().positive(),
         materials: z.array(z.string()).nonempty().default(["human.material"])
     }),
+    visualType: VisualType.default(VisualType.enum.eyeball),
     renderable: SceneNode,
     actions: Actions
 });
@@ -159,6 +161,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     private _disorientation: number;
 
     private readonly _visibilityManager: VisibilityManager;
+    private _canSee: UnitId[];
 
     constructor(
         recipe: Readonly<UnitRecipe>,
@@ -194,6 +197,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this._visibilityManager = visibilityManager;
         this._visibilityManager.addViewer(this);
+        this._canSee = [];
     }
 
     get id(): UnitId {
@@ -241,7 +245,12 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     set location(value: TilePos | null) {
+        if (value === this._location) {
+            return;
+        }
+
         this._location = value;
+        this._visibilityManager.invalidateViewerLocation(this.id);
     }
 
     get orientation(): Orientation {
@@ -261,8 +270,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     set disorientation(value: number) {
+        clamp(value, 0, MAX_DISORIENTATION);
+
         console.info("Setting disorientation to", value);
-        this._disorientation = clamp(value, 0, MAX_DISORIENTATION);
+        this._disorientation = value;
     }
 
     get isAlive(): boolean {
@@ -324,6 +335,22 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get throwInaccuracyAngle() {
         return 10 + this.disorientation / 5;
+    }
+
+    get visualType(): VisualType {
+        return this._recipe.visualType;
+    }
+
+    get viewAngleInDegrees(): number {
+        return this._recipe.viewAngleInDegrees;
+    }
+
+    get canSee(): UnitId[] {
+        return this._canSee;
+    }
+
+    set canSee(value: UnitId[]) {
+        this._canSee = value;
     }
 
     getActions(): Actions {
@@ -467,7 +494,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
 
             // TODO: Update available actions.
-            // TODO: Refresh visibility (just yours).
+
+            this._visibilityManager.invalidateViewerOrientation(this.id);
+            if (config.showVisibilityDebugGraphics) {
+                const debugGraphics: DebugGraphic[] = [];
+                this._visibilityManager.update(this.id, debugGraphics);
+                if (debugGraphics.length > 0) {
+                    messageRouter.send({
+                        type: "server:debug:graphics",
+                        payload: debugGraphics
+                    });
+                }
+            } else {
+                this._visibilityManager.update(this.id);
+            }
 
             const tile = game.map.getTile(mapLocation);
 
@@ -567,7 +607,18 @@ export class Unit extends SceneObject implements VisibilityViewer {
             dstPos
         );
 
-        this._visibilityManager.update();
+        if (config.showVisibilityDebugGraphics) {
+            const debugGraphics: DebugGraphic[] = [];
+            this._visibilityManager.update(this.id, debugGraphics);
+            if (debugGraphics.length > 0) {
+                messageRouter.send({
+                    type: "server:debug:graphics",
+                    payload: debugGraphics
+                });
+            }
+        } else {
+            this._visibilityManager.update(this.id);
+        }
 
         // this.updateAvailableActions(map);
 
@@ -1050,6 +1101,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             disorientation: this.disorientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
             collisionRadius: this._recipe.collision.radius,
+            canSee: this.canSee,
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,

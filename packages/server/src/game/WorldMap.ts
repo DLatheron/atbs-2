@@ -1,4 +1,4 @@
-import { ClientMap, RenderMode, MapId } from "@atbs/shared-data";
+import { ClientMap, RenderMode, MapId, type VisualType } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, clamp, DebugGraphic, ITilePos, Orientation, TilePos, Vec2 } from "@atbs/maths";
@@ -13,6 +13,9 @@ import { DamageCacheManager } from "./DamageCacheManager.js";
 import { CollisionSample } from "./Tile.js";
 import type { VisibilityManager } from "./VisibilityManager.js";
 
+export type VisualRayCastResult =
+    | { visible: true; pos: Vec2; tile: Tile }
+    | { visible: false; pos?: Vec2; tile?: Tile; material?: Material };
 export const MapRecipe = z.object({
     id: MapId,
     name: z.string().nonempty(),
@@ -258,6 +261,70 @@ export class WorldMap {
 
             return tile.castRay(cellWalk.srcPos, cellWalk.dstPos, debugGraphics, damageCache);
         });
+    }
+
+    /**
+     * Cast a visual LOS ray through the map, draining life by material densityMap[visualType].
+     * Skips the viewer tile and succeeds as soon as the POI tile is entered (without sampling it).
+     */
+    castVisualRay(
+        ray: IRayCast,
+        visualType: VisualType,
+        options: {
+            skipTilePos: TilePos;
+            targetTilePos: TilePos;
+        },
+        debugGraphics?: DebugGraphic[]
+    ): VisualRayCastResult {
+        const { skipTilePos, targetTilePos } = options;
+        const grid = { aabb: this.worldBounds, gridScale: this.tileSize, subGrid: false };
+
+        let reachedTarget = false;
+        let targetPos: Vec2 | undefined;
+        let targetTile: Tile | undefined;
+
+        const blocked = traceGridRay(ray.srcPos, ray.dstPos, grid, (cellWalk) => {
+            const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
+            const tile = this.sampleTile(tilePos);
+            if (!tile) {
+                return undefined;
+            }
+
+            if (TilePos.IsEqual(tilePos, targetTilePos)) {
+                reachedTarget = true;
+                targetPos = cellWalk.cellOrigin.add(cellWalk.srcPos).add(this.worldBounds.topLeft);
+                targetTile = tile;
+                // Stop the walk without treating this as a material block.
+                return { pos: cellWalk.srcPos, tile };
+            }
+
+            if (TilePos.IsEqual(tilePos, skipTilePos)) {
+                return undefined;
+            }
+
+            return tile.castVisualRay(
+                ray,
+                visualType,
+                cellWalk.srcPos,
+                cellWalk.dstPos,
+                debugGraphics
+            );
+        });
+
+        if (reachedTarget && targetPos && targetTile) {
+            return { visible: true, pos: targetPos, tile: targetTile };
+        }
+
+        if (blocked) {
+            return {
+                visible: false,
+                pos: blocked.pos,
+                tile: blocked.tile,
+                material: blocked.material
+            };
+        }
+
+        return { visible: false };
     }
 
     stepRay(

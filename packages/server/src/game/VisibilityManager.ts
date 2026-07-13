@@ -4,9 +4,17 @@ import type { Game } from "./Game.js";
 import type { WorldMap } from "./WorldMap.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
-import { InterestMask } from "@atbs/shared-data";
-import { VisibilityRay } from "./VisibilityRay.js";
-import type { Vec2 } from "@atbs/maths";
+import { InterestMask, ViewerId } from "@atbs/shared-data";
+import { VisibilityRay, VISUAL_RAY_LIFE } from "./VisibilityRay.js";
+import {
+    Colour,
+    DebugGraphic,
+    DebugGraphicType,
+    Orientation,
+    radiansToDegrees,
+    Vec2,
+    type IVec2
+} from "@atbs/maths";
 
 interface VisibilityCacheEntry {
     poi: VisibilityPoi;
@@ -14,6 +22,40 @@ interface VisibilityCacheEntry {
     intersection: Vec2 | undefined;
     invalidRay: boolean;
     invalidAngle: boolean;
+}
+
+const IN_CONE_COLOUR = new Colour({ r: 40, g: 220, b: 80, a: 1 });
+const OUT_OF_CONE_COLOUR = new Colour({ r: 200, g: 60, b: 60, a: 1 });
+
+function withAlpha(colour: Colour, alpha: number): Colour {
+    return new Colour({ r: colour.r, g: colour.g, b: colour.b, a: alpha });
+}
+
+/**
+ * True when the direction from viewer to target lies within the viewer's view cone.
+ * Non-directional / CENTER facing units treat the cone as 360°. Same-tile / zero length is in-cone.
+ */
+export function isDirectionInViewCone(
+    viewerPos: IVec2,
+    targetPos: IVec2,
+    orientation: Orientation,
+    viewAngleInDegrees: number,
+    isDirectional: boolean
+): boolean {
+    if (!isDirectional || orientation === Orientation.CENTER || viewAngleInDegrees >= 360) {
+        return true;
+    }
+
+    const toTarget = new Vec2(targetPos).sub(viewerPos);
+    if (!toTarget.isNonZero()) {
+        return true;
+    }
+
+    const facing = Vec2.StepInDirection(orientation);
+    const absAngleDeg = Math.abs(
+        radiansToDegrees(Vec2.AngleBetweenInRadians(facing, toTarget.normalise()))
+    );
+    return absAngleDeg <= viewAngleInDegrees / 2;
 }
 
 export class VisibilityManager {
@@ -24,15 +66,15 @@ export class VisibilityManager {
 
     private readonly _game: Game;
     private readonly _pois: Set<VisibilityPoi>;
-    private readonly _viewers: Set<VisibilityViewer>;
-    private readonly _cache: Map<VisibilityViewer, VisibilityCacheEntry[]>;
+    private readonly _viewers: Map<ViewerId, VisibilityViewer>;
+    private readonly _cache: Map<ViewerId, VisibilityCacheEntry[]>;
 
     constructor(game: Game) {
         this._game = game;
 
         this._pois = new Set<VisibilityPoi>();
-        this._viewers = new Set<VisibilityViewer>();
-        this._cache = new Map<VisibilityViewer, VisibilityCacheEntry[]>();
+        this._viewers = new Map<ViewerId, VisibilityViewer>();
+        this._cache = new Map<ViewerId, VisibilityCacheEntry[]>();
     }
 
     get game(): Game {
@@ -69,19 +111,21 @@ export class VisibilityManager {
     addViewer(viewer: VisibilityViewer): void {
         VisibilityManager.Logger.debug(`Adding viewer ${viewer.id} to visibility manager`);
 
-        this._viewers.add(viewer);
+        this._viewers.set(viewer.id, viewer);
     }
 
     removeViewer(viewer: VisibilityViewer): void {
-        VisibilityManager.Logger.debug(`Removing viewer ${viewer.location} from visibility manager`);
+        VisibilityManager.Logger.debug(
+            `Removing viewer ${viewer.location} from visibility manager`
+        );
 
-        this._viewers.delete(viewer);
+        this._viewers.delete(viewer.id);
 
-        this.removeViewerFromCache(viewer);
+        this.removeViewerFromCache(viewer.id);
     }
 
-    private removeViewerFromCache(viewer: VisibilityViewer): void {
-        this._cache.delete(viewer);
+    private removeViewerFromCache(viewerId: ViewerId): void {
+        this._cache.delete(viewerId);
     }
 
     getPois(interestMasks: InterestMask[]): VisibilityPoi[] {
@@ -96,47 +140,163 @@ export class VisibilityManager {
         );
     }
 
-    private getViewerCache(viewer: VisibilityViewer): VisibilityCacheEntry[] {
-        let cache = this._cache.get(viewer);
+    invalidateViewerLocation(viewerId: ViewerId): void {
+        const cache = this.getViewerCache(viewerId);
+        for (const entry of cache) {
+            entry.invalidRay = true;
+            entry.invalidAngle = true;
+            entry.ray.rayValid = false;
+            entry.ray.angleValid = false;
+        }
+    }
+
+    /** Rotation changes facing only — invalidate view-cone angle checks, not LOS casts. */
+    invalidateViewerOrientation(viewerId: ViewerId): void {
+        const cache = this.getViewerCache(viewerId);
+        for (const entry of cache) {
+            entry.invalidAngle = true;
+            entry.ray.angleValid = false;
+        }
+    }
+
+    private getViewerCache(viewerId: ViewerId): VisibilityCacheEntry[] {
+        let cache = this._cache.get(viewerId);
         if (!cache) {
             cache = [];
-            this._cache.set(viewer, cache);
+            this._cache.set(viewerId, cache);
         }
         return cache;
     }
 
-    update(): void {
+    update(viewerId?: ViewerId, debugGraphics?: DebugGraphic[]): void {
+        if (viewerId) {
+            this._updateUnit(viewerId, debugGraphics);
+        } else {
+            this._updateAll(debugGraphics);
+        }
+    }
+
+    private getViewer(viewerId: ViewerId): VisibilityViewer | undefined {
+        return this._viewers.get(viewerId);
+    }
+
+    private _updateUnit(viewerId: ViewerId, debugGraphics?: DebugGraphic[]): void {
+        VisibilityManager.Logger.debug(`Updating visibility for viewer ${viewerId}`);
+
+        const viewer = this.getViewer(viewerId);
+        if (!viewer) {
+            return;
+        }
+
+        this._updateViewer(viewer, debugGraphics);
+    }
+
+    private _updateAll(debugGraphics?: DebugGraphic[]): void {
         VisibilityManager.Logger.debug(`Updating visibility`);
 
-        for (const viewer of this._viewers) {
-            const cache = this.getViewerCache(viewer);
+        for (const viewer of this._viewers.values()) {
+            this._updateViewer(viewer, debugGraphics);
+        }
+    }
 
-            for (const poi of viewer.pois) {
-                if (viewer.location === null) {
-                    continue;
+    private _updateViewer(viewer: VisibilityViewer, debugGraphics?: DebugGraphic[]): void {
+        for (const poi of viewer.pois) {
+            if (viewer.location === null) {
+                continue;
+            }
+
+            const viewerWorldPos = this.map.tileCenterToWorld(viewer.location);
+            const poiWorldPos = this.map.tileCenterToWorld(poi.location);
+
+            const cache = this.getViewerCache(viewer.id);
+            let entry = cache.find((c) => c.poi === poi);
+            let ray = entry?.ray;
+            let updatedThisPass = false;
+
+            const needsRecast = !ray || !ray.rayValid || (entry?.invalidRay ?? false);
+
+            if (needsRecast) {
+                ray = new VisibilityRay(viewerWorldPos, poiWorldPos, viewer.visualType);
+                ray.life = VISUAL_RAY_LIFE;
+                const result = this.map.castVisualRay(
+                    ray,
+                    viewer.visualType,
+                    {
+                        skipTilePos: viewer.location,
+                        targetTilePos: poi.location
+                    },
+                    debugGraphics
+                );
+                ray.intersection = result.pos;
+                ray.rayValid = true;
+                // New LOS endpoint — angle vs cone must be recomputed.
+                ray.angleValid = false;
+                updatedThisPass = true;
+
+                if (entry) {
+                    entry.ray = ray;
+                    entry.intersection = ray.intersection;
+                    entry.invalidRay = false;
+                    entry.invalidAngle = true;
+                } else {
+                    entry = {
+                        poi,
+                        ray,
+                        intersection: ray.intersection,
+                        invalidRay: false,
+                        invalidAngle: true
+                    };
+                    cache.push(entry);
                 }
+            }
 
-                const viewerWorldPos = this.map.tileCenterToWorld(viewer.location);
-                const poiWorldPos = this.map.tileCenterToWorld(poi.location);
-
-                let ray = cache.find((c) => c.poi === poi)?.ray;
-                if (!ray) {
-                    ray = new VisibilityRay(viewerWorldPos, poiWorldPos);
-                    cache.push({ poi, ray, intersection: undefined, invalidRay: false, invalidAngle: false });
+            const needsAngleCheck = !ray!.angleValid || (entry?.invalidAngle ?? false);
+            if (needsAngleCheck && ray) {
+                const angleTarget = ray.intersection ?? ray.dstPos;
+                ray.inViewCone = isDirectionInViewCone(
+                    ray.srcPos,
+                    angleTarget,
+                    viewer.orientation,
+                    viewer.viewAngleInDegrees,
+                    viewer.isDirectional
+                );
+                ray.angleValid = true;
+                if (entry) {
+                    entry.invalidAngle = false;
                 }
+                updatedThisPass = true;
+            }
 
-                if (!ray.rayValid) {
-                    const result = this.map.castRay(ray);
-                    if (result) {
-                        ray.intersection = result.pos;
-                    } else {
-                        ray.intersection = undefined;
-                    }
-                    ray.rayValid = true;
-                }
-
-                // TODO: Check if the angle is valid.
+            if (debugGraphics && ray) {
+                this._pushRayDebugGraphics(debugGraphics, ray, updatedThisPass);
             }
         }
+    }
+
+    private _pushRayDebugGraphics(
+        debugGraphics: DebugGraphic[],
+        ray: VisibilityRay,
+        updatedThisPass: boolean
+    ): void {
+        const baseColour = ray.inViewCone ? IN_CONE_COLOUR : OUT_OF_CONE_COLOUR;
+        const alpha = updatedThisPass ? 1 : 0.35;
+        const strokeColour = withAlpha(baseColour, alpha);
+        const dstWorldPos = ray.intersection ?? ray.dstPos;
+
+        debugGraphics.push({
+            type: DebugGraphicType.enum.line,
+            srcWorldPos: ray.srcPos,
+            dstWorldPos,
+            strokeColour,
+            strokeThickness: updatedThisPass ? 2 : 1,
+            ...(updatedThisPass ? {} : { lineDash: [6, 4] })
+        });
+
+        debugGraphics.push({
+            type: DebugGraphicType.enum.point,
+            worldPos: dstWorldPos,
+            colour: strokeColour,
+            size: updatedThisPass ? 6 : 4
+        });
     }
 }

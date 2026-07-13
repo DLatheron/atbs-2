@@ -2,5 +2,6 @@
     "highlanderGameMode": true,
     "infiniteActionPoints": true,
     "infiniteAmmunition": true,
-    "showProjectileDebugGraphics": false
+    "showProjectileDebugGraphics": false,
+    "showVisibilityDebugGraphics": true
 }

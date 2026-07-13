@@ -23,7 +23,8 @@ import {
     RenderMode,
     TileInfo,
     TileUpdate,
-    TimedTileUpdate
+    TimedTileUpdate,
+    type VisualType
 } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
@@ -468,6 +469,79 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
                     imageId,
                     layerIndex,
                     orientation: collisionSample.orientation
+                };
+            }
+        }
+    }
+
+    /**
+     * Casts a visual LOS ray through this tile, draining ray life by material densityMap[visualType].
+     * Does not damage materials. Returns a hit when life is exhausted; otherwise undefined.
+     */
+    castVisualRay(
+        ray: IRayCast,
+        visualType: VisualType,
+        subTileSrcPos: Vec2,
+        subTileDstPos: Vec2,
+        debugGraphics?: DebugGraphic[]
+    ): GridRayTraceResult {
+        this.logger.info("Casting visual ray against tile");
+
+        if (!this.anythingCollidable) {
+            this.logger.info("  - Contains nothing collidable");
+            return;
+        }
+
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        if (collisionLayers.length === 0) {
+            this.logger.info("  - Has no collision layers (but is collidable?");
+            return;
+        }
+
+        for (const samplePos of walkCellBresenhamLine(
+            subTileSrcPos,
+            subTileDstPos,
+            this._tileSize
+        )) {
+            this.logger.info(`  - ${samplePos} - sampling...`);
+
+            const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
+            if (!collisionSample) {
+                continue;
+            }
+
+            const { material, owner, imageId, layerIndex, orientation } = collisionSample;
+            const pixelCost = material.getDensityForType(visualType);
+            ray.life -= pixelCost;
+
+            this.logger.info(
+                `    - hit material ${material.id} (cost ${pixelCost}, life ${ray.life})`
+            );
+
+            if (!ray.isRayAlive) {
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 8,
+                        colour: Colour.White
+                    },
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 6,
+                        colour: new Colour({ ...Colour.Red, a: 1 })
+                    }
+                );
+
+                return {
+                    pos: samplePos,
+                    material,
+                    tile: this,
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation
                 };
             }
         }

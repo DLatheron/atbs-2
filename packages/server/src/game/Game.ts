@@ -32,6 +32,7 @@ import { DamageCacheManager } from "./DamageCacheManager.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { VisibilityManager } from "./VisibilityManager.js";
+import { DebugGraphic } from "@atbs/maths";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -539,7 +540,22 @@ export class Game {
             })
         );
 
-        this.visibilityManager.update();
+        if (config.showVisibilityDebugGraphics) {
+            const debugGraphics: DebugGraphic[] = [];
+            this.visibilityManager.update(undefined, debugGraphics);
+            if (debugGraphics.length > 0) {
+                this.messageRouter.broadcast(
+                    {
+                        type: "server:debug:graphics",
+                        payload: debugGraphics
+                    },
+                    [],
+                    true
+                );
+            }
+        } else {
+            this.visibilityManager.update();
+        }
 
         this.messageRouter.broadcast(
             {
