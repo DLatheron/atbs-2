@@ -5,7 +5,7 @@ import type { WorldMap } from "./WorldMap.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
 import { InterestMask, ViewerId } from "@atbs/shared-data";
-import { VisibilityRay, VISUAL_RAY_LIFE } from "./VisibilityRay.js";
+import { VisibilityRay } from "./VisibilityRay.js";
 import {
     Colour,
     DebugGraphic,
@@ -19,9 +19,12 @@ import {
 interface VisibilityCacheEntry {
     poi: VisibilityPoi;
     ray: VisibilityRay;
-    intersection: Vec2 | undefined;
-    invalidRay: boolean;
-    invalidAngle: boolean;
+    /** True when the LOS cast result is still valid for the current viewer location. */
+    rayValid: boolean;
+    /** True when the in-view-cone status is still valid for the current orientation. */
+    angleValid: boolean;
+    /** Whether the LOS direction currently lies inside the viewer's view cone. */
+    inViewCone: boolean;
 }
 
 const IN_CONE_COLOUR = new Colour({ r: 40, g: 220, b: 80, a: 1 });
@@ -143,10 +146,8 @@ export class VisibilityManager {
     invalidateViewerLocation(viewerId: ViewerId): void {
         const cache = this.getViewerCache(viewerId);
         for (const entry of cache) {
-            entry.invalidRay = true;
-            entry.invalidAngle = true;
-            entry.ray.rayValid = false;
-            entry.ray.angleValid = false;
+            entry.rayValid = false;
+            entry.angleValid = false;
         }
     }
 
@@ -154,8 +155,7 @@ export class VisibilityManager {
     invalidateViewerOrientation(viewerId: ViewerId): void {
         const cache = this.getViewerCache(viewerId);
         for (const entry of cache) {
-            entry.invalidAngle = true;
-            entry.ray.angleValid = false;
+            entry.angleValid = false;
         }
     }
 
@@ -210,14 +210,13 @@ export class VisibilityManager {
 
             const cache = this.getViewerCache(viewer.id);
             let entry = cache.find((c) => c.poi === poi);
-            let ray = entry?.ray;
             let updatedThisPass = false;
 
-            const needsRecast = !ray || !ray.rayValid || (entry?.invalidRay ?? false);
-
-            if (needsRecast) {
+            let ray: VisibilityRay;
+            if (entry?.rayValid) {
+                ray = entry.ray;
+            } else {
                 ray = new VisibilityRay(viewerWorldPos, poiWorldPos, viewer.visualType);
-                ray.life = VISUAL_RAY_LIFE;
                 const result = this.map.castVisualRay(
                     ray,
                     viewer.visualType,
@@ -228,47 +227,40 @@ export class VisibilityManager {
                     debugGraphics
                 );
                 ray.intersection = result.pos;
-                ray.rayValid = true;
-                // New LOS endpoint — angle vs cone must be recomputed.
-                ray.angleValid = false;
                 updatedThisPass = true;
 
                 if (entry) {
                     entry.ray = ray;
-                    entry.intersection = ray.intersection;
-                    entry.invalidRay = false;
-                    entry.invalidAngle = true;
+                    entry.rayValid = true;
+                    // New LOS endpoint — angle vs cone must be recomputed.
+                    entry.angleValid = false;
                 } else {
                     entry = {
                         poi,
                         ray,
-                        intersection: ray.intersection,
-                        invalidRay: false,
-                        invalidAngle: true
+                        rayValid: true,
+                        angleValid: false,
+                        inViewCone: false
                     };
                     cache.push(entry);
                 }
             }
 
-            const needsAngleCheck = !ray!.angleValid || (entry?.invalidAngle ?? false);
-            if (needsAngleCheck && ray) {
-                const angleTarget = ray.intersection ?? ray.dstPos;
-                ray.inViewCone = isDirectionInViewCone(
+            if (!entry.angleValid) {
+                const angleTarget = ray.dstPos;
+                entry.inViewCone = isDirectionInViewCone(
                     ray.srcPos,
                     angleTarget,
                     viewer.orientation,
                     viewer.viewAngleInDegrees,
                     viewer.isDirectional
                 );
-                ray.angleValid = true;
-                if (entry) {
-                    entry.invalidAngle = false;
-                }
+                entry.angleValid = true;
                 updatedThisPass = true;
             }
 
-            if (debugGraphics && ray) {
-                this._pushRayDebugGraphics(debugGraphics, ray, updatedThisPass);
+            if (debugGraphics) {
+                this._pushRayDebugGraphics(debugGraphics, ray, entry.inViewCone, updatedThisPass);
             }
         }
     }
@@ -276,9 +268,10 @@ export class VisibilityManager {
     private _pushRayDebugGraphics(
         debugGraphics: DebugGraphic[],
         ray: VisibilityRay,
+        inViewCone: boolean,
         updatedThisPass: boolean
     ): void {
-        const baseColour = ray.inViewCone ? IN_CONE_COLOUR : OUT_OF_CONE_COLOUR;
+        const baseColour = inViewCone ? IN_CONE_COLOUR : OUT_OF_CONE_COLOUR;
         const alpha = updatedThisPass ? 1 : 0.35;
         const strokeColour = withAlpha(baseColour, alpha);
         const dstWorldPos = ray.intersection ?? ray.dstPos;

@@ -13,12 +13,6 @@ export class VisibilityRay implements IRayCast {
     private _life: number;
     private _intersection: Vec2 | undefined;
 
-    private _rayValid: boolean;
-    /** True when the in-view-cone status is still valid for the current orientation. */
-    private _angleValid: boolean;
-    /** Whether the LOS direction currently lies inside the viewer's view cone. */
-    private _inViewCone: boolean;
-
     constructor(
         srcPos: Vec2,
         dstPos: Vec2,
@@ -30,9 +24,6 @@ export class VisibilityRay implements IRayCast {
         this._visualType = visualType;
         this._life = life;
         this._intersection = undefined;
-        this._rayValid = false;
-        this._angleValid = false;
-        this._inViewCone = false;
     }
 
     get srcPos(): Vec2 {
@@ -53,30 +44,6 @@ export class VisibilityRay implements IRayCast {
 
     set intersection(value: Vec2 | undefined) {
         this._intersection = value;
-    }
-
-    get rayValid(): boolean {
-        return this._rayValid;
-    }
-
-    set rayValid(value: boolean) {
-        this._rayValid = value;
-    }
-
-    get angleValid(): boolean {
-        return this._angleValid;
-    }
-
-    set angleValid(value: boolean) {
-        this._angleValid = value;
-    }
-
-    get inViewCone(): boolean {
-        return this._inViewCone;
-    }
-
-    set inViewCone(value: boolean) {
-        this._inViewCone = value;
     }
 
     get life(): number {
