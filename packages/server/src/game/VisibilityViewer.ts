@@ -3,6 +3,8 @@ import type { InterestMask } from "@atbs/shared-data";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 
 export interface VisibilityViewer {
+    get id(): string;
+
     get interestMasks(): InterestMask[];
     set interestMasks(value: InterestMask[]);
 

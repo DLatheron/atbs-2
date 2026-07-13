@@ -23,15 +23,15 @@ export class VisibilityManager {
     );
 
     private readonly _game: Game;
-    private _pois: VisibilityPoi[];
-    private _viewers: VisibilityViewer[];
-    private _cache: Map<VisibilityViewer, VisibilityCacheEntry[]>;
+    private readonly _pois: Set<VisibilityPoi>;
+    private readonly _viewers: Set<VisibilityViewer>;
+    private readonly _cache: Map<VisibilityViewer, VisibilityCacheEntry[]>;
 
     constructor(game: Game) {
         this._game = game;
 
-        this._pois = [];
-        this._viewers = [];
+        this._pois = new Set<VisibilityPoi>();
+        this._viewers = new Set<VisibilityViewer>();
         this._cache = new Map<VisibilityViewer, VisibilityCacheEntry[]>();
     }
 
@@ -44,29 +44,54 @@ export class VisibilityManager {
     }
 
     addPoi(poi: VisibilityPoi): void {
-        this._pois.push(poi);
+        VisibilityManager.Logger.debug(`Adding POI ${poi.location} to visibility manager`);
+
+        this._pois.add(poi);
     }
 
     removePoi(poi: VisibilityPoi): void {
-        this._pois = this._pois.filter((p) => p !== poi);
+        VisibilityManager.Logger.debug(`Removing POI ${poi.location} from visibility manager`);
+
+        this._pois.delete(poi);
+
+        this.removePoiFromCache(poi);
+    }
+
+    private removePoiFromCache(poi: VisibilityPoi): void {
+        for (const [viewer, cacheLine] of this._cache.entries()) {
+            this._cache.set(
+                viewer,
+                cacheLine.filter((c) => c.poi !== poi)
+            );
+        }
     }
 
     addViewer(viewer: VisibilityViewer): void {
-        this._viewers.push(viewer);
+        VisibilityManager.Logger.debug(`Adding viewer ${viewer.id} to visibility manager`);
+
+        this._viewers.add(viewer);
     }
 
     removeViewer(viewer: VisibilityViewer): void {
-        this._viewers = this._viewers.filter((v) => v !== viewer);
+        VisibilityManager.Logger.debug(`Removing viewer ${viewer.location} from visibility manager`);
+
+        this._viewers.delete(viewer);
+
+        this.removeViewerFromCache(viewer);
+    }
+
+    private removeViewerFromCache(viewer: VisibilityViewer): void {
+        this._cache.delete(viewer);
     }
 
     getPois(interestMasks: InterestMask[]): VisibilityPoi[] {
-        return this._pois.filter((poi) =>
+        return [...this._pois.values()].filter((poi) =>
             poi.interestMasks.some((mask) => interestMasks.includes(mask))
         );
     }
 
     getViewers(interestMasks: InterestMask[]): VisibilityViewer[] {
-        return this._viewers.filter((viewer) =>
+        return [...this._viewers.values()].filter((viewer) =>
             viewer.interestMasks.some((mask) => interestMasks.includes(mask))
         );
     }
@@ -81,20 +106,36 @@ export class VisibilityManager {
     }
 
     update(): void {
+        VisibilityManager.Logger.debug(`Updating visibility`);
+
         for (const viewer of this._viewers) {
             const cache = this.getViewerCache(viewer);
 
             for (const poi of viewer.pois) {
-                if (viewer.location === null || poi.location === null) {
+                if (viewer.location === null) {
                     continue;
                 }
 
                 const viewerWorldPos = this.map.tileCenterToWorld(viewer.location);
                 const poiWorldPos = this.map.tileCenterToWorld(poi.location);
 
-                const ray = new VisibilityRay(viewerWorldPos, poiWorldPos);
-                const intersection = poi.intersectsRay(ray);
-                cache.push({ poi, ray, intersection, invalidRay: false, invalidAngle: false });
+                let ray = cache.find((c) => c.poi === poi)?.ray;
+                if (!ray) {
+                    ray = new VisibilityRay(viewerWorldPos, poiWorldPos);
+                    cache.push({ poi, ray, intersection: undefined, invalidRay: false, invalidAngle: false });
+                }
+
+                if (!ray.rayValid) {
+                    const result = this.map.castRay(ray);
+                    if (result) {
+                        ray.intersection = result.pos;
+                    } else {
+                        ray.intersection = undefined;
+                    }
+                    ray.rayValid = true;
+                }
+
+                // TODO: Check if the angle is valid.
             }
         }
     }

@@ -39,6 +39,7 @@ import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Item } from "./Item.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityRay } from "./VisibilityRay.js";
+import type { VisibilityManager } from "./VisibilityManager.js";
 
 export interface CollisionSample {
     material: Material;
@@ -107,11 +108,14 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     protected _items: Item[];
     protected _units: Unit[];
 
+    private readonly _visibilityManager: VisibilityManager;
+
     constructor(
         location: TilePos,
         tileSize: number,
         recipe: Readonly<TileRecipe>,
-        furnitureManager: FurnitureManager
+        furnitureManager: FurnitureManager,
+        visibilityManager: VisibilityManager
     ) {
         this.logger = new Logger(`Tile-${location}`, config.logLevels?.tile);
 
@@ -128,6 +132,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             : undefined;
         this._items = [];
         this._units = [];
+        this._visibilityManager = visibilityManager;
     }
 
     get terrain(): Terrain {
@@ -194,6 +199,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         }
 
         this._units.unshift(unit);
+
+        this._updateTilePoi();
     }
 
     removeUnit(unit: Unit): void {
@@ -207,6 +214,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         }
 
         this._units = this._units.filter(({ id }) => id !== unit.id);
+
+        this._updateTilePoi();
     }
 
     addItem(item: Item): void {
@@ -221,6 +230,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
 
         this._items.unshift(item);
         this._items.sort((a, b) => a.weight - b.weight);
+
+        this._updateTilePoi();
     }
 
     removeItem(item: Item): void {
@@ -234,6 +245,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         }
 
         this._items = this._items.filter(({ id }) => id !== item.id);
+
+        this._updateTilePoi();
     }
 
     getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
@@ -640,6 +653,14 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
                 const [material] = Material.DetermineMaterial(materialColour, materials);
                 return { material, owner, imageId, layerIndex, orientation };
             }
+        }
+    }
+
+    private _updateTilePoi(): void {
+        if (this.interestMasks.length > 0) {
+            this._visibilityManager.addPoi(this);
+        } else {
+            this._visibilityManager.removePoi(this);
         }
     }
 }

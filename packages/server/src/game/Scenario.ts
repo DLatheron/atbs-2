@@ -36,7 +36,7 @@ export class Scenario {
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
 
         const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);
-        this._map = new WorldMap(mapRecipe, itemManager, furnitureManager);
+        this._map = new WorldMap(mapRecipe, itemManager, furnitureManager, visibilityManager);
     }
 
     get id() {

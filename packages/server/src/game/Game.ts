@@ -539,6 +539,8 @@ export class Game {
             })
         );
 
+        this.visibilityManager.update();
+
         this.messageRouter.broadcast(
             {
                 type: "server:map",

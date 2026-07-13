@@ -11,6 +11,7 @@ import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { CollisionSample } from "./Tile.js";
+import type { VisibilityManager } from "./VisibilityManager.js";
 
 export const MapRecipe = z.object({
     id: MapId,
@@ -33,7 +34,8 @@ export class WorldMap {
     constructor(
         recipe: Readonly<MapRecipe>,
         _itemManager: ItemManager,
-        furnitureManager: FurnitureManager
+        furnitureManager: FurnitureManager,
+        visibilityManager: VisibilityManager
     ) {
         this._id = recipe.id;
         this._name = recipe.name;
@@ -44,7 +46,13 @@ export class WorldMap {
         this._tiles = recipe.tiles.map((tileRow, row) =>
             tileRow.map(
                 (tileRecipe, col) =>
-                    new Tile(new TilePos(col, row), recipe.tileSize, tileRecipe, furnitureManager)
+                    new Tile(
+                        new TilePos(col, row),
+                        recipe.tileSize,
+                        tileRecipe,
+                        furnitureManager,
+                        visibilityManager
+                    )
             )
         );
     }

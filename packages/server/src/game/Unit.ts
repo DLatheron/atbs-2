@@ -191,7 +191,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this._materials = recipe.collision.materials.map((materialId) =>
             MaterialManager.GetSingleton().getMaterial(materialId)
         );
+
         this._visibilityManager = visibilityManager;
+        this._visibilityManager.addViewer(this);
     }
 
     get id(): UnitId {
@@ -564,6 +566,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             ],
             dstPos
         );
+
+        this._visibilityManager.update();
 
         // this.updateAvailableActions(map);
 

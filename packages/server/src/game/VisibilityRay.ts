@@ -1,20 +1,24 @@
 import type { Vec2 } from "@atbs/maths";
+import { IRayCast } from "./IRayCast.js";
 
-export class VisibilityRay {
+export class VisibilityRay implements IRayCast {
     private readonly _srcPos: Vec2;
     private readonly _dstPos: Vec2;
-
+    
+    private _life: number;
     private _intersection: Vec2 | undefined;
 
-    private _invalidRay: boolean;
-    private _invalidAngle: boolean;
+    private _rayValid: boolean;
+    private _angleValid: boolean;
+
 
     constructor(srcPos: Vec2, dstPos: Vec2) {
         this._srcPos = srcPos;
         this._dstPos = dstPos;
+        this._life = 1;
         this._intersection = undefined;
-        this._invalidRay = false;
-        this._invalidAngle = false;
+        this._rayValid = false;
+        this._angleValid = false;
     }
 
     get srcPos(): Vec2 {
@@ -33,16 +37,31 @@ export class VisibilityRay {
         this._intersection = value;
     }
 
-    get isRayInvalid(): boolean {
-        return this._invalidRay;
+    get rayValid(): boolean {
+        return this._rayValid;
     }
 
-    get isAngleInvalid(): boolean {
-        return this._invalidAngle;
+    set rayValid(value: boolean) {
+        this._rayValid = value;
     }
 
-    setValid(): void {
-        this._invalidRay = false;
-        this._invalidAngle = false;
+    get angleValid(): boolean {
+        return this._angleValid;
+    }
+
+    set angleValid(value: boolean) {
+        this._angleValid = value;
+    }
+
+    get life(): number {
+        return 1;
+    }
+
+    set life(value: number) {
+        this._life = value;
+    }
+
+    get isRayAlive(): boolean {
+        return this._life > 0;
     }
 }
