@@ -670,7 +670,7 @@ export const UnitSummary = z.object({
     viewAngleInDegrees: z.int().positive(),
     collisionRadius: z.number().positive(),
     isDirectional: z.boolean().optional().default(true),
-    canSee: z.array(UnitId),
+    canSee: z.number().nonnegative(),
     attributes: z.object({
         actionPoints: Attribute,
         constitution: Attribute,

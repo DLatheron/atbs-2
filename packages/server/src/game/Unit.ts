@@ -507,7 +507,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.messageRouter.send(
                 {
                     type: "server:unit:selected:update",
-                    payload: { canSee: this.canSee.map(({ id }) => id) }
+                    payload: { canSee: this.canSee.length }
                 },
                 this.side.id
             );
@@ -547,14 +547,6 @@ export class Unit extends SceneObject implements VisibilityViewer {
         while (Math.abs(relativeRotation) > 0) {
             this.orientation = rotateOrientation(this.orientation, Math.sign(relativeRotation));
 
-            this.messageRouter.send(
-                {
-                    type: "server:unit:selected:update",
-                    payload: { orientation: this._orientation }
-                },
-                this.side.id
-            );
-
             if (!this._useActionPoints(ROTATION_APT_COST)) {
                 return;
             }
@@ -562,6 +554,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // TODO: Update available actions.
 
             this._refreshVisibility();
+
+            this.messageRouter.send(
+                {
+                    type: "server:unit:selected:update",
+                    payload: { orientation: this._orientation, canSee: this.canSee.length }
+                },
+                this.side.id
+            );
 
             const tile = this.map.getTile(mapLocation);
 
@@ -1155,7 +1155,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             disorientation: this.disorientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
             collisionRadius: this._recipe.collision.radius,
-            canSee: this.canSee.map(({ id }) => id),
+            canSee: this.canSee.length,
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,

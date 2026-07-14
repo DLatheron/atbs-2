@@ -19,6 +19,7 @@ import { UnitDetailsComponent } from "../../UnitDetails";
 import { ItemDetailsComponent } from "../../ItemDetails";
 import { ImageComponent } from "../../Image";
 import { DisorientedComponent } from "../../Disoriented/Disoriented";
+import { UnitsSeenComponent } from "../../UnitsSeen";
 
 export interface UnitModePanelProps {
     visible: boolean;
@@ -95,6 +96,7 @@ export function UnitModePanel({
                 />
                 <Box>
                     <DisorientedComponent disorientation={unit.disorientation} />
+                    <UnitsSeenComponent numSeenUnits={unit.canSee} sx={{ mb: 1 }} />
                     <AttributesComponent
                         title="Attributes"
                         attributes={[

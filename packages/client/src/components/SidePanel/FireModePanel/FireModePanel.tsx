@@ -27,6 +27,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnTargetComponent } from "../../OnTarget";
 import { getModeHelper, isModeAvailable } from "../../../helpers/fireModeHelpers";
 import { DisorientedComponent } from "../../Disoriented/Disoriented";
+import { UnitsSeenComponent } from "../../UnitsSeen";
 
 export interface FireModePanelProps {
     visible: boolean;
@@ -157,6 +158,7 @@ export function FireModePanel({
                 <Box>
                     <OnTargetComponent isOnTarget={isOnTarget} />
                     <DisorientedComponent disorientation={unit.disorientation} />
+                    <UnitsSeenComponent numSeenUnits={unit.canSee} sx={{ mb: 1 }} />
                     <AttributesComponent
                         title="Attributes"
                         attributes={[
