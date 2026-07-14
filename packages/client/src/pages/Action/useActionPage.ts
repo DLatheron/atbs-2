@@ -184,6 +184,10 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:debug:graphics", async (_context, payload) => {
                 world.debugGraphics = payload;
+            }),
+
+            messageManager.registerHandler("server:visible:tiles", async (_context, payload) => {
+                world.visibleTiles = new Set(payload);
             })
         ];
 

@@ -3,9 +3,7 @@ import z from "zod";
 import { Side, SideRecipe } from "./Side.js";
 import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
-import type { ItemManager } from "./ItemManager.js";
-import type { FurnitureManager } from "./FurnitureManager.js";
-import type { VisibilityManager } from "./VisibilityManager.js";
+import type { Game } from "./Game.js";
 
 export const ScenarioRecipe = z.object({
     id: ScenarioId,
@@ -18,25 +16,21 @@ export type ScenarioRecipe = z.infer<typeof ScenarioRecipe>;
 
 export class Scenario {
     private readonly _recipe: Readonly<ScenarioRecipe>;
+    private readonly _game: Game;
+
     private readonly _sides: Side[];
     private readonly _sidesMap: Map<SideId, Side>;
     private readonly _map: WorldMap;
 
-    constructor(
-        recipe: Readonly<ScenarioRecipe>,
-        itemManager: ItemManager,
-        furnitureManager: FurnitureManager,
-        visibilityManager: VisibilityManager
-    ) {
+    constructor(recipe: Readonly<ScenarioRecipe>, game: Game) {
         this._recipe = recipe;
+        this._game = game;
 
-        this._sides = recipe.sides.map(
-            (sideRecipe) => new Side(sideRecipe, itemManager, visibilityManager)
-        );
+        this._sides = recipe.sides.map((sideRecipe) => new Side(sideRecipe, this._game));
         this._sidesMap = new Map<SideId, Side>(this._sides.map((side) => [side.id, side]));
 
         const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);
-        this._map = new WorldMap(mapRecipe, itemManager, furnitureManager, visibilityManager);
+        this._map = new WorldMap(mapRecipe, this._game);
     }
 
     get id() {

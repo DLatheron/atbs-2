@@ -173,7 +173,7 @@ export class ActionPhaseHandler extends PhaseHandler {
 
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
-                        selectedUnit.move(game, orientation, game.messageRouter);
+                        selectedUnit.move(orientation);
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
@@ -186,7 +186,7 @@ export class ActionPhaseHandler extends PhaseHandler {
 
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
-                        selectedUnit.rotate(game, orientation, game.messageRouter);
+                        selectedUnit.rotate(orientation);
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
@@ -243,13 +243,11 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
 
                 selectedUnit.fire(
-                    game,
                     weapon,
                     fireDetails.fireSelector,
                     fireDetails.fireMode,
                     fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
-                    fireDetails.triggerHeldTimeInMs,
-                    this.messageRouter
+                    fireDetails.triggerHeldTimeInMs
                 );
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             }),
@@ -267,7 +265,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     );
                 }
 
-                selectedUnit.throw(game, new Vec2(throwDetails.worldPos), this.messageRouter);
+                selectedUnit.throw(new Vec2(throwDetails.worldPos));
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             })
 

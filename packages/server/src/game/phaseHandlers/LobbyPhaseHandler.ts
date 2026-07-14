@@ -126,12 +126,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
                     const oldScenario = game.scenario;
                     if (scenarioId) {
                         const scenarioRecipe = game.scenarioRecipeManager.get(scenarioId);
-                        game.scenario = new Scenario(
-                            scenarioRecipe,
-                            game.itemManager,
-                            game.furnitureManager,
-                            game.visibilityManager
-                        );
+                        game.scenario = new Scenario(scenarioRecipe, game);
 
                         game.broadcastMessage({
                             type: "server:lobby:scenario:changed",
@@ -220,12 +215,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
 
         if (!this.game.scenario) {
             const owner = this.game.owner;
-            this.game.scenario = new Scenario(
-                scenarioRecipe,
-                this.game.itemManager,
-                this.game.furnitureManager,
-                this.game.visibilityManager
-            );
+            this.game.scenario = new Scenario(scenarioRecipe, this.game);
 
             this.game.broadcastMessage({
                 type: "server:lobby:scenario:changed",

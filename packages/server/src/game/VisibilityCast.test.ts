@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -21,8 +21,9 @@ import { VisibilityManager, isDirectionInViewCone } from "./VisibilityManager.js
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
 import { VisibilityRay, VISUAL_RAY_LIFE } from "./VisibilityRay.js";
-import { WorldMap, MapRecipe } from "./WorldMap.js";
+import { WorldMap, MapRecipe, type VisualRayCastResult } from "./WorldMap.js";
 import type { InterestMask, VisualType } from "@atbs/shared-data";
+import type { IRayCast } from "./IRayCast.js";
 
 const OPAQUE_RGB = { r: 107, g: 66, b: 0 };
 const GLASS_RGB = { r: 180, g: 220, b: 255 };
@@ -130,6 +131,7 @@ describe("visual ray casting", () => {
     let imageManager: ImageManager;
     let materialManager: MaterialManager;
     let furnitureRecipeManager: FurnitureRecipeManager;
+    let game: Game;
     let furnitureManager: FurnitureManager;
     let itemManager: ItemManager;
     let visibilityManager: VisibilityManager;
@@ -203,7 +205,11 @@ describe("visual ray casting", () => {
 
         furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
         itemManager = new ItemManager(new ItemRecipeManager());
-        visibilityManager = new VisibilityManager({ id: gameId } as Game);
+
+        // Single mutable Game object so managers/map share the same reference.
+        game = { id: gameId, furnitureManager, itemManager } as Game;
+        visibilityManager = new VisibilityManager(game);
+        Object.assign(game, { visibilityManager });
     });
 
     afterEach(() => {
@@ -237,7 +243,7 @@ describe("visual ray casting", () => {
     }
 
     function createMap(tiles: TileRecipe[][]): WorldMap {
-        return new WorldMap(
+        const map = new WorldMap(
             MapRecipe.parse({
                 id: "visual-test.map",
                 name: "Visual Test",
@@ -246,10 +252,10 @@ describe("visual ray casting", () => {
                 tileSize,
                 tiles
             }),
-            itemManager,
-            furnitureManager,
-            visibilityManager
+            game
         );
+        Object.assign(game, { map });
+        return map;
     }
 
     it("blocks a visual ray in one opaque eyeball:100 pixel", () => {
@@ -342,102 +348,11 @@ describe("visual ray casting", () => {
 
 describe("VisibilityManager debugGraphics", () => {
     const tileSize = 100;
-    const gameId = "VIS-DEBUG";
-    let tempDir: string;
-    let imageManager: ImageManager;
-    let materialManager: MaterialManager;
-    let furnitureRecipeManager: FurnitureRecipeManager;
-    let furnitureManager: FurnitureManager;
-    let itemManager: ItemManager;
-    let game: Game;
-    let visibilityManager: VisibilityManager;
-    let map: WorldMap;
 
-    beforeEach(() => {
-        tempDir = mkdtempSync(path.join(tmpdir(), "atbs-visual-debug-"));
-        imageManager = ImageManager.GetSingleton();
-
-        for (const [id, rgb] of [
-            ["opaque-wall", OPAQUE_RGB],
-            ["opaque-wall-cl", OPAQUE_RGB],
-            ["grass", { r: 0, g: 128, b: 0 }]
-        ] as const) {
-            if (!imageManager.exists(id)) {
-                imageManager.addImage(id, tempDir, createSolidImage(id, tileSize, rgb));
-            }
-        }
-
-        const terrainManager = TerrainManager.GetSingleton();
-        if (!terrainManager.has("grass")) {
-            terrainManager.add(
-                new Terrain(
-                    TerrainRecipe.parse({
-                        id: "grass",
-                        name: "Grass",
-                        category: "terrain",
-                        description: [{ text: "Grass" }],
-                        renderable: { default: [{ imageId: "grass" }] }
-                    })
-                )
-            );
-        }
-
-        materialManager = new MaterialManager();
-        materialManager.addMaterial(
-            MaterialRecipe.parse({
-                id: "opaque-wood.material",
-                category: "furniture",
-                rgb: OPAQUE_RGB,
-                densityMap: { default: 3, eyeball: 100 },
-                hardness: 0.15,
-                toughness: 0.25,
-                roughness: 0.8,
-                elasticity: 0.05,
-                density: 0.08
-            })
-        );
-
-        furnitureRecipeManager = new FurnitureRecipeManager();
-        furnitureRecipeManager.addRecipe(
-            createFurnitureRecipe("opaque-wall.furniture", "opaque-wall", "opaque-wood.material")
-        );
-        furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
-        itemManager = new ItemManager(new ItemRecipeManager());
-
-        game = { id: gameId } as Game;
-        visibilityManager = new VisibilityManager(game);
-        map = new WorldMap(
-            MapRecipe.parse({
-                id: "visual-debug.map",
-                name: "Visual Debug",
-                width: 3,
-                height: 1,
-                tileSize,
-                tiles: [
-                    [
-                        TileRecipe.parse({ terrain: { id: "grass" } }),
-                        TileRecipe.parse({ terrain: { id: "grass" } }),
-                        TileRecipe.parse({ terrain: { id: "grass" } })
-                    ]
-                ]
-            }),
-            itemManager,
-            furnitureManager,
-            visibilityManager
-        );
-        Object.assign(game, { map });
-    });
-
-    afterEach(() => {
-        for (const id of ["opaque-wall", "opaque-wall-cl", "grass"]) {
-            if (imageManager.exists(id)) {
-                imageManager.removeImage(id);
-            }
-        }
-        if (existsSync(tempDir)) {
-            rmSync(tempDir, { recursive: true, force: true });
-        }
-    });
+    function tileCenterToWorld(tilePos: TilePos): Vec2 {
+        const half = tileSize / 2;
+        return new Vec2(tilePos.col * tileSize + half, tilePos.row * tileSize + half);
+    }
 
     function createMockPoi(location: TilePos): VisibilityPoi {
         return {
@@ -456,20 +371,16 @@ describe("VisibilityManager debugGraphics", () => {
             viewAngleInDegrees?: number;
             isDirectional?: boolean;
         } = {}
-    ): VisibilityViewer & { setOrientation(value: Orientation): void } {
+    ): VisibilityViewer {
         let interestMasks: InterestMask[] = ["items"];
         let orientation = options.orientation ?? Orientation.NORTH;
-        const viewAngleInDegrees = options.viewAngleInDegrees ?? 90;
-        const isDirectional = options.isDirectional ?? true;
+        let viewerLocation: TilePos | null = location;
+
         return {
             id,
             visualType: "eyeball" as VisualType,
-            get viewAngleInDegrees() {
-                return viewAngleInDegrees;
-            },
-            get isDirectional() {
-                return isDirectional;
-            },
+            viewAngleInDegrees: options.viewAngleInDegrees ?? 90,
+            isDirectional: options.isDirectional ?? true,
             get interestMasks() {
                 return interestMasks;
             },
@@ -477,10 +388,10 @@ describe("VisibilityManager debugGraphics", () => {
                 interestMasks = value;
             },
             get location() {
-                return location;
+                return viewerLocation;
             },
-            set location(_value) {
-                /* immutable for test */
+            set location(value) {
+                viewerLocation = value;
             },
             get orientation() {
                 return orientation;
@@ -488,14 +399,39 @@ describe("VisibilityManager debugGraphics", () => {
             set orientation(value) {
                 orientation = value;
             },
-            setOrientation(value: Orientation) {
-                orientation = value;
-            },
             get pois() {
                 return pois;
             }
         };
     }
+
+    let castVisualRay: ReturnType<typeof vi.fn>;
+    let visibilityManager: VisibilityManager;
+
+    beforeEach(() => {
+        castVisualRay = vi.fn(
+            (
+                _ray: IRayCast,
+                _visualType: VisualType,
+                options: { skipTilePos: TilePos; targetTilePos: TilePos }
+            ): VisualRayCastResult => ({
+                visible: true,
+                pos: tileCenterToWorld(options.targetTilePos),
+                tile: { location: options.targetTilePos } as Tile
+            })
+        );
+
+        const game = {
+            id: "VIS-DEBUG",
+            map: {
+                tileSize,
+                tileCenterToWorld,
+                castVisualRay
+            }
+        } as unknown as Game;
+
+        visibilityManager = new VisibilityManager(game);
+    });
 
     it("populates lines for every viewer→POI ray, marking updated vs cached", () => {
         const poiA = createMockPoi(new TilePos(1, 0));
@@ -509,6 +445,7 @@ describe("VisibilityManager debugGraphics", () => {
         const firstPass: DebugGraphic[] = [];
         visibilityManager.update(viewer.id, firstPass);
 
+        expect(castVisualRay).toHaveBeenCalledTimes(2);
         const firstLines = firstPass.filter((g) => g.type === DebugGraphicType.enum.line);
         expect(firstLines).toHaveLength(2);
         expect(firstLines.every((line) => line.lineDash === undefined)).toBe(true);
@@ -518,6 +455,8 @@ describe("VisibilityManager debugGraphics", () => {
         const secondPass: DebugGraphic[] = [];
         visibilityManager.update(viewer.id, secondPass);
 
+        // Cache hit — no further LOS casts.
+        expect(castVisualRay).toHaveBeenCalledTimes(2);
         const secondLines = secondPass.filter((g) => g.type === DebugGraphicType.enum.line);
         expect(secondLines).toHaveLength(2);
         expect(secondLines.every((line) => line.lineDash !== undefined)).toBe(true);
@@ -526,6 +465,7 @@ describe("VisibilityManager debugGraphics", () => {
         const thirdPass: DebugGraphic[] = [];
         visibilityManager.update(viewer.id, thirdPass);
 
+        expect(castVisualRay).toHaveBeenCalledTimes(4);
         const thirdLines = thirdPass.filter((g) => g.type === DebugGraphicType.enum.line);
         expect(thirdLines).toHaveLength(2);
         expect(thirdLines.every((line) => line.lineDash === undefined)).toBe(true);
@@ -541,15 +481,16 @@ describe("VisibilityManager debugGraphics", () => {
 
         const firstPass: DebugGraphic[] = [];
         visibilityManager.update(viewer.id, firstPass);
-        expect(firstPass.filter((g) => g.type === DebugGraphicType.enum.line)[0].strokeColour.g).toBeGreaterThan(
-            firstPass.filter((g) => g.type === DebugGraphicType.enum.line)[0].strokeColour.r
-        );
+        expect(castVisualRay).toHaveBeenCalledTimes(1);
+        const firstLine = firstPass.filter((g) => g.type === DebugGraphicType.enum.line)[0];
+        expect(firstLine.strokeColour.g).toBeGreaterThan(firstLine.strokeColour.r);
 
-        viewer.setOrientation(Orientation.WEST);
+        viewer.orientation = Orientation.WEST;
         visibilityManager.invalidateViewerOrientation(viewer.id);
 
         const afterRotate: DebugGraphic[] = [];
         visibilityManager.update(viewer.id, afterRotate);
+        expect(castVisualRay).toHaveBeenCalledTimes(1);
         const line = afterRotate.filter((g) => g.type === DebugGraphicType.enum.line)[0];
         // Out-of-cone → red-ish, and treated as updated (solid).
         expect(line.strokeColour.r).toBeGreaterThan(line.strokeColour.g);
@@ -560,30 +501,28 @@ describe("VisibilityManager debugGraphics", () => {
 describe("isDirectionInViewCone", () => {
     it("treats same position and non-directional viewers as in-cone", () => {
         const origin = new Vec2(50, 50);
-        expect(
-            isDirectionInViewCone(origin, origin, Orientation.NORTH, 90, true)
-        ).toBe(true);
-        expect(
-            isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.NORTH, 90, false)
-        ).toBe(true);
-        expect(
-            isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.CENTER, 90, true)
-        ).toBe(true);
+        expect(isDirectionInViewCone(origin, origin, Orientation.NORTH, 90, true)).toBe(true);
+        expect(isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.NORTH, 90, false)).toBe(
+            true
+        );
+        expect(isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.CENTER, 90, true)).toBe(
+            true
+        );
     });
 
     it("accepts targets within half the view angle of facing", () => {
         const origin = new Vec2(50, 50);
         // Facing north (0, -1): target further north is in cone.
-        expect(
-            isDirectionInViewCone(origin, new Vec2(50, 0), Orientation.NORTH, 90, true)
-        ).toBe(true);
+        expect(isDirectionInViewCone(origin, new Vec2(50, 0), Orientation.NORTH, 90, true)).toBe(
+            true
+        );
         // Due east is 90° from north — outside a 90° cone (±45°).
-        expect(
-            isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.NORTH, 90, true)
-        ).toBe(false);
+        expect(isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.NORTH, 90, true)).toBe(
+            false
+        );
         // Facing east: due east is in cone.
-        expect(
-            isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.EAST, 90, true)
-        ).toBe(true);
+        expect(isDirectionInViewCone(origin, new Vec2(100, 50), Orientation.EAST, 90, true)).toBe(
+            true
+        );
     });
 });

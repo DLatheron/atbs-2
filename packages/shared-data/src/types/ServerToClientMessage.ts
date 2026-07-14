@@ -182,6 +182,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:debug:graphics"),
         payload: z.array(DebugGraphic).nullable()
+    }),
+    z.object({
+        type: z.literal("server:visible:tiles"),
+        payload: z.array(z.string().describe("Tile position as a string"))
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

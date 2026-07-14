@@ -23,8 +23,12 @@ interface VisibilityCacheEntry {
     rayValid: boolean;
     /** True when the in-view-cone status is still valid for the current orientation. */
     angleValid: boolean;
+    /** Whether the LOS cast currently reaches the POI. */
+    hasLos: boolean;
     /** Whether the LOS direction currently lies inside the viewer's view cone. */
     inViewCone: boolean;
+    /** True when hasLos && inViewCone — this viewer currently sees the POI. */
+    visible: boolean;
 }
 
 const IN_CONE_COLOUR = new Colour({ r: 40, g: 220, b: 80, a: 1 });
@@ -71,6 +75,8 @@ export class VisibilityManager {
     private readonly _pois: Set<VisibilityPoi>;
     private readonly _viewers: Map<ViewerId, VisibilityViewer>;
     private readonly _cache: Map<ViewerId, VisibilityCacheEntry[]>;
+    /** Per-POI refcount of visible viewers, keyed by each of those viewers' interest masks. */
+    private readonly _poiVisibleByMask: Map<VisibilityPoi, Map<InterestMask, number>>;
 
     constructor(game: Game) {
         this._game = game;
@@ -78,6 +84,7 @@ export class VisibilityManager {
         this._pois = new Set<VisibilityPoi>();
         this._viewers = new Map<ViewerId, VisibilityViewer>();
         this._cache = new Map<ViewerId, VisibilityCacheEntry[]>();
+        this._poiVisibleByMask = new Map<VisibilityPoi, Map<InterestMask, number>>();
     }
 
     get game(): Game {
@@ -98,14 +105,21 @@ export class VisibilityManager {
         VisibilityManager.Logger.debug(`Removing POI ${poi.location} from visibility manager`);
 
         this._pois.delete(poi);
-
         this.removePoiFromCache(poi);
+        this._poiVisibleByMask.delete(poi);
     }
 
     private removePoiFromCache(poi: VisibilityPoi): void {
-        for (const [viewer, cacheLine] of this._cache.entries()) {
+        for (const [viewerId, cacheLine] of this._cache.entries()) {
+            const viewer = this._viewers.get(viewerId);
+            for (const entry of cacheLine) {
+                if (entry.poi === poi && entry.visible && viewer) {
+                    this.adjustPoiMaskVisibility(poi, viewer.interestMasks, -1);
+                    entry.visible = false;
+                }
+            }
             this._cache.set(
-                viewer,
+                viewerId,
                 cacheLine.filter((c) => c.poi !== poi)
             );
         }
@@ -122,6 +136,16 @@ export class VisibilityManager {
             `Removing viewer ${viewer.location} from visibility manager`
         );
 
+        const cache = this._cache.get(viewer.id);
+        if (cache) {
+            for (const entry of cache) {
+                if (entry.visible) {
+                    this.adjustPoiMaskVisibility(entry.poi, viewer.interestMasks, -1);
+                    entry.visible = false;
+                }
+            }
+        }
+
         this._viewers.delete(viewer.id);
 
         this.removeViewerFromCache(viewer.id);
@@ -129,6 +153,58 @@ export class VisibilityManager {
 
     private removeViewerFromCache(viewerId: ViewerId): void {
         this._cache.delete(viewerId);
+    }
+
+    private adjustPoiMaskVisibility(
+        poi: VisibilityPoi,
+        masks: InterestMask[],
+        delta: number
+    ): void {
+        let byMask = this._poiVisibleByMask.get(poi);
+        if (!byMask) {
+            if (delta <= 0) {
+                return;
+            }
+            byMask = new Map<InterestMask, number>();
+            this._poiVisibleByMask.set(poi, byMask);
+        }
+
+        for (const mask of masks) {
+            const next = (byMask.get(mask) ?? 0) + delta;
+            if (next <= 0) {
+                byMask.delete(mask);
+            } else {
+                byMask.set(mask, next);
+            }
+        }
+
+        if (byMask.size === 0) {
+            this._poiVisibleByMask.delete(poi);
+        }
+    }
+
+    isPoiVisibleForMasks(poi: VisibilityPoi, masks: InterestMask[]): boolean {
+        const byMask = this._poiVisibleByMask.get(poi);
+        if (!byMask) {
+            return false;
+        }
+        return masks.some((mask) => (byMask.get(mask) ?? 0) > 0);
+    }
+
+    private setEntryVisible(
+        entry: VisibilityCacheEntry,
+        viewer: VisibilityViewer,
+        nextVisible: boolean
+    ): void {
+        if (entry.visible === nextVisible) {
+            return;
+        }
+        this.adjustPoiMaskVisibility(entry.poi, viewer.interestMasks, nextVisible ? 1 : -1);
+        entry.visible = nextVisible;
+    }
+
+    private recomputeEntryVisible(entry: VisibilityCacheEntry, viewer: VisibilityViewer): void {
+        this.setEntryVisible(entry, viewer, entry.hasLos && entry.inViewCone);
     }
 
     getPois(interestMasks: InterestMask[]): VisibilityPoi[] {
@@ -200,15 +276,19 @@ export class VisibilityManager {
     }
 
     private _updateViewer(viewer: VisibilityViewer, debugGraphics?: DebugGraphic[]): void {
-        for (const poi of viewer.pois) {
-            if (viewer.location === null) {
-                continue;
-            }
+        const cache = this.getViewerCache(viewer.id);
 
+        if (viewer.location === null) {
+            for (const entry of cache) {
+                this.setEntryVisible(entry, viewer, false);
+            }
+            return;
+        }
+
+        for (const poi of viewer.pois) {
             const viewerWorldPos = this.map.tileCenterToWorld(viewer.location);
             const poiWorldPos = this.map.tileCenterToWorld(poi.location);
 
-            const cache = this.getViewerCache(viewer.id);
             let entry = cache.find((c) => c.poi === poi);
             let updatedThisPass = false;
 
@@ -232,6 +312,7 @@ export class VisibilityManager {
                 if (entry) {
                     entry.ray = ray;
                     entry.rayValid = true;
+                    entry.hasLos = result.visible;
                     // New LOS endpoint — angle vs cone must be recomputed.
                     entry.angleValid = false;
                 } else {
@@ -240,7 +321,9 @@ export class VisibilityManager {
                         ray,
                         rayValid: true,
                         angleValid: false,
-                        inViewCone: false
+                        hasLos: result.visible,
+                        inViewCone: false,
+                        visible: false
                     };
                     cache.push(entry);
                 }
@@ -258,6 +341,8 @@ export class VisibilityManager {
                 entry.angleValid = true;
                 updatedThisPass = true;
             }
+
+            this.recomputeEntryVisible(entry, viewer);
 
             if (debugGraphics) {
                 this._pushRayDebugGraphics(debugGraphics, ray, entry.inViewCone, updatedThisPass);
@@ -289,7 +374,35 @@ export class VisibilityManager {
             type: DebugGraphicType.enum.point,
             worldPos: dstWorldPos,
             colour: strokeColour,
-            size: updatedThisPass ? 6 : 4
+            size: updatedThisPass ? 8 : 4
         });
+    }
+
+    getVisibleTiles(viewersInterestMasks: InterestMask[]): string[] {
+        const allInterestMasks = [...viewersInterestMasks, "items", "vfx"];
+        const visibleTiles: string[] = [];
+
+        // Add friendly viewer locations to the visible tiles.
+        for (const viewer of this._viewers.values()) {
+            if (viewer.location === null) {
+                continue;
+            }
+
+            if (viewer.interestMasks.some((mask) => viewersInterestMasks.includes(mask))) {
+                visibleTiles.push(viewer.location.toString());
+            }
+        }
+
+        // Add interested POI locations visible to at least one matching viewer.
+        for (const poi of this._pois.values()) {
+            if (
+                poi.interestMasks.some((mask) => allInterestMasks.includes(mask)) &&
+                this.isPoiVisibleForMasks(poi, viewersInterestMasks)
+            ) {
+                visibleTiles.push(poi.location.toString());
+            }
+        }
+
+        return visibleTiles;
     }
 }

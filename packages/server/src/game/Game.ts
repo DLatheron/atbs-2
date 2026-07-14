@@ -529,6 +529,16 @@ export class Game {
         this._playState.selectedUnit = value;
     }
 
+    getUnitsForSide(sideId: SideId): Unit[] {
+        return this.getSide(sideId).units;
+    }
+
+    getOppositionUnitsForSide(sideId: SideId): Unit[] {
+        return this.getSide(sideId)
+            .oppositionSideIds.map((oppositionSideId) => this.getSide(oppositionSideId).units)
+            .flat();
+    }
+
     startActionPhase(): void {
         this._playState.turn = 1;
         this.selectedUnit = null;
@@ -627,6 +637,12 @@ export class Game {
         // Make the playing side start the side, disable their UI and clear their waiting model.
         this.messageRouter.send(
             [
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibleTiles(
+                        this.turnsSide.oppositionSideIds
+                    )
+                },
                 {
                     type: "server:side:start",
                     payload: { side: this.turnsSide.toSummary() }

@@ -41,7 +41,6 @@ import type { Side } from "./Side.js";
 import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
-import { ItemManager } from "./ItemManager.js";
 import { Item } from "./Item.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
@@ -56,6 +55,11 @@ import { MaterialManager } from "./MaterialManager.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
 import type { VisibilityManager } from "./VisibilityManager.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
+import type { WorldMap } from "./WorldMap.js";
+import type { ItemManager } from "./ItemManager.js";
+import type { FurnitureManager } from "./FurnitureManager.js";
+import type { DamageCacheManager } from "./DamageCacheManager.js";
+import isEqual from "lodash/isEqual.js";
 
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
@@ -142,6 +146,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     readonly logger: Logger;
 
     private readonly _recipe: Readonly<UnitRecipe>;
+    private readonly _game: Game;
     private readonly _attributes: {
         actionPoints: Attribute;
         constitution: Attribute;
@@ -160,18 +165,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     private _disorientation: number;
 
-    private readonly _visibilityManager: VisibilityManager;
-    private _canSee: UnitId[];
+    private _canSee: Unit[];
 
     constructor(
         recipe: Readonly<UnitRecipe>,
         overrides: Readonly<UnitOverrides>,
         additionalData: Readonly<UnitAdditionalData>,
-        itemManager: ItemManager,
-        visibilityManager: VisibilityManager
+        game: Game
     ) {
         super(recipe.renderable);
 
+        this._game = game;
         this.logger = new Logger(`Unit-${recipe.id}`, config.logLevels.unit);
 
         this._recipe = recipe;
@@ -184,7 +188,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             speed: setDefaultAttribute(recipe.attributes.speed),
             strength: setDefaultAttribute(recipe.attributes.strength)
         };
-        this._inventory = new Inventory(this._recipe.inventory, itemManager);
+        this._inventory = new Inventory(this._recipe.inventory, this.itemManager);
         this._location = overrides.location ? TilePos.parse(overrides.location) : null;
         this._orientation = recipe.isDirectional
             ? (overrides.orientation ?? Orientation.NORTH)
@@ -195,9 +199,36 @@ export class Unit extends SceneObject implements VisibilityViewer {
             MaterialManager.GetSingleton().getMaterial(materialId)
         );
 
-        this._visibilityManager = visibilityManager;
-        this._visibilityManager.addViewer(this);
+        this.visibilityManager.addViewer(this);
         this._canSee = [];
+    }
+
+    get game(): Game {
+        return this._game;
+    }
+
+    get map(): WorldMap {
+        return this.game.map;
+    }
+
+    get itemManager(): ItemManager {
+        return this.game.itemManager;
+    }
+
+    get furnitureManager(): FurnitureManager {
+        return this.game.furnitureManager;
+    }
+
+    get visibilityManager(): VisibilityManager {
+        return this.game.visibilityManager;
+    }
+
+    get damageCacheManager(): DamageCacheManager {
+        return this.game.damageCacheManager;
+    }
+
+    get messageRouter(): MessageRouter {
+        return this.game.messageRouter;
     }
 
     get id(): UnitId {
@@ -250,11 +281,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         this._location = value;
-        this._visibilityManager.invalidateViewerLocation(this.id);
+        this.visibilityManager.invalidateViewerLocation(this.id);
     }
 
     get orientation(): Orientation {
         return this._orientation;
+    }
+
+    set orientation(value: Orientation) {
+        if (value === this._orientation) {
+            return;
+        }
+
+        this._orientation = value;
+        this.visibilityManager.invalidateViewerOrientation(this.id);
     }
 
     get isDirectional(): boolean {
@@ -345,11 +385,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._recipe.viewAngleInDegrees;
     }
 
-    get canSee(): UnitId[] {
+    get canSee(): Unit[] {
         return this._canSee;
     }
 
-    set canSee(value: UnitId[]) {
+    set canSee(value: Unit[]) {
         this._canSee = value;
     }
 
@@ -372,29 +412,26 @@ export class Unit extends SceneObject implements VisibilityViewer {
         const unitContext = {
             ...context,
             states: [this.isAlive ? "alive" : "dead", this.itemInUse ? "item-in-use" : "default"],
-            orientation: this.orientation
+            orientation: this.orientation,
+            visibilityFilter: true
         };
 
         return super.getRenderList(unitContext);
     }
 
-    private _hasSufficientActionPoints(
-        _game: Game,
-        aptCost: number,
-        messageRouter: MessageRouter
-    ): boolean {
+    private _hasSufficientActionPoints(aptCost: number): boolean {
         if (aptCost <= this.actionPoints) {
             return true;
         }
 
-        messageRouter.send(
+        this.messageRouter.send(
             { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_ACTION_POINTS },
             this.side.id
         );
         return false;
     }
 
-    private _useActionPoints(_game: Game, aptCost: number, messageRouter: MessageRouter): boolean {
+    private _useActionPoints(aptCost: number): boolean {
         if (aptCost > this.actionPoints) {
             throw new Error(
                 `Unit ${this.id} does not have sufficient action points to deduct ${aptCost}`
@@ -407,7 +444,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         if (!config.infiniteActionPoints) {
             this._attributes.actionPoints.value -= aptCost;
 
-            messageRouter.send(
+            this.messageRouter.send(
                 {
                     type: "server:unit:selected:update",
                     payload: {
@@ -448,7 +485,36 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // this.updateAvailableActions(game.map);
     }
 
-    rotate(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
+    private _refreshVisibility(): void {
+        const oldCanSee = this.canSee;
+
+        if (config.showVisibilityDebugGraphics) {
+            const debugGraphics: DebugGraphic[] = [];
+            this.visibilityManager.update(undefined, debugGraphics);
+            if (debugGraphics.length > 0) {
+                this.messageRouter.send({
+                    type: "server:debug:graphics",
+                    payload: debugGraphics
+                });
+            }
+        } else {
+            this.visibilityManager.update();
+        }
+
+        this.canSee = this.getVisibleUnits();
+
+        if (!isEqual(oldCanSee, this.canSee)) {
+            this.messageRouter.send(
+                {
+                    type: "server:unit:selected:update",
+                    payload: { canSee: this.canSee.map(({ id }) => id) }
+                },
+                this.side.id
+            );
+        }
+    }
+
+    rotate(orientation: Orientation): void {
         this.logger.info("Rotating", this.name, "to orientation", orientation);
 
         this._verifyDirectional();
@@ -462,11 +528,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const aptCost = ROTATION_APT_COST * Math.abs(relativeRotation);
 
-        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+        if (!this._hasSufficientActionPoints(aptCost)) {
             return;
         }
 
-        messageRouter.sendIfVisible(
+        this.messageRouter.sendIfVisible(
             {
                 type: "server:camera:move:to",
                 payload: {
@@ -479,9 +545,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
         );
 
         while (Math.abs(relativeRotation) > 0) {
-            this._orientation = rotateOrientation(this.orientation, Math.sign(relativeRotation));
+            this.orientation = rotateOrientation(this.orientation, Math.sign(relativeRotation));
 
-            messageRouter.send(
+            this.messageRouter.send(
                 {
                     type: "server:unit:selected:update",
                     payload: { orientation: this._orientation }
@@ -489,29 +555,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 this.side.id
             );
 
-            if (!this._useActionPoints(game, ROTATION_APT_COST, messageRouter)) {
+            if (!this._useActionPoints(ROTATION_APT_COST)) {
                 return;
             }
 
             // TODO: Update available actions.
 
-            this._visibilityManager.invalidateViewerOrientation(this.id);
-            if (config.showVisibilityDebugGraphics) {
-                const debugGraphics: DebugGraphic[] = [];
-                this._visibilityManager.update(this.id, debugGraphics);
-                if (debugGraphics.length > 0) {
-                    messageRouter.send({
-                        type: "server:debug:graphics",
-                        payload: debugGraphics
-                    });
-                }
-            } else {
-                this._visibilityManager.update(this.id);
-            }
+            this._refreshVisibility();
 
-            const tile = game.map.getTile(mapLocation);
+            const tile = this.map.getTile(mapLocation);
 
-            messageRouter.sendIfVisible(
+            this.messageRouter.sendIfVisible(
                 [
                     { type: "server:wait:time", payload: 300 },
                     {
@@ -521,13 +575,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 ],
                 mapLocation
             );
+            this.messageRouter.send(
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibleTiles(this.side.oppositionSideIds)
+                },
+                this.side.id
+            );
 
             relativeRotation = relativeDirection(this.orientation, orientation);
         }
     }
 
-    move(game: Game, orientation: Orientation, messageRouter: MessageRouter): void {
-        const { map } = game;
+    move(orientation: Orientation): void {
+        const { map } = this;
 
         const direction = this.isDirectional
             ? rotateOrientation(this.orientation, orientation)
@@ -542,7 +603,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const dstTile = map.sampleTile(dstPos);
         if (!dstTile) {
-            messageRouter.send(
+            this.messageRouter.send(
                 {
                     type: "server:error",
                     payload: ErrorType.enum.UNABLE_TO_MOVE_THERE
@@ -554,7 +615,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const movementObstruction = dstTile.getMovementObstruction(this.type);
         if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
-            messageRouter.send(
+            this.messageRouter.send(
                 { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MOVE_THERE },
                 this.side.id
             );
@@ -562,19 +623,19 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         aptCost *= 1 /* + movementObstruction */;
-        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+        if (!this._hasSufficientActionPoints(aptCost)) {
             return;
         }
 
         // TODO: Overtaking stuff...
 
-        if (!this._useActionPoints(game, aptCost, messageRouter)) {
+        if (!this._useActionPoints(aptCost)) {
             return;
         }
 
         const srcTile = map.getTile(this.mapLocation);
         srcTile.removeUnit(this);
-        messageRouter.sendIfVisible(
+        this.messageRouter.sendIfVisible(
             [
                 { type: "server:wait:time", payload: 300 },
                 { type: "server:map:update", payload: [srcTile.generateTileUpdate()] }
@@ -583,16 +644,24 @@ export class Unit extends SceneObject implements VisibilityViewer {
         );
 
         this.location = dstTile.location;
-        messageRouter.send(
-            {
-                type: "server:unit:selected:update",
-                payload: { location: this.location }
-            },
+        dstTile.addUnit(this);
+        this._refreshVisibility();
+
+        this.messageRouter.send(
+            [
+                {
+                    type: "server:unit:selected:update",
+                    payload: { location: this.location }
+                },
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibleTiles(this.side.oppositionSideIds)
+                }
+            ],
             this.side.id
         );
 
-        dstTile.addUnit(this);
-        messageRouter.sendIfVisible(
+        this.messageRouter.sendIfVisible(
             [
                 { type: "server:map:update", payload: [dstTile.generateTileUpdate()] },
                 {
@@ -606,19 +675,6 @@ export class Unit extends SceneObject implements VisibilityViewer {
             ],
             dstPos
         );
-
-        if (config.showVisibilityDebugGraphics) {
-            const debugGraphics: DebugGraphic[] = [];
-            this._visibilityManager.update(this.id, debugGraphics);
-            if (debugGraphics.length > 0) {
-                messageRouter.send({
-                    type: "server:debug:graphics",
-                    payload: debugGraphics
-                });
-            }
-        } else {
-            this._visibilityManager.update(this.id);
-        }
 
         // this.updateAvailableActions(map);
 
@@ -637,13 +693,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     fire(
-        game: Game,
         weapon: Item,
         fireSelector: FireSelector,
         fireMode: FireMode,
         worldPoses: Vec2[],
-        triggerHeldTimeInMs: number,
-        messageRouter: MessageRouter
+        triggerHeldTimeInMs: number
     ): void {
         if (!this.itemInUse) {
             throw new Error("No item in use - but one was expected");
@@ -652,10 +706,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
             throw new Error(`Weapon ${weapon.id} is not part of item in use ${this.itemInUse?.id}`);
         }
 
-        const { map } = game;
+        const { map } = this;
 
         this.logger.info("Fire", {
-            gameId: game.id,
+            gameId: this.game.id,
             weaponId: weapon.id,
             fireSelector,
             fireMode,
@@ -724,25 +778,25 @@ export class Unit extends SceneObject implements VisibilityViewer {
             const aptCost = shot === 0 ? initialAptCost : perShotAptCost;
             this.logger.dir({ shot, aptCost, initialAptCost, perShotAptCost });
 
-            if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+            if (!this._hasSufficientActionPoints(aptCost)) {
                 return;
             }
 
             if (weapon.isEmpty) {
-                messageRouter.send(
+                this.messageRouter.send(
                     { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_AMMO },
                     this.side.id
                 );
             }
 
-            if (!this._useActionPoints(game, aptCost, messageRouter)) {
+            if (!this._useActionPoints(aptCost)) {
                 return;
             }
 
             const round = weapon.fire();
             this.logger.dir({ round });
 
-            messageRouter.send(
+            this.messageRouter.send(
                 {
                     type: "server:unit:weapon:update",
                     payload: this.itemInUse.getFireModeItemSummary(this)
@@ -766,7 +820,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 this.logger.dir({ perturbedAngle, directionVector, fromWorldPos });
 
                 return new Projectile({
-                    game,
+                    game: this.game,
                     firingUnit: this,
                     firingWeapon: weapon,
                     projectileIndex,
@@ -784,7 +838,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             const showDebugGraphics = config.showProjectileDebugGraphics;
             const debugGraphics: DebugGraphic[] = [];
             const imageManager = ImageManager.GetSingleton();
-            const roundDamageCache = game.damageCacheManager.createRoundInstance(imageManager);
+            const roundDamageCache = this.damageCacheManager.createRoundInstance(imageManager);
 
             const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
@@ -809,14 +863,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 (a, b) => a.timeMs - b.timeMs
             );
 
-            roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
+            roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
             this.logger.dir({ onTarget });
 
             if (showDebugGraphics && debugGraphics) {
-                messageRouter.send({
+                this.messageRouter.send({
                     type: "server:debug:graphics",
                     payload: debugGraphics
                 });
@@ -824,7 +878,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             // TODO: Move the projectiles forward in time...
             // TODO: Psuedo tracers - how do we determine visibility?
-            messageRouter.send([
+            this.messageRouter.send([
                 {
                     type: "server:fire:trace",
                     payload: {
@@ -837,23 +891,23 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
     }
 
-    throw(game: Game, worldPos: Vec2, messageRouter: MessageRouter): void {
+    throw(worldPos: Vec2): void {
         const { itemInUse: itemToThrow } = this;
 
         if (!itemToThrow) {
             throw new Error("No item in use - but one was expected");
         }
 
-        const { map } = game;
+        const { map } = this;
 
         this.logger.info("Throw", {
-            gameId: game.id,
+            gameId: this.game.id,
             itemId: itemToThrow.id,
             worldPos
         });
 
         const aptCost = itemToThrow.throwActionPointCost;
-        if (!this._hasSufficientActionPoints(game, aptCost, messageRouter)) {
+        if (!this._hasSufficientActionPoints(aptCost)) {
             return;
         }
 
@@ -915,7 +969,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             perturbedTargetWorldPos: perturbedTargetWorldPos.toString()
         });
 
-        if (!this._useActionPoints(game, aptCost, messageRouter)) {
+        if (!this._useActionPoints(aptCost)) {
             return;
         }
 
@@ -925,7 +979,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         );
 
         const projectile = new Projectile({
-            game,
+            game: this.game,
             firingUnit: this,
             firingWeapon: itemToThrow,
             projectileIndex: 0,
@@ -960,7 +1014,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         const showDebugGraphics = config.showProjectileDebugGraphics;
         const debugGraphics: DebugGraphic[] = [];
         const imageManager = ImageManager.GetSingleton();
-        const roundDamageCache = game.damageCacheManager.createRoundInstance(imageManager);
+        const roundDamageCache = this.damageCacheManager.createRoundInstance(imageManager);
 
         const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
@@ -982,7 +1036,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // - Update the
 
         if (showDebugGraphics && debugGraphics) {
-            messageRouter.send({
+            this.messageRouter.send({
                 type: "server:debug:graphics",
                 payload: debugGraphics
             });
@@ -992,7 +1046,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             (a, b) => a.timeMs - b.timeMs
         );
 
-        roundDamageCache.adoptInto(game.damageCacheManager, imageManager);
+        roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
         const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
 
@@ -1014,7 +1068,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         // TODO: Move the projectiles forward in time...
         // TODO: Psuedo tracers - how do we determine visibility?
-        messageRouter.send([
+        this.messageRouter.send([
             {
                 type: "server:fire:trace",
                 payload: {
@@ -1025,7 +1079,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
         ]);
 
-        messageRouter.send(
+        this.messageRouter.send(
             {
                 type: "server:unit:selected:update",
                 payload: {
@@ -1101,7 +1155,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             disorientation: this.disorientation,
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
             collisionRadius: this._recipe.collision.radius,
-            canSee: this.canSee,
+            canSee: this.canSee.map(({ id }) => id),
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,
@@ -1132,6 +1186,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     get pois(): VisibilityPoi[] {
-        return this._visibilityManager.getPois(this.interestMasks);
+        return this.visibilityManager.getPois(this.interestMasks);
+    }
+
+    getVisibleUnits(): Unit[] {
+        const { game, side, visibilityManager } = this;
+
+        const oppositionUnits = game.getOppositionUnitsForSide(side.id);
+
+        return oppositionUnits.filter(({ mapLocation }) => {
+            const tile = game.map.getTile(mapLocation);
+            return visibilityManager.isPoiVisibleForMasks(tile, this.interestMasks);
+        });
     }
 }

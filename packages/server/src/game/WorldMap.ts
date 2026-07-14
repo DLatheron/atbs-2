@@ -3,15 +3,13 @@ import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import { Aabb, clamp, DebugGraphic, ITilePos, Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { Unit } from "./Unit.js";
-import { FurnitureManager } from "./FurnitureManager.js";
-import { ItemManager } from "./ItemManager.js";
 import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 import { Material } from "./Material.js";
 import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { CollisionSample } from "./Tile.js";
-import type { VisibilityManager } from "./VisibilityManager.js";
+import type { Game } from "./Game.js";
 
 export type VisualRayCastResult =
     | { visible: true; pos: Vec2; tile: Tile }
@@ -27,6 +25,7 @@ export const MapRecipe = z.object({
 export type MapRecipe = z.infer<typeof MapRecipe>;
 
 export class WorldMap {
+    private readonly _game: Game;
     private readonly _id: MapId;
     private readonly _name: string;
     private readonly _width: number;
@@ -34,12 +33,9 @@ export class WorldMap {
     private readonly _tileSize: number;
     private readonly _tiles: Tile[][];
 
-    constructor(
-        recipe: Readonly<MapRecipe>,
-        _itemManager: ItemManager,
-        furnitureManager: FurnitureManager,
-        visibilityManager: VisibilityManager
-    ) {
+    constructor(recipe: Readonly<MapRecipe>, game: Game) {
+        this._game = game;
+
         this._id = recipe.id;
         this._name = recipe.name;
         this._width = recipe.width;
@@ -53,8 +49,8 @@ export class WorldMap {
                         new TilePos(col, row),
                         recipe.tileSize,
                         tileRecipe,
-                        furnitureManager,
-                        visibilityManager
+                        this._game.furnitureManager,
+                        this._game.visibilityManager
                     )
             )
         );
