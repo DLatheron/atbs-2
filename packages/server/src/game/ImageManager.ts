@@ -13,7 +13,8 @@ const ImageDirectories = [
     "./data/units",
     "./data/items",
     "./data/icons",
-    "./data/furniture"
+    "./data/furniture",
+    "./data/vfx"
 ];
 
 const compoundIdRegex =
