@@ -2,6 +2,7 @@ import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
 import { TilePos, Vec2 } from "@atbs/maths";
+import { Smoke } from "../../AnimationDefinitions.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
@@ -53,6 +54,11 @@ export class ActionPhaseHandler extends PhaseHandler {
                 from.sendMessage({
                     type: "server:game:tile:info",
                     payload: tile.getTileInfo()
+                });
+
+                from.sendMessage({
+                    type: "server:animations:play",
+                    payload: [{ worldPos: game.map.tileCenterToWorld(tilePos), recipe: Smoke }]
                 });
 
                 // from.sendMessage({

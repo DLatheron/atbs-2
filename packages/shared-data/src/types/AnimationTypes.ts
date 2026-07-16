@@ -94,6 +94,14 @@ export const AnimationRecipe = z.object({
 });
 export type AnimationRecipe = z.infer<typeof AnimationRecipe>;
 
+export const PlayAnimation = z
+    .object({
+        worldPos: IVec2,
+        recipe: AnimationRecipe
+    })
+    .describe("The animation to play");
+export type PlayAnimation = z.infer<typeof PlayAnimation>;
+
 export function interpolateNumber(fromValue: number, toValue: number, t: number) {
     return fromValue + (toValue - fromValue) * t;
 }

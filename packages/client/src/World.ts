@@ -48,6 +48,7 @@ import {
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { applyTimedTileUpdate } from "./mapUpdates.js";
+import { AnimationController } from "./AnimationController.js";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -99,6 +100,7 @@ export class World {
     private _drawSights: boolean;
     private _debugGraphics: DebugGraphic[] | null;
     private _visibleTiles: Set<string>;
+    private _animationController: AnimationController;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -140,6 +142,7 @@ export class World {
         this._drawSights = false;
         this._debugGraphics = null;
         this._visibleTiles = new Set<string>();
+        this._animationController = new AnimationController(imageCache);
     }
 
     get hasMap(): boolean {
@@ -378,6 +381,10 @@ export class World {
         this._visibleTiles = value;
     }
 
+    get animationController(): AnimationController {
+        return this._animationController;
+    }
+
     setTracers(
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
@@ -597,6 +604,8 @@ export class World {
     update({ time, frameDelta }: { time: number; frameDelta: number }) {
         this._frameTime = time;
 
+        this._animationController.update({ time, frameDelta });
+
         this.camera.worldBounds = this.worldBounds;
 
         this._interactionHandler?.update?.({ time, frameDelta });
@@ -649,6 +658,11 @@ export class World {
 
         this._renderDebugGraphics(renderProps);
         this.renderSight(context, time);
+
+        this._animationController.render({
+            camera: this.camera,
+            context: context
+        });
 
         if (this._renderStarted) {
             this._renderStarted();

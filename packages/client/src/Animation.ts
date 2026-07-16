@@ -1,4 +1,4 @@
-import { clamp } from "@atbs/maths";
+import { clamp, Vec2 } from "@atbs/maths";
 import { Logger, LogLevel } from "@atbs/misc";
 import {
     AnimationId,
@@ -15,6 +15,9 @@ import {
     ScaleState
 } from "@atbs/shared-data";
 import z from "zod";
+import { DrawVfx } from "./RenderHelpers";
+import { ImageCache } from "./ImageCache";
+import { Camera2d } from "./Camera2d";
 
 export const AnimationOverrides = z
     .object({
@@ -77,7 +80,7 @@ export class Animation {
         evaluateValue: (fromValue: TValue, toValue: TValue, t: number) => TValue
     ): TValue {
         this.logger.debug(`Evaluating state value: ${name} at time ${elapsedTimeIntoAnimation}`);
-        this.logger.group();
+        // this.logger.group();
         if (!Array.isArray(value)) {
             this.logger.debug("Evaluating static state value", { value });
             this.logger.groupEnd();
@@ -136,12 +139,34 @@ export class Animation {
 
     update(time: number) {
         if (this._startTime === undefined) {
-            throw new Error("Animation has not been started");
+            this._startTime = time;
+            // throw new Error("Animation has not been started");
         }
 
         const elapsedTimeIntoAnimation = time - this._startTime;
         this.logger.debug("Updating animation", { time, elapsedTimeIntoAnimation });
 
         this._state = this.evaluateState(elapsedTimeIntoAnimation);
+    }
+
+    render({
+        camera,
+        context,
+        worldPos,
+        imageCache
+    }: {
+        camera: Camera2d;
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+        worldPos: Vec2;
+        imageCache: ImageCache;
+    }) {
+        const { imageId, scale, opacity } = this._state;
+
+        imageCache.requestImage(imageId);
+        if (!imageCache.isLoaded(imageId)) {
+            return;
+        }
+
+        DrawVfx(camera, context, imageCache.getImage(imageId), worldPos, scale, opacity, 0);
     }
 }
