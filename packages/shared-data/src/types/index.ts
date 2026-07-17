@@ -7,3 +7,4 @@ export * from "./RenderMode.js";
 export * from "./RestTypes.js";
 export * from "./TrackingSpeed.js";
 export * from "./ServerToClientMessage.js";
+export * from "./VfxTypes.js";

@@ -1,21 +1,17 @@
 import { AnimationId, PlayAnimation } from "@atbs/shared-data";
 import { Animation } from "./Animation";
 import { ImageCache } from "./ImageCache";
-import { Camera2d } from "./Camera2d";
 import { Vec2 } from "@atbs/maths";
 
 export class AnimationController {
     private _imageCache: ImageCache;
-    private _animationInstances: {
-        animation: Animation;
-        worldPos: Vec2;
-    }[];
-    private _animationInstanceIndex: number;
+    private _animationMap: Map<AnimationId, Animation>;
+    private _lastUpdateTime: number;
 
     constructor(imageCache: ImageCache) {
         this._imageCache = imageCache;
-        this._animationInstances = [];
-        this._animationInstanceIndex = 0;
+        this._animationMap = new Map<AnimationId, Animation>();
+        this._lastUpdateTime = 0;
     }
 
     get imageCache(): ImageCache {
@@ -23,44 +19,41 @@ export class AnimationController {
     }
 
     newAnimation(playAnimation: PlayAnimation) {
-        const animation = new Animation(playAnimation.recipe, {
-            instanceIndex: this._animationInstanceIndex++
-            // TODO: Location etc.
-        });
+        const animation = new Animation(playAnimation, { startTime: this._lastUpdateTime });
 
-        this._animationInstances.push({ animation, worldPos: new Vec2(playAnimation.worldPos) });
+        this._animationMap.set(animation.id, animation);
 
         return animation.id;
     }
 
     removeAnimation(animationId: AnimationId) {
-        this._animationInstances = this._animationInstances.filter(
-            ({ animation }) => animation.id !== animationId
-        );
+        this._animationMap.delete(animationId);
     }
 
     update({ time }: { time: number; frameDelta: number }) {
-        for (const { animation } of this._animationInstances) {
+        for (const animation of this._animationMap.values()) {
             animation.update(time);
         }
+
+        this._lastUpdateTime = time;
     }
 
-    render({
-        camera,
-        context
-    }: {
-        camera: Camera2d;
-        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-    }) {
+    renderAnimation(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        animationId: AnimationId,
+        canvasPos: Vec2
+    ) {
+        const animation = this._animationMap.get(animationId);
+        if (!animation) {
+            return;
+        }
+
         const { imageCache } = this;
 
-        for (const { animation, worldPos } of this._animationInstances) {
-            animation.render({
-                camera,
-                context,
-                worldPos,
-                imageCache
-            });
-        }
+        animation.renderToCanvas({
+            context,
+            canvasPos,
+            imageCache
+        });
     }
 }

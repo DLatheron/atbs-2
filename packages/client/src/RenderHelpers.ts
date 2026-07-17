@@ -597,3 +597,23 @@ export function DrawVfx(
     context.translate(-centerCanvasPos.x + halfSize, -centerCanvasPos.y + halfSize);
     context.globalAlpha = 1;
 }
+
+export function DrawVfxToCanvas(
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    image: CanvasImageSource,
+    canvasPos: Vec2,
+    size: number,
+    alpha: number,
+    rotationInDegrees = 0
+): void {
+    const angleInRadians = degreesToRadians(rotationInDegrees);
+    const halfSize = size / 2;
+
+    context.globalAlpha = alpha;
+    context.translate(canvasPos.x - halfSize, canvasPos.y - halfSize);
+    context.rotate(angleInRadians);
+    context.drawImage(image, 0, 0, size, size);
+    context.rotate(-angleInRadians);
+    context.translate(-canvasPos.x + halfSize, -canvasPos.y + halfSize);
+    context.globalAlpha = 1;
+}

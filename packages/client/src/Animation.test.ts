@@ -13,7 +13,7 @@ const Smoke: AnimationRecipe = {
 
 describe("Animation", () => {
     it("should evaluate the state of the animation", () => {
-        const animation = new Animation(Smoke);
+        const animation = new Animation({ instanceId: "smoke.vfx", recipe: Smoke });
         expect(animation.state).toStrictEqual({
             scale: 0,
             opacity: 0,
@@ -22,7 +22,7 @@ describe("Animation", () => {
     });
 
     it("should evaluate the state of the animation over time", () => {
-        const animation = new Animation(Smoke);
+        const animation = new Animation({ instanceId: "smoke.vfx", recipe: Smoke });
         animation.startTime = 0;
         animation.update(1000);
         expect(animation.state).toStrictEqual({
@@ -33,7 +33,7 @@ describe("Animation", () => {
     });
 
     it("should stick to the first state values after the animation has started", () => {
-        const animation = new Animation(Smoke);
+        const animation = new Animation({ instanceId: "smoke.vfx", recipe: Smoke });
         animation.startTime = 0;
         animation.update(0);
         expect(animation.state).toStrictEqual({
@@ -44,7 +44,7 @@ describe("Animation", () => {
     });
 
     it("should stick to the last state values after the animation has finished", () => {
-        const animation = new Animation(Smoke);
+        const animation = new Animation({ instanceId: "smoke.vfx", recipe: Smoke });
         animation.startTime = 0;
         animation.update(1001);
         expect(animation.state).toStrictEqual({
@@ -55,7 +55,7 @@ describe("Animation", () => {
     });
 
     it("should interpolate values between the first and last state values", () => {
-        const animation = new Animation(Smoke);
+        const animation = new Animation({ instanceId: "smoke.vfx", recipe: Smoke });
         animation.startTime = 0;
         animation.update(500);
         expect(animation.state).toStrictEqual({

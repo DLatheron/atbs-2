@@ -2,7 +2,6 @@ import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
 import { TilePos, Vec2 } from "@atbs/maths";
-import { Smoke } from "../../AnimationDefinitions.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
@@ -56,9 +55,18 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: tile.getTileInfo()
                 });
 
+                // Temporary create a smoke vfx.
+                const vfx = game.vfxManager.newVfx("smoke.vfx", tilePos);
+                tile.addVfx(vfx);
+
+                // from.sendMessage({
+                //     type: "server:animations:play",
+                //     payload: [{ worldPos: game.map.tileCenterToWorld(tilePos) }]
+                // });
+
                 from.sendMessage({
-                    type: "server:animations:play",
-                    payload: [{ worldPos: game.map.tileCenterToWorld(tilePos), recipe: Smoke }]
+                    type: "server:map:update",
+                    payload: [tile.generateTileUpdate()]
                 });
 
                 // from.sendMessage({

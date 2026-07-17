@@ -11,11 +11,12 @@ import {
     interpolateNumber,
     OpacitySequence,
     OpacityState,
+    PlayAnimation,
     ScaleSequence,
     ScaleState
 } from "@atbs/shared-data";
 import z from "zod";
-import { DrawVfx } from "./RenderHelpers";
+import { DrawVfx, DrawVfxToCanvas } from "./RenderHelpers";
 import { ImageCache } from "./ImageCache";
 import { Camera2d } from "./Camera2d";
 
@@ -36,10 +37,10 @@ export class Animation {
     private _startTime: number | undefined;
 
     constructor(
-        readonly recipe: AnimationRecipe,
+        { instanceId, recipe }: PlayAnimation,
         overrides: Readonly<AnimationOverrides> = {}
     ) {
-        this._id = `${recipe.id}-${overrides.instanceIndex}`;
+        this._id = instanceId;
         this._recipe = recipe;
         this.logger = new Logger(this.id, LogLevel.enum.warn);
         this._startTime = overrides.startTime ?? undefined;
@@ -149,7 +150,7 @@ export class Animation {
         this._state = this.evaluateState(elapsedTimeIntoAnimation);
     }
 
-    render({
+    renderToWorld({
         camera,
         context,
         worldPos,
@@ -168,5 +169,24 @@ export class Animation {
         }
 
         DrawVfx(camera, context, imageCache.getImage(imageId), worldPos, scale, opacity, 0);
+    }
+
+    renderToCanvas({
+        context,
+        canvasPos,
+        imageCache
+    }: {
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+        canvasPos: Vec2;
+        imageCache: ImageCache;
+    }) {
+        const { imageId, scale, opacity } = this._state;
+
+        imageCache.requestImage(imageId);
+        if (!imageCache.isLoaded(imageId)) {
+            return;
+        }
+
+        DrawVfxToCanvas(context, imageCache.getImage(imageId), canvasPos, scale, opacity, 0);
     }
 }

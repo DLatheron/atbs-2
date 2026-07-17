@@ -659,10 +659,10 @@ export class World {
         this._renderDebugGraphics(renderProps);
         this.renderSight(context, time);
 
-        this._animationController.render({
-            camera: this.camera,
-            context: context
-        });
+        // this._animationController.render({
+        //     camera: this.camera,
+        //     context: context
+        // });
 
         if (this._renderStarted) {
             this._renderStarted();
@@ -886,25 +886,33 @@ export class World {
                 opacity = 1,
                 visibilityFilter = false
             }) => {
-                this.imageCache.requestImage(imageId);
-                if (!this.imageCache.isLoaded(imageId)) {
-                    return;
-                }
+                if (imageId.startsWith("anim-")) {
+                    this._animationController.renderAnimation(
+                        context,
+                        imageId,
+                        canvasPos.add({ x: tileSize / 2, y: tileSize / 2 })
+                    );
+                } else {
+                    this.imageCache.requestImage(imageId);
+                    if (!this.imageCache.isLoaded(imageId)) {
+                        return;
+                    }
 
-                if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
-                    return;
-                }
+                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                        return;
+                    }
 
-                this.drawImage({
-                    context,
-                    canvasPos,
-                    image: this.imageCache.getImage(imageId),
-                    orientation,
-                    opacity,
-                    tileSize,
-                    scale,
-                    offset
-                });
+                    this.drawImage({
+                        context,
+                        canvasPos,
+                        image: this.imageCache.getImage(imageId),
+                        orientation,
+                        opacity,
+                        tileSize,
+                        scale,
+                        offset
+                    });
+                }
             }
         );
     }

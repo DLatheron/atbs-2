@@ -28,26 +28,30 @@ const Config = z
                 server: LogLevel.optional(),
                 tile: LogLevel.optional(),
                 unit: LogLevel.optional(),
-                visibilityManager: LogLevel.optional()
+                visibilityManager: LogLevel.optional(),
+                vfxRecipeManager: LogLevel.optional(),
+                vfxManager: LogLevel.optional()
             })
             .optional()
             .default({
-                itemManager: LogLevel.enum.warn,
-                unitRecipeManager: LogLevel.enum.warn,
-                furnitureManager: LogLevel.enum.warn,
-                materialManager: LogLevel.enum.warn,
-                furnitureRecipeManager: LogLevel.enum.warn,
-                gameManager: LogLevel.enum.warn,
-                imageManager: LogLevel.enum.warn,
-                mapRecipeManager: LogLevel.enum.warn,
-                scenarioRecipeManager: LogLevel.enum.warn,
-                terrainManager: LogLevel.enum.warn,
-                projectile: LogLevel.enum.warn,
-                game: LogLevel.enum.warn,
-                server: LogLevel.enum.warn,
-                tile: LogLevel.enum.warn,
-                unit: LogLevel.enum.warn,
-                visibilityManager: LogLevel.enum.info
+                itemManager: LogLevel.enum.info,
+                unitRecipeManager: LogLevel.enum.info,
+                furnitureManager: LogLevel.enum.info,
+                materialManager: LogLevel.enum.info,
+                furnitureRecipeManager: LogLevel.enum.info,
+                gameManager: LogLevel.enum.info,
+                imageManager: LogLevel.enum.info,
+                mapRecipeManager: LogLevel.enum.info,
+                scenarioRecipeManager: LogLevel.enum.info,
+                terrainManager: LogLevel.enum.info,
+                projectile: LogLevel.enum.info,
+                game: LogLevel.enum.info,
+                server: LogLevel.enum.info,
+                tile: LogLevel.enum.info,
+                unit: LogLevel.enum.info,
+                visibilityManager: LogLevel.enum.info,
+                vfxRecipeManager: LogLevel.enum.info,
+                vfxManager: LogLevel.enum.info
             })
     })
     .strict();

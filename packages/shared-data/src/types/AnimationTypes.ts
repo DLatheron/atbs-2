@@ -96,7 +96,7 @@ export type AnimationRecipe = z.infer<typeof AnimationRecipe>;
 
 export const PlayAnimation = z
     .object({
-        worldPos: IVec2,
+        instanceId: AnimationId,
         recipe: AnimationRecipe
     })
     .describe("The animation to play");

@@ -41,6 +41,7 @@ import { Item } from "./Item.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityRay } from "./VisibilityRay.js";
 import type { VisibilityManager } from "./VisibilityManager.js";
+import { Vfx } from "./Vfx.js";
 
 export interface CollisionSample {
     material: Material;
@@ -108,6 +109,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     protected readonly _furniture?: Furniture;
     protected _items: Item[];
     protected _units: Unit[];
+    protected _vfx: Vfx[];
 
     private readonly _visibilityManager: VisibilityManager;
 
@@ -133,6 +135,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             : undefined;
         this._items = [];
         this._units = [];
+        this._vfx = [];
         this._visibilityManager = visibilityManager;
     }
 
@@ -152,6 +155,10 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         return this._items;
     }
 
+    get vfx(): Vfx[] {
+        return this._vfx;
+    }
+
     get topmostUnit(): Unit | null {
         return this._units[0] ?? null;
     }
@@ -167,9 +174,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     get interestMasks(): InterestMask[] {
         return [
             ...(this.topmostItem ? ["items"] : []),
-            ...(this.topmostUnit ? [this.topmostUnit.side.id] : [])
-            // TODO: VFX
-            // ...(this.vfx.length > 0 ? ["vfx"] : [])
+            ...(this.topmostUnit ? [this.topmostUnit.side.id] : []),
+            ...(this.vfx.length > 0 ? ["vfx"] : [])
         ];
     }
 
@@ -250,19 +256,25 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._updateTilePoi();
     }
 
-    getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
-        if (this.units.length > 0) {
-            this.logger.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
-                depth: null,
-                colors: true
-            });
-        }
+    addVfx(vfx: Vfx): void {
+        this._vfx.unshift(vfx);
 
+        this._updateTilePoi();
+    }
+
+    removeVfx(vfx: Vfx): void {
+        this._vfx = this._vfx.filter(({ id }) => id !== vfx.id);
+
+        this._updateTilePoi();
+    }
+
+    getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
         return [
             ...this.terrain.getRenderList(context),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
-            ...this.units.map((unit) => unit.getRenderList(context)).flat()
+            ...this.units.map((unit) => unit.getRenderList(context)).flat(),
+            ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat()
         ];
     }
 
@@ -391,6 +403,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             });
         });
 
+        // TODO: VFX
         // this.vfx.forEach((vfx) => {
         //     const { materials } = vfx;
 
