@@ -59,6 +59,7 @@ export interface SceneContext {
     applyOrientation?: number;
     opacity?: number;
     states: string[];
+    visibilityFilter?: boolean;
 }
 
 export class SceneObject {
@@ -103,14 +104,13 @@ export class SceneObject {
                         context.applyOrientation ?? Orientation.NORTH
                     );
                     const opacity = (originalOpacity ?? 1) * (context.opacity ?? 1);
-                    // TODO: Implement visibility filtering when visibilty is added.
-                    const visibilityFilter = true;
+                    const visibilityFilter = context.visibilityFilter ?? false;
 
                     return {
                         imageId,
                         ...(orientation && { orientation }),
                         ...(opacity !== 1 && { opacity }),
-                        ...(visibilityFilter ? {} : { visibilityFilter })
+                        ...(visibilityFilter ? { visibilityFilter } : {})
                     };
                 }
             );

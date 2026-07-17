@@ -1,3 +1,4 @@
+export * from "./AnimationTypes.js";
 export * from "./ClientToServerMessage.js";
 export * from "./LobbyState.js";
 export * from "./Phase.js";
@@ -6,3 +7,4 @@ export * from "./RenderMode.js";
 export * from "./RestTypes.js";
 export * from "./TrackingSpeed.js";
 export * from "./ServerToClientMessage.js";
+export * from "./VfxTypes.js";

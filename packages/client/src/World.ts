@@ -48,6 +48,7 @@ import {
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { applyTimedTileUpdate } from "./mapUpdates.js";
+import { AnimationController } from "./AnimationController.js";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -98,6 +99,8 @@ export class World {
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
     private _debugGraphics: DebugGraphic[] | null;
+    private _visibleTiles: Set<string>;
+    private _animationController: AnimationController;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -138,6 +141,8 @@ export class World {
         this._renderPlugins = [];
         this._drawSights = false;
         this._debugGraphics = null;
+        this._visibleTiles = new Set<string>();
+        this._animationController = new AnimationController(imageCache);
     }
 
     get hasMap(): boolean {
@@ -368,6 +373,18 @@ export class World {
         });
     }
 
+    get visibleTiles(): Set<string> {
+        return this._visibleTiles;
+    }
+
+    set visibleTiles(value: Set<string>) {
+        this._visibleTiles = value;
+    }
+
+    get animationController(): AnimationController {
+        return this._animationController;
+    }
+
     setTracers(
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
@@ -587,6 +604,8 @@ export class World {
     update({ time, frameDelta }: { time: number; frameDelta: number }) {
         this._frameTime = time;
 
+        this._animationController.update({ time, frameDelta });
+
         this.camera.worldBounds = this.worldBounds;
 
         this._interactionHandler?.update?.({ time, frameDelta });
@@ -639,6 +658,11 @@ export class World {
 
         this._renderDebugGraphics(renderProps);
         this.renderSight(context, time);
+
+        // this._animationController.render({
+        //     camera: this.camera,
+        //     context: context
+        // });
 
         if (this._renderStarted) {
             this._renderStarted();
@@ -758,7 +782,12 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         time: number
     ) {
-        if (this.renderMode !== RenderMode.enum.FIRE_MODE || !this.hasUnit || !this.hasUnitWeapon || !this._drawSights) {
+        if (
+            this.renderMode !== RenderMode.enum.FIRE_MODE ||
+            !this.hasUnit ||
+            !this.hasUnitWeapon ||
+            !this._drawSights
+        ) {
             return;
         }
 
@@ -820,11 +849,12 @@ export class World {
         scale: Vec2,
         offset: Vec2
     ) {
-        this.iterateViewportTiles((renderList, _tilePos, worldPos) => {
+        this.iterateViewportTiles((renderList, tilePos, worldPos) => {
             this.drawRenderList({
                 context,
                 canvasPos: this.camera.worldToCanvas(worldPos),
                 renderList,
+                tilePos,
                 tileSize,
                 scale,
                 offset
@@ -836,6 +866,7 @@ export class World {
         context,
         canvasPos,
         renderList,
+        tilePos,
         tileSize,
         scale,
         offset
@@ -843,27 +874,47 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
         renderList: RenderList;
+        tilePos: TilePos;
         tileSize: number;
         scale: Vec2;
         offset: Vec2;
     }): void {
-        renderList.forEach(({ imageId, orientation = Orientation.NORTH, opacity = 1 }) => {
-            this.imageCache.requestImage(imageId);
-            if (!this.imageCache.isLoaded(imageId)) {
-                return;
-            }
+        renderList.forEach(
+            ({
+                imageId,
+                orientation = Orientation.NORTH,
+                opacity = 1,
+                visibilityFilter = false
+            }) => {
+                if (imageId.startsWith("anim-")) {
+                    this._animationController.renderAnimation(
+                        context,
+                        imageId,
+                        canvasPos.add({ x: tileSize / 2, y: tileSize / 2 })
+                    );
+                } else {
+                    this.imageCache.requestImage(imageId);
+                    if (!this.imageCache.isLoaded(imageId)) {
+                        return;
+                    }
 
-            this.drawImage({
-                context,
-                canvasPos,
-                image: this.imageCache.getImage(imageId),
-                orientation,
-                opacity,
-                tileSize,
-                scale,
-                offset
-            });
-        });
+                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                        return;
+                    }
+
+                    this.drawImage({
+                        context,
+                        canvasPos,
+                        image: this.imageCache.getImage(imageId),
+                        orientation,
+                        opacity,
+                        tileSize,
+                        scale,
+                        offset
+                    });
+                }
+            }
+        );
     }
 
     drawImage({

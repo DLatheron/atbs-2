@@ -184,6 +184,16 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:debug:graphics", async (_context, payload) => {
                 world.debugGraphics = payload;
+            }),
+
+            messageManager.registerHandler("server:visible:tiles", async (_context, payload) => {
+                world.visibleTiles = new Set(payload);
+            }),
+
+            messageManager.registerHandler("server:animations:play", async (_context, payload) => {
+                for (const playAnimation of payload) {
+                    world.animationController.newAnimation(playAnimation);
+                }
             })
         ];
 

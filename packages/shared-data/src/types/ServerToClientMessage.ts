@@ -20,6 +20,7 @@ import {
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
+import { PlayAnimation } from "./AnimationTypes.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -182,6 +183,14 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:debug:graphics"),
         payload: z.array(DebugGraphic).nullable()
+    }),
+    z.object({
+        type: z.literal("server:visible:tiles"),
+        payload: z.array(z.string().describe("Tile position as a string"))
+    }),
+    z.object({
+        type: z.literal("server:animations:play"),
+        payload: z.array(PlayAnimation)
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

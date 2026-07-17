@@ -55,6 +55,20 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: tile.getTileInfo()
                 });
 
+                // Temporary create a smoke vfx.
+                const vfx = game.vfxManager.newVfx("smoke.vfx", tilePos);
+                tile.addVfx(vfx);
+
+                // from.sendMessage({
+                //     type: "server:animations:play",
+                //     payload: [{ worldPos: game.map.tileCenterToWorld(tilePos) }]
+                // });
+
+                from.sendMessage({
+                    type: "server:map:update",
+                    payload: [tile.generateTileUpdate()]
+                });
+
                 // from.sendMessage({
                 //     type: "server:debug:graphics",
                 //     payload: [
@@ -173,7 +187,7 @@ export class ActionPhaseHandler extends PhaseHandler {
 
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
-                        selectedUnit.move(game, orientation, game.messageRouter);
+                        selectedUnit.move(orientation);
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
@@ -186,7 +200,7 @@ export class ActionPhaseHandler extends PhaseHandler {
 
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
-                        selectedUnit.rotate(game, orientation, game.messageRouter);
+                        selectedUnit.rotate(orientation);
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
@@ -243,13 +257,11 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
 
                 selectedUnit.fire(
-                    game,
                     weapon,
                     fireDetails.fireSelector,
                     fireDetails.fireMode,
                     fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
-                    fireDetails.triggerHeldTimeInMs,
-                    this.messageRouter
+                    fireDetails.triggerHeldTimeInMs
                 );
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             }),
@@ -267,7 +279,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     );
                 }
 
-                selectedUnit.throw(game, new Vec2(throwDetails.worldPos), this.messageRouter);
+                selectedUnit.throw(new Vec2(throwDetails.worldPos));
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             })
 

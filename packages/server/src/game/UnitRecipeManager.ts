@@ -2,9 +2,9 @@ import { UnitId } from "@atbs/shared-data";
 import { Unit, UnitAdditionalData, UnitOverrides, UnitRecipe } from "./Unit.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
-import { ItemManager } from "./ItemManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
+import type { Game } from "./Game.js";
 
 const UnitDirectory = "./data/units";
 
@@ -24,11 +24,11 @@ export class UnitRecipeManager {
         unitId: UnitId,
         overrides: UnitOverrides,
         additionalData: UnitAdditionalData,
-        itemManager: ItemManager
+        game: Game
     ): Unit {
         const unitRecipe = this.getRecipe(unitId);
 
-        return new Unit(unitRecipe, overrides, additionalData, itemManager);
+        return new Unit(unitRecipe, overrides, additionalData, game);
     }
 
     async loadUnitRecipes(directory = UnitDirectory): Promise<void> {

@@ -31,6 +31,10 @@ import { MaterialManager } from "./MaterialManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
+import { VisibilityManager } from "./VisibilityManager.js";
+import { DebugGraphic } from "@atbs/maths";
+import { VfxRecipeManager } from "./VfxRecipeManager.js";
+import { VfxManager } from "./VfxManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -69,6 +73,9 @@ export class Game {
     private readonly _itemManager: ItemManager;
     private readonly _furnitureManager: FurnitureManager;
     private readonly _damageCacheManager: DamageCacheManager;
+    private readonly _visibilityManager: VisibilityManager;
+    private readonly _vfxRecipeManager: VfxRecipeManager;
+    private readonly _vfxManager: VfxManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -86,6 +93,7 @@ export class Game {
         scenarioRecipeManager: ScenarioRecipeManager,
         itemRecipeManager: ItemRecipeManager,
         furnitureRecipeManager: FurnitureRecipeManager,
+        vfxRecipeManager: VfxRecipeManager,
         materialManager: MaterialManager
     ) {
         const gameId = generateGameId();
@@ -99,6 +107,9 @@ export class Game {
         this._itemManager = new ItemManager(itemRecipeManager);
         this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
         this._damageCacheManager = new DamageCacheManager(gameId);
+        this._visibilityManager = new VisibilityManager(this);
+        this._vfxRecipeManager = vfxRecipeManager;
+        this._vfxManager = new VfxManager(this);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -312,6 +323,18 @@ export class Game {
         return this._damageCacheManager;
     }
 
+    get visibilityManager(): VisibilityManager {
+        return this._visibilityManager;
+    }
+
+    get vfxManager(): VfxManager {
+        return this._vfxManager;
+    }
+
+    get vfxRecipeManager(): VfxRecipeManager {
+        return this._vfxRecipeManager;
+    }
+
     set scenario(value: Scenario | null) {
         if (this.phase !== Phase.enum.lobby) {
             throw new Error(`Scenario cannot be changed whilst in ${this.phase} phase`);
@@ -521,6 +544,16 @@ export class Game {
         this._playState.selectedUnit = value;
     }
 
+    getUnitsForSide(sideId: SideId): Unit[] {
+        return this.getSide(sideId).units;
+    }
+
+    getOppositionUnitsForSide(sideId: SideId): Unit[] {
+        return this.getSide(sideId)
+            .oppositionSideIds.map((oppositionSideId) => this.getSide(oppositionSideId).units)
+            .flat();
+    }
+
     startActionPhase(): void {
         this._playState.turn = 1;
         this.selectedUnit = null;
@@ -531,6 +564,23 @@ export class Game {
                 this.map.addUnit(unit);
             })
         );
+
+        if (config.showVisibilityDebugGraphics) {
+            const debugGraphics: DebugGraphic[] = [];
+            this.visibilityManager.update(undefined, debugGraphics);
+            if (debugGraphics.length > 0) {
+                this.messageRouter.broadcast(
+                    {
+                        type: "server:debug:graphics",
+                        payload: debugGraphics
+                    },
+                    [],
+                    true
+                );
+            }
+        } else {
+            this.visibilityManager.update();
+        }
 
         this.messageRouter.broadcast(
             {
@@ -602,6 +652,12 @@ export class Game {
         // Make the playing side start the side, disable their UI and clear their waiting model.
         this.messageRouter.send(
             [
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibleTiles(
+                        this.turnsSide.oppositionSideIds
+                    )
+                },
                 {
                     type: "server:side:start",
                     payload: { side: this.turnsSide.toSummary() }

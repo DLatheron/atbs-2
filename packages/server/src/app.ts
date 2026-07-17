@@ -8,6 +8,8 @@ import { UnitRecipeManager } from "./game/UnitRecipeManager.js";
 import { ItemRecipeManager } from "./game/ItemRecipeManager.js";
 import { FurnitureRecipeManager } from "./game/FurnitureRecipeManager.js";
 import { MaterialManager } from "./game/MaterialManager.js";
+import { AnimationRecipeManager } from "./game/AnimationRecipeManager.js";
+import { VfxRecipeManager } from "./game/VfxRecipeManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -37,6 +39,12 @@ export async function createApp(): Promise<Application> {
     const furnitureRecipeManager = FurnitureRecipeManager.GetSingleton();
     await furnitureRecipeManager.loadFurnitureRecipes();
 
+    const animationRecipeManager = AnimationRecipeManager.GetSingleton();
+    await animationRecipeManager.loadAnimationRecipes();
+
+    const vfxRecipeManager = VfxRecipeManager.GetSingleton();
+    await vfxRecipeManager.loadVfxRecipes();
+
     const scenarioRecipeManager = new ScenarioRecipeManager();
     await scenarioRecipeManager.loadScenarioRecipes();
 
@@ -46,6 +54,8 @@ export async function createApp(): Promise<Application> {
     app.locals.mapRecipeManager = mapRecipeManager;
     app.locals.unitRecipeManager = unitRecipeManager;
     app.locals.itemRecipeManager = itemRecipeManager;
+    app.locals.animationRecipeManager = animationRecipeManager;
+    app.locals.vfxRecipeManager = vfxRecipeManager;
     app.locals.furnitureRecipeManager = furnitureRecipeManager;
     app.locals.scenarioRecipeManager = scenarioRecipeManager;
 

@@ -23,6 +23,7 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { TerrainRecipe } from "./Terrain.js";
 import type { Game } from "./Game.js";
+import { VisibilityManager } from "./VisibilityManager.js";
 
 const THIN_WOOD_RGB = { r: 107, g: 66, b: 0 };
 
@@ -850,6 +851,7 @@ describe("Tile.SampleCollisionLayers", () => {
         const furnitureRecipeManager = new FurnitureRecipeManager();
         furnitureRecipeManager.addRecipe(createDoorRecipe());
         const furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
+        const visibilityManager = new VisibilityManager({ id: "game-1" } as Game);
         const tilePos = new TilePos(0, 0);
 
         const tempDir = mkdtempSync(path.join(tmpdir(), "atbs-tile-test-"));
@@ -882,7 +884,8 @@ describe("Tile.SampleCollisionLayers", () => {
                 terrain: { id: "grass" },
                 furniture: { id: "door.furniture" }
             }),
-            furnitureManager
+            furnitureManager,
+            visibilityManager
         );
 
         const layers = tile.getCollisionLayers(imageManager);

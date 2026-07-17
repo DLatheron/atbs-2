@@ -18,11 +18,13 @@ import { IRenderableEntity } from "./IRenderableEntity.js";
 import { SceneContext } from "./SceneObject.js";
 import {
     FurnitureState,
+    InterestMask,
     RenderList,
     RenderMode,
     TileInfo,
     TileUpdate,
-    TimedTileUpdate
+    TimedTileUpdate,
+    type VisualType
 } from "@atbs/shared-data";
 import { Unit } from "./Unit.js";
 import { Furniture } from "./Furniture.js";
@@ -36,6 +38,10 @@ import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Item } from "./Item.js";
+import type { VisibilityPoi } from "./VisibilityPoi.js";
+import type { VisibilityRay } from "./VisibilityRay.js";
+import type { VisibilityManager } from "./VisibilityManager.js";
+import { Vfx } from "./Vfx.js";
 
 export interface CollisionSample {
     material: Material;
@@ -93,7 +99,7 @@ export interface LayerCollision {
     materials: Material[];
 }
 
-export class Tile implements IRenderableEntity {
+export class Tile implements IRenderableEntity, VisibilityPoi {
     readonly logger: Logger;
 
     protected _location: TilePos;
@@ -103,12 +109,16 @@ export class Tile implements IRenderableEntity {
     protected readonly _furniture?: Furniture;
     protected _items: Item[];
     protected _units: Unit[];
+    protected _vfx: Vfx[];
+
+    private readonly _visibilityManager: VisibilityManager;
 
     constructor(
         location: TilePos,
         tileSize: number,
         recipe: Readonly<TileRecipe>,
-        furnitureManager: FurnitureManager
+        furnitureManager: FurnitureManager,
+        visibilityManager: VisibilityManager
     ) {
         this.logger = new Logger(`Tile-${location}`, config.logLevels?.tile);
 
@@ -125,6 +135,8 @@ export class Tile implements IRenderableEntity {
             : undefined;
         this._items = [];
         this._units = [];
+        this._vfx = [];
+        this._visibilityManager = visibilityManager;
     }
 
     get terrain(): Terrain {
@@ -143,6 +155,10 @@ export class Tile implements IRenderableEntity {
         return this._items;
     }
 
+    get vfx(): Vfx[] {
+        return this._vfx;
+    }
+
     get topmostUnit(): Unit | null {
         return this._units[0] ?? null;
     }
@@ -153,6 +169,14 @@ export class Tile implements IRenderableEntity {
 
     get location(): TilePos {
         return this._location;
+    }
+
+    get interestMasks(): InterestMask[] {
+        return [
+            ...(this.topmostItem ? ["items"] : []),
+            ...(this.topmostUnit ? [this.topmostUnit.side.id] : []),
+            ...(this.vfx.length > 0 ? ["vfx"] : [])
+        ];
     }
 
     get aabb(): Aabb {
@@ -167,6 +191,10 @@ export class Tile implements IRenderableEntity {
         return Orientation.NORTH;
     }
 
+    intersectsRay(ray: VisibilityRay): Vec2 | undefined {
+        return this._aabb.intersectRay(ray.srcPos, ray.dstPos);
+    }
+
     addUnit(unit: Unit): void {
         if (!unit.location) {
             throw new Error(`Unit ${unit.id} does not have an assigned location`);
@@ -178,6 +206,8 @@ export class Tile implements IRenderableEntity {
         }
 
         this._units.unshift(unit);
+
+        this._updateTilePoi();
     }
 
     removeUnit(unit: Unit): void {
@@ -191,6 +221,8 @@ export class Tile implements IRenderableEntity {
         }
 
         this._units = this._units.filter(({ id }) => id !== unit.id);
+
+        this._updateTilePoi();
     }
 
     addItem(item: Item): void {
@@ -205,6 +237,8 @@ export class Tile implements IRenderableEntity {
 
         this._items.unshift(item);
         this._items.sort((a, b) => a.weight - b.weight);
+
+        this._updateTilePoi();
     }
 
     removeItem(item: Item): void {
@@ -218,21 +252,29 @@ export class Tile implements IRenderableEntity {
         }
 
         this._items = this._items.filter(({ id }) => id !== item.id);
+
+        this._updateTilePoi();
+    }
+
+    addVfx(vfx: Vfx): void {
+        this._vfx.unshift(vfx);
+
+        this._updateTilePoi();
+    }
+
+    removeVfx(vfx: Vfx): void {
+        this._vfx = this._vfx.filter(({ id }) => id !== vfx.id);
+
+        this._updateTilePoi();
     }
 
     getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
-        if (this.units.length > 0) {
-            this.logger.dir(this.units.map((unit) => unit.getRenderList(context)).flat(), {
-                depth: null,
-                colors: true
-            });
-        }
-
         return [
             ...this.terrain.getRenderList(context),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
-            ...this.units.map((unit) => unit.getRenderList(context)).flat()
+            ...this.units.map((unit) => unit.getRenderList(context)).flat(),
+            ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat()
         ];
     }
 
@@ -361,6 +403,7 @@ export class Tile implements IRenderableEntity {
             });
         });
 
+        // TODO: VFX
         // this.vfx.forEach((vfx) => {
         //     const { materials } = vfx;
 
@@ -439,6 +482,79 @@ export class Tile implements IRenderableEntity {
                     imageId,
                     layerIndex,
                     orientation: collisionSample.orientation
+                };
+            }
+        }
+    }
+
+    /**
+     * Casts a visual LOS ray through this tile, draining ray life by material densityMap[visualType].
+     * Does not damage materials. Returns a hit when life is exhausted; otherwise undefined.
+     */
+    castVisualRay(
+        ray: IRayCast,
+        visualType: VisualType,
+        subTileSrcPos: Vec2,
+        subTileDstPos: Vec2,
+        debugGraphics?: DebugGraphic[]
+    ): GridRayTraceResult {
+        this.logger.info("Casting visual ray against tile");
+
+        if (!this.anythingCollidable) {
+            this.logger.info("  - Contains nothing collidable");
+            return;
+        }
+
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        if (collisionLayers.length === 0) {
+            this.logger.info("  - Has no collision layers (but is collidable?");
+            return;
+        }
+
+        for (const samplePos of walkCellBresenhamLine(
+            subTileSrcPos,
+            subTileDstPos,
+            this._tileSize
+        )) {
+            this.logger.info(`  - ${samplePos} - sampling...`);
+
+            const collisionSample = Tile.SampleCollisionLayers(samplePos, collisionLayers);
+            if (!collisionSample) {
+                continue;
+            }
+
+            const { material, owner, imageId, layerIndex, orientation } = collisionSample;
+            const pixelCost = material.getDensityForType(visualType);
+            ray.life -= pixelCost;
+
+            this.logger.info(
+                `    - hit material ${material.id} (cost ${pixelCost}, life ${ray.life})`
+            );
+
+            if (!ray.isRayAlive) {
+                debugGraphics?.push(
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 8,
+                        colour: Colour.White
+                    },
+                    {
+                        type: DebugGraphicType.enum.point,
+                        worldPos: this.aabb.topLeft.add(samplePos),
+                        size: 6,
+                        colour: new Colour({ ...Colour.Red, a: 1 })
+                    }
+                );
+
+                return {
+                    pos: samplePos,
+                    material,
+                    tile: this,
+                    owner,
+                    imageId,
+                    layerIndex,
+                    orientation
                 };
             }
         }
@@ -624,6 +740,14 @@ export class Tile implements IRenderableEntity {
                 const [material] = Material.DetermineMaterial(materialColour, materials);
                 return { material, owner, imageId, layerIndex, orientation };
             }
+        }
+    }
+
+    private _updateTilePoi(): void {
+        if (this.interestMasks.length > 0) {
+            this._visibilityManager.addPoi(this);
+        } else {
+            this._visibilityManager.removePoi(this);
         }
     }
 }

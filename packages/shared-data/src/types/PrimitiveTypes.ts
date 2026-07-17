@@ -51,6 +51,9 @@ export type ObjectId = z.infer<typeof ObjectId>;
 export const UnitId = z.string().nonempty();
 export type UnitId = z.infer<typeof UnitId>;
 
+export const ViewerId = z.string().nonempty();
+export type ViewerId = z.infer<typeof ViewerId>;
+
 export const ItemId = z.string().nonempty();
 export type ItemId = z.infer<typeof ItemId>;
 
@@ -115,7 +118,10 @@ export const materialTransition = ["enter", "exit", "transition"] as const;
 export const MaterialTransition = z.enum(materialTransition);
 export type MaterialTransition = z.infer<typeof MaterialTransition>;
 
-export const materialDensityType = ["eyeball", "projectile"] as const;
+export const VisualType = z.enum(["eyeball", "infrared"]);
+export type VisualType = z.infer<typeof VisualType>;
+
+export const materialDensityType = ["eyeball", "infrared", "projectile"] as const;
 export const MaterialDensityType = z.enum(materialDensityType);
 export type MaterialDensityType = z.infer<typeof MaterialDensityType>;
 
@@ -664,6 +670,7 @@ export const UnitSummary = z.object({
     viewAngleInDegrees: z.int().positive(),
     collisionRadius: z.number().positive(),
     isDirectional: z.boolean().optional().default(true),
+    canSee: z.number().nonnegative(),
     attributes: z.object({
         actionPoints: Attribute,
         constitution: Attribute,
@@ -773,3 +780,6 @@ export const TimedTileUpdate = TileUpdate.extend({
     timeMs: z.number().nonnegative()
 });
 export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;
+
+export const InterestMask = z.union([z.literal("items"), z.literal("vfx"), z.string()]);
+export type InterestMask = z.infer<typeof InterestMask>;
