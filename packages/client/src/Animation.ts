@@ -33,17 +33,25 @@ export class Animation {
 
     private readonly _id: InstanceId;
     private readonly _recipe: AnimationRecipe;
+    private readonly _flags: { loop: boolean };
+    private _completeCallback?: (time: number) => void;
+
     private _state: AnimationState;
     private _startTime: number | undefined;
+    private _duration: number;
 
     constructor(
         { instanceId, recipe }: PlayAnimation,
-        overrides: Readonly<AnimationOverrides> = {}
+        overrides: Readonly<AnimationOverrides> = {},
+        completeCallback?: (time: number) => void
     ) {
         this._id = instanceId;
         this._recipe = recipe;
+        this._flags = recipe.flags ?? { loop: false };
         this.logger = new Logger(this.id, LogLevel.enum.warn);
         this._startTime = overrides.startTime ?? undefined;
+        this._duration = Animation._PreCalculateDuration(recipe);
+        this._completeCallback = completeCallback;
 
         // Ensure we have a valid state.
         this._state = this.evaluateState(this._startTime ?? 0);
@@ -65,6 +73,10 @@ export class Animation {
         return this._startTime;
     }
 
+    get duration(): number {
+        return this._duration;
+    }
+
     set startTime(value: number) {
         if (this._startTime !== undefined) {
             throw new Error("Animation has already been started");
@@ -72,6 +84,22 @@ export class Animation {
 
         this.logger.debug("Starting animation", { value });
         this._startTime = value;
+    }
+
+    private static _PreCalculateDuration(recipe: AnimationRecipe): number {
+        let duration = 0;
+
+        for (const property of Object.values(recipe.stateDef)) {
+            if (!Array.isArray(property)) {
+                continue;
+            }
+
+            for (const sequence of property[1]) {
+                duration = Math.max(duration, sequence.startOffset + sequence.duration);
+            }
+        }
+
+        return duration;
     }
 
     private evaluateStateValue<TValue, TSequence>(
@@ -141,13 +169,19 @@ export class Animation {
     update(time: number) {
         if (this._startTime === undefined) {
             this._startTime = time;
-            // throw new Error("Animation has not been started");
         }
 
-        const elapsedTimeIntoAnimation = time - this._startTime;
+        const elapsedTimeIntoAnimation = this._flags.loop
+            ? (time - this._startTime) % this.duration
+            : time - this._startTime;
         this.logger.debug("Updating animation", { time, elapsedTimeIntoAnimation });
 
         this._state = this.evaluateState(elapsedTimeIntoAnimation);
+
+        if (this._completeCallback && elapsedTimeIntoAnimation >= this.duration) {
+            this._completeCallback(time);
+            this._completeCallback = undefined;
+        }
     }
 
     renderToWorld({

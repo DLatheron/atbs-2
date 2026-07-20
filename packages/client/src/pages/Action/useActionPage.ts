@@ -194,7 +194,16 @@ export function useActionPage() {
                 for (const playAnimation of payload) {
                     world.animationController.newAnimation(playAnimation);
                 }
-            })
+            }),
+
+            messageManager.registerHandler(
+                "server:anim:objects:create",
+                async (_context, payload) => {
+                    for (const animatableObjectRecipe of payload) {
+                        world.animationController.newAnimatableObject(animatableObjectRecipe);
+                    }
+                }
+            )
         ];
 
         return () => {

@@ -42,6 +42,9 @@ pnpm dev:client   # UI on http://localhost:5173 (Vite, proxies /api to the serve
 
 Open http://localhost:5173 — the page shows the message from `GET /api/status`.
 
+- http://localhost:5173/?client-id=ea3f6731-d893-4cf8-9641-e588b184c4a7&game-id=USH6-8D25&mode=create
+- http://localhost:5173/?game-id=USH6-8D25&client-id=f2aae33e-c5d1-4d54-aafc-709f7350feab&mode=join
+
 ## Scripts
 
 | Script        | Description        |

@@ -1,6 +1,6 @@
 import { IColour, IVec2 } from "@atbs/maths";
 import z from "zod";
-import { ImageId } from "./PrimitiveTypes.js";
+import { ImageId, InstanceId } from "./PrimitiveTypes.js";
 
 export const AnimationId = z.string().nonempty().describe("The ID of the animation");
 export type AnimationId = z.infer<typeof AnimationId>;
@@ -90,6 +90,7 @@ export type AnimationState = z.infer<typeof AnimationState>;
 
 export const AnimationRecipe = z.object({
     id: AnimationId,
+    flags: z.object({ loop: z.boolean().describe("Whether the animation should loop") }).optional(),
     stateDef: AnimationStateDef.describe("The definition of each animation property overtime")
 });
 export type AnimationRecipe = z.infer<typeof AnimationRecipe>;
@@ -97,6 +98,11 @@ export type AnimationRecipe = z.infer<typeof AnimationRecipe>;
 export const PlayAnimation = z
     .object({
         instanceId: AnimationId,
+        offset: z
+            .number()
+            .nonnegative()
+            .describe("The offset from the start of the animation in milliseconds")
+            .default(0),
         recipe: AnimationRecipe
     })
     .describe("The animation to play");
@@ -125,3 +131,12 @@ export function interpolateVec2(fromValue: IVec2, toValue: IVec2, t: number) {
 export function interpolateImageId(fromValue: ImageId, toValue: ImageId, t: number) {
     return t < 0.5 ? fromValue : toValue;
 }
+
+export const AnimatableObjectRecipe = z.object({
+    instanceId: InstanceId.nonempty().describe("The unique ID of the animatable object"),
+    worldPos: IVec2.optional().describe(
+        "The world position of the animatable object, if not specified then its referenced from the world's render list"
+    ),
+    recipes: z.array(AnimationRecipe).describe("The recipes of the animatable object")
+});
+export type AnimatableObjectRecipe = z.infer<typeof AnimatableObjectRecipe>;

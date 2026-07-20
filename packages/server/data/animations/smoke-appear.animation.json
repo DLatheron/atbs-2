@@ -1,5 +1,5 @@
 {
-    "id": "smoke.animation",
+    "id": "smoke-appear.animation",
     "stateDef": {
         "scale": [
             0,

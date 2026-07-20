@@ -14,7 +14,7 @@ export class Logger {
     }
 
     private _log(level: LogLevel, ...args: unknown[]) {
-        if (level >= this.level) {
+        if (level <= this.level) {
             console.log(`[${this.system}] ${level}:`, ...args);
         }
     }

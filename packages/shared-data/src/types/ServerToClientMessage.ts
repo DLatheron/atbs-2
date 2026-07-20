@@ -20,7 +20,7 @@ import {
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
-import { PlayAnimation } from "./AnimationTypes.js";
+import { AnimatableObjectRecipe, PlayAnimation } from "./AnimationTypes.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -191,6 +191,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:animations:play"),
         payload: z.array(PlayAnimation)
+    }),
+    z.object({
+        type: z.literal("server:anim:objects:create"),
+        payload: z.array(AnimatableObjectRecipe)
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;
