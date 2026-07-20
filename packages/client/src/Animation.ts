@@ -1,4 +1,4 @@
-import { clamp, Vec2 } from "@atbs/maths";
+import { clamp, Vec2, Vec2 } from "@atbs/maths";
 import { Logger, LogLevel } from "@atbs/misc";
 import {
     AnimationId,
@@ -12,6 +12,8 @@ import {
     OpacitySequence,
     OpacityState,
     PlayAnimation,
+    RotationSequence,
+    RotationState,
     ScaleSequence,
     ScaleState
 } from "@atbs/shared-data";
@@ -33,6 +35,7 @@ export class Animation {
 
     private readonly _id: InstanceId;
     private readonly _recipe: AnimationRecipe;
+    private readonly _worldPos: Vec2 | undefined;
     private readonly _flags: { loop: boolean };
     private _completeCallback?: (time: number) => void;
 
@@ -41,12 +44,13 @@ export class Animation {
     private _duration: number;
 
     constructor(
-        { instanceId, recipe }: PlayAnimation,
+        { instanceId, recipe, worldPos }: PlayAnimation,
         overrides: Readonly<AnimationOverrides> = {},
         completeCallback?: (time: number) => void
     ) {
         this._id = instanceId;
         this._recipe = recipe;
+        this._worldPos = worldPos ? new Vec2(worldPos) : undefined;
         this._flags = recipe.flags ?? { loop: false };
         this.logger = new Logger(this.id, LogLevel.enum.warn);
         this._startTime = overrides.startTime ?? undefined;
@@ -84,6 +88,18 @@ export class Animation {
 
         this.logger.debug("Starting animation", { value });
         this._startTime = value;
+    }
+
+    get hasWorldPos(): boolean {
+        return this._worldPos !== undefined;
+    }
+
+    get worldPos(): Vec2 {
+        if (!this._worldPos) {
+            throw new Error("Animation does not have a world position");
+        }
+
+        return this._worldPos;
     }
 
     private static _PreCalculateDuration(recipe: AnimationRecipe): number {
@@ -145,18 +161,30 @@ export class Animation {
 
     private evaluateState(elapsedTimeIntoAnimation: number): AnimationState {
         return {
-            scale: this.evaluateStateValue<ScaleState, ScaleSequence>(
-                "scale",
-                this._recipe.stateDef.scale,
-                elapsedTimeIntoAnimation,
-                interpolateNumber
-            ),
-            opacity: this.evaluateStateValue<OpacityState, OpacitySequence>(
-                "opacity",
-                this._recipe.stateDef.opacity,
-                elapsedTimeIntoAnimation,
-                interpolateNumber
-            ),
+            scale: this._recipe.stateDef.scale
+                ? this.evaluateStateValue<ScaleState, ScaleSequence>(
+                      "scale",
+                      this._recipe.stateDef.scale,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 100,
+            opacity: this._recipe.stateDef.opacity
+                ? this.evaluateStateValue<OpacityState, OpacitySequence>(
+                      "opacity",
+                      this._recipe.stateDef.opacity,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 1,
+            rotation: this._recipe.stateDef.rotation
+                ? this.evaluateStateValue<RotationState, RotationSequence>(
+                      "rotation",
+                      this._recipe.stateDef.rotation,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 0,
             imageId: this.evaluateStateValue<ImageIdState, ImageIdSequence>(
                 "imageId",
                 this._recipe.stateDef.imageId,
@@ -195,14 +223,14 @@ export class Animation {
         worldPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity } = this._state;
+        const { imageId, scale, opacity, rotation } = this._state;
 
         imageCache.requestImage(imageId);
         if (!imageCache.isLoaded(imageId)) {
             return;
         }
 
-        DrawVfx(camera, context, imageCache.getImage(imageId), worldPos, scale, opacity, 0);
+        DrawVfx(camera, context, imageCache.getImage(imageId), worldPos, scale, opacity, rotation);
     }
 
     renderToCanvas({
@@ -214,13 +242,13 @@ export class Animation {
         canvasPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity } = this._state;
+        const { imageId, scale, opacity, rotation } = this._state;
 
         imageCache.requestImage(imageId);
         if (!imageCache.isLoaded(imageId)) {
             return;
         }
 
-        DrawVfxToCanvas(context, imageCache.getImage(imageId), canvasPos, scale, opacity, 0);
+        DrawVfxToCanvas(context, imageCache.getImage(imageId), canvasPos, scale, opacity, rotation);
     }
 }

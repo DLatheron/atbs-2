@@ -659,10 +659,10 @@ export class World {
         this._renderDebugGraphics(renderProps);
         this.renderSight(context, time);
 
-        // this._animationController.render({
-        //     camera: this.camera,
-        //     context: context
-        // });
+        this._animationController.render({
+            camera: this.camera,
+            context: context
+        });
 
         if (this._renderStarted) {
             this._renderStarted();

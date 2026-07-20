@@ -57,6 +57,19 @@ export const OpacitySequence = z
     .describe("The sequence of opacity values over time");
 export type OpacitySequence = z.infer<typeof OpacitySequence>;
 
+export const RotationState = z.number().describe("The rotation of the animation");
+export type RotationState = z.infer<typeof RotationState>;
+
+export const RotationSequence = z
+    .tuple([
+        RotationState,
+        z
+            .array(makeSequenceDef(RotationState))
+            .describe("The sequence of rotation values over time")
+    ])
+    .describe("The sequence of rotation values over time");
+export type RotationSequence = z.infer<typeof RotationSequence>;
+
 export const ImageIdState = z.string().nonempty().describe("The image ID of the animation");
 export type ImageIdState = z.infer<typeof ImageIdState>;
 
@@ -69,12 +82,18 @@ export const ImageIdSequence = z
 export type ImageIdSequence = z.infer<typeof ImageIdSequence>;
 
 export const AnimationStateDef = z.object({
-    scale: ScaleState.or(ScaleSequence).describe(
-        "The scale of the animation or its sequence over time"
-    ),
-    opacity: OpacityState.or(OpacitySequence).describe(
-        "The opacity of the animation or its sequence over time"
-    ),
+    scale: ScaleState.or(ScaleSequence)
+        .describe("The scale of the animation or its sequence over time")
+        .optional()
+        .default(100),
+    opacity: OpacityState.or(OpacitySequence)
+        .describe("The opacity of the animation or its sequence over time")
+        .optional()
+        .default(1),
+    rotation: RotationState.or(RotationSequence)
+        .describe("The rotation of the animation or its sequence over time")
+        .optional()
+        .default(0),
     imageId: ImageIdState.or(ImageIdSequence).describe(
         "The image ID of the animation or its sequence over time"
     )
@@ -84,6 +103,7 @@ export type AnimationStateDef = z.infer<typeof AnimationStateDef>;
 export const AnimationState = z.object({
     scale: ScaleState,
     opacity: OpacityState,
+    rotation: RotationState,
     imageId: ImageIdState
 });
 export type AnimationState = z.infer<typeof AnimationState>;
@@ -103,7 +123,8 @@ export const PlayAnimation = z
             .nonnegative()
             .describe("The offset from the start of the animation in milliseconds")
             .default(0),
-        recipe: AnimationRecipe
+        recipe: AnimationRecipe,
+        worldPos: IVec2.optional().describe("The world position of the animation")
     })
     .describe("The animation to play");
 export type PlayAnimation = z.infer<typeof PlayAnimation>;

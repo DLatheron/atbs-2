@@ -2,6 +2,7 @@ import { Phase } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
 import { TilePos, Vec2 } from "@atbs/maths";
+import { AnimationRecipeManager } from "../AnimationRecipeManager.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
@@ -55,9 +56,24 @@ export class ActionPhaseHandler extends PhaseHandler {
                     payload: tile.getTileInfo()
                 });
 
+                // Temporary create a shockwave vfx.
+                from.sendMessage({
+                    type: "server:animations:play",
+                    payload: [
+                        {
+                            instanceId: "shockwave.animation",
+                            offset: 0,
+                            recipe: AnimationRecipeManager.GetSingleton().getRecipe(
+                                "shockwave.animation"
+                            ),
+                            worldPos: game.map.tileCenterToWorld(tilePos)
+                        }
+                    ]
+                });
+
                 // Temporary create a smoke vfx.
-                const vfx = game.vfxManager.newVfx("smoke.vfx", tilePos);
-                tile.addVfx(vfx);
+                // const smokeVfx = game.vfxManager.newVfx("smoke.vfx", tilePos);
+                // tile.addVfx(smokeVfx);
 
                 // from.sendMessage({
                 //     type: "server:animations:play",

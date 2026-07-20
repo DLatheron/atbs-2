@@ -1,0 +1,49 @@
+{
+    "id": "shockwave.animation",
+    "stateDef": {
+        "scale": [
+            0,
+            [
+                {
+                    "type": "ease-in",
+                    "startOffset": 0,
+                    "powerIn": 4,
+                    "duration": 1000,
+                    "toValue": 800
+                }
+            ]
+        ],
+        "opacity": [
+            0.5,
+            [
+                {
+                    "type": "ease-out",
+                    "startOffset": 0,
+                    "powerOut": 4,
+                    "duration": 750,
+                    "toValue": 1
+                },
+                {
+                    "type": "ease-out",
+                    "startOffset": 900,
+                    "powerOut": 1,
+                    "duration": 100,
+                    "toValue": 0
+                }
+            ]
+        ],
+        "rotation": [
+            0,
+            [
+                {
+                    "type": "ease-in",
+                    "startOffset": 0,
+                    "powerIn": 4,
+                    "duration": 1000,
+                    "toValue": 100
+                }
+            ]
+        ],
+        "imageId": "shockwave"
+    }
+}

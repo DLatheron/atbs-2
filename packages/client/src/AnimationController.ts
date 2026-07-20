@@ -3,6 +3,7 @@ import { Animation } from "./Animation";
 import { ImageCache } from "./ImageCache";
 import { Vec2 } from "@atbs/maths";
 import { AnimatableObject } from "./AnimatableObject";
+import { Camera2d } from "./Camera2d";
 
 export class AnimationController {
     private _imageCache: ImageCache;
@@ -62,6 +63,27 @@ export class AnimationController {
         }
 
         this._lastUpdateTime = time;
+    }
+
+    render({
+        camera,
+        context
+    }: {
+        camera: Camera2d;
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+    }) {
+        const { imageCache } = this;
+
+        for (const animation of this._animationMap.values()) {
+            if (animation.hasWorldPos) {
+                animation.renderToWorld({
+                    camera,
+                    context,
+                    worldPos: animation.worldPos,
+                    imageCache
+                });
+            }
+        }
     }
 
     renderAnimation(

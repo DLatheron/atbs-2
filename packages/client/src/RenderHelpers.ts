@@ -590,11 +590,11 @@ export function DrawVfx(
     const halfSize = size / 2;
 
     context.globalAlpha = alpha;
-    context.translate(centerCanvasPos.x - halfSize, centerCanvasPos.y - halfSize);
+    context.translate(centerCanvasPos.x, centerCanvasPos.y);
     context.rotate(angleInRadians);
-    context.drawImage(image, 0, 0, size, size);
+    context.drawImage(image, -halfSize, -halfSize, size, size);
     context.rotate(-angleInRadians);
-    context.translate(-centerCanvasPos.x + halfSize, -centerCanvasPos.y + halfSize);
+    context.translate(-centerCanvasPos.x, -centerCanvasPos.y);
     context.globalAlpha = 1;
 }
 

@@ -43,10 +43,10 @@ export class AnimatableObject {
         this._worldPos = value;
     }
 
-    playNextAnimation(time: number) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    playNextAnimation(_time: number) {
         const animationRecipe = this._animationQueue.shift();
         if (animationRecipe) {
-            this._logger.debug(`Animation ${this._animation?.id} started at ${time}`);
             this._animation = this._animationController.newAnimation(
                 {
                     instanceId: this.instanceId,
@@ -67,8 +67,7 @@ export class AnimatableObject {
             this.playNextAnimation(time);
         }
 
-        const elapsedTimeIntoAnimation = time - this._startTime;
-        this._logger.debug("Updating animatable object", { time, elapsedTimeIntoAnimation });
+        // const elapsedTimeIntoAnimation = time - this._startTime;
 
         // TODO: Start any new animations - update and inprogress ones etc.
 
