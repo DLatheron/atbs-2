@@ -591,26 +591,25 @@ export class World {
 
             render({ camera, context }: RenderPluginRenderProps) {
                 const { time } = tracerTimer;
-                const inFireMode = world.renderMode === RenderMode.enum.FIRE_MODE;
 
-                // Tracers only draw in fire mode; while a death is playing we are
-                // in map mode and must not draw projectiles.
-                let allComplete = true;
-                if (inFireMode) {
-                    for (const tracer of tracers) {
-                        if (!DrawProjectile(camera, context, 0, time, tracer)) {
-                            allComplete = false;
-                        }
-                    }
-                }
-
-                // Never complete the trace while a death spin holds the clock;
-                // the frozen `time` also prevents projectiles from advancing.
+                // A death spin/hold owns the tracer clock: don't draw projectiles
+                // or complete the trace while it plays. `paused` (set in
+                // beginDeath, cleared in endHold) is the authoritative "a death is
+                // playing" flag, independent of this client's persistent render
+                // mode — the observing side stays in map mode yet must still draw
+                // tracers and complete the trace to unblock its message queue.
                 if (paused) {
                     return false;
                 }
 
-                if (inFireMode && allComplete) {
+                let allComplete = true;
+                for (const tracer of tracers) {
+                    if (!DrawProjectile(camera, context, 0, time, tracer)) {
+                        allComplete = false;
+                    }
+                }
+
+                if (allComplete) {
                     finish();
                     return true;
                 }

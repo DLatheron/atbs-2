@@ -650,14 +650,13 @@ export class Game {
         );
 
         // Make the playing side start the side, disable their UI and clear their waiting model.
+        // Intentionally do NOT send `server:visible:tiles` here: the queued playback
+        // from the previous side already contains interleaved visibility updates that
+        // stay in sync with each map change. Sending the final set first would be
+        // immediately overwritten by those historical intermediate sets and cause
+        // units to flicker in and out during playback.
         this.messageRouter.send(
             [
-                {
-                    type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(
-                        this.turnsSide.oppositionSideIds
-                    )
-                },
                 {
                     type: "server:side:start",
                     payload: { side: this.turnsSide.toSummary() }
@@ -679,12 +678,21 @@ export class Game {
         this.messageRouter.pauseMessageSending(this.oppositionSideIds);
         this.messageRouter.resumeMessageSending(this.turnsSideId);
 
-        // When done re-enable playing side's UI.
+        // Final visibility sync (covers empty queues / actions that don't broadcast)
+        // then re-enable the playing side's UI.
         this.messageRouter.send(
-            {
-                type: "server:ui:disabled",
-                payload: false
-            },
+            [
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibleTiles(
+                        this.turnsSide.oppositionSideIds
+                    )
+                },
+                {
+                    type: "server:ui:disabled",
+                    payload: false
+                }
+            ],
             this.turnsSideId
         );
 

@@ -517,6 +517,27 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
     }
 
+    /**
+     * Sends every side its own visibility set. Because opposition messages are
+     * queued during another side's turn, this interleaves each side's visible
+     * tiles into their playback so that visibility-filtered content (enemy units)
+     * is revealed/hidden correctly when they watch the acting side's actions.
+     * Sending only to the acting side leaves the opposition's `visibleTiles`
+     * stale, which culls enemy unit sprites on their client even when they should
+     * be visible.
+     */
+    private _broadcastVisibleTiles(): void {
+        for (const side of this.game.sides) {
+            this.messageRouter.send(
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibleTiles(side.oppositionSideIds)
+                },
+                side.id
+            );
+        }
+    }
+
     rotate(orientation: Orientation): void {
         this.logger.info("Rotating", this.name, "to orientation", orientation);
 
@@ -578,13 +599,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 ],
                 mapLocation
             );
-            this.messageRouter.send(
-                {
-                    type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(this.side.oppositionSideIds)
-                },
-                this.side.id
-            );
+            this._broadcastVisibleTiles();
 
             relativeRotation = relativeDirection(this.orientation, orientation);
         }
@@ -651,18 +666,18 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this._refreshVisibility();
 
         this.messageRouter.send(
-            [
-                {
-                    type: "server:unit:selected:update",
-                    payload: { location: this.location }
-                },
-                {
-                    type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(this.side.oppositionSideIds)
-                }
-            ],
+            {
+                type: "server:unit:selected:update",
+                payload: { location: this.location }
+            },
             this.side.id
         );
+
+        // Broadcast the post-move visibility set AFTER the source tile has been
+        // cleared (so the old viewer location is no longer needed to keep the
+        // departing sprite visible) and BEFORE the destination tile update (so
+        // the arriving sprite is not briefly culled by a stale visibleTiles).
+        this._broadcastVisibleTiles();
 
         this.messageRouter.sendIfVisible(
             [
@@ -894,6 +909,15 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     }
                 }
             ]);
+
+            // A death can remove a viewer/blocker and open up sightlines, so
+            // recompute visibility and push each side its updated visible tiles.
+            // Queued after the trace, this applies once playback of the death has
+            // finished on the observing client.
+            if (deaths.length > 0) {
+                this._refreshVisibility();
+                this._broadcastVisibleTiles();
+            }
         }
     }
 
@@ -1087,6 +1111,15 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 }
             }
         ]);
+
+        // A death can remove a viewer/blocker and open up sightlines, so
+        // recompute visibility and push each side its updated visible tiles.
+        // Queued after the trace, this applies once playback of the death has
+        // finished on the observing client.
+        if (deaths.length > 0) {
+            this._refreshVisibility();
+            this._broadcastVisibleTiles();
+        }
 
         this.messageRouter.send(
             {
