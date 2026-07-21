@@ -1,4 +1,4 @@
-import { clamp, Vec2, Vec2 } from "@atbs/maths";
+import { clamp, Vec2 } from "@atbs/maths";
 import { Logger, LogLevel } from "@atbs/misc";
 import {
     AnimationId,

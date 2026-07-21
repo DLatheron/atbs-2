@@ -11,6 +11,7 @@ export const Smoke: AnimationRecipe = {
                 { type: "ease-in", powerIn: 4, startOffset: 1000, duration: 10000, toValue: 0 }
             ]
         ],
+        rotation: 0,
         opacity: [0, [{ type: "linear", startOffset: 0, duration: 500, toValue: 1 }]],
         imageId: "smoke15"
     }
