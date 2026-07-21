@@ -1,16 +1,19 @@
-import { clamp, Vec2 } from "@atbs/maths";
+import { clamp, Orientation, Vec2 } from "@atbs/maths";
 import { Logger, LogLevel } from "@atbs/misc";
 import {
     AnimationId,
     AnimationRecipe,
     AnimationState,
-    ImageIdSequence,
-    ImageIdState,
+    FrameSequence,
+    FrameState,
     InstanceId,
-    interpolateImageId,
+    interpolateFrame,
     interpolateNumber,
+    interpolateOrientation,
     OpacitySequence,
     OpacityState,
+    OrientationSequence,
+    OrientationState,
     PlayAnimation,
     RenderMode,
     RotationSequence,
@@ -20,7 +23,7 @@ import {
     SceneObject
 } from "@atbs/shared-data";
 import z from "zod";
-import { DrawVfx, DrawVfxToCanvas } from "./RenderHelpers";
+import { DrawVfxToCanvas } from "./RenderHelpers";
 import { ImageCache } from "./ImageCache";
 import { Camera2d } from "./Camera2d";
 
@@ -48,7 +51,8 @@ export class Animation extends SceneObject {
     constructor(
         { instanceId, recipe, worldPos }: PlayAnimation,
         overrides: Readonly<AnimationOverrides> = {},
-        completeCallback?: (time: number) => void
+        completeCallback?: (time: number) => void,
+        imageCache?: ImageCache
     ) {
         super(recipe.stateDef.renderable);
 
@@ -63,6 +67,12 @@ export class Animation extends SceneObject {
 
         // Ensure we have a valid state.
         this._state = this.evaluateState(this._startTime ?? 0);
+
+        // Pre-warm the cache for every image this animation could render, so
+        // frames/states/orientations are available before they are first shown.
+        if (imageCache) {
+            this.forEachImageId((imageId) => imageCache.requestImage(imageId));
+        }
     }
 
     get id(): InstanceId {
@@ -189,14 +199,22 @@ export class Animation extends SceneObject {
                       interpolateNumber
                   )
                 : 0,
-            imageId: this._recipe.stateDef.imageId
-                ? this.evaluateStateValue<ImageIdState, ImageIdSequence>(
-                      "imageId",
-                      this._recipe.stateDef.imageId as ImageIdState,
+            orientation: this._recipe.stateDef.orientation
+                ? this.evaluateStateValue<OrientationState, OrientationSequence>(
+                      "orientation",
+                      this._recipe.stateDef.orientation,
                       elapsedTimeIntoAnimation,
-                      interpolateImageId
+                      interpolateOrientation
                   )
-                : null
+                : Orientation.NORTH,
+            frame: this._recipe.stateDef.frame
+                ? this.evaluateStateValue<FrameState, FrameSequence>(
+                      "frame",
+                      this._recipe.stateDef.frame,
+                      elapsedTimeIntoAnimation,
+                      interpolateFrame
+                  )
+                : 0
         };
     }
 
@@ -219,7 +237,6 @@ export class Animation extends SceneObject {
     }
 
     renderToWorld({
-        camera,
         context,
         worldPos,
         imageCache
@@ -229,46 +246,29 @@ export class Animation extends SceneObject {
         worldPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity, rotation, orientation } = this._state;
+        const { scale, opacity, rotation, orientation, frame } = this._state;
 
-        if (imageId) {
-            imageCache.requestImage(imageId);
-            if (!imageCache.isLoaded(imageId)) {
+        const renderList = this.getRenderList({
+            renderMode: RenderMode.enum.MAP_MODE,
+            orientation,
+            opacity,
+            frame,
+            states: ["default"]
+        });
+
+        for (const renderable of renderList) {
+            if (!imageCache.isLoaded(renderable.imageId)) {
                 return;
             }
 
-            DrawVfx(
-                camera,
+            DrawVfxToCanvas(
                 context,
-                imageCache.getImage(imageId),
+                imageCache.getImage(renderable.imageId),
                 worldPos,
                 scale,
-                opacity,
+                renderable.opacity ?? opacity,
                 rotation
             );
-        } else {
-            const renderList = this.getRenderList({
-                renderMode: RenderMode.enum.MAP_MODE,
-                orientation,
-                opacity,
-                states: ["default"]
-            });
-
-            for (const renderable of renderList) {
-                imageCache.requestImage(renderable.imageId);
-                if (!imageCache.isLoaded(renderable.imageId)) {
-                    return;
-                }
-
-                DrawVfxToCanvas(
-                    context,
-                    imageCache.getImage(renderable.imageId),
-                    worldPos,
-                    scale,
-                    renderable.opacity ?? opacity,
-                    rotation
-                );
-            }
         }
     }
 
@@ -281,20 +281,27 @@ export class Animation extends SceneObject {
         canvasPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity, rotation } = this._state;
+        const { scale, opacity, rotation, orientation, frame } = this._state;
 
-        if (imageId) {
-            imageCache.requestImage(imageId);
-            if (!imageCache.isLoaded(imageId)) {
+        const renderList = this.getRenderList({
+            renderMode: RenderMode.enum.MAP_MODE,
+            orientation,
+            opacity,
+            frame,
+            states: ["default"]
+        });
+
+        for (const renderable of renderList) {
+            if (!imageCache.isLoaded(renderable.imageId)) {
                 return;
             }
 
             DrawVfxToCanvas(
                 context,
-                imageCache.getImage(imageId),
+                imageCache.getImage(renderable.imageId),
                 canvasPos,
                 scale,
-                opacity,
+                renderable.opacity ?? opacity,
                 rotation
             );
         }

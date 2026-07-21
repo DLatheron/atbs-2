@@ -15,28 +15,32 @@ describe("SceneObject", () => {
         },
         "map-mode": {
             alive: {
-                default: [
-                    [{ imageId: "generic-0", orientation: 8 }],
-                    [{ imageId: "generic-1", orientation: 8 }],
-                    [{ imageId: "generic-2", orientation: 8 }],
-                    [{ imageId: "generic-3", orientation: 8 }],
-                    [{ imageId: "generic-4", orientation: 8 }],
-                    [{ imageId: "generic-5", orientation: 8 }],
-                    [{ imageId: "generic-6", orientation: 8 }],
-                    [{ imageId: "generic-7", orientation: 8 }],
-                    []
-                ],
-                "item-in-use": [
-                    [{ imageId: "generic-carrying-0", orientation: 8 }],
-                    [{ imageId: "generic-carrying-1", orientation: 8 }],
-                    [{ imageId: "generic-carrying-2", orientation: 8 }],
-                    [{ imageId: "generic-carrying-3", orientation: 8 }],
-                    [{ imageId: "generic-carrying-4", orientation: 8 }],
-                    [{ imageId: "generic-carrying-5", orientation: 8 }],
-                    [{ imageId: "generic-carrying-6", orientation: 8 }],
-                    [{ imageId: "generic-carrying-7", orientation: 8 }],
-                    []
-                ]
+                default: {
+                    directional: [
+                        [{ imageId: "generic-0", orientation: 8 }],
+                        [{ imageId: "generic-1", orientation: 8 }],
+                        [{ imageId: "generic-2", orientation: 8 }],
+                        [{ imageId: "generic-3", orientation: 8 }],
+                        [{ imageId: "generic-4", orientation: 8 }],
+                        [{ imageId: "generic-5", orientation: 8 }],
+                        [{ imageId: "generic-6", orientation: 8 }],
+                        [{ imageId: "generic-7", orientation: 8 }],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    directional: [
+                        [{ imageId: "generic-carrying-0", orientation: 8 }],
+                        [{ imageId: "generic-carrying-1", orientation: 8 }],
+                        [{ imageId: "generic-carrying-2", orientation: 8 }],
+                        [{ imageId: "generic-carrying-3", orientation: 8 }],
+                        [{ imageId: "generic-carrying-4", orientation: 8 }],
+                        [{ imageId: "generic-carrying-5", orientation: 8 }],
+                        [{ imageId: "generic-carrying-6", orientation: 8 }],
+                        [{ imageId: "generic-carrying-7", orientation: 8 }],
+                        []
+                    ]
+                }
             },
             dead: [{ imageId: "generic-dead" }],
             default: []
@@ -104,6 +108,55 @@ describe("SceneObject", () => {
         expect(SceneNode.parse(furnitureSceneObjectRecipe));
     });
 
+    it("should parse a directional node whose slots are frames", () => {
+        expect(() =>
+            SceneNode.parse({
+                [RenderMode.enum.MAP_MODE]: {
+                    walking: {
+                        directional: [
+                            { frames: [[{ imageId: "n-0" }], [{ imageId: "n-1" }]] },
+                            [{ imageId: "ne" }],
+                            [{ imageId: "e" }],
+                            [{ imageId: "se" }],
+                            [{ imageId: "s" }],
+                            [{ imageId: "sw" }],
+                            [{ imageId: "w" }],
+                            [{ imageId: "nw" }],
+                            []
+                        ]
+                    },
+                    default: []
+                },
+                default: []
+            })
+        ).not.toThrow();
+    });
+
+    it("should parse a frames node whose frames are directional", () => {
+        expect(() =>
+            SceneNode.parse({
+                default: {
+                    frames: [
+                        {
+                            directional: [
+                                [{ imageId: "f0-n" }],
+                                [{ imageId: "f0-ne" }],
+                                [{ imageId: "f0-e" }],
+                                [{ imageId: "f0-se" }],
+                                [{ imageId: "f0-s" }],
+                                [{ imageId: "f0-sw" }],
+                                [{ imageId: "f0-w" }],
+                                [{ imageId: "f0-nw" }],
+                                []
+                            ]
+                        },
+                        [{ imageId: "f1" }]
+                    ]
+                }
+            })
+        ).not.toThrow();
+    });
+
     describe("SceneObject", () => {
         let sceneObject: SceneObject;
 
@@ -117,34 +170,45 @@ describe("SceneObject", () => {
                             },
                             default: [{ imageId: "did-not-match-state-3" }]
                         },
-                        "state-2-dir": [
-                            [{ imageId: "state-2-orientation-n" }],
-                            [{ imageId: "state-2-orientation-ne" }],
-                            [{ imageId: "state-2-orientation-e" }],
-                            [{ imageId: "state-2-orientation-se" }],
-                            [{ imageId: "state-2-orientation-s" }],
-                            [{ imageId: "state-2-orientation-sw" }],
-                            [{ imageId: "state-2-orientation-w" }],
-                            [{ imageId: "state-2-orientation-nw" }],
-                            [{ imageId: "state-2-orientation-center" }]
-                        ],
+                        "state-2-dir": {
+                            directional: [
+                                [{ imageId: "state-2-orientation-n" }],
+                                [{ imageId: "state-2-orientation-ne" }],
+                                [{ imageId: "state-2-orientation-e" }],
+                                [{ imageId: "state-2-orientation-se" }],
+                                [{ imageId: "state-2-orientation-s" }],
+                                [{ imageId: "state-2-orientation-sw" }],
+                                [{ imageId: "state-2-orientation-w" }],
+                                [{ imageId: "state-2-orientation-nw" }],
+                                [{ imageId: "state-2-orientation-center" }]
+                            ]
+                        },
                         default: [{ imageId: "did-not-match-state-2" }]
                     },
-                    "state-1-dir": [
-                        [{ imageId: "state-1-orientation-n" }],
-                        [{ imageId: "state-1-orientation-ne" }],
-                        [{ imageId: "state-1-orientation-e" }],
-                        [{ imageId: "state-1-orientation-se" }],
-                        [{ imageId: "state-1-orientation-s" }],
-                        [{ imageId: "state-1-orientation-sw" }],
-                        [{ imageId: "state-1-orientation-w" }],
-                        [{ imageId: "state-1-orientation-nw" }],
-                        [{ imageId: "state-1-orientation-center" }]
-                    ],
+                    "state-1-dir": {
+                        directional: [
+                            [{ imageId: "state-1-orientation-n" }],
+                            [{ imageId: "state-1-orientation-ne" }],
+                            [{ imageId: "state-1-orientation-e" }],
+                            [{ imageId: "state-1-orientation-se" }],
+                            [{ imageId: "state-1-orientation-s" }],
+                            [{ imageId: "state-1-orientation-sw" }],
+                            [{ imageId: "state-1-orientation-w" }],
+                            [{ imageId: "state-1-orientation-nw" }],
+                            [{ imageId: "state-1-orientation-center" }]
+                        ]
+                    },
                     centred: [{ imageId: "centred", orientation: Orientation.CENTER }],
                     "facing-south-west": [
                         { imageId: "facing-south-west", orientation: Orientation.SOUTH_WEST }
                     ],
+                    animated: {
+                        frames: [
+                            [{ imageId: "frame-0" }],
+                            [{ imageId: "frame-1" }],
+                            [{ imageId: "frame-2" }]
+                        ]
+                    },
                     default: [{ imageId: "did-not-match-state-1" }]
                 }
             });
@@ -256,11 +320,99 @@ describe("SceneObject", () => {
                     states: ["facing-south-west"]
                 },
                 expected: [{ imageId: "facing-south-west", orientation: Orientation.NORTH_WEST }]
+            },
+            {
+                test: "selects the first frame when no frame is provided",
+                context: {
+                    renderMode: RenderMode.enum.UI_MODE,
+                    orientation: 0,
+                    states: ["animated"]
+                },
+                expected: [{ imageId: "frame-0" }]
+            },
+            {
+                test: "selects the requested frame",
+                context: {
+                    renderMode: RenderMode.enum.UI_MODE,
+                    orientation: 0,
+                    frame: 1,
+                    states: ["animated"]
+                },
+                expected: [{ imageId: "frame-1" }]
+            },
+            {
+                test: "floors a fractional frame index",
+                context: {
+                    renderMode: RenderMode.enum.UI_MODE,
+                    orientation: 0,
+                    frame: 2.9,
+                    states: ["animated"]
+                },
+                expected: [{ imageId: "frame-2" }]
+            },
+            {
+                test: "wraps the frame index (loop)",
+                context: {
+                    renderMode: RenderMode.enum.UI_MODE,
+                    orientation: 0,
+                    frame: 4,
+                    states: ["animated"]
+                },
+                expected: [{ imageId: "frame-1" }]
             }
         ];
 
-        it.only.each(tests)("should $test", ({ context, expected }: (typeof tests)[0]) => {
+        it.each(tests)("should $test", ({ context, expected }: (typeof tests)[0]) => {
             expect(sceneObject.getRenderList(context)).toStrictEqual(expected);
+        });
+
+        it("visits every unique imageId across modes, states, orientations and frames", () => {
+            const seen: string[] = [];
+            sceneObject.forEachImageId((imageId) => seen.push(imageId));
+
+            expect(seen).toStrictEqual([
+                "matched-state-3",
+                "did-not-match-state-3",
+                "state-2-orientation-n",
+                "state-2-orientation-ne",
+                "state-2-orientation-e",
+                "state-2-orientation-se",
+                "state-2-orientation-s",
+                "state-2-orientation-sw",
+                "state-2-orientation-w",
+                "state-2-orientation-nw",
+                "state-2-orientation-center",
+                "did-not-match-state-2",
+                "state-1-orientation-n",
+                "state-1-orientation-ne",
+                "state-1-orientation-e",
+                "state-1-orientation-se",
+                "state-1-orientation-s",
+                "state-1-orientation-sw",
+                "state-1-orientation-w",
+                "state-1-orientation-nw",
+                "state-1-orientation-center",
+                "centred",
+                "facing-south-west",
+                "frame-0",
+                "frame-1",
+                "frame-2",
+                "did-not-match-state-1"
+            ]);
+        });
+
+        it("dedupes repeated imageIds", () => {
+            const duplicating = new SceneObject({
+                default: {
+                    default: [{ imageId: "shared" }],
+                    other: [{ imageId: "shared" }, { imageId: "unique" }]
+                }
+            });
+
+            const seen: string[] = [];
+            duplicating.forEachImageId((imageId) => seen.push(imageId));
+
+            expect(seen).toStrictEqual(["shared", "unique"]);
         });
     });
 });

@@ -609,11 +609,13 @@ export function DrawVfxToCanvas(
     const angleInRadians = degreesToRadians(rotationInDegrees);
     const halfSize = size / 2;
 
+    // Rotate about the centre of the drawn image: translate to the centre,
+    // rotate, then draw the image offset by half its size in each axis.
     context.globalAlpha = alpha;
-    context.translate(canvasPos.x - halfSize, canvasPos.y - halfSize);
+    context.translate(canvasPos.x, canvasPos.y);
     context.rotate(angleInRadians);
-    context.drawImage(image, 0, 0, size, size);
+    context.drawImage(image, -halfSize, -halfSize, size, size);
     context.rotate(-angleInRadians);
-    context.translate(-canvasPos.x + halfSize, -canvasPos.y + halfSize);
+    context.translate(-canvasPos.x, -canvasPos.y);
     context.globalAlpha = 1;
 }

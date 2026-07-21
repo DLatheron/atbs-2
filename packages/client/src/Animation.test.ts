@@ -8,7 +8,9 @@ const Smoke: AnimationRecipe = {
         scale: [0, [{ type: "linear", startOffset: 0, duration: 1000, toValue: 100 }]],
         opacity: [0, [{ type: "linear", startOffset: 0, duration: 1000, toValue: 1 }]],
         rotation: 0,
-        imageId: "smoke15"
+        renderable: {
+            default: [{ imageId: "smoke15" }]
+        }
     }
 };
 
@@ -19,7 +21,8 @@ describe("Animation", () => {
             scale: 0,
             opacity: 0,
             rotation: 0,
-            imageId: "smoke15"
+            orientation: 0,
+            frame: 0
         });
     });
 
@@ -31,7 +34,8 @@ describe("Animation", () => {
             scale: 100,
             opacity: 1,
             rotation: 0,
-            imageId: "smoke15"
+            orientation: 0,
+            frame: 0
         });
     });
 
@@ -43,7 +47,8 @@ describe("Animation", () => {
             scale: 0,
             opacity: 0,
             rotation: 0,
-            imageId: "smoke15"
+            orientation: 0,
+            frame: 0
         });
     });
 
@@ -55,7 +60,8 @@ describe("Animation", () => {
             scale: 100,
             opacity: 1,
             rotation: 0,
-            imageId: "smoke15"
+            orientation: 0,
+            frame: 0
         });
     });
 
@@ -67,7 +73,8 @@ describe("Animation", () => {
             scale: 50,
             opacity: 0.5,
             rotation: 0,
-            imageId: "smoke15"
+            orientation: 0,
+            frame: 0
         });
     });
 });

@@ -1,6 +1,6 @@
 import { IColour, IVec2, Orientation } from "@atbs/maths";
 import z from "zod";
-import { ImageId, InstanceId } from "./PrimitiveTypes.js";
+import { InstanceId } from "./PrimitiveTypes.js";
 import { SceneNode } from "./SceneObject.js";
 
 export const AnimationId = z.string().nonempty().describe("The ID of the animation");
@@ -84,16 +84,20 @@ export const OrientationSequence = z
     .describe("The sequence of orientation values over time");
 export type OrientationSequence = z.infer<typeof OrientationSequence>;
 
-export const ImageIdState = z.string().nonempty().describe("The image ID of the animation");
-export type ImageIdState = z.infer<typeof ImageIdState>;
+export const FrameState = z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("The current animation frame index");
+export type FrameState = z.infer<typeof FrameState>;
 
-export const ImageIdSequence = z
+export const FrameSequence = z
     .tuple([
-        ImageIdState,
-        z.array(makeSequenceDef(ImageIdState)).describe("The sequence of image IDs over time")
+        FrameState,
+        z.array(makeSequenceDef(FrameState)).describe("The sequence of frame indices over time")
     ])
-    .describe("The sequence of image IDs over time");
-export type ImageIdSequence = z.infer<typeof ImageIdSequence>;
+    .describe("The sequence of frame indices over time");
+export type FrameSequence = z.infer<typeof FrameSequence>;
 
 export const AnimationStateDef = z.object({
     scale: ScaleState.or(ScaleSequence)
@@ -110,8 +114,8 @@ export const AnimationStateDef = z.object({
         .or(OrientationSequence)
         .describe("The orientation of the animation or its sequence over time")
         .optional(),
-    imageId: ImageIdState.or(ImageIdSequence)
-        .describe("The image ID of the animation or its sequence over time")
+    frame: FrameState.or(FrameSequence)
+        .describe("The scene node frame index or its sequence over time")
         .optional(),
     renderable: SceneNode.describe("The renderable of the animation")
 });
@@ -122,7 +126,7 @@ export const AnimationState = z.object({
     opacity: OpacityState,
     rotation: RotationState,
     orientation: OrientationState,
-    imageId: ImageIdState.nullable()
+    frame: FrameState
 });
 export type AnimationState = z.infer<typeof AnimationState>;
 
@@ -167,7 +171,15 @@ export function interpolateVec2(fromValue: IVec2, toValue: IVec2, t: number) {
     };
 }
 
-export function interpolateImageId(fromValue: ImageId, toValue: ImageId, t: number) {
+export function interpolateFrame(fromValue: number, toValue: number, t: number) {
+    return Math.floor(interpolateNumber(fromValue, toValue, t));
+}
+
+export function interpolateOrientation(
+    fromValue: OrientationState,
+    toValue: OrientationState,
+    t: number
+): OrientationState {
     return t < 0.5 ? fromValue : toValue;
 }
 

@@ -29,7 +29,8 @@ export class AnimationController {
         const animation = new Animation(
             playAnimation,
             { startTime: this._lastUpdateTime },
-            completeCallback
+            completeCallback,
+            this._imageCache
         );
 
         this._animationMap.set(animation.id, animation);

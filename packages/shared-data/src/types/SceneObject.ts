@@ -1,5 +1,5 @@
 import { Orientation, rotateOrientation } from "@atbs/maths";
-import { isRenderImage, RenderImage, RenderList } from "./PrimitiveTypes.js";
+import { ImageId, isRenderImage, RenderImage, RenderList } from "./PrimitiveTypes.js";
 import { RenderMode } from "./RenderMode.js";
 import z from "zod";
 
@@ -10,29 +10,58 @@ function isSceneLeafNode(node: unknown): node is SceneLeafNode {
     return Array.isArray(node) && node.every(isRenderImage);
 }
 
-// Maps to the 9 different Orientations.
-const SceneDirectionalNode = z.tuple([
-    SceneLeafNode, // NORTH
-    SceneLeafNode, // NORTH_EAST
-    SceneLeafNode, // EAST
-    SceneLeafNode, // SOUTH_EAST
-    SceneLeafNode, // SOUTH
-    SceneLeafNode, // SOUTH_WEST
-    SceneLeafNode, // WEST
-    SceneLeafNode, // NORTH_WEST
-    SceneLeafNode // CENTER
-]);
-export type SceneDirectionalNode = z.infer<typeof SceneDirectionalNode>;
-
-function isSceneDirectionalNode(node: unknown): node is SceneDirectionalNode {
-    return Array.isArray(node) && node.length === 9;
-}
-
 // Recursive types: written by hand to break the inference cycle.
-type SceneStateNode = { [key: string]: SceneChildNode } & {
+// Maps to the 9 different Orientations (NORTH..NORTH_WEST + CENTER).
+export type SceneDirectionalNode = {
+    directional: [
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode,
+        SceneChildNode
+    ];
+};
+export type SceneFramesNode = { frames: SceneChildNode[] };
+export type SceneStateNode = { [key: string]: SceneChildNode } & {
     default: SceneChildNode;
 };
-type SceneChildNode = SceneLeafNode | SceneDirectionalNode | SceneStateNode;
+export type SceneChildNode =
+    | SceneLeafNode
+    | SceneDirectionalNode
+    | SceneFramesNode
+    | SceneStateNode;
+
+const SceneDirectionalNode: z.ZodType<SceneDirectionalNode> = z.object({
+    directional: z.tuple([
+        z.lazy(() => SceneChildNode), // NORTH
+        z.lazy(() => SceneChildNode), // NORTH_EAST
+        z.lazy(() => SceneChildNode), // EAST
+        z.lazy(() => SceneChildNode), // SOUTH_EAST
+        z.lazy(() => SceneChildNode), // SOUTH
+        z.lazy(() => SceneChildNode), // SOUTH_WEST
+        z.lazy(() => SceneChildNode), // WEST
+        z.lazy(() => SceneChildNode), // NORTH_WEST
+        z.lazy(() => SceneChildNode) // CENTER
+    ])
+});
+
+function isSceneDirectionalNode(node: unknown): node is SceneDirectionalNode {
+    return (
+        typeof node === "object" && node !== null && !Array.isArray(node) && "directional" in node
+    );
+}
+
+const SceneFramesNode: z.ZodType<SceneFramesNode> = z.object({
+    frames: z.array(z.lazy(() => SceneChildNode)).min(1)
+});
+
+function isSceneFramesNode(node: unknown): node is SceneFramesNode {
+    return typeof node === "object" && node !== null && !Array.isArray(node) && "frames" in node;
+}
 
 const SceneStateNode: z.ZodType<SceneStateNode> = z
     .object({
@@ -43,6 +72,7 @@ const SceneStateNode: z.ZodType<SceneStateNode> = z
 const SceneChildNode: z.ZodType<SceneChildNode> = z.union([
     SceneLeafNode,
     SceneDirectionalNode,
+    SceneFramesNode,
     SceneStateNode
 ]);
 
@@ -59,6 +89,7 @@ export interface SceneContext {
     orientation?: Orientation;
     applyOrientation?: number;
     opacity?: number;
+    frame?: number;
     states: string[];
     visibilityFilter?: boolean;
 }
@@ -72,6 +103,50 @@ export class SceneObject {
 
     getRenderList(context: SceneContext): RenderList {
         return SceneObject._ResolveSceneNode(this._sceneNode, context);
+    }
+
+    // Visits every leaf imageId across all render modes, states, orientations and
+    // frames, invoking the callback once per unique id. Independent of SceneContext,
+    // so callers (e.g. the client cache pre-warm) receive the full set up front.
+    forEachImageId(callback: (imageId: ImageId) => void): void {
+        const seen = new Set<ImageId>();
+
+        const visit = (imageId: ImageId): void => {
+            if (!seen.has(imageId)) {
+                seen.add(imageId);
+                callback(imageId);
+            }
+        };
+
+        const walk = (node: SceneChildNode): void => {
+            if (isSceneLeafNode(node)) {
+                for (const { imageId } of node) {
+                    visit(imageId);
+                }
+            } else if (isSceneDirectionalNode(node)) {
+                node.directional.forEach(walk);
+            } else if (isSceneFramesNode(node)) {
+                node.frames.forEach(walk);
+            } else {
+                for (const child of Object.values(node)) {
+                    walk(child);
+                }
+            }
+        };
+
+        const modes = [
+            RenderMode.enum.UI_MODE,
+            RenderMode.enum.MAP_MODE,
+            RenderMode.enum.FIRE_MODE,
+            "default"
+        ] as const;
+
+        for (const mode of modes) {
+            const child = this._sceneNode[mode];
+            if (child) {
+                walk(child);
+            }
+        }
     }
 
     // getRenderListAllModes(context: SceneContext): Record<RenderMode, RenderList> {
@@ -120,7 +195,20 @@ export class SceneObject {
         if (isSceneDirectionalNode(childNode)) {
             const orientation = context.orientation ?? Orientation.NORTH;
             return SceneObject._ResolveChildNodeRecursively(
-                childNode[orientation],
+                childNode.directional[orientation],
+                context,
+                stateIndex
+            );
+        }
+
+        if (isSceneFramesNode(childNode)) {
+            const frameCount = childNode.frames.length;
+            const frameIndex =
+                frameCount === 0
+                    ? 0
+                    : ((Math.floor(context.frame ?? 0) % frameCount) + frameCount) % frameCount;
+            return SceneObject._ResolveChildNodeRecursively(
+                childNode.frames[frameIndex],
                 context,
                 stateIndex
             );
