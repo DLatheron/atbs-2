@@ -26,6 +26,9 @@
             ]
         ],
         "opacity": 1,
-        "imageId": "smoke15"
+        "imageId": "smoke15",
+        "renderable": {
+            "default": [{ "imageId": "smoke15" }]
+        }
     }
 }

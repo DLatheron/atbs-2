@@ -16,6 +16,9 @@ import {
     OnTarget,
     RenderList,
     RenderMode,
+    SceneContext,
+    SceneNode,
+    SceneObject,
     shotsFired,
     TrackingSpeed,
     UnitId,
@@ -24,7 +27,6 @@ import {
     VisualType
 } from "@atbs/shared-data";
 import z from "zod";
-import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
     clamp,
     Colour,

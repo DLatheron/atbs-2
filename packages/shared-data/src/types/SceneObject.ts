@@ -1,5 +1,6 @@
 import { Orientation, rotateOrientation } from "@atbs/maths";
-import { isRenderImage, RenderImage, RenderList, RenderMode } from "@atbs/shared-data";
+import { isRenderImage, RenderImage, RenderList } from "./PrimitiveTypes.js";
+import { RenderMode } from "./RenderMode.js";
 import z from "zod";
 
 const SceneLeafNode = z.array(RenderImage);

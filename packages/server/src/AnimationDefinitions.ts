@@ -13,6 +13,9 @@ export const Smoke: AnimationRecipe = {
         ],
         rotation: 0,
         opacity: [0, [{ type: "linear", startOffset: 0, duration: 500, toValue: 1 }]],
-        imageId: "smoke15"
+        imageId: "smoke15",
+        renderable: {
+            default: [{ imageId: "smoke15" }]
+        }
     }
 };

@@ -11,11 +11,11 @@ import {
     TilePos,
     Vec2
 } from "@atbs/maths";
+import { SceneContext } from "@atbs/shared-data";
 import z from "zod";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
-import { SceneContext } from "./SceneObject.js";
 import {
     FurnitureState,
     InterestMask,

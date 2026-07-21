@@ -1,6 +1,7 @@
-import { IColour, IVec2 } from "@atbs/maths";
+import { IColour, IVec2, Orientation } from "@atbs/maths";
 import z from "zod";
 import { ImageId, InstanceId } from "./PrimitiveTypes.js";
+import { SceneNode } from "./SceneObject.js";
 
 export const AnimationId = z.string().nonempty().describe("The ID of the animation");
 export type AnimationId = z.infer<typeof AnimationId>;
@@ -70,6 +71,19 @@ export const RotationSequence = z
     .describe("The sequence of rotation values over time");
 export type RotationSequence = z.infer<typeof RotationSequence>;
 
+export const OrientationState = z.enum(Orientation).describe("The orientation of the animation");
+export type OrientationState = z.infer<typeof OrientationState>;
+
+export const OrientationSequence = z
+    .tuple([
+        OrientationState,
+        z
+            .array(makeSequenceDef(OrientationState))
+            .describe("The sequence of orientation values over time")
+    ])
+    .describe("The sequence of orientation values over time");
+export type OrientationSequence = z.infer<typeof OrientationSequence>;
+
 export const ImageIdState = z.string().nonempty().describe("The image ID of the animation");
 export type ImageIdState = z.infer<typeof ImageIdState>;
 
@@ -84,19 +98,22 @@ export type ImageIdSequence = z.infer<typeof ImageIdSequence>;
 export const AnimationStateDef = z.object({
     scale: ScaleState.or(ScaleSequence)
         .describe("The scale of the animation or its sequence over time")
-        .optional()
-        .default(100),
+        .optional(),
     opacity: OpacityState.or(OpacitySequence)
         .describe("The opacity of the animation or its sequence over time")
-        .optional()
-        .default(1),
+        .optional(),
     rotation: RotationState.or(RotationSequence)
         .describe("The rotation of the animation or its sequence over time")
-        .optional()
-        .default(0),
-    imageId: ImageIdState.or(ImageIdSequence).describe(
-        "The image ID of the animation or its sequence over time"
-    )
+        .optional(),
+    orientation: z
+        .enum(Orientation)
+        .or(OrientationSequence)
+        .describe("The orientation of the animation or its sequence over time")
+        .optional(),
+    imageId: ImageIdState.or(ImageIdSequence)
+        .describe("The image ID of the animation or its sequence over time")
+        .optional(),
+    renderable: SceneNode.describe("The renderable of the animation")
 });
 export type AnimationStateDef = z.infer<typeof AnimationStateDef>;
 
@@ -104,7 +121,8 @@ export const AnimationState = z.object({
     scale: ScaleState,
     opacity: OpacityState,
     rotation: RotationState,
-    imageId: ImageIdState
+    orientation: OrientationState,
+    imageId: ImageIdState.nullable()
 });
 export type AnimationState = z.infer<typeof AnimationState>;
 

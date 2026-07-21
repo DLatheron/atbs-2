@@ -1,6 +1,7 @@
 import { Orientation } from "@atbs/maths";
 import { SceneNode, SceneObject, SceneContext } from "./SceneObject.js";
-import { RenderImage, RenderMode } from "@atbs/shared-data";
+import { RenderImage } from "./PrimitiveTypes.js";
+import { RenderMode } from "./RenderMode.js";
 
 describe("SceneObject", () => {
     const unitSceneObjectRecipe = {

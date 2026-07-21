@@ -1,6 +1,5 @@
 import { ITilePos, TilePos } from "@atbs/maths";
-import { VfxId } from "@atbs/shared-data";
-import { SceneObject } from "./SceneObject.js";
+import { SceneObject, VfxId } from "@atbs/shared-data";
 import { VfxRecipe } from "./VfxRecipe.js";
 import { VfxManager } from "./VfxManager.js";
 import { AnimationRecipeManager } from "./AnimationRecipeManager.js";

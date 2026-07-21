@@ -1,8 +1,6 @@
 import { Orientation } from "@atbs/maths";
-import { Description } from "@atbs/shared-data";
+import { Description, SceneNode, SceneObject } from "@atbs/shared-data";
 import z from "zod";
-
-import { SceneNode, SceneObject } from "./SceneObject.js";
 
 export const TerrainRecipe = z.object({
     id: z.string(),

@@ -6,10 +6,12 @@ import {
     FurnitureStateMovementObstructionMap,
     InstanceId,
     RenderList,
-    RenderMode
+    RenderMode,
+    SceneContext,
+    SceneObject,
+    SceneNode
 } from "@atbs/shared-data";
 import z from "zod";
-import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import { clamp, Orientation, TilePos } from "@atbs/maths";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { Material } from "./Material.js";

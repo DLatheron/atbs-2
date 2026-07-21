@@ -12,10 +12,12 @@ import {
     OpacitySequence,
     OpacityState,
     PlayAnimation,
+    RenderMode,
     RotationSequence,
     RotationState,
     ScaleSequence,
-    ScaleState
+    ScaleState,
+    SceneObject
 } from "@atbs/shared-data";
 import z from "zod";
 import { DrawVfx, DrawVfxToCanvas } from "./RenderHelpers";
@@ -30,7 +32,7 @@ export const AnimationOverrides = z
     .partial();
 export type AnimationOverrides = z.infer<typeof AnimationOverrides>;
 
-export class Animation {
+export class Animation extends SceneObject {
     readonly logger: Logger;
 
     private readonly _id: InstanceId;
@@ -48,6 +50,8 @@ export class Animation {
         overrides: Readonly<AnimationOverrides> = {},
         completeCallback?: (time: number) => void
     ) {
+        super(recipe.stateDef.renderable);
+
         this._id = instanceId;
         this._recipe = recipe;
         this._worldPos = worldPos ? new Vec2(worldPos) : undefined;
@@ -185,12 +189,14 @@ export class Animation {
                       interpolateNumber
                   )
                 : 0,
-            imageId: this.evaluateStateValue<ImageIdState, ImageIdSequence>(
-                "imageId",
-                this._recipe.stateDef.imageId,
-                elapsedTimeIntoAnimation,
-                interpolateImageId
-            )
+            imageId: this._recipe.stateDef.imageId
+                ? this.evaluateStateValue<ImageIdState, ImageIdSequence>(
+                      "imageId",
+                      this._recipe.stateDef.imageId as ImageIdState,
+                      elapsedTimeIntoAnimation,
+                      interpolateImageId
+                  )
+                : null
         };
     }
 
@@ -223,14 +229,47 @@ export class Animation {
         worldPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity, rotation } = this._state;
+        const { imageId, scale, opacity, rotation, orientation } = this._state;
 
-        imageCache.requestImage(imageId);
-        if (!imageCache.isLoaded(imageId)) {
-            return;
+        if (imageId) {
+            imageCache.requestImage(imageId);
+            if (!imageCache.isLoaded(imageId)) {
+                return;
+            }
+
+            DrawVfx(
+                camera,
+                context,
+                imageCache.getImage(imageId),
+                worldPos,
+                scale,
+                opacity,
+                rotation
+            );
+        } else {
+            const renderList = this.getRenderList({
+                renderMode: RenderMode.enum.MAP_MODE,
+                orientation,
+                opacity,
+                states: ["default"]
+            });
+
+            for (const renderable of renderList) {
+                imageCache.requestImage(renderable.imageId);
+                if (!imageCache.isLoaded(renderable.imageId)) {
+                    return;
+                }
+
+                DrawVfxToCanvas(
+                    context,
+                    imageCache.getImage(renderable.imageId),
+                    worldPos,
+                    scale,
+                    renderable.opacity ?? opacity,
+                    rotation
+                );
+            }
         }
-
-        DrawVfx(camera, context, imageCache.getImage(imageId), worldPos, scale, opacity, rotation);
     }
 
     renderToCanvas({
@@ -244,11 +283,20 @@ export class Animation {
     }) {
         const { imageId, scale, opacity, rotation } = this._state;
 
-        imageCache.requestImage(imageId);
-        if (!imageCache.isLoaded(imageId)) {
-            return;
-        }
+        if (imageId) {
+            imageCache.requestImage(imageId);
+            if (!imageCache.isLoaded(imageId)) {
+                return;
+            }
 
-        DrawVfxToCanvas(context, imageCache.getImage(imageId), canvasPos, scale, opacity, rotation);
+            DrawVfxToCanvas(
+                context,
+                imageCache.getImage(imageId),
+                canvasPos,
+                scale,
+                opacity,
+                rotation
+            );
+        }
     }
 }
