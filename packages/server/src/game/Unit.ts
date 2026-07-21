@@ -48,6 +48,7 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
+import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
@@ -865,6 +866,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 (a, b) => a.timeMs - b.timeMs
             );
 
+            const deaths = furnitureDamageSystem.unitDeaths.map(buildUnitDeathAnimation);
+
             roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
@@ -886,7 +889,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     payload: {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                        tileUpdates
+                        tileUpdates,
+                        deaths
                     }
                 }
             ]);
@@ -1048,6 +1052,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             (a, b) => a.timeMs - b.timeMs
         );
 
+        const deaths = furnitureDamageSystem.unitDeaths.map(buildUnitDeathAnimation);
+
         roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
         const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
@@ -1076,7 +1082,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 payload: {
                     tracers: [projectile.getTracer()],
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                    tileUpdates
+                    tileUpdates,
+                    deaths
                 }
             }
         ]);

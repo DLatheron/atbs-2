@@ -444,7 +444,12 @@ export class Projectile implements IRayCast {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                     const died = owner.inflictDamage(pos, projectile);
                     if (died) {
-                        furnitureDamageSystem?.onUnitDeath(map.getTile(owner.mapLocation), atTime);
+                        furnitureDamageSystem?.onUnitDeath(
+                            map.getTile(owner.mapLocation),
+                            owner,
+                            atTime,
+                            projectile.roundIndex
+                        );
                     }
                 }
 

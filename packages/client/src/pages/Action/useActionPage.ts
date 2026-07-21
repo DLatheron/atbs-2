@@ -168,6 +168,7 @@ export function useActionPage() {
                 world.setTracers(
                     payload.tracers,
                     payload.tileUpdates,
+                    payload.deaths,
                     () => {
                         setMap((map: ClientMap | null) => map);
                     },

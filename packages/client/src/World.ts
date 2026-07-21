@@ -1,6 +1,7 @@
 import {
     ClientMap,
     ClientToServerMessage,
+    DeathAnimation,
     FireDetails,
     FireMode,
     FireModeEx,
@@ -8,6 +9,7 @@ import {
     FireModeWeaponSummary,
     FireSelector,
     getRpm,
+    RenderImage,
     RenderList,
     RenderMode,
     SightType,
@@ -388,6 +390,7 @@ export class World {
     setTracers(
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
+        deaths: DeathAnimation[],
         onMapUpdated: () => void,
         completeCallback: () => void
     ): void {
@@ -397,8 +400,58 @@ export class World {
 
         const appliedUpdateIndices = new Set<number>();
 
+        // Deaths are folded into the tracer timeline. They are played one at a
+        // time, in ascending start-time order, each pausing the tracer clock for
+        // the duration of its spin animation.
+        const deathQueue = [...deaths].sort((a, b) => a.startTimeMs - b.startTimeMs);
+
+        // The tracer clock is paused while a death spin plays (and during the
+        // subsequent hold). We rely on the Timer's native pause support (a paused
+        // Timer freezes its `time` and resumes seamlessly), and mirror that with
+        // a local flag used to guard the update/render logic below. `paused`
+        // stays true for the entire spin + hold so tracers, completion, and the
+        // next death are all suppressed until the hold elapses.
+        let paused = false;
+        // `holding` distinguishes the post-spin map-mode linger (dead sprite
+        // shown) from the spin itself. During the hold the tracer clock is still
+        // paused, so we measure elapsed hold time against `performance.now()`.
+        let holding = false;
+        let holdStartMs = 0;
+        let currentHoldMs = 0;
+        let savedRenderMode: RenderMode = this._renderMode;
+
         // eslint-disable-next-line @typescript-eslint/no-this-alias
         const world = this;
+
+        // A death emits two tile updates at the same tilePos: a placeholder
+        // (whose render list references the spin animation's instanceId) and a
+        // "rest" update (generic-dead). We find the rest update by matching the
+        // placeholder's tilePos while excluding the placeholder itself.
+        const renderListsContainImageId = (update: TimedTileUpdate, imageId: string): boolean =>
+            update.tileByRenderMode[RenderMode.enum.MAP_MODE].some(
+                (image: RenderImage) => image.imageId === imageId
+            ) ||
+            update.tileByRenderMode[RenderMode.enum.FIRE_MODE].some(
+                (image: RenderImage) => image.imageId === imageId
+            );
+
+        const findRestUpdateIndex = (death: DeathAnimation): number => {
+            const placeholderImageId = death.playAnimation.instanceId;
+            const placeholderIndex = tileUpdates.findIndex((update) =>
+                renderListsContainImageId(update, placeholderImageId)
+            );
+            if (placeholderIndex < 0) {
+                return -1;
+            }
+
+            const { tilePos } = tileUpdates[placeholderIndex];
+            return tileUpdates.findIndex(
+                (update, index) =>
+                    index !== placeholderIndex &&
+                    TilePos.IsEqual(update.tilePos, tilePos) &&
+                    !renderListsContainImageId(update, placeholderImageId)
+            );
+        };
 
         const finish = () => {
             for (let index = 0; index < tileUpdates.length; index++) {
@@ -416,51 +469,148 @@ export class World {
             completeCallback();
         };
 
+        const applyDueTileUpdates = (elapsedMs: number) => {
+            if (!tileUpdates.length) {
+                return;
+            }
+
+            let applied = false;
+
+            for (let index = 0; index < tileUpdates.length; index++) {
+                if (appliedUpdateIndices.has(index)) {
+                    continue;
+                }
+
+                if (tileUpdates[index].timeMs <= elapsedMs) {
+                    applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                    appliedUpdateIndices.add(index);
+                    applied = true;
+                }
+            }
+
+            if (applied) {
+                onMapUpdated();
+            }
+        };
+
+        const beginDeath = (death: DeathAnimation) => {
+            // Freeze the tracer timeline so projectiles and tile updates hold
+            // while the spin plays out on the (independent) world clock.
+            paused = true;
+            tracerTimer.pause();
+
+            // Tracers must not draw during the death, so drop into map mode. The
+            // server's start tile-update (timed at death.startTimeMs) swaps the
+            // unit tile to the anim-death placeholder, which is drawn via the
+            // registered animation below.
+            savedRenderMode = world.renderMode;
+            world.renderMode = RenderMode.enum.MAP_MODE;
+
+            // Locate the "rest" (generic-dead) tile update now, off the frozen
+            // tracer clock, so we can reveal the dead sprite the instant the spin
+            // completes rather than waiting for the (resumed) timeline to reach it.
+            const restUpdateIndex = findRestUpdateIndex(death);
+
+            const onSpinComplete = () => {
+                // Reveal the dead unit immediately: apply the rest (generic-dead)
+                // tile update and mark it applied so the timeline won't re-apply it.
+                if (restUpdateIndex >= 0 && !appliedUpdateIndices.has(restUpdateIndex)) {
+                    applyTimedTileUpdate(world.map, tileUpdates[restUpdateIndex], world.imageCache);
+                    appliedUpdateIndices.add(restUpdateIndex);
+                    onMapUpdated();
+                }
+
+                // Drop the spin animation; the tile now renders generic-dead.
+                world._animationController.removeAnimation(death.playAnimation.instanceId);
+
+                // Enter the HOLD phase: stay in map mode with the tracer clock
+                // still paused so no projectiles draw and no other death/tile
+                // update leaks. The hold is timed against performance.now()
+                // because the tracer clock is frozen.
+                holding = true;
+                holdStartMs = performance.now();
+                currentHoldMs = death.holdMs;
+            };
+
+            // Registering now aligns the animation's world-clock start with this
+            // moment; it advances via AnimationController.update regardless of
+            // the paused tracer clock.
+            world._animationController.newAnimation(death.playAnimation, onSpinComplete);
+        };
+
+        const endHold = () => {
+            // Restore the pre-death render mode (fire mode during a trace) but
+            // keep sights suppressed until the trace fully finishes, to preserve
+            // the non-death rendering behaviour.
+            world.renderMode = savedRenderMode ?? RenderMode.enum.FIRE_MODE;
+            world._drawSights = false;
+
+            tracerTimer.resume();
+            paused = false;
+            holding = false;
+
+            // Only now advance to the next death, so deaths serialise: the next
+            // one cannot begin until this hold has fully elapsed.
+            deathQueue.shift();
+        };
+
         this.addRenderPlugin({
             get name() {
                 return "Tracers";
             },
 
             update() {
-                const { time } = tracerTimer.tick();
-
-                if (!tileUpdates.length) {
+                // While holding on the dead unit, the tracer clock is paused, so
+                // measure the linger against the wall clock and resume once it
+                // elapses. Nothing else advances until then.
+                if (holding) {
+                    if (performance.now() - holdStartMs >= currentHoldMs) {
+                        endHold();
+                    }
                     return false;
                 }
 
+                const { time } = tracerTimer.tick();
                 const elapsedMs = Math.max(time, 0);
-                let applied = false;
 
-                for (let index = 0; index < tileUpdates.length; index++) {
-                    if (appliedUpdateIndices.has(index)) {
-                        continue;
-                    }
-
-                    if (tileUpdates[index].timeMs <= elapsedMs) {
-                        applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
-                        appliedUpdateIndices.add(index);
-                        applied = true;
-                    }
+                // Kick off the next death once the (unpaused) clock reaches its
+                // start time. Only one death is active at a time; the paused
+                // clock naturally serialises the remainder.
+                if (!paused && deathQueue.length > 0 && deathQueue[0].startTimeMs <= elapsedMs) {
+                    beginDeath(deathQueue[0]);
                 }
 
-                if (applied) {
-                    onMapUpdated();
-                }
+                // Apply tile updates up to the (frozen while paused) elapsed
+                // time. This includes the death's start tile-update at the moment
+                // the death begins; while paused `elapsedMs` no longer advances,
+                // so no later updates leak through.
+                applyDueTileUpdates(elapsedMs);
 
                 return false;
             },
 
             render({ camera, context }: RenderPluginRenderProps) {
                 const { time } = tracerTimer;
-                let allComplete = true;
+                const inFireMode = world.renderMode === RenderMode.enum.FIRE_MODE;
 
-                for (const tracer of tracers) {
-                    if (!DrawProjectile(camera, context, 0, time, tracer)) {
-                        allComplete = false;
+                // Tracers only draw in fire mode; while a death is playing we are
+                // in map mode and must not draw projectiles.
+                let allComplete = true;
+                if (inFireMode) {
+                    for (const tracer of tracers) {
+                        if (!DrawProjectile(camera, context, 0, time, tracer)) {
+                            allComplete = false;
+                        }
                     }
                 }
 
-                if (allComplete) {
+                // Never complete the trace while a death spin holds the clock;
+                // the frozen `time` also prevents projectiles from advancing.
+                if (paused) {
+                    return false;
+                }
+
+                if (inFireMode && allComplete) {
                     finish();
                     return true;
                 }

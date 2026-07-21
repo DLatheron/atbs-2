@@ -151,6 +151,27 @@ export const PlayAnimation = z
     .describe("The animation to play");
 export type PlayAnimation = z.infer<typeof PlayAnimation>;
 
+export const DeathAnimation = z
+    .object({
+        playAnimation: PlayAnimation.describe("The spin animation registered under an anim- id"),
+        startTimeMs: z
+            .number()
+            .nonnegative()
+            .describe("When the death spin begins on the fire trace timeline"),
+        durationMs: z
+            .number()
+            .positive()
+            .describe("The duration of the death spin in milliseconds"),
+        holdMs: z
+            .number()
+            .nonnegative()
+            .describe(
+                "Pause (ms) to linger on the dead unit in map mode after the spin, before restoring fire mode and resuming tracers"
+            )
+    })
+    .describe("A unit death animation folded into the fire trace timeline");
+export type DeathAnimation = z.infer<typeof DeathAnimation>;
+
 export function interpolateNumber(fromValue: number, toValue: number, t: number) {
     return fromValue + (toValue - fromValue) * t;
 }
