@@ -188,7 +188,8 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:visible:tiles", async (_context, payload) => {
-                world.visibleTiles = new Set(payload);
+                world.visibleTiles = new Set(payload.tiles);
+                world.visibilityViewers = payload.viewers;
             }),
 
             messageManager.registerHandler("server:animations:play", async (_context, payload) => {

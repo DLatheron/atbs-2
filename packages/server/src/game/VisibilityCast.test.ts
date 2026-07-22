@@ -380,7 +380,9 @@ describe("VisibilityManager debugGraphics", () => {
             id,
             visualType: "eyeball" as VisualType,
             viewAngleInDegrees: options.viewAngleInDegrees ?? 90,
+            viewRanges: [1000],
             isDirectional: options.isDirectional ?? true,
+            isAlive: true,
             get interestMasks() {
                 return interestMasks;
             },

@@ -15,7 +15,8 @@ import {
     TimedTileUpdate,
     UnitSummary,
     WaitingFor,
-    TileUpdate
+    TileUpdate,
+    VisibilityUpdate
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
@@ -187,7 +188,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:visible:tiles"),
-        payload: z.array(z.string().describe("Tile position as a string"))
+        payload: VisibilityUpdate
     }),
     z.object({
         type: z.literal("server:animations:play"),

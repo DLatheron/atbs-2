@@ -16,7 +16,8 @@ import {
     ThrowDetails,
     TimedTileUpdate,
     Tracer,
-    UnitSummary
+    UnitSummary,
+    VisibilityViewerSummary
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
 import { CanvasLoopProps } from "./components/CanvasLoop";
@@ -49,7 +50,8 @@ import {
     DrawLaserSight,
     DrawProjectile,
     DrawRangeSight,
-    DrawViewCone
+    DrawViewCone,
+    DrawFeatheredViewerTile
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { applyTimedTileUpdate } from "./mapUpdates.js";
@@ -105,6 +107,7 @@ export class World {
     private _drawSights: boolean;
     private _debugGraphics: DebugGraphic[] | null;
     private _visibleTiles: Set<string>;
+    private _visibilityViewers: VisibilityViewerSummary[];
     private _animationController: AnimationController;
 
     _waitForRenderStart: Promise<void>;
@@ -147,6 +150,7 @@ export class World {
         this._drawSights = false;
         this._debugGraphics = null;
         this._visibleTiles = new Set<string>();
+        this._visibilityViewers = [];
         this._animationController = new AnimationController(imageCache);
     }
 
@@ -384,6 +388,14 @@ export class World {
 
     set visibleTiles(value: Set<string>) {
         this._visibleTiles = value;
+    }
+
+    get visibilityViewers(): VisibilityViewerSummary[] {
+        return this._visibilityViewers;
+    }
+
+    set visibilityViewers(value: VisibilityViewerSummary[]) {
+        this._visibilityViewers = value;
     }
 
     get animationController(): AnimationController {
@@ -775,61 +787,40 @@ export class World {
     private _renderUnitViewCones(
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         tileSize: number,
-        scale: Vec2,
-        offset: Vec2,
+        _scale: Vec2,
+        _offset: Vec2,
         colour: Colour
     ) {
-        // TODO: List of all units who have view cones to render...
-        // this._unitStore.allUnits.forEach((unit) => {
-        const location = new TilePos(12, 10);
-        const orientation = Orientation.EAST;
-        const viewRange = 1000;
-        const viewAngleInDegrees = 90;
-
         const halfTileSize = tileSize / 2;
 
-        const coneWorldPos = new TilePos(location!).scale(tileSize).add(new Vec2(halfTileSize, halfTileSize));
-        const unitAngle = OrientationToDegrees[orientation];
+        for (const viewer of this._visibilityViewers) {
+            const location = new TilePos(viewer.location);
+            const coneWorldPos = location
+                .scale(tileSize)
+                .add(new Vec2(halfTileSize, halfTileSize));
+            const unitAngle = OrientationToDegrees[viewer.orientation as Orientation];
 
-        DrawViewCone(
-            this.camera,
-            context,
-            coneWorldPos,
-            viewRange,
-            unitAngle,
-            viewAngleInDegrees,
-            colour // this.renderMode === RenderMode.MAP_MODE ? whiteColour : new Colour({ r: 0.25, g: 0.25, b: 0.25, a: 0.5 })
-        );
+            // Soft-edged tile stencil first; the cone overwrites the open side.
+            DrawFeatheredViewerTile(
+                this.camera,
+                context,
+                coneWorldPos.sub(new Vec2(halfTileSize, halfTileSize)),
+                tileSize,
+                colour
+            );
 
-        // Draw the current tile, so its all visible...
-        DebugDrawBox(
-            this.camera,
-            context,
-            coneWorldPos.sub(new Vec2(halfTileSize, halfTileSize)),
-            tileSize,
-            tileSize,
-            colour,
-            0,
-            colour
-        );
-
-        // const worldPos = new TilePos(location!).scale(tileSize);
-        // imagesAdv[this.renderMode].forEach(({ imageId: id, orientation, alpha }) => {
-        //     if (!id) {
-        //         return;
-        //     }
-        //     context.globalAlpha = alpha ?? 1;
-        //     this.renderTile({
-        //         context,
-        //         canvasPos: this.camera.worldToCanvas(worldPos),
-        //         image: this.imageCache.getImage(id),
-        //         orientation: orientation ?? Orientation.NORTH,
-        //         tileSize,
-        //         scale,
-        //         offset
-        //     });
-        // });
-        // });
+            for (const viewRange of viewer.viewRanges) {
+                DrawViewCone(
+                    this.camera,
+                    context,
+                    coneWorldPos,
+                    viewRange,
+                    unitAngle,
+                    viewer.viewAngleInDegrees,
+                    colour
+                );
+            }
+        }
     }
 
     renderWorld(canvasLoopProps: CanvasLoopProps) {

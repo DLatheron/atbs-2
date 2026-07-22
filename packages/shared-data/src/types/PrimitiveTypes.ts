@@ -693,6 +693,24 @@ export const UnitSummary = z.object({
 });
 export type UnitSummary = z.infer<typeof UnitSummary>;
 
+/**
+ * A friendly viewer's cone parameters for client-side fog / view-cone rendering.
+ * Sent alongside the side's visible tile set whenever visibility changes.
+ */
+export const VisibilityViewerSummary = z.object({
+    location: ITilePos,
+    orientation: z.enum(Orientation),
+    viewAngleInDegrees: z.number().positive(),
+    viewRanges: z.array(z.number().positive()).nonempty()
+});
+export type VisibilityViewerSummary = z.infer<typeof VisibilityViewerSummary>;
+
+export const VisibilityUpdate = z.object({
+    tiles: z.array(z.string().describe("Tile position as a string")),
+    viewers: z.array(VisibilityViewerSummary)
+});
+export type VisibilityUpdate = z.infer<typeof VisibilityUpdate>;
+
 export const FireModeWeaponSummary = z.object({
     id: ItemId,
     name: z.string(),

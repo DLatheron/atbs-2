@@ -103,6 +103,7 @@ export const UnitRecipe = z.object({
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),
+    viewRanges: z.array(z.number().positive()).nonempty().optional().default([1000]),
     attributes: z.object({
         actionPoints: AttributeDef,
         constitution: AttributeDef,
@@ -388,6 +389,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._recipe.viewAngleInDegrees;
     }
 
+    get viewRanges(): number[] {
+        return this._recipe.viewRanges;
+    }
+
     get canSee(): Unit[] {
         return this._canSee;
     }
@@ -521,20 +526,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     /**
-     * Sends every side its own visibility set. Because opposition messages are
-     * queued during another side's turn, this interleaves each side's visible
-     * tiles into their playback so that visibility-filtered content (enemy units)
-     * is revealed/hidden correctly when they watch the acting side's actions.
-     * Sending only to the acting side leaves the opposition's `visibleTiles`
-     * stale, which culls enemy unit sprites on their client even when they should
-     * be visible.
+     * Sends every side its own visibility snapshot (visible tiles + friendly
+     * viewer cone parameters). Because opposition messages are queued during
+     * another side's turn, this interleaves each side's visibility into their
+     * playback so fog-of-war and view cones stay in sync with map updates.
      */
     private _broadcastVisibleTiles(): void {
         for (const side of this.game.sides) {
             this.messageRouter.send(
                 {
                     type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(side.oppositionSideIds)
+                    payload: this.visibilityManager.getVisibilityUpdate(side.oppositionSideIds)
                 },
                 side.id
             );

@@ -6,7 +6,9 @@ export interface VisibilityViewer {
     get id(): string;
     get visualType(): VisualType;
     get viewAngleInDegrees(): number;
+    get viewRanges(): number[];
     get isDirectional(): boolean;
+    get isAlive(): boolean;
 
     get interestMasks(): InterestMask[];
     set interestMasks(value: InterestMask[]);

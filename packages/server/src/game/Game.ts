@@ -703,7 +703,7 @@ export class Game {
             [
                 {
                     type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(
+                    payload: this.visibilityManager.getVisibilityUpdate(
                         this.turnsSide.oppositionSideIds
                     )
                 },
