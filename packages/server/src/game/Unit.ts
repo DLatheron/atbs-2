@@ -313,7 +313,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     set disorientation(value: number) {
-        clamp(value, 0, MAX_DISORIENTATION);
+        value = clamp(value, 0, MAX_DISORIENTATION);
 
         console.info("Setting disorientation to", value);
         this._disorientation = value;
