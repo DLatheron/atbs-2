@@ -504,7 +504,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.visibilityManager.update();
         }
 
-        this.canSee = this.getVisibleUnits();
+        // visibilityManager.update() refreshes every viewer; keep each unit's
+        // canSee in sync so opposition units that newly see someone report the
+        // correct count when later selected (toSummary → UnitsSeen).
+        this.game.syncUnitsCanSee();
 
         if (!isEqual(oldCanSee, this.canSee)) {
             this.messageRouter.send(

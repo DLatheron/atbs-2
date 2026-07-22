@@ -582,6 +582,10 @@ export class Game {
             this.visibilityManager.update();
         }
 
+        // Seed each unit's canSee from the initial visibility pass so selection
+        // summaries are correct before anyone has moved.
+        this.syncUnitsCanSee();
+
         this.messageRouter.broadcast(
             {
                 type: "server:map",
@@ -590,6 +594,21 @@ export class Game {
             [],
             true
         );
+    }
+
+    /**
+     * Recomputes every unit's `canSee` from the current VisibilityManager state.
+     * `visibilityManager.update()` refreshes LOS for all viewers, so canSee must
+     * be synced for all units — not just the one that triggered the refresh —
+     * otherwise an opposition unit that newly sees someone still reports 0 when
+     * selected later.
+     */
+    syncUnitsCanSee(): void {
+        for (const side of this.sides) {
+            for (const unit of side.units) {
+                unit.canSee = unit.getVisibleUnits();
+            }
+        }
     }
 
     startTurn(): void {

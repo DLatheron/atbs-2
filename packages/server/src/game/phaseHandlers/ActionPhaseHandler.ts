@@ -169,7 +169,7 @@ export class ActionPhaseHandler extends PhaseHandler {
 
                 console.log(unit?.side.id, from.sideId);
 
-                if (unit && unit.side.id === from.sideId) {
+                if (unit && unit.isAlive && unit.side.id === from.sideId) {
                     game.selectedUnit = unit;
 
                     from.sendMessage({
