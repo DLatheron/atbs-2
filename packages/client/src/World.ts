@@ -24,9 +24,11 @@ import { ITilePos, TilePos } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
 import {
+    Colour,
     DebugGraphic,
     DebugGraphicType,
     Orientation,
+    OrientationToDegrees,
     OrientationToRadians,
     PathSegment
 } from "@atbs/maths";
@@ -46,7 +48,8 @@ import {
     DebugDrawText,
     DrawLaserSight,
     DrawProjectile,
-    DrawRangeSight
+    DrawRangeSight,
+    DrawViewCone
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { applyTimedTileUpdate } from "./mapUpdates.js";
@@ -769,28 +772,104 @@ export class World {
         this._updateRenderPlugins(updateProps);
     }
 
+    private _renderUnitViewCones(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        tileSize: number,
+        scale: Vec2,
+        offset: Vec2,
+        colour: Colour
+    ) {
+        // TODO: List of all units who have view cones to render...
+        // this._unitStore.allUnits.forEach((unit) => {
+        const location = new TilePos(12, 10);
+        const orientation = Orientation.EAST;
+        const viewRange = 1000;
+        const viewAngleInDegrees = 90;
+
+        const halfTileSize = tileSize / 2;
+
+        const coneWorldPos = new TilePos(location!).scale(tileSize).add(new Vec2(halfTileSize, halfTileSize));
+        const unitAngle = OrientationToDegrees[orientation];
+
+        DrawViewCone(
+            this.camera,
+            context,
+            coneWorldPos,
+            viewRange,
+            unitAngle,
+            viewAngleInDegrees,
+            colour // this.renderMode === RenderMode.MAP_MODE ? whiteColour : new Colour({ r: 0.25, g: 0.25, b: 0.25, a: 0.5 })
+        );
+
+        // Draw the current tile, so its all visible...
+        DebugDrawBox(
+            this.camera,
+            context,
+            coneWorldPos.sub(new Vec2(halfTileSize, halfTileSize)),
+            tileSize,
+            tileSize,
+            colour,
+            0,
+            colour
+        );
+
+        // const worldPos = new TilePos(location!).scale(tileSize);
+        // imagesAdv[this.renderMode].forEach(({ imageId: id, orientation, alpha }) => {
+        //     if (!id) {
+        //         return;
+        //     }
+        //     context.globalAlpha = alpha ?? 1;
+        //     this.renderTile({
+        //         context,
+        //         canvasPos: this.camera.worldToCanvas(worldPos),
+        //         image: this.imageCache.getImage(id),
+        //         orientation: orientation ?? Orientation.NORTH,
+        //         tileSize,
+        //         scale,
+        //         offset
+        //     });
+        // });
+        // });
+    }
+
     renderWorld(canvasLoopProps: CanvasLoopProps) {
-        const { canvas, context } = canvasLoopProps;
-        const { time, frameDelta } = this._timer.tick();
-        const { width, height } = canvas;
-
-        context.clearRect(0, 0, width, height);
-
         if (!this.hasMap) {
             return;
         }
 
+        const { canvas, context, offscreenCanvases, offscreenContexts } = canvasLoopProps;
+        const { time, frameDelta } = this._timer.tick();
+        const { width, height } = canvas;
+
         canvas.style.cursor = this.mouseCursor ?? this.defaultMouseCursor ?? "default";
 
+        offscreenCanvases[0].width = width;
+        offscreenCanvases[0].height = height;
+        offscreenCanvases[1].width = width;
+        offscreenCanvases[1].height = height
         this.camera.viewportDimensions = new Vec2(width, height);
 
+        
         this.update({ time, frameDelta });
-
+        
         const { tileSize } = this.map;
         const scale = new Vec2(1, 1);
         const offset = new Vec2(tileSize / 2, tileSize / 2);
+        
+        context.clearRect(0, 0, width, height);
+        offscreenContexts[0].clearRect(0, 0, width, height);
+        offscreenContexts[1].clearRect(0, 0, width, height);
 
-        this.renderTerrainAndFurniture(context, tileSize, scale, offset);
+        //
+        // Offscreen canvas #0 - What can be seen.
+        //
+        this._renderUnitViewCones(offscreenContexts[0], tileSize, scale, offset, Colour.White);
+
+        offscreenContexts[0].globalCompositeOperation = "source-atop";
+        offscreenContexts[0].fillStyle = this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffffff" : "#001000ff";
+        offscreenContexts[0].fillRect(0, 0, width, height);
+
+        this.renderTerrainAndFurniture(offscreenContexts[0], tileSize, scale, offset);
 
         // TODO: Render tracers...
         const renderProps: RenderPluginRenderProps = {
@@ -798,20 +877,37 @@ export class World {
             frameDelta,
             simulationTime: this._timer.simulationTime,
             camera: this.camera,
-            context: context // offscreenContexts[0],
+            context: offscreenContexts[0],
         };
 
         this._renderRenderPlugins(renderProps);
 
         this._interactionHandler?.render?.(canvasLoopProps);
 
-        this._renderDebugGraphics(renderProps);
-        this.renderSight(context, time);
+        this.renderSight(renderProps.context, time);
 
         this._animationController.render({
             camera: this.camera,
-            context: context
+            context: renderProps.context
         });
+
+        //
+        // Offscreen canvas #1 - What cannot be seen.
+        //
+        this._renderUnitViewCones(offscreenContexts[1], tileSize, scale, offset, Colour.Black);
+
+        offscreenContexts[1].globalCompositeOperation = "destination-atop";
+        offscreenContexts[1].fillStyle = this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffff80" : "#80000030";
+        offscreenContexts[1].fillRect(0, 0, width, height);
+        offscreenContexts[1].globalCompositeOperation = "source-atop";        
+
+        this.renderTerrainAndFurniture(offscreenContexts[1], tileSize, scale, offset);
+
+        context.globalCompositeOperation = "source-over";
+        context.drawImage(offscreenCanvases[1], 0, 0);
+        context.drawImage(offscreenCanvases[0], 0, 0);
+        
+        this._renderDebugGraphics(renderProps);
 
         if (this._renderStarted) {
             this._renderStarted();

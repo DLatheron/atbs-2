@@ -1,4 +1,4 @@
-import { colourToRGBA, degreesToRadians, IColour, IVec2, PathSegment, Vec2 } from "@atbs/maths";
+import { Colour, colourToRGBA, degreesToRadians, IColour, IVec2, PathSegment, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 import { calcFalloff, clamp } from "../../maths/src/Maths";
 import { Tracer } from "@atbs/shared-data";
@@ -618,4 +618,57 @@ export function DrawVfxToCanvas(
     context.rotate(-angleInRadians);
     context.translate(-canvasPos.x, -canvasPos.y);
     context.globalAlpha = 1;
+}
+
+export function DrawViewCone(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    worldPos: Vec2,
+    radius: number,
+    directionAngleInDegrees: number,
+    viewConeInDegrees: number,
+    colour: Colour
+) {
+    const transparentColour = new Colour({ ...colour, a: 0 }).asRGBAColorString;
+
+    const canvasPos = camera.worldToCanvas(worldPos);
+
+    const angleOffsetInDegreesToRealign = 90;
+    const colorStopReverseAngleInDegrees = 180;
+    const externalFuzzAngleInDegrees = 2;
+    const internalFuzzAngleInDegrees = 1;
+    const halfViewConeInDegrees = viewConeInDegrees / 2;
+
+    const gradient = context.createConicGradient(
+        degreesToRadians(directionAngleInDegrees - colorStopReverseAngleInDegrees - angleOffsetInDegreesToRealign),
+        canvasPos.x,
+        canvasPos.y
+    );
+
+    const startAngle = degreesToRadians(directionAngleInDegrees - externalFuzzAngleInDegrees - halfViewConeInDegrees - angleOffsetInDegreesToRealign);
+    const endAngle = degreesToRadians(directionAngleInDegrees + externalFuzzAngleInDegrees + halfViewConeInDegrees - angleOffsetInDegreesToRealign);
+
+    const angleToColorStop = (angleInDegrees: number): number => {
+        return degreesToRadians(angleInDegrees) / (2 * Math.PI);
+    };
+
+    const coneColour = colour.asRGBAColorString;
+
+    gradient.addColorStop(angleToColorStop(0), "red");
+    gradient.addColorStop(angleToColorStop(180 - halfViewConeInDegrees - externalFuzzAngleInDegrees), transparentColour);
+    gradient.addColorStop(angleToColorStop(180 - halfViewConeInDegrees + internalFuzzAngleInDegrees), coneColour);
+    gradient.addColorStop(angleToColorStop(180), coneColour);
+    gradient.addColorStop(angleToColorStop(180 + halfViewConeInDegrees - internalFuzzAngleInDegrees), coneColour);
+    gradient.addColorStop(angleToColorStop(180 + halfViewConeInDegrees + externalFuzzAngleInDegrees), transparentColour);
+
+    gradient.addColorStop(angleToColorStop(360), "blue");
+
+    context.fillStyle = gradient;
+    context.strokeStyle = "transparent";
+
+    context.beginPath();
+    context.moveTo(canvasPos.x, canvasPos.y);
+    context.arc(canvasPos.x, canvasPos.y, radius, startAngle, endAngle, false);
+    context.lineTo(canvasPos.x, canvasPos.y);
+    context.fill();
 }
