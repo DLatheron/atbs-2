@@ -11,17 +11,17 @@ See also: [root AGENT.md](../../AGENT.md).
 
 ## Layout
 
-| Path | Role |
-|------|------|
-| `src/index.ts` | Public exports |
-| `Vec2.ts` | Vector ops, direction steps |
-| `TilePos.ts` | Grid coords; stringification for visibility sets |
-| `Orientation.ts` | 8 directions + `CENTER`; degree/radian maps |
-| `Path.ts` | Timed path segments (tracers) |
-| `Penetration.ts` | Pixel penetration cost helpers |
-| `Aabb.ts` / `Mat22.ts` / `Colour.ts` | Bounds, matrices, colours |
-| `DebugGraphics.ts` | Zod schemas for debug overlays |
-| `Maths.ts` / `Misc.ts` | Numeric helpers (`Misc` also as namespace) |
+| Path                                 | Role                                             |
+| ------------------------------------ | ------------------------------------------------ |
+| `src/index.ts`                       | Public exports                                   |
+| `Vec2.ts`                            | Vector ops, direction steps                      |
+| `TilePos.ts`                         | Grid coords; stringification for visibility sets |
+| `Orientation.ts`                     | 8 directions + `CENTER`; degree/radian maps      |
+| `Path.ts`                            | Timed path segments (tracers)                    |
+| `Penetration.ts`                     | Pixel penetration cost helpers                   |
+| `Aabb.ts` / `Mat22.ts` / `Colour.ts` | Bounds, matrices, colours                        |
+| `DebugGraphics.ts`                   | Zod schemas for debug overlays                   |
+| `Maths.ts` / `Misc.ts`               | Numeric helpers (`Misc` also as namespace)       |
 
 ## Patterns
 

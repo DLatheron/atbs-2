@@ -11,20 +11,20 @@ See also: [root AGENT.md](../../AGENT.md).
 
 ## Layout
 
-| Path | Role |
-|------|------|
-| `src/index.ts` | Re-exports `./types` |
-| `src/types/index.ts` | Barrel |
-| `ClientToServerMessage.ts` | Discriminated union `client:…` |
-| `ServerToClientMessage.ts` | Discriminated union `server:…` |
-| `PrimitiveTypes.ts` | Ids, `UnitSummary`, `ClientMap`, fire helpers, `VisibilityUpdate` |
-| `Phase.ts` | `main_menu \| lobby \| armament \| deployment \| action \| game_over` |
-| `SceneObject.ts` | Recursive scene graph → `RenderList` |
-| `AnimationTypes.ts` | Animation recipes, play/death payloads |
-| `LobbyState.ts` | Lobby snapshot |
-| `RestTypes.ts` | Create/join/status bodies, URL query parsing |
-| `RenderMode.ts` | `UI_MODE \| MAP_MODE \| FIRE_MODE` |
-| `VfxTypes.ts` | `VfxId` |
+| Path                       | Role                                                                  |
+| -------------------------- | --------------------------------------------------------------------- |
+| `src/index.ts`             | Re-exports `./types`                                                  |
+| `src/types/index.ts`       | Barrel                                                                |
+| `ClientToServerMessage.ts` | Discriminated union `client:…`                                        |
+| `ServerToClientMessage.ts` | Discriminated union `server:…`                                        |
+| `PrimitiveTypes.ts`        | Ids, `UnitSummary`, `ClientMap`, fire helpers, `VisibilityUpdate`     |
+| `Phase.ts`                 | `main_menu \| lobby \| armament \| deployment \| action \| game_over` |
+| `SceneObject.ts`           | Recursive scene graph → `RenderList`                                  |
+| `AnimationTypes.ts`        | Animation recipes, play/death payloads                                |
+| `LobbyState.ts`            | Lobby snapshot                                                        |
+| `RestTypes.ts`             | Create/join/status bodies, URL query parsing                          |
+| `RenderMode.ts`            | `UI_MODE \| MAP_MODE \| FIRE_MODE`                                    |
+| `VfxTypes.ts`              | `VfxId`                                                               |
 
 Exports resolve via package `exports` → `dist/`. Keep the package built or in `pnpm dev` watch when changing schemas.
 

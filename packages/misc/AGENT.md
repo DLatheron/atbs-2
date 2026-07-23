@@ -11,13 +11,13 @@ See also: [root AGENT.md](../../AGENT.md).
 
 ## Layout
 
-| Path | Role |
-|------|------|
-| `src/index.ts` | Public exports |
-| `MessageManager.ts` | Typed register / enqueue / process for `{ type, payload }` messages |
-| `Logger.ts` | Level-filtered console logger + `LogLevel` Zod enum |
-| `PriorityQueue.ts` | Used by server projectile collision scheduling |
-| `CastToArray.ts` / `typescriptHelpers.ts` | Small helpers |
+| Path                                      | Role                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `src/index.ts`                            | Public exports                                                      |
+| `MessageManager.ts`                       | Typed register / enqueue / process for `{ type, payload }` messages |
+| `Logger.ts`                               | Level-filtered console logger + `LogLevel` Zod enum                 |
+| `PriorityQueue.ts`                        | Used by server projectile collision scheduling                      |
+| `CastToArray.ts` / `typescriptHelpers.ts` | Small helpers                                                       |
 
 ## Patterns
 

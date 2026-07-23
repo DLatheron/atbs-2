@@ -31,7 +31,9 @@ import {
     Orientation,
     OrientationToDegrees,
     OrientationToRadians,
-    PathSegment
+    PathSegment,
+    rotateOrientation,
+    RotateBy180Degrees
 } from "@atbs/maths";
 import { ImageCache } from "./ImageCache";
 import { Timer } from "./Timer";
@@ -794,20 +796,27 @@ export class World {
         const halfTileSize = tileSize / 2;
 
         for (const viewer of this._visibilityViewers) {
-            const location = new TilePos(viewer.location);
-            const coneWorldPos = location
-                .scale(tileSize)
-                .add(new Vec2(halfTileSize, halfTileSize));
-            const unitAngle = OrientationToDegrees[viewer.orientation as Orientation];
+            const orientation = viewer.orientation as Orientation;
+            const tileTopLeft = new TilePos(viewer.location).scale(tileSize);
+            const tileCenter = tileTopLeft.add(new Vec2(halfTileSize, halfTileSize));
 
-            // Soft-edged tile stencil first; the cone overwrites the open side.
-            DrawFeatheredViewerTile(
-                this.camera,
-                context,
-                coneWorldPos.sub(new Vec2(halfTileSize, halfTileSize)),
-                tileSize,
-                colour
-            );
+            const featherPx = 6;
+            // Origin the cone at the back of the tile (opposite corner for
+            // diagonals, mid-back edge for cardinals) so it opens across the tile
+            // toward the facing direction — e.g. SOUTH_WEST → NORTH_EAST corner.
+            const backOffset =
+                orientation === Orientation.CENTER
+                    ? Vec2.Zero()
+                    : Vec2.StepInDirection(
+                          rotateOrientation(orientation, RotateBy180Degrees)
+                      ).scale(halfTileSize - featherPx);
+            const coneWorldPos = tileCenter.add(backOffset);
+            const unitAngle = OrientationToDegrees[orientation];
+
+            if (orientation % 2 === 0) {
+                // Soft-edged tile stencil first; the cone overwrites the open side.
+                DrawFeatheredViewerTile(this.camera, context, tileTopLeft, tileSize, colour, featherPx);
+            }
 
             for (const viewRange of viewer.viewRanges) {
                 DrawViewCone(
@@ -837,16 +846,15 @@ export class World {
         offscreenCanvases[0].width = width;
         offscreenCanvases[0].height = height;
         offscreenCanvases[1].width = width;
-        offscreenCanvases[1].height = height
+        offscreenCanvases[1].height = height;
         this.camera.viewportDimensions = new Vec2(width, height);
 
-        
         this.update({ time, frameDelta });
-        
+
         const { tileSize } = this.map;
         const scale = new Vec2(1, 1);
         const offset = new Vec2(tileSize / 2, tileSize / 2);
-        
+
         context.clearRect(0, 0, width, height);
         offscreenContexts[0].clearRect(0, 0, width, height);
         offscreenContexts[1].clearRect(0, 0, width, height);
@@ -857,7 +865,8 @@ export class World {
         this._renderUnitViewCones(offscreenContexts[0], tileSize, scale, offset, Colour.White);
 
         offscreenContexts[0].globalCompositeOperation = "source-atop";
-        offscreenContexts[0].fillStyle = this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffffff" : "#001000ff";
+        offscreenContexts[0].fillStyle =
+            this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffffff" : "#001000ff";
         offscreenContexts[0].fillRect(0, 0, width, height);
 
         this.renderTerrainAndFurniture(offscreenContexts[0], tileSize, scale, offset);
@@ -868,7 +877,7 @@ export class World {
             frameDelta,
             simulationTime: this._timer.simulationTime,
             camera: this.camera,
-            context: offscreenContexts[0],
+            context: offscreenContexts[0]
         };
 
         this._renderRenderPlugins(renderProps);
@@ -888,16 +897,17 @@ export class World {
         this._renderUnitViewCones(offscreenContexts[1], tileSize, scale, offset, Colour.Black);
 
         offscreenContexts[1].globalCompositeOperation = "destination-atop";
-        offscreenContexts[1].fillStyle = this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffff80" : "#80000030";
+        offscreenContexts[1].fillStyle =
+            this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffff80" : "#80000030";
         offscreenContexts[1].fillRect(0, 0, width, height);
-        offscreenContexts[1].globalCompositeOperation = "source-atop";        
+        offscreenContexts[1].globalCompositeOperation = "source-atop";
 
         this.renderTerrainAndFurniture(offscreenContexts[1], tileSize, scale, offset);
 
         context.globalCompositeOperation = "source-over";
         context.drawImage(offscreenCanvases[1], 0, 0);
         context.drawImage(offscreenCanvases[0], 0, 0);
-        
+
         this._renderDebugGraphics(renderProps);
 
         if (this._renderStarted) {

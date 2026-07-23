@@ -1,4 +1,12 @@
-import { Colour, colourToRGBA, degreesToRadians, IColour, IVec2, PathSegment, Vec2 } from "@atbs/maths";
+import {
+    Colour,
+    colourToRGBA,
+    degreesToRadians,
+    IColour,
+    IVec2,
+    PathSegment,
+    Vec2
+} from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 import { calcFalloff, clamp } from "../../maths/src/Maths";
 import { Tracer } from "@atbs/shared-data";
@@ -376,12 +384,12 @@ export function DebugDrawBox(
 }
 
 /**
- * Fills the viewer's own tile for the fog stencil as a full `tileSize` opaque
- * box, with soft transparency feathering extending *outside* that box. The view
- * cone is drawn over this and restores the open side.
+ * Fills the viewer's own tile for the fog stencil within `tileSize` × `tileSize`,
+ * feathering all four edges inward to transparency. The view cone is drawn over
+ * this and restores the open side.
  *
  * @param worldPos - World-space top-left of the tile
- * @param featherPx - Soft-edge width in canvas pixels outside the tile (default {@link VIEWER_TILE_FEATHER_PX})
+ * @param featherPx - Soft-edge width in canvas pixels inside the tile (default {@link VIEWER_TILE_FEATHER_PX})
  */
 export function DrawFeatheredViewerTile(
     camera: Camera2d,
@@ -394,45 +402,52 @@ export function DrawFeatheredViewerTile(
     const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
     const { x, y } = canvasPos;
     const size = tileSize;
-    const feather = Math.max(0, featherPx);
+    const feather = Math.max(0, Math.min(featherPx, Math.floor(size / 2)));
 
     const opaque = colourToRGBA(colour);
     const transparent = colourToRGBA({ ...colour, a: 0 });
 
-    // Opaque core is always exactly tileSize × tileSize.
-    context.fillStyle = opaque;
-    context.fillRect(x, y, size, size);
+    const coreW = size - 2 * feather;
+    const coreH = size - 2 * feather;
+    if (coreW > 0 && coreH > 0) {
+        context.fillStyle = opaque;
+        context.fillRect(x + feather, y + feather, coreW, coreH);
+    }
 
     if (feather === 0) {
         return;
     }
 
-    // Side strips outside the core (corners excluded so overlapping alphas don't darken).
-    const topGradient = context.createLinearGradient(0, y - feather, 0, y);
-    topGradient.addColorStop(0, transparent);
-    topGradient.addColorStop(1, opaque);
-    context.fillStyle = topGradient;
-    context.fillRect(x, y - feather, size, feather);
+    // Side strips inside the box (corners excluded so overlapping alphas don't darken).
+    if (coreW > 0) {
+        const topGradient = context.createLinearGradient(0, y, 0, y + feather);
+        topGradient.addColorStop(0, transparent);
+        topGradient.addColorStop(1, opaque);
+        context.fillStyle = topGradient;
+        context.fillRect(x + feather, y, coreW, feather);
 
-    const bottomGradient = context.createLinearGradient(0, y + size, 0, y + size + feather);
-    bottomGradient.addColorStop(0, opaque);
-    bottomGradient.addColorStop(1, transparent);
-    context.fillStyle = bottomGradient;
-    context.fillRect(x, y + size, size, feather);
+        const bottomGradient = context.createLinearGradient(0, y + size - feather, 0, y + size);
+        bottomGradient.addColorStop(0, opaque);
+        bottomGradient.addColorStop(1, transparent);
+        context.fillStyle = bottomGradient;
+        context.fillRect(x + feather, y + size - feather, coreW, feather);
+    }
 
-    const leftGradient = context.createLinearGradient(x - feather, 0, x, 0);
-    leftGradient.addColorStop(0, transparent);
-    leftGradient.addColorStop(1, opaque);
-    context.fillStyle = leftGradient;
-    context.fillRect(x - feather, y, feather, size);
+    if (coreH > 0) {
+        const leftGradient = context.createLinearGradient(x, 0, x + feather, 0);
+        leftGradient.addColorStop(0, transparent);
+        leftGradient.addColorStop(1, opaque);
+        context.fillStyle = leftGradient;
+        context.fillRect(x, y + feather, feather, coreH);
 
-    const rightGradient = context.createLinearGradient(x + size, 0, x + size + feather, 0);
-    rightGradient.addColorStop(0, opaque);
-    rightGradient.addColorStop(1, transparent);
-    context.fillStyle = rightGradient;
-    context.fillRect(x + size, y, feather, size);
+        const rightGradient = context.createLinearGradient(x + size - feather, 0, x + size, 0);
+        rightGradient.addColorStop(0, opaque);
+        rightGradient.addColorStop(1, transparent);
+        context.fillStyle = rightGradient;
+        context.fillRect(x + size - feather, y + feather, feather, coreH);
+    }
 
-    // Corner fades outside the box where two feathered edges meet.
+    // Corner fades inside the box where two feathered edges meet.
     const fillCorner = (cx: number, cy: number, innerX: number, innerY: number) => {
         const gradient = context.createRadialGradient(innerX, innerY, 0, innerX, innerY, feather);
         gradient.addColorStop(0, opaque);
@@ -441,10 +456,10 @@ export function DrawFeatheredViewerTile(
         context.fillRect(cx, cy, feather, feather);
     };
 
-    fillCorner(x - feather, y - feather, x, y);
-    fillCorner(x + size, y - feather, x + size, y);
-    fillCorner(x - feather, y + size, x, y + size);
-    fillCorner(x + size, y + size, x + size, y + size);
+    fillCorner(x, y, x + feather, y + feather);
+    fillCorner(x + size - feather, y, x + size - feather, y + feather);
+    fillCorner(x, y + size - feather, x + feather, y + size - feather);
+    fillCorner(x + size - feather, y + size - feather, x + size - feather, y + size - feather);
 }
 
 export function DebugDrawLine(
@@ -715,13 +730,25 @@ export function DrawViewCone(
     const halfViewConeInDegrees = viewConeInDegrees / 2;
 
     const gradient = context.createConicGradient(
-        degreesToRadians(directionAngleInDegrees - colorStopReverseAngleInDegrees - angleOffsetInDegreesToRealign),
+        degreesToRadians(
+            directionAngleInDegrees - colorStopReverseAngleInDegrees - angleOffsetInDegreesToRealign
+        ),
         canvasPos.x,
         canvasPos.y
     );
 
-    const startAngle = degreesToRadians(directionAngleInDegrees - externalFuzzAngleInDegrees - halfViewConeInDegrees - angleOffsetInDegreesToRealign);
-    const endAngle = degreesToRadians(directionAngleInDegrees + externalFuzzAngleInDegrees + halfViewConeInDegrees - angleOffsetInDegreesToRealign);
+    const startAngle = degreesToRadians(
+        directionAngleInDegrees -
+            externalFuzzAngleInDegrees -
+            halfViewConeInDegrees -
+            angleOffsetInDegreesToRealign
+    );
+    const endAngle = degreesToRadians(
+        directionAngleInDegrees +
+            externalFuzzAngleInDegrees +
+            halfViewConeInDegrees -
+            angleOffsetInDegreesToRealign
+    );
 
     const angleToColorStop = (angleInDegrees: number): number => {
         return degreesToRadians(angleInDegrees) / (2 * Math.PI);
@@ -730,11 +757,23 @@ export function DrawViewCone(
     const coneColour = colour.asRGBAColorString;
 
     gradient.addColorStop(angleToColorStop(0), "red");
-    gradient.addColorStop(angleToColorStop(180 - halfViewConeInDegrees - externalFuzzAngleInDegrees), transparentColour);
-    gradient.addColorStop(angleToColorStop(180 - halfViewConeInDegrees + internalFuzzAngleInDegrees), coneColour);
+    gradient.addColorStop(
+        angleToColorStop(180 - halfViewConeInDegrees - externalFuzzAngleInDegrees),
+        transparentColour
+    );
+    gradient.addColorStop(
+        angleToColorStop(180 - halfViewConeInDegrees + internalFuzzAngleInDegrees),
+        coneColour
+    );
     gradient.addColorStop(angleToColorStop(180), coneColour);
-    gradient.addColorStop(angleToColorStop(180 + halfViewConeInDegrees - internalFuzzAngleInDegrees), coneColour);
-    gradient.addColorStop(angleToColorStop(180 + halfViewConeInDegrees + externalFuzzAngleInDegrees), transparentColour);
+    gradient.addColorStop(
+        angleToColorStop(180 + halfViewConeInDegrees - internalFuzzAngleInDegrees),
+        coneColour
+    );
+    gradient.addColorStop(
+        angleToColorStop(180 + halfViewConeInDegrees + externalFuzzAngleInDegrees),
+        transparentColour
+    );
 
     gradient.addColorStop(angleToColorStop(360), "blue");
 

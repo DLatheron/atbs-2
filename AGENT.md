@@ -4,13 +4,13 @@ Turn-based tactical combat game. **Authoritative server** owns simulation; **thi
 
 ## Packages
 
-| Package | Role |
-|---------|------|
-| [`@atbs/client`](packages/client/AGENT.md) | React UI + canvas World renderer |
-| [`@atbs/server`](packages/server/AGENT.md) | Express HTTP + WebSocket game host |
-| [`@atbs/shared-data`](packages/shared-data/AGENT.md) | Shared Zod schemas / message types |
-| [`@atbs/maths`](packages/maths/AGENT.md) | 2D vectors, tiles, orientations, paths |
-| [`@atbs/misc`](packages/misc/AGENT.md) | Logger, MessageManager, PriorityQueue |
+| Package                                              | Role                                   |
+| ---------------------------------------------------- | -------------------------------------- |
+| [`@atbs/client`](packages/client/AGENT.md)           | React UI + canvas World renderer       |
+| [`@atbs/server`](packages/server/AGENT.md)           | Express HTTP + WebSocket game host     |
+| [`@atbs/shared-data`](packages/shared-data/AGENT.md) | Shared Zod schemas / message types     |
+| [`@atbs/maths`](packages/maths/AGENT.md)             | 2D vectors, tiles, orientations, paths |
+| [`@atbs/misc`](packages/misc/AGENT.md)               | Logger, MessageManager, PriorityQueue  |
 
 Dependency graph:
 

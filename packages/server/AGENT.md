@@ -14,45 +14,45 @@ See also: [root AGENT.md](../../AGENT.md), [`@atbs/shared-data`](../shared-data/
 
 ### Bootstrap
 
-| Path | Role |
-|------|------|
-| `src/server.ts` | HTTP + WS upgrade on `/ws/game?clientId&gameId` |
-| `src/app.ts` | Express; loads recipe/image managers into `app.locals` |
-| `src/config/` | Zod config (`config/config.json`) |
-| `src/routes/` | `*.router.ts` + `*.handler.ts`; mount under `/api` in `routes/index.ts` |
+| Path            | Role                                                                    |
+| --------------- | ----------------------------------------------------------------------- |
+| `src/server.ts` | HTTP + WS upgrade on `/ws/game?clientId&gameId`                         |
+| `src/app.ts`    | Express; loads recipe/image managers into `app.locals`                  |
+| `src/config/`   | Zod config (`config/config.json`)                                       |
+| `src/routes/`   | `*.router.ts` + `*.handler.ts`; mount under `/api` in `routes/index.ts` |
 
 ### Game core (`src/game/`)
 
-| Path | Role |
-|------|------|
-| `GameManager.ts` | In-memory `Map<GameId, Game>` singleton |
-| `Game.ts` | Session, phase machine, turns/sides, message routing |
-| `Client.ts` / `ClientManager.ts` | Per-player WS binding |
-| `MessageRouter.ts` | Side-targeted send + pause/resume queues |
-| `phaseHandlers/*.ts` | Phase-specific WS handlers |
-| `Unit.ts` | Move / rotate / fire / throw / damage; `VisibilityViewer` |
-| `WorldMap.ts` / `Tile.ts` | Grid map, raycasts, client map rendering |
-| `VisibilityManager.ts` / `VisibilityViewer.ts` / `VisibilityPoi.ts` | LOS, view cones, interest masks |
-| `Projectile.ts` / `PenetrationSystem.ts` | Ballistics |
-| `Scenario.ts` / `Side.ts` | Scenario instance + sides |
-| `*RecipeManager.ts` / `ImageManager.ts` | Load `data/` recipes and PNGs |
-| `AnimationRecipeManager.ts` / `AnimationDefinitions.ts` | Animation recipes + procedural death spins |
-| `Vfx*.ts` | VFX instances/recipes |
+| Path                                                                | Role                                                      |
+| ------------------------------------------------------------------- | --------------------------------------------------------- |
+| `GameManager.ts`                                                    | In-memory `Map<GameId, Game>` singleton                   |
+| `Game.ts`                                                           | Session, phase machine, turns/sides, message routing      |
+| `Client.ts` / `ClientManager.ts`                                    | Per-player WS binding                                     |
+| `MessageRouter.ts`                                                  | Side-targeted send + pause/resume queues                  |
+| `phaseHandlers/*.ts`                                                | Phase-specific WS handlers                                |
+| `Unit.ts`                                                           | Move / rotate / fire / throw / damage; `VisibilityViewer` |
+| `WorldMap.ts` / `Tile.ts`                                           | Grid map, raycasts, client map rendering                  |
+| `VisibilityManager.ts` / `VisibilityViewer.ts` / `VisibilityPoi.ts` | LOS, view cones, interest masks                           |
+| `Projectile.ts` / `PenetrationSystem.ts`                            | Ballistics                                                |
+| `Scenario.ts` / `Side.ts`                                           | Scenario instance + sides                                 |
+| `*RecipeManager.ts` / `ImageManager.ts`                             | Load `data/` recipes and PNGs                             |
+| `AnimationRecipeManager.ts` / `AnimationDefinitions.ts`             | Animation recipes + procedural death spins                |
+| `Vfx*.ts`                                                           | VFX instances/recipes                                     |
 
 ### Data (`data/`)
 
-| Dir | Contents |
-|-----|----------|
-| `animations/` | `*.animation.json` |
-| `furniture/` | `*.furniture.json` + PNGs (`*-cl` collision) |
-| `items/` | guns, magazines, rounds + PNGs |
-| `maps/` | `*.map.json` |
-| `materials/` | density / penetration |
-| `scenarios/` | sides, units, phase flags |
-| `terrain/` | `*.terrain.json` + PNGs |
-| `units/` | `*.unit.json` + directional PNGs |
-| `vfx/` | `*.vfx.json` + assets |
-| `icons/` | UI PNGs |
+| Dir           | Contents                                     |
+| ------------- | -------------------------------------------- |
+| `animations/` | `*.animation.json`                           |
+| `furniture/`  | `*.furniture.json` + PNGs (`*-cl` collision) |
+| `items/`      | guns, magazines, rounds + PNGs               |
+| `maps/`       | `*.map.json`                                 |
+| `materials/`  | density / penetration                        |
+| `scenarios/`  | sides, units, phase flags                    |
+| `terrain/`    | `*.terrain.json` + PNGs                      |
+| `units/`      | `*.unit.json` + directional PNGs             |
+| `vfx/`        | `*.vfx.json` + assets                        |
+| `icons/`      | UI PNGs                                      |
 
 JSON recipes are Zod-parsed; ids usually match the filename stem. Image id = PNG basename (no `.png`). Duplicate basenames across dirs throw on load. Nodemon CWD is `packages/server`; paths are `./data/...`.
 

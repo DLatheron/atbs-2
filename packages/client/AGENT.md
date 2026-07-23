@@ -11,23 +11,23 @@ See also: [root AGENT.md](../../AGENT.md), [`@atbs/shared-data`](../shared-data/
 
 ## Layout
 
-| Path | Role |
-|------|------|
-| `src/main.tsx` | Router → `App` |
-| `src/App.tsx` | Phase switch; global `server:phase` / wait handlers |
-| `src/GameSocket.ts` | Browser WebSocket to `/ws/game` |
-| `src/hooks/useServerSocket.ts` | Create/join REST + socket + URL params |
-| `src/hooks/useServerMessageManager.ts` | **Singleton** MessageManager + `sendMessage` |
-| `src/hooks/useWorld.ts` | `World.GetSingleton()` |
-| `src/pages/*` | Phase UIs (`MainMenu`, `Lobby`, `Armament`, `Deployment`, `Action`) |
-| `src/World.ts` | Map camera, modes, fog, tracers, death timeline, draw |
-| `src/RenderHelpers.ts` | Canvas drawing helpers |
-| `src/Camera2d.ts` | Viewport / interpolation |
-| `src/ImageCache.ts` | Fetches `/api/image/:id` |
-| `src/Animation*.ts` | Client animation playback |
-| `src/modeHandlers/*` | Map / unit / fire interaction |
-| `src/components/Map/` | Canvas host |
-| `vite.config.ts` | Proxies `/api`, `/ws`, `/public` → `:3000` |
+| Path                                   | Role                                                                |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| `src/main.tsx`                         | Router → `App`                                                      |
+| `src/App.tsx`                          | Phase switch; global `server:phase` / wait handlers                 |
+| `src/GameSocket.ts`                    | Browser WebSocket to `/ws/game`                                     |
+| `src/hooks/useServerSocket.ts`         | Create/join REST + socket + URL params                              |
+| `src/hooks/useServerMessageManager.ts` | **Singleton** MessageManager + `sendMessage`                        |
+| `src/hooks/useWorld.ts`                | `World.GetSingleton()`                                              |
+| `src/pages/*`                          | Phase UIs (`MainMenu`, `Lobby`, `Armament`, `Deployment`, `Action`) |
+| `src/World.ts`                         | Map camera, modes, fog, tracers, death timeline, draw               |
+| `src/RenderHelpers.ts`                 | Canvas drawing helpers                                              |
+| `src/Camera2d.ts`                      | Viewport / interpolation                                            |
+| `src/ImageCache.ts`                    | Fetches `/api/image/:id`                                            |
+| `src/Animation*.ts`                    | Client animation playback                                           |
+| `src/modeHandlers/*`                   | Map / unit / fire interaction                                       |
+| `src/components/Map/`                  | Canvas host                                                         |
+| `vite.config.ts`                       | Proxies `/api`, `/ws`, `/public` → `:3000`                          |
 
 ## Patterns
 
