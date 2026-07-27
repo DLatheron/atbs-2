@@ -53,7 +53,7 @@ import {
     DrawProjectile,
     DrawRangeSight,
     DrawViewCone,
-    DrawFeatheredViewerTile
+    DrawRoundedFeatheredTile
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { applyTimedTileUpdate } from "./mapUpdates.js";
@@ -801,6 +801,7 @@ export class World {
             const tileCenter = tileTopLeft.add(new Vec2(halfTileSize, halfTileSize));
 
             const featherPx = 6;
+            const cornerRadiusPx = 24;
             // Origin the cone at the back of the tile (opposite corner for
             // diagonals, mid-back edge for cardinals) so it opens across the tile
             // toward the facing direction — e.g. SOUTH_WEST → NORTH_EAST corner.
@@ -809,21 +810,19 @@ export class World {
                     ? Vec2.Zero()
                     : Vec2.StepInDirection(
                           rotateOrientation(orientation, RotateBy180Degrees)
-                      ).scale(halfTileSize - featherPx);
+                      ).scale(halfTileSize - cornerRadiusPx);
             const coneWorldPos = tileCenter.add(backOffset);
             const unitAngle = OrientationToDegrees[orientation];
 
-            if (orientation % 2 === 0) {
-                // Soft-edged tile stencil first; the cone overwrites the open side.
-                DrawFeatheredViewerTile(
-                    this.camera,
-                    context,
-                    tileTopLeft,
-                    tileSize,
-                    colour,
-                    featherPx
-                );
-            }
+            DrawRoundedFeatheredTile(
+                this.camera,
+                context,
+                tileTopLeft,
+                tileSize,
+                colour,
+                featherPx,
+                cornerRadiusPx
+            );
 
             if (viewer.viewRange > 0) {
                 DrawViewCone(
