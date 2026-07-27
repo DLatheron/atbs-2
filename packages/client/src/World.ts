@@ -815,15 +815,22 @@ export class World {
 
             if (orientation % 2 === 0) {
                 // Soft-edged tile stencil first; the cone overwrites the open side.
-                DrawFeatheredViewerTile(this.camera, context, tileTopLeft, tileSize, colour, featherPx);
+                DrawFeatheredViewerTile(
+                    this.camera,
+                    context,
+                    tileTopLeft,
+                    tileSize,
+                    colour,
+                    featherPx
+                );
             }
 
-            for (const viewRange of viewer.viewRanges) {
+            if (viewer.viewRange > 0) {
                 DrawViewCone(
                     this.camera,
                     context,
                     coneWorldPos,
-                    viewRange,
+                    viewer.viewRange,
                     unitAngle,
                     viewer.viewAngleInDegrees,
                     colour

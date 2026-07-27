@@ -420,7 +420,7 @@ export class VisibilityManager {
                     location: { col: location!.col, row: location!.row },
                     orientation: viewer.orientation,
                     viewAngleInDegrees: viewer.viewAngleInDegrees,
-                    viewRanges: [...viewer.viewRanges]
+                    viewRange: viewer.limitedView ? 0 : viewer.viewRange
                 };
             });
 

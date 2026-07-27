@@ -671,6 +671,7 @@ export const UnitSummary = z.object({
     collisionRadius: z.number().positive(),
     isDirectional: z.boolean().optional().default(true),
     canSee: z.number().nonnegative(),
+    isOvertaking: z.boolean(),
     attributes: z.object({
         actionPoints: Attribute,
         constitution: Attribute,
@@ -701,7 +702,7 @@ export const VisibilityViewerSummary = z.object({
     location: ITilePos,
     orientation: z.enum(Orientation),
     viewAngleInDegrees: z.number().positive(),
-    viewRanges: z.array(z.number().positive()).nonempty()
+    viewRange: z.number().nonnegative()
 });
 export type VisibilityViewerSummary = z.infer<typeof VisibilityViewerSummary>;
 

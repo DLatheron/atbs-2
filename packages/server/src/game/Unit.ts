@@ -63,6 +63,7 @@ import type { ItemManager } from "./ItemManager.js";
 import type { FurnitureManager } from "./FurnitureManager.js";
 import type { DamageCacheManager } from "./DamageCacheManager.js";
 import isEqual from "lodash/isEqual.js";
+import { Overtaking } from "./Overtaking.js";
 
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
@@ -103,7 +104,7 @@ export const UnitRecipe = z.object({
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),
-    viewRanges: z.array(z.number().positive()).nonempty().optional().default([1000]),
+    viewRange: z.number().positive().default(1000),
     attributes: z.object({
         actionPoints: AttributeDef,
         constitution: AttributeDef,
@@ -170,6 +171,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     private _disorientation: number;
 
     private _canSee: Unit[];
+    private _overtaking: Overtaking | null;
 
     constructor(
         recipe: Readonly<UnitRecipe>,
@@ -205,6 +207,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.visibilityManager.addViewer(this);
         this._canSee = [];
+        this._overtaking = null;
     }
 
     get game(): Game {
@@ -341,6 +344,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._attributes.actionPoints.value;
     }
 
+    set actionPoints(value: number) {
+        if (value < 0) {
+            throw new Error(`Unit ${this.id} cannot have negative action points`);
+        }
+        this._attributes.actionPoints.value = value;
+    }
+
     get maxConstitution(): number {
         return this._attributes.constitution.max;
     }
@@ -389,8 +399,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._recipe.viewAngleInDegrees;
     }
 
-    get viewRanges(): number[] {
-        return this._recipe.viewRanges;
+    get viewRange(): number {
+        return this._recipe.viewRange;
     }
 
     get canSee(): Unit[] {
@@ -399,6 +409,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     set canSee(value: Unit[]) {
         this._canSee = value;
+    }
+
+    get isOvertaking(): boolean {
+        return this._overtaking !== null;
+    }
+
+    get limitedView(): boolean {
+        return this.isOvertaking;
     }
 
     getActions(): Actions {
@@ -491,6 +509,61 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         // this.updateAvailableActions(game.map);
+    }
+
+    select() {
+        this.logger.info("Selecting", this.name);
+    }
+
+    deselect() {
+        this.logger.info("Deselecting", this.name);
+
+        if (this._overtaking) {
+            const currentTile = this.map.getTile(this.mapLocation);
+            currentTile.removeUnit(this);
+
+            this._overtaking.rollback();
+            this._overtaking = null;
+
+            const rolledBackTile = this.map.getTile(this.mapLocation);
+            this._location = this.mapLocation;
+            rolledBackTile.addUnit(this);
+            this._refreshVisibility();
+
+            this.messageRouter.sendIfVisible(
+                {
+                    type: "server:map:update",
+                    payload: [currentTile.generateTileUpdate()]
+                },
+                currentTile.location
+            );
+            this.messageRouter.sendIfVisible(
+                {
+                    type: "server:map:update",
+                    payload: [rolledBackTile.generateTileUpdate()]
+                },
+                rolledBackTile.location
+            );
+
+            this.messageRouter.send(
+                {
+                    type: "server:unit:selected:update",
+                    payload: {
+                        isOvertaking: false,
+                        orientation: this.orientation,
+                        location: this.mapLocation,
+                        attributes: {
+                            actionPoints: { value: this.actionPoints }
+                        }
+                    }
+                },
+                this.side.id
+            );
+
+            this._broadcastVisibleTiles();
+
+            this._overtaking = null;
+        }
     }
 
     private _refreshVisibility(): void {
@@ -650,7 +723,19 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return;
         }
 
-        // TODO: Overtaking stuff...
+        // Does the destination tile trigger/maintain overtaking?
+        if (dstTile.overtaking) {
+            // Create a new overtaking instance if one doesn't exist.
+            if (!this._overtaking) {
+                this._overtaking = new Overtaking(this);
+            }
+        } else {
+            // Is there an existing overtaking instance? If so, commit it.
+            if (this._overtaking) {
+                this._overtaking.commit();
+                this._overtaking = null;
+            }
+        }
 
         if (!this._useActionPoints(aptCost)) {
             return;
@@ -668,6 +753,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.location = dstTile.location;
         dstTile.addUnit(this);
+
         this._refreshVisibility();
 
         this.messageRouter.send(
@@ -1203,6 +1289,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             viewAngleInDegrees: this._recipe.viewAngleInDegrees,
             collisionRadius: this._recipe.collision.radius,
             canSee: this.canSee.length,
+            isOvertaking: this.isOvertaking,
             attributes: {
                 actionPoints: this._attributes.actionPoints,
                 constitution: this._attributes.constitution,

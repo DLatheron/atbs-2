@@ -192,6 +192,10 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         return Orientation.NORTH;
     }
 
+    get overtaking(): boolean {
+        return true;
+    }
+
     intersectsRay(ray: VisibilityRay): Vec2 | undefined {
         return this._aabb.intersectRay(ray.srcPos, ray.dstPos);
     }
