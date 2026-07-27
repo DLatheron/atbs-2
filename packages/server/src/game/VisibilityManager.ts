@@ -4,7 +4,7 @@ import type { Game } from "./Game.js";
 import type { WorldMap } from "./WorldMap.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
-import { InterestMask, ViewerId } from "@atbs/shared-data";
+import { InterestMask, ViewerId, VisibilityUpdate } from "@atbs/shared-data";
 import { VisibilityRay } from "./VisibilityRay.js";
 import {
     Colour,
@@ -404,5 +404,29 @@ export class VisibilityManager {
         }
 
         return visibleTiles;
+    }
+
+    /**
+     * Full visibility snapshot for a side: fog-of-war tiles plus the cone
+     * parameters of that side's living viewers (for client view-cone rendering).
+     */
+    getVisibilityUpdate(viewersInterestMasks: InterestMask[]): VisibilityUpdate {
+        const viewers = this.getViewers(viewersInterestMasks)
+            .filter((viewer) => viewer.isAlive && viewer.location !== null)
+            .map((viewer) => {
+                const { location } = viewer;
+                // Filtered above; location is non-null for living viewers we send.
+                return {
+                    location: { col: location!.col, row: location!.row },
+                    orientation: viewer.orientation,
+                    viewAngleInDegrees: viewer.viewAngleInDegrees,
+                    viewRanges: [...viewer.viewRanges]
+                };
+            });
+
+        return {
+            tiles: this.getVisibleTiles(viewersInterestMasks),
+            viewers
+        };
     }
 }

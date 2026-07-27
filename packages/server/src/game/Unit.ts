@@ -16,6 +16,9 @@ import {
     OnTarget,
     RenderList,
     RenderMode,
+    SceneContext,
+    SceneNode,
+    SceneObject,
     shotsFired,
     TrackingSpeed,
     UnitId,
@@ -24,7 +27,6 @@ import {
     VisualType
 } from "@atbs/shared-data";
 import z from "zod";
-import { SceneContext, SceneNode, SceneObject } from "./SceneObject.js";
 import {
     clamp,
     Colour,
@@ -46,6 +48,7 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
+import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
@@ -100,6 +103,7 @@ export const UnitRecipe = z.object({
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),
+    viewRanges: z.array(z.number().positive()).nonempty().optional().default([1000]),
     attributes: z.object({
         actionPoints: AttributeDef,
         constitution: AttributeDef,
@@ -310,7 +314,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     set disorientation(value: number) {
-        clamp(value, 0, MAX_DISORIENTATION);
+        value = clamp(value, 0, MAX_DISORIENTATION);
 
         console.info("Setting disorientation to", value);
         this._disorientation = value;
@@ -383,6 +387,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get viewAngleInDegrees(): number {
         return this._recipe.viewAngleInDegrees;
+    }
+
+    get viewRanges(): number[] {
+        return this._recipe.viewRanges;
     }
 
     get canSee(): Unit[] {
@@ -501,7 +509,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.visibilityManager.update();
         }
 
-        this.canSee = this.getVisibleUnits();
+        // visibilityManager.update() refreshes every viewer; keep each unit's
+        // canSee in sync so opposition units that newly see someone report the
+        // correct count when later selected (toSummary → UnitsSeen).
+        this.game.syncUnitsCanSee();
 
         if (!isEqual(oldCanSee, this.canSee)) {
             this.messageRouter.send(
@@ -510,6 +521,24 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     payload: { canSee: this.canSee.length }
                 },
                 this.side.id
+            );
+        }
+    }
+
+    /**
+     * Sends every side its own visibility snapshot (visible tiles + friendly
+     * viewer cone parameters). Because opposition messages are queued during
+     * another side's turn, this interleaves each side's visibility into their
+     * playback so fog-of-war and view cones stay in sync with map updates.
+     */
+    private _broadcastVisibleTiles(): void {
+        for (const side of this.game.sides) {
+            this.messageRouter.send(
+                {
+                    type: "server:visible:tiles",
+                    payload: this.visibilityManager.getVisibilityUpdate(side.oppositionSideIds)
+                },
+                side.id
             );
         }
     }
@@ -575,13 +604,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 ],
                 mapLocation
             );
-            this.messageRouter.send(
-                {
-                    type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(this.side.oppositionSideIds)
-                },
-                this.side.id
-            );
+            this._broadcastVisibleTiles();
 
             relativeRotation = relativeDirection(this.orientation, orientation);
         }
@@ -648,18 +671,18 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this._refreshVisibility();
 
         this.messageRouter.send(
-            [
-                {
-                    type: "server:unit:selected:update",
-                    payload: { location: this.location }
-                },
-                {
-                    type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibleTiles(this.side.oppositionSideIds)
-                }
-            ],
+            {
+                type: "server:unit:selected:update",
+                payload: { location: this.location }
+            },
             this.side.id
         );
+
+        // Broadcast the post-move visibility set AFTER the source tile has been
+        // cleared (so the old viewer location is no longer needed to keep the
+        // departing sprite visible) and BEFORE the destination tile update (so
+        // the arriving sprite is not briefly culled by a stale visibleTiles).
+        this._broadcastVisibleTiles();
 
         this.messageRouter.sendIfVisible(
             [
@@ -863,6 +886,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 (a, b) => a.timeMs - b.timeMs
             );
 
+            const deaths = furnitureDamageSystem.unitDeaths.map(buildUnitDeathAnimation);
+
             roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
             const centerProjectile = projectiles.find((projectile) => projectile.index === 0)!;
@@ -884,10 +909,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     payload: {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                        tileUpdates
+                        tileUpdates,
+                        deaths
                     }
                 }
             ]);
+
+            // A death can remove a viewer/blocker and open up sightlines, so
+            // recompute visibility and push each side its updated visible tiles.
+            // Queued after the trace, this applies once playback of the death has
+            // finished on the observing client.
+            if (deaths.length > 0) {
+                this._refreshVisibility();
+                this._broadcastVisibleTiles();
+            }
         }
     }
 
@@ -1046,6 +1081,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             (a, b) => a.timeMs - b.timeMs
         );
 
+        const deaths = furnitureDamageSystem.unitDeaths.map(buildUnitDeathAnimation);
+
         roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
         const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
@@ -1074,10 +1111,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 payload: {
                     tracers: [projectile.getTracer()],
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                    tileUpdates
+                    tileUpdates,
+                    deaths
                 }
             }
         ]);
+
+        // A death can remove a viewer/blocker and open up sightlines, so
+        // recompute visibility and push each side its updated visible tiles.
+        // Queued after the trace, this applies once playback of the death has
+        // finished on the observing client.
+        if (deaths.length > 0) {
+            this._refreshVisibility();
+            this._broadcastVisibleTiles();
+        }
 
         this.messageRouter.send(
             {

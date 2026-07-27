@@ -1,6 +1,11 @@
 import z from "zod";
 
-const logLevel = ["error", "warn", "info", "debug"] as const;
+const logLevel = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3
+} as const;
 export const LogLevel = z.enum(logLevel);
 export type LogLevel = z.infer<typeof LogLevel>;
 

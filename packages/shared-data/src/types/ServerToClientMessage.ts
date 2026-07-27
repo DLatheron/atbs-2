@@ -15,12 +15,13 @@ import {
     TimedTileUpdate,
     UnitSummary,
     WaitingFor,
-    TileUpdate
+    TileUpdate,
+    VisibilityUpdate
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
-import { PlayAnimation } from "./AnimationTypes.js";
+import { AnimatableObjectRecipe, DeathAnimation, PlayAnimation } from "./AnimationTypes.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
@@ -177,7 +178,8 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: z.object({
             tracers: z.array(Tracer),
             isOnTarget: OnTarget,
-            tileUpdates: z.array(TimedTileUpdate).optional().default([])
+            tileUpdates: z.array(TimedTileUpdate).optional().default([]),
+            deaths: z.array(DeathAnimation).optional().default([])
         })
     }),
     z.object({
@@ -186,11 +188,15 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:visible:tiles"),
-        payload: z.array(z.string().describe("Tile position as a string"))
+        payload: VisibilityUpdate
     }),
     z.object({
         type: z.literal("server:animations:play"),
         payload: z.array(PlayAnimation)
+    }),
+    z.object({
+        type: z.literal("server:anim:objects:create"),
+        payload: z.array(AnimatableObjectRecipe)
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

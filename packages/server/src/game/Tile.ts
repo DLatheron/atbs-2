@@ -11,14 +11,15 @@ import {
     TilePos,
     Vec2
 } from "@atbs/maths";
+import { SceneContext } from "@atbs/shared-data";
 import z from "zod";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { IRenderableEntity } from "./IRenderableEntity.js";
-import { SceneContext } from "./SceneObject.js";
 import {
     FurnitureState,
     InterestMask,
+    RenderImage,
     RenderList,
     RenderMode,
     TileInfo,
@@ -275,6 +276,25 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.units.map((unit) => unit.getRenderList(context)).flat(),
             ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat()
+        ];
+    }
+
+    /**
+     * Mirrors {@link getRenderList} but omits units and appends an injected render image
+     * (e.g. an `anim-` placeholder that the client resolves to an animation). Used to
+     * replace a dying unit's static sprite with its death spin animation.
+     */
+    getRenderListExcludingUnits(
+        context: SceneContext,
+        injectedImage: RenderImage,
+        damageCache?: DamageCacheManager
+    ): RenderList {
+        return [
+            ...this.terrain.getRenderList(context),
+            ...(this.furniture?.getRenderList(context, damageCache) ?? []),
+            ...this.items.map((item) => item.getRenderList(context)).flat(),
+            ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat(),
+            injectedImage
         ];
     }
 

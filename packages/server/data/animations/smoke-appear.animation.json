@@ -1,5 +1,5 @@
 {
-    "id": "smoke.animation",
+    "id": "smoke-appear.animation",
     "stateDef": {
         "scale": [
             0,
@@ -23,6 +23,8 @@
                 }
             ]
         ],
-        "imageId": "smoke15"
+        "renderable": {
+            "default": [{ "imageId": "smoke15" }]
+        }
     }
 }

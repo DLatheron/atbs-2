@@ -1,6 +1,5 @@
 import type { Orientation, TilePos } from "@atbs/maths";
-import type { RenderList } from "@atbs/shared-data";
-import type { SceneContext } from "./SceneObject.js";
+import type { RenderList, SceneContext } from "@atbs/shared-data";
 
 export interface RenderableProps {
     location: TilePos | null;

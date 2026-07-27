@@ -1,7 +1,18 @@
-import { colourToRGBA, degreesToRadians, IColour, IVec2, PathSegment, Vec2 } from "@atbs/maths";
+import {
+    Colour,
+    colourToRGBA,
+    degreesToRadians,
+    IColour,
+    IVec2,
+    PathSegment,
+    Vec2
+} from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 import { calcFalloff, clamp } from "../../maths/src/Maths";
 import { Tracer } from "@atbs/shared-data";
+
+/** Default soft-edge width (canvas px) for viewer-tile feathering. */
+export const VIEWER_TILE_FEATHER_PX = 6;
 
 export function DrawProjectile(
     camera: Camera2d,
@@ -372,6 +383,85 @@ export function DebugDrawBox(
     }
 }
 
+/**
+ * Fills the viewer's own tile for the fog stencil within `tileSize` × `tileSize`,
+ * feathering all four edges inward to transparency. The view cone is drawn over
+ * this and restores the open side.
+ *
+ * @param worldPos - World-space top-left of the tile
+ * @param featherPx - Soft-edge width in canvas pixels inside the tile (default {@link VIEWER_TILE_FEATHER_PX})
+ */
+export function DrawFeatheredViewerTile(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    worldPos: IVec2,
+    tileSize: number,
+    colour: IColour,
+    featherPx: number = VIEWER_TILE_FEATHER_PX
+) {
+    const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
+    const { x, y } = canvasPos;
+    const size = tileSize;
+    const feather = Math.max(0, Math.min(featherPx, Math.floor(size / 2)));
+
+    const opaque = colourToRGBA(colour);
+    const transparent = colourToRGBA({ ...colour, a: 0 });
+
+    const coreW = size - 2 * feather;
+    const coreH = size - 2 * feather;
+    if (coreW > 0 && coreH > 0) {
+        context.fillStyle = opaque;
+        context.fillRect(x + feather, y + feather, coreW, coreH);
+    }
+
+    if (feather === 0) {
+        return;
+    }
+
+    // Side strips inside the box (corners excluded so overlapping alphas don't darken).
+    if (coreW > 0) {
+        const topGradient = context.createLinearGradient(0, y, 0, y + feather);
+        topGradient.addColorStop(0, transparent);
+        topGradient.addColorStop(1, opaque);
+        context.fillStyle = topGradient;
+        context.fillRect(x + feather, y, coreW, feather);
+
+        const bottomGradient = context.createLinearGradient(0, y + size - feather, 0, y + size);
+        bottomGradient.addColorStop(0, opaque);
+        bottomGradient.addColorStop(1, transparent);
+        context.fillStyle = bottomGradient;
+        context.fillRect(x + feather, y + size - feather, coreW, feather);
+    }
+
+    if (coreH > 0) {
+        const leftGradient = context.createLinearGradient(x, 0, x + feather, 0);
+        leftGradient.addColorStop(0, transparent);
+        leftGradient.addColorStop(1, opaque);
+        context.fillStyle = leftGradient;
+        context.fillRect(x, y + feather, feather, coreH);
+
+        const rightGradient = context.createLinearGradient(x + size - feather, 0, x + size, 0);
+        rightGradient.addColorStop(0, opaque);
+        rightGradient.addColorStop(1, transparent);
+        context.fillStyle = rightGradient;
+        context.fillRect(x + size - feather, y + feather, feather, coreH);
+    }
+
+    // Corner fades inside the box where two feathered edges meet.
+    const fillCorner = (cx: number, cy: number, innerX: number, innerY: number) => {
+        const gradient = context.createRadialGradient(innerX, innerY, 0, innerX, innerY, feather);
+        gradient.addColorStop(0, opaque);
+        gradient.addColorStop(1, transparent);
+        context.fillStyle = gradient;
+        context.fillRect(cx, cy, feather, feather);
+    };
+
+    fillCorner(x, y, x + feather, y + feather);
+    fillCorner(x + size - feather, y, x + size - feather, y + feather);
+    fillCorner(x, y + size - feather, x + feather, y + size - feather);
+    fillCorner(x + size - feather, y + size - feather, x + size - feather, y + size - feather);
+}
+
 export function DebugDrawLine(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -590,11 +680,11 @@ export function DrawVfx(
     const halfSize = size / 2;
 
     context.globalAlpha = alpha;
-    context.translate(centerCanvasPos.x - halfSize, centerCanvasPos.y - halfSize);
+    context.translate(centerCanvasPos.x, centerCanvasPos.y);
     context.rotate(angleInRadians);
-    context.drawImage(image, 0, 0, size, size);
+    context.drawImage(image, -halfSize, -halfSize, size, size);
     context.rotate(-angleInRadians);
-    context.translate(-centerCanvasPos.x + halfSize, -centerCanvasPos.y + halfSize);
+    context.translate(-centerCanvasPos.x, -centerCanvasPos.y);
     context.globalAlpha = 1;
 }
 
@@ -609,11 +699,90 @@ export function DrawVfxToCanvas(
     const angleInRadians = degreesToRadians(rotationInDegrees);
     const halfSize = size / 2;
 
+    // Rotate about the centre of the drawn image: translate to the centre,
+    // rotate, then draw the image offset by half its size in each axis.
     context.globalAlpha = alpha;
-    context.translate(canvasPos.x - halfSize, canvasPos.y - halfSize);
+    context.translate(canvasPos.x, canvasPos.y);
     context.rotate(angleInRadians);
-    context.drawImage(image, 0, 0, size, size);
+    context.drawImage(image, -halfSize, -halfSize, size, size);
     context.rotate(-angleInRadians);
-    context.translate(-canvasPos.x + halfSize, -canvasPos.y + halfSize);
+    context.translate(-canvasPos.x, -canvasPos.y);
     context.globalAlpha = 1;
+}
+
+export function DrawViewCone(
+    camera: Camera2d,
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    worldPos: Vec2,
+    radius: number,
+    directionAngleInDegrees: number,
+    viewConeInDegrees: number,
+    colour: Colour
+) {
+    const transparentColour = new Colour({ ...colour, a: 0 }).asRGBAColorString;
+
+    const canvasPos = camera.worldToCanvas(worldPos);
+
+    const angleOffsetInDegreesToRealign = 90;
+    const colorStopReverseAngleInDegrees = 180;
+    const externalFuzzAngleInDegrees = 2;
+    const internalFuzzAngleInDegrees = 1;
+    const halfViewConeInDegrees = viewConeInDegrees / 2;
+
+    const gradient = context.createConicGradient(
+        degreesToRadians(
+            directionAngleInDegrees - colorStopReverseAngleInDegrees - angleOffsetInDegreesToRealign
+        ),
+        canvasPos.x,
+        canvasPos.y
+    );
+
+    const startAngle = degreesToRadians(
+        directionAngleInDegrees -
+            externalFuzzAngleInDegrees -
+            halfViewConeInDegrees -
+            angleOffsetInDegreesToRealign
+    );
+    const endAngle = degreesToRadians(
+        directionAngleInDegrees +
+            externalFuzzAngleInDegrees +
+            halfViewConeInDegrees -
+            angleOffsetInDegreesToRealign
+    );
+
+    const angleToColorStop = (angleInDegrees: number): number => {
+        return degreesToRadians(angleInDegrees) / (2 * Math.PI);
+    };
+
+    const coneColour = colour.asRGBAColorString;
+
+    gradient.addColorStop(angleToColorStop(0), "red");
+    gradient.addColorStop(
+        angleToColorStop(180 - halfViewConeInDegrees - externalFuzzAngleInDegrees),
+        transparentColour
+    );
+    gradient.addColorStop(
+        angleToColorStop(180 - halfViewConeInDegrees + internalFuzzAngleInDegrees),
+        coneColour
+    );
+    gradient.addColorStop(angleToColorStop(180), coneColour);
+    gradient.addColorStop(
+        angleToColorStop(180 + halfViewConeInDegrees - internalFuzzAngleInDegrees),
+        coneColour
+    );
+    gradient.addColorStop(
+        angleToColorStop(180 + halfViewConeInDegrees + externalFuzzAngleInDegrees),
+        transparentColour
+    );
+
+    gradient.addColorStop(angleToColorStop(360), "blue");
+
+    context.fillStyle = gradient;
+    context.strokeStyle = "transparent";
+
+    context.beginPath();
+    context.moveTo(canvasPos.x, canvasPos.y);
+    context.arc(canvasPos.x, canvasPos.y, radius, startAngle, endAngle, false);
+    context.lineTo(canvasPos.x, canvasPos.y);
+    context.fill();
 }

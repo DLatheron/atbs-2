@@ -53,28 +53,32 @@
         },
         "MAP_MODE": {
             "alive": {
-                "default": [
-                    [{ "imageId": "generic-0", "orientation": 8 }],
-                    [{ "imageId": "generic-1", "orientation": 8 }],
-                    [{ "imageId": "generic-2", "orientation": 8 }],
-                    [{ "imageId": "generic-3", "orientation": 8 }],
-                    [{ "imageId": "generic-4", "orientation": 8 }],
-                    [{ "imageId": "generic-5", "orientation": 8 }],
-                    [{ "imageId": "generic-6", "orientation": 8 }],
-                    [{ "imageId": "generic-7", "orientation": 8 }],
-                    []
-                ],
-                "item-in-use": [
-                    [{ "imageId": "generic-carrying-0", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-1", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-2", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-3", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-4", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-5", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-6", "orientation": 8 }],
-                    [{ "imageId": "generic-carrying-7", "orientation": 8 }],
-                    []
-                ]
+                "default": {
+                    "directional": [
+                        [{ "imageId": "generic-0", "orientation": 8 }],
+                        [{ "imageId": "generic-1", "orientation": 8 }],
+                        [{ "imageId": "generic-2", "orientation": 8 }],
+                        [{ "imageId": "generic-3", "orientation": 8 }],
+                        [{ "imageId": "generic-4", "orientation": 8 }],
+                        [{ "imageId": "generic-5", "orientation": 8 }],
+                        [{ "imageId": "generic-6", "orientation": 8 }],
+                        [{ "imageId": "generic-7", "orientation": 8 }],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    "directional": [
+                        [{ "imageId": "generic-carrying-0", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-1", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-2", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-3", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-4", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-5", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-6", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-7", "orientation": 8 }],
+                        []
+                    ]
+                }
             },
             "dead": [{ "imageId": "generic-dead" }],
             "default": []

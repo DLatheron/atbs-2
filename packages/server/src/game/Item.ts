@@ -14,9 +14,10 @@ import {
     Weight,
     RenderMode,
     SightType,
-    FireType
+    FireType,
+    SceneObject,
+    SceneContext
 } from "@atbs/shared-data";
-import { SceneContext, SceneObject } from "./SceneObject.js";
 import { clamp, degreesToRadians, TilePos, Vec2 } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";

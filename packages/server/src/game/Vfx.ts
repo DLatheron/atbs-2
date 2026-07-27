@@ -1,6 +1,5 @@
 import { ITilePos, TilePos } from "@atbs/maths";
-import { VfxId } from "@atbs/shared-data";
-import { SceneObject } from "./SceneObject.js";
+import { SceneObject, VfxId } from "@atbs/shared-data";
 import { VfxRecipe } from "./VfxRecipe.js";
 import { VfxManager } from "./VfxManager.js";
 import { AnimationRecipeManager } from "./AnimationRecipeManager.js";
@@ -30,14 +29,22 @@ export class Vfx extends SceneObject {
         this._recipe = recipe;
         this._location = new TilePos(additionalData.location);
 
-        const animationRecipe = AnimationRecipeManager.GetSingleton().getRecipe(
-            this.recipe.animationRecipeId
+        const animationRecipes = recipe.animationRecipeIds.map((animationRecipeId) =>
+            AnimationRecipeManager.GetSingleton().getRecipe(animationRecipeId)
         );
 
         // Register this animation with all clients.
+        // this._vfxManager.game.broadcastMessage({
+        //     type: "server:animations:play",
+        //     payload: [
+        //         { instanceId, recipe: animationRecipe, offset: 0 },
+        //         { instanceId, recipe: animationRecipe, offset: 0 }
+        //     ]
+        // });
+
         this._vfxManager.game.broadcastMessage({
-            type: "server:animations:play",
-            payload: [{ instanceId, recipe: animationRecipe }]
+            type: "server:anim:objects:create",
+            payload: [{ instanceId, recipes: animationRecipes }]
         });
     }
 

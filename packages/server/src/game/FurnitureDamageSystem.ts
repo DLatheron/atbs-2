@@ -1,11 +1,13 @@
 import { IVec2, Orientation, TilePos, Vec2 } from "@atbs/maths";
-import { FurnitureState, RenderMode, TimedTileUpdate } from "@atbs/shared-data";
+import { FurnitureState, RenderImage, RenderMode, TimedTileUpdate } from "@atbs/shared-data";
+import { DEATH_DURATION_MS, UnitDeathRecord, unitDeathAnimId } from "../AnimationDefinitions.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Furniture, isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
 import { ImageManager } from "./ImageManager.js";
 import { Projectile } from "./Projectile.js";
 import { CollisionSample, Tile } from "./Tile.js";
+import type { Unit } from "./Unit.js";
 
 export class FurnitureDamageSystem {
     private readonly _damageCache: DamageCacheManager;
@@ -13,6 +15,7 @@ export class FurnitureDamageSystem {
     private readonly _tileSize: number;
     private readonly _hpDamageApplied = new Set<string>();
     private readonly _timedUpdates: TimedTileUpdate[] = [];
+    private readonly _unitDeaths: UnitDeathRecord[] = [];
 
     constructor(damageCache: DamageCacheManager, tileSize: number) {
         this._damageCache = damageCache;
@@ -24,6 +27,10 @@ export class FurnitureDamageSystem {
         return this._timedUpdates;
     }
 
+    get unitDeaths(): readonly UnitDeathRecord[] {
+        return this._unitDeaths;
+    }
+
     private hpDamageKey(projectile: Projectile, furniture: Furniture): string {
         return `${projectile.roundIndex}-${projectile.index}-${furniture.id}`;
     }
@@ -32,15 +39,24 @@ export class FurnitureDamageSystem {
         return Math.max(1, Math.round((projectile.diameter / 2) * (this._tileSize / 1000)));
     }
 
-    private recordTileUpdate(timeMs: number, tile: Tile): void {
-        const tilePos = tile.location;
+    private upsertTimedUpdate(update: TimedTileUpdate): void {
         const existingIndex = this._timedUpdates.findIndex(
-            (update) => update.timeMs === timeMs && TilePos.IsEqual(update.tilePos, tilePos)
+            (existing) =>
+                existing.timeMs === update.timeMs &&
+                TilePos.IsEqual(existing.tilePos, update.tilePos)
         );
 
-        const update: TimedTileUpdate = {
+        if (existingIndex >= 0) {
+            this._timedUpdates[existingIndex] = update;
+        } else {
+            this._timedUpdates.push(update);
+        }
+    }
+
+    private recordTileUpdate(timeMs: number, tile: Tile): void {
+        this.upsertTimedUpdate({
             timeMs,
-            tilePos,
+            tilePos: tile.location,
             tileByRenderMode: {
                 [RenderMode.enum.MAP_MODE]: tile.getRenderList(
                     {
@@ -57,17 +73,54 @@ export class FurnitureDamageSystem {
                     this._damageCache
                 )
             }
-        };
-
-        if (existingIndex >= 0) {
-            this._timedUpdates[existingIndex] = update;
-        } else {
-            this._timedUpdates.push(update);
-        }
+        });
     }
 
-    onUnitDeath(tile: Tile, timeMs: number): void {
-        this.recordTileUpdate(timeMs, tile);
+    private recordDeathPlaceholderUpdate(timeMs: number, tile: Tile, animImageId: string): void {
+        const injectedImage: RenderImage = { imageId: animImageId };
+
+        this.upsertTimedUpdate({
+            timeMs,
+            tilePos: tile.location,
+            tileByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: tile.getRenderListExcludingUnits(
+                    {
+                        renderMode: RenderMode.enum.MAP_MODE,
+                        states: []
+                    },
+                    injectedImage,
+                    this._damageCache
+                ),
+                [RenderMode.enum.FIRE_MODE]: tile.getRenderListExcludingUnits(
+                    {
+                        renderMode: RenderMode.enum.FIRE_MODE,
+                        states: []
+                    },
+                    injectedImage,
+                    this._damageCache
+                )
+            }
+        });
+    }
+
+    onUnitDeath(tile: Tile, unit: Unit, timeMs: number, roundIndex: number): void {
+        const animImageId = unitDeathAnimId(unit.id, roundIndex);
+
+        this._unitDeaths.push({
+            unitId: unit.id,
+            orientation: unit.orientation,
+            itemInUse: Boolean(unit.itemInUse),
+            worldPos: tile.aabb.middleCenter,
+            timeMs,
+            roundIndex,
+            scale: this._tileSize
+        });
+
+        // Start: replace the (now dead) unit with the spinning death animation placeholder.
+        this.recordDeathPlaceholderUpdate(timeMs, tile, animImageId);
+
+        // End: settle to the normal dead-sprite tile render list once the spin completes.
+        this.recordTileUpdate(timeMs + DEATH_DURATION_MS, tile);
     }
 
     onMaterialEntry(projectile: Projectile, event: GridRayTraceHitResult, timeMs: number): void {

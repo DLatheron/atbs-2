@@ -1,22 +1,29 @@
-import { clamp, Vec2 } from "@atbs/maths";
+import { clamp, Orientation, Vec2 } from "@atbs/maths";
 import { Logger, LogLevel } from "@atbs/misc";
 import {
     AnimationId,
     AnimationRecipe,
     AnimationState,
-    ImageIdSequence,
-    ImageIdState,
+    FrameSequence,
+    FrameState,
     InstanceId,
-    interpolateImageId,
+    interpolateFrame,
     interpolateNumber,
+    interpolateOrientation,
     OpacitySequence,
     OpacityState,
+    OrientationSequence,
+    OrientationState,
     PlayAnimation,
+    RenderMode,
+    RotationSequence,
+    RotationState,
     ScaleSequence,
-    ScaleState
+    ScaleState,
+    SceneObject
 } from "@atbs/shared-data";
 import z from "zod";
-import { DrawVfx, DrawVfxToCanvas } from "./RenderHelpers";
+import { DrawVfxToCanvas } from "./RenderHelpers";
 import { ImageCache } from "./ImageCache";
 import { Camera2d } from "./Camera2d";
 
@@ -28,25 +35,44 @@ export const AnimationOverrides = z
     .partial();
 export type AnimationOverrides = z.infer<typeof AnimationOverrides>;
 
-export class Animation {
+export class Animation extends SceneObject {
     readonly logger: Logger;
 
     private readonly _id: InstanceId;
     private readonly _recipe: AnimationRecipe;
+    private readonly _worldPos: Vec2 | undefined;
+    private readonly _flags: { loop: boolean };
+    private _completeCallback?: (time: number) => void;
+
     private _state: AnimationState;
     private _startTime: number | undefined;
+    private _duration: number;
 
     constructor(
-        { instanceId, recipe }: PlayAnimation,
-        overrides: Readonly<AnimationOverrides> = {}
+        { instanceId, recipe, worldPos }: PlayAnimation,
+        overrides: Readonly<AnimationOverrides> = {},
+        completeCallback?: (time: number) => void,
+        imageCache?: ImageCache
     ) {
+        super(recipe.stateDef.renderable);
+
         this._id = instanceId;
         this._recipe = recipe;
+        this._worldPos = worldPos ? new Vec2(worldPos) : undefined;
+        this._flags = recipe.flags ?? { loop: false };
         this.logger = new Logger(this.id, LogLevel.enum.warn);
         this._startTime = overrides.startTime ?? undefined;
+        this._duration = Animation._PreCalculateDuration(recipe);
+        this._completeCallback = completeCallback;
 
         // Ensure we have a valid state.
         this._state = this.evaluateState(this._startTime ?? 0);
+
+        // Pre-warm the cache for every image this animation could render, so
+        // frames/states/orientations are available before they are first shown.
+        if (imageCache) {
+            this.forEachImageId((imageId) => imageCache.requestImage(imageId));
+        }
     }
 
     get id(): InstanceId {
@@ -65,6 +91,10 @@ export class Animation {
         return this._startTime;
     }
 
+    get duration(): number {
+        return this._duration;
+    }
+
     set startTime(value: number) {
         if (this._startTime !== undefined) {
             throw new Error("Animation has already been started");
@@ -72,6 +102,34 @@ export class Animation {
 
         this.logger.debug("Starting animation", { value });
         this._startTime = value;
+    }
+
+    get hasWorldPos(): boolean {
+        return this._worldPos !== undefined;
+    }
+
+    get worldPos(): Vec2 {
+        if (!this._worldPos) {
+            throw new Error("Animation does not have a world position");
+        }
+
+        return this._worldPos;
+    }
+
+    private static _PreCalculateDuration(recipe: AnimationRecipe): number {
+        let duration = 0;
+
+        for (const property of Object.values(recipe.stateDef)) {
+            if (!Array.isArray(property)) {
+                continue;
+            }
+
+            for (const sequence of property[1]) {
+                duration = Math.max(duration, sequence.startOffset + sequence.duration);
+            }
+        }
+
+        return duration;
     }
 
     private evaluateStateValue<TValue, TSequence>(
@@ -117,41 +175,68 @@ export class Animation {
 
     private evaluateState(elapsedTimeIntoAnimation: number): AnimationState {
         return {
-            scale: this.evaluateStateValue<ScaleState, ScaleSequence>(
-                "scale",
-                this._recipe.stateDef.scale,
-                elapsedTimeIntoAnimation,
-                interpolateNumber
-            ),
-            opacity: this.evaluateStateValue<OpacityState, OpacitySequence>(
-                "opacity",
-                this._recipe.stateDef.opacity,
-                elapsedTimeIntoAnimation,
-                interpolateNumber
-            ),
-            imageId: this.evaluateStateValue<ImageIdState, ImageIdSequence>(
-                "imageId",
-                this._recipe.stateDef.imageId,
-                elapsedTimeIntoAnimation,
-                interpolateImageId
-            )
+            scale: this._recipe.stateDef.scale
+                ? this.evaluateStateValue<ScaleState, ScaleSequence>(
+                      "scale",
+                      this._recipe.stateDef.scale,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 100,
+            opacity: this._recipe.stateDef.opacity
+                ? this.evaluateStateValue<OpacityState, OpacitySequence>(
+                      "opacity",
+                      this._recipe.stateDef.opacity,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 1,
+            rotation: this._recipe.stateDef.rotation
+                ? this.evaluateStateValue<RotationState, RotationSequence>(
+                      "rotation",
+                      this._recipe.stateDef.rotation,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 0,
+            orientation: this._recipe.stateDef.orientation
+                ? this.evaluateStateValue<OrientationState, OrientationSequence>(
+                      "orientation",
+                      this._recipe.stateDef.orientation,
+                      elapsedTimeIntoAnimation,
+                      interpolateOrientation
+                  )
+                : Orientation.NORTH,
+            frame: this._recipe.stateDef.frame
+                ? this.evaluateStateValue<FrameState, FrameSequence>(
+                      "frame",
+                      this._recipe.stateDef.frame,
+                      elapsedTimeIntoAnimation,
+                      interpolateFrame
+                  )
+                : 0
         };
     }
 
     update(time: number) {
         if (this._startTime === undefined) {
             this._startTime = time;
-            // throw new Error("Animation has not been started");
         }
 
-        const elapsedTimeIntoAnimation = time - this._startTime;
+        const elapsedTimeIntoAnimation = this._flags.loop
+            ? (time - this._startTime) % this.duration
+            : time - this._startTime;
         this.logger.debug("Updating animation", { time, elapsedTimeIntoAnimation });
 
         this._state = this.evaluateState(elapsedTimeIntoAnimation);
+
+        if (this._completeCallback && elapsedTimeIntoAnimation >= this.duration) {
+            this._completeCallback(time);
+            this._completeCallback = undefined;
+        }
     }
 
     renderToWorld({
-        camera,
         context,
         worldPos,
         imageCache
@@ -161,14 +246,30 @@ export class Animation {
         worldPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity } = this._state;
+        const { scale, opacity, rotation, orientation, frame } = this._state;
 
-        imageCache.requestImage(imageId);
-        if (!imageCache.isLoaded(imageId)) {
-            return;
+        const renderList = this.getRenderList({
+            renderMode: RenderMode.enum.MAP_MODE,
+            orientation,
+            opacity,
+            frame,
+            states: ["default"]
+        });
+
+        for (const renderable of renderList) {
+            if (!imageCache.isLoaded(renderable.imageId)) {
+                return;
+            }
+
+            DrawVfxToCanvas(
+                context,
+                imageCache.getImage(renderable.imageId),
+                worldPos,
+                scale,
+                renderable.opacity ?? opacity,
+                rotation
+            );
         }
-
-        DrawVfx(camera, context, imageCache.getImage(imageId), worldPos, scale, opacity, 0);
     }
 
     renderToCanvas({
@@ -180,13 +281,29 @@ export class Animation {
         canvasPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { imageId, scale, opacity } = this._state;
+        const { scale, opacity, rotation, orientation, frame } = this._state;
 
-        imageCache.requestImage(imageId);
-        if (!imageCache.isLoaded(imageId)) {
-            return;
+        const renderList = this.getRenderList({
+            renderMode: RenderMode.enum.MAP_MODE,
+            orientation,
+            opacity,
+            frame,
+            states: ["default"]
+        });
+
+        for (const renderable of renderList) {
+            if (!imageCache.isLoaded(renderable.imageId)) {
+                return;
+            }
+
+            DrawVfxToCanvas(
+                context,
+                imageCache.getImage(renderable.imageId),
+                canvasPos,
+                scale,
+                renderable.opacity ?? opacity,
+                rotation
+            );
         }
-
-        DrawVfxToCanvas(context, imageCache.getImage(imageId), canvasPos, scale, opacity, 0);
     }
 }

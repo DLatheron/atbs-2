@@ -168,6 +168,7 @@ export function useActionPage() {
                 world.setTracers(
                     payload.tracers,
                     payload.tileUpdates,
+                    payload.deaths,
                     () => {
                         setMap((map: ClientMap | null) => map);
                     },
@@ -187,14 +188,24 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:visible:tiles", async (_context, payload) => {
-                world.visibleTiles = new Set(payload);
+                world.visibleTiles = new Set(payload.tiles);
+                world.visibilityViewers = payload.viewers;
             }),
 
             messageManager.registerHandler("server:animations:play", async (_context, payload) => {
                 for (const playAnimation of payload) {
                     world.animationController.newAnimation(playAnimation);
                 }
-            })
+            }),
+
+            messageManager.registerHandler(
+                "server:anim:objects:create",
+                async (_context, payload) => {
+                    for (const animatableObjectRecipe of payload) {
+                        world.animationController.newAnimatableObject(animatableObjectRecipe);
+                    }
+                }
+            )
         ];
 
         return () => {

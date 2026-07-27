@@ -1,0 +1,33 @@
+{
+    "id": "smoke-maintain.animation",
+    "flags": {
+        "loop": true
+    },
+    "stateDef": {
+        "scale": [
+            100,
+            [
+                {
+                    "type": "ease-in-out",
+                    "startOffset": 0,
+                    "duration": 2000,
+                    "powerIn": 2,
+                    "powerOut": 2,
+                    "toValue": 80
+                },
+                {
+                    "type": "ease-in-out",
+                    "startOffset": 0,
+                    "powerIn": 2,
+                    "powerOut": 2,
+                    "duration": 2000,
+                    "toValue": 100
+                }
+            ]
+        ],
+        "opacity": 1,
+        "renderable": {
+            "default": [{ "imageId": "smoke15" }]
+        }
+    }
+}

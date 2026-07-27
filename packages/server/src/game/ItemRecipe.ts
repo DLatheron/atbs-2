@@ -10,10 +10,10 @@ import {
     DamageMap,
     FireSelector,
     FireType,
-    VisualRecipe
+    VisualRecipe,
+    SceneNode
 } from "@atbs/shared-data";
 import z from "zod";
-import { SceneNode } from "./SceneObject.js";
 import { TilePos } from "@atbs/maths";
 
 export const Slot = z.object({

@@ -1,4 +1,4 @@
 {
     "id": "smoke.vfx",
-    "animationRecipeId": "smoke.animation"
+    "animationRecipeIds": ["smoke-appear.animation", "smoke-maintain.animation"]
 }
