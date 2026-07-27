@@ -6,7 +6,7 @@ export interface VisibilityViewer {
     get id(): string;
     get visualType(): VisualType;
     get viewAngleInDegrees(): number;
-    get viewRanges(): number[];
+    get viewRange(): number;
     get isDirectional(): boolean;
     get isAlive(): boolean;
 
@@ -20,4 +20,6 @@ export interface VisibilityViewer {
     set orientation(value: Orientation);
 
     get pois(): VisibilityPoi[];
+
+    get limitedView(): boolean;
 }

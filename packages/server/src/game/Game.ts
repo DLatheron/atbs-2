@@ -533,12 +533,16 @@ export class Game {
 
         if (selectedUnit) {
             this.logger.info("Deselect unit", selectedUnit.name);
-            // TODO: Deal with unselecting the unit...
+
+            selectedUnit.deselect();
         }
 
         if (value) {
             this.logger.info("Selecting unit", value.name);
-            // TODO: Deal with selecting the unit.
+
+            if (selectedUnit) {
+                selectedUnit.select();
+            }
         }
 
         this._playState.selectedUnit = value;

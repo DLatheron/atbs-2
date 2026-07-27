@@ -14,6 +14,36 @@ import { Tracer } from "@atbs/shared-data";
 /** Default soft-edge width (canvas px) for viewer-tile feathering. */
 export const VIEWER_TILE_FEATHER_PX = 6;
 
+/** Maximum allowed corner radius (canvas px) for {@link DrawRoundedFeatheredTile}. */
+export const VIEWER_TILE_CORNER_RADIUS_MAX_PX = 50;
+
+function addRoundRectPath(
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number
+): void {
+    const radius = Math.min(Math.max(0, r), w / 2, h / 2);
+    if (typeof context.roundRect === "function") {
+        context.roundRect(x, y, w, h, radius);
+        return;
+    }
+
+    if (radius === 0) {
+        context.rect(x, y, w, h);
+        return;
+    }
+
+    context.moveTo(x + radius, y);
+    context.arcTo(x + w, y, x + w, y + h, radius);
+    context.arcTo(x + w, y + h, x, y + h, radius);
+    context.arcTo(x, y + h, x, y, radius);
+    context.arcTo(x, y, x + w, y, radius);
+    context.closePath();
+}
+
 export function DrawProjectile(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -384,82 +414,91 @@ export function DebugDrawBox(
 }
 
 /**
- * Fills the viewer's own tile for the fog stencil within `tileSize` × `tileSize`,
- * feathering all four edges inward to transparency. The view cone is drawn over
- * this and restores the open side.
+ * Fills a tile-sized fog stencil within `tileSize` × `tileSize`, with optional
+ * rounded corners and inward edge feathering to transparency. The view cone is
+ * drawn over this and restores the open side.
  *
  * @param worldPos - World-space top-left of the tile
  * @param featherPx - Soft-edge width in canvas pixels inside the tile (default {@link VIEWER_TILE_FEATHER_PX})
+ * @param cornerRadiusPx - Corner radius in canvas pixels, clamped to 0…{@link VIEWER_TILE_CORNER_RADIUS_MAX_PX}
  */
-export function DrawFeatheredViewerTile(
+export function DrawRoundedFeatheredTile(
     camera: Camera2d,
     context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
     worldPos: IVec2,
     tileSize: number,
     colour: IColour,
-    featherPx: number = VIEWER_TILE_FEATHER_PX
+    featherPx: number = VIEWER_TILE_FEATHER_PX,
+    cornerRadiusPx: number = 0
 ) {
     const canvasPos = camera.worldToCanvas(new Vec2(worldPos));
     const { x, y } = canvasPos;
     const size = tileSize;
     const feather = Math.max(0, Math.min(featherPx, Math.floor(size / 2)));
+    const cornerRadius = Math.min(
+        Math.max(0, cornerRadiusPx),
+        VIEWER_TILE_CORNER_RADIUS_MAX_PX,
+        size / 2
+    );
 
-    const opaque = colourToRGBA(colour);
-    const transparent = colourToRGBA({ ...colour, a: 0 });
+    const baseAlpha = colour.a ?? 1;
 
+    // Opaque core — inset by the feather band, with corners tightened to match.
     const coreW = size - 2 * feather;
     const coreH = size - 2 * feather;
     if (coreW > 0 && coreH > 0) {
-        context.fillStyle = opaque;
-        context.fillRect(x + feather, y + feather, coreW, coreH);
+        context.beginPath();
+        addRoundRectPath(
+            context,
+            x + feather,
+            y + feather,
+            coreW,
+            coreH,
+            Math.max(0, cornerRadius - feather)
+        );
+        context.fillStyle = colourToRGBA({ ...colour, a: baseAlpha });
+        context.fill();
     }
 
     if (feather === 0) {
         return;
     }
 
-    // Side strips inside the box (corners excluded so overlapping alphas don't darken).
-    if (coreW > 0) {
-        const topGradient = context.createLinearGradient(0, y, 0, y + feather);
-        topGradient.addColorStop(0, transparent);
-        topGradient.addColorStop(1, opaque);
-        context.fillStyle = topGradient;
-        context.fillRect(x + feather, y, coreW, feather);
+    // Feather as concentric rounded-rect rings (evenodd outer−inner), so the
+    // fade follows both straight edges and rounded corners without alpha stacking.
+    for (let i = 0; i < feather; i++) {
+        const outerInset = i;
+        const innerInset = i + 1;
+        const outerSize = size - 2 * outerInset;
+        const innerSize = size - 2 * innerInset;
+        if (outerSize <= 0) {
+            continue;
+        }
 
-        const bottomGradient = context.createLinearGradient(0, y + size - feather, 0, y + size);
-        bottomGradient.addColorStop(0, opaque);
-        bottomGradient.addColorStop(1, transparent);
-        context.fillStyle = bottomGradient;
-        context.fillRect(x + feather, y + size - feather, coreW, feather);
+        const alpha = baseAlpha * ((i + 0.5) / feather);
+
+        context.beginPath();
+        addRoundRectPath(
+            context,
+            x + outerInset,
+            y + outerInset,
+            outerSize,
+            outerSize,
+            Math.max(0, cornerRadius - outerInset)
+        );
+        if (innerSize > 0) {
+            addRoundRectPath(
+                context,
+                x + innerInset,
+                y + innerInset,
+                innerSize,
+                innerSize,
+                Math.max(0, cornerRadius - innerInset)
+            );
+        }
+        context.fillStyle = colourToRGBA({ ...colour, a: alpha });
+        context.fill("evenodd");
     }
-
-    if (coreH > 0) {
-        const leftGradient = context.createLinearGradient(x, 0, x + feather, 0);
-        leftGradient.addColorStop(0, transparent);
-        leftGradient.addColorStop(1, opaque);
-        context.fillStyle = leftGradient;
-        context.fillRect(x, y + feather, feather, coreH);
-
-        const rightGradient = context.createLinearGradient(x + size - feather, 0, x + size, 0);
-        rightGradient.addColorStop(0, opaque);
-        rightGradient.addColorStop(1, transparent);
-        context.fillStyle = rightGradient;
-        context.fillRect(x + size - feather, y + feather, feather, coreH);
-    }
-
-    // Corner fades inside the box where two feathered edges meet.
-    const fillCorner = (cx: number, cy: number, innerX: number, innerY: number) => {
-        const gradient = context.createRadialGradient(innerX, innerY, 0, innerX, innerY, feather);
-        gradient.addColorStop(0, opaque);
-        gradient.addColorStop(1, transparent);
-        context.fillStyle = gradient;
-        context.fillRect(cx, cy, feather, feather);
-    };
-
-    fillCorner(x, y, x + feather, y + feather);
-    fillCorner(x + size - feather, y, x + size - feather, y + feather);
-    fillCorner(x, y + size - feather, x + feather, y + size - feather);
-    fillCorner(x + size - feather, y + size - feather, x + size - feather, y + size - feather);
 }
 
 export function DebugDrawLine(
