@@ -29,6 +29,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         error,
         disabled,
         isOnTarget,
+        opportunityFire,
         onMove,
         onRotateTo,
         onChangeFireSelector,
@@ -157,6 +158,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     unit={unit}
                     unitWeapon={unitWeapon}
                     isOnTarget={isOnTarget}
+                    opportunityFire={opportunityFire}
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
                     onEndFireMode={onEndFireMode}

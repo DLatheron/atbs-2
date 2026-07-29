@@ -35,6 +35,7 @@ export function useActionPage() {
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
     const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
+    const [opportunityFire, setOpportunityFire] = useState<boolean>(false);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -74,6 +75,11 @@ export function useActionPage() {
                     setSidePanelMode(MapMode.enum["map-mode"]);
                     world.mapMode = MapMode.enum["map-mode"];
                 }
+            }),
+
+            messageManager.registerHandler("server:unit:mode:fire:end", () => {
+                setSidePanelMode(MapMode.enum["unit-mode"]);
+                world.mapMode = MapMode.enum["unit-mode"];
             }),
 
             messageManager.registerHandler("server:turn:start", (_context, payload) => {
@@ -205,7 +211,21 @@ export function useActionPage() {
                         world.animationController.newAnimatableObject(animatableObjectRecipe);
                     }
                 }
-            )
+            ),
+
+            // messageManager.registerHandler("server:opportunity:fire", async (_context, payload) => {
+            //     console.info("$$$ Received opportunity fire message $$$", payload.unit.id);
+
+            //     await delay(5000);
+            // }),
+
+            messageManager.registerHandler("server:opportunity:fire:start", async () => {
+                setOpportunityFire(true);
+            }),
+
+            messageManager.registerHandler("server:opportunity:fire:end", async () => {
+                setOpportunityFire(false);
+            })
         ];
 
         return () => {
@@ -276,9 +296,11 @@ export function useActionPage() {
     }, [sendMessage, unit?.id]);
 
     const onEndFireMode = useCallback(() => {
-        setSidePanelMode(MapMode.enum["unit-mode"]);
-        world.mapMode = MapMode.enum["unit-mode"];
-    }, [world]);
+        sendMessage({
+            type: "client:unit:mode:fire:end",
+            payload: null
+        });
+    }, [sendMessage]);
 
     const onChangeFireSelector = useCallback(
         (weaponId: ItemId, fireSelector: FireSelector) => {
@@ -347,6 +369,7 @@ export function useActionPage() {
         error,
         disabled,
         isOnTarget,
+        opportunityFire,
         onMove,
         onRotateTo,
         onChangeFireSelector,

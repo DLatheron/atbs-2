@@ -68,6 +68,11 @@ import { Overtaking } from "./Overtaking.js";
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
 
+const OPPORTUNITY_FIRE_APTS_THRESHOLD = 0.5;
+
+const OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER = 0.75;
+const OPPORTUNITY_FIRE_DEFAULT_SPEED_SCALER = 1.0;
+
 const ROTATION_APT_COST = 1;
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
@@ -367,6 +372,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._attributes.strength.value;
     }
 
+    get speed(): number {
+        return this._attributes.speed.value;
+    }
+
     get canFire(): boolean {
         return !!this.itemInUse?.canFire;
     }
@@ -417,6 +426,22 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get limitedView(): boolean {
         return this.isOvertaking;
+    }
+
+    get canOpportunityFire(): boolean {
+        if (this.isDead) {
+            return false;
+        }
+
+        if (this.actionPoints < this.maxActionPoints * OPPORTUNITY_FIRE_APTS_THRESHOLD) {
+            return false;
+        }
+
+        if (!this.itemInUse?.suitableForOpportunityFire) {
+            return false;
+        }
+
+        return true;
     }
 
     getActions(): Actions {
@@ -566,7 +591,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
     }
 
-    private _refreshVisibility(): void {
+    private _refreshVisibility(speedScaler: number = OPPORTUNITY_FIRE_DEFAULT_SPEED_SCALER): void {
         const oldCanSee = this.canSee;
 
         if (config.showVisibilityDebugGraphics) {
@@ -585,7 +610,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // visibilityManager.update() refreshes every viewer; keep each unit's
         // canSee in sync so opposition units that newly see someone report the
         // correct count when later selected (toSummary → UnitsSeen).
-        this.game.syncUnitsCanSee();
+        this.game.syncUnitsCanSee((unit: Unit) => {
+            if (unit.canOpportunityFire) {
+                const speed = unit.speed * (unit === this ? speedScaler : 1);
+
+                this.game.opportunityFireManager.registerOpportunity(unit, speed);
+            }
+        });
 
         if (!isEqual(oldCanSee, this.canSee)) {
             this.messageRouter.send(
@@ -754,7 +785,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.location = dstTile.location;
         dstTile.addUnit(this);
 
-        this._refreshVisibility();
+        this._refreshVisibility(OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER);
 
         this.messageRouter.send(
             {

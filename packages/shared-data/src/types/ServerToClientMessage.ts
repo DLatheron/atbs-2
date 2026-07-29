@@ -16,7 +16,8 @@ import {
     UnitSummary,
     WaitingFor,
     TileUpdate,
-    VisibilityUpdate
+    VisibilityUpdate,
+    UnitId
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
@@ -119,6 +120,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: FireModeItemSummary.nullable()
     }),
     z.object({
+        type: z.literal("server:unit:mode:fire:end"),
+        payload: z.null()
+    }),
+    z.object({
         type: z.literal("server:unit:weapon:update"),
         payload: zodDeepPartial(FireModeItemSummary)
     }),
@@ -197,6 +202,23 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:anim:objects:create"),
         payload: z.array(AnimatableObjectRecipe)
+    }),
+    z.object({
+        type: z.literal("server:opportunity:fire"),
+        payload: z.object({
+            unit: z.object({
+                id: UnitId,
+                name: z.string()
+            })
+        })
+    }),
+    z.object({
+        type: z.literal("server:opportunity:fire:start"),
+        payload: z.null()
+    }),
+    z.object({
+        type: z.literal("server:opportunity:fire:end"),
+        payload: z.null()
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;
