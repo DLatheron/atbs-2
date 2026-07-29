@@ -106,11 +106,15 @@ export class ActionPhaseHandler extends PhaseHandler {
             messageManager.registerHandler(
                 "client:unit:rotate",
                 ({ game }, { unitId, orientation }, from) => {
-                    game.verifyFromPlayingClient(from);
-
-                    const { selectedUnit } = game;
-                    if (unitId === selectedUnit?.id) {
-                        selectedUnit.rotate(orientation);
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
+    
+                    const unit = game.getUnit(unitId);
+                    if (unitId === unit?.id) {
+                        unit.rotate(orientation);
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
@@ -128,13 +132,18 @@ export class ActionPhaseHandler extends PhaseHandler {
             messageManager.registerHandler(
                 "client:unit:fire:selector",
                 ({ game }, { unitId, weaponId, fireSelector }, from) => {
-                    game.verifyFromPlayingClient(from);
-                    const { selectedUnit } = game;
-                    if (unitId !== selectedUnit?.id) {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
+    
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
                         throw new Error(`Unit ${unitId} is not selected`);
                     }
 
-                    const item = selectedUnit.itemInUse;
+                    const item = unit.itemInUse;
                     if (!item) {
                         throw new Error(`Unit ${unitId} is not using an item`);
                     }
@@ -147,7 +156,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     from.sendMessage({
                         type: "server:unit:mode:fire",
                         payload:
-                            selectedUnit?.itemInUse?.getFireModeItemSummary(selectedUnit) ?? null
+                        unit?.itemInUse?.getFireModeItemSummary(unit) ?? null
                     });
                 }
             ),
@@ -189,20 +198,25 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
             }),
 
-            messageManager.registerHandler("client:unit:throw", ({ game }, throwDetails, from) => {
-                game.verifyFromPlayingClient(from);
-                const { selectedUnit } = game;
-                if (throwDetails.unitId !== selectedUnit?.id) {
-                    throw new Error(`Unit ${throwDetails.unitId} is not selected`);
+            messageManager.registerHandler("client:unit:throw", ({ game }, { unitId, itemId, worldPos }, from) => {
+                if (game.opportunityFireManager.opportunity) {
+                    game.verifyFromOpportunityFireClient(from);
+                } else {
+                    game.verifyFromPlayingClient(from);
                 }
 
-                if (selectedUnit.itemInUse?.id !== throwDetails.itemId) {
+                const unit = game.getUnit(unitId);
+                if (unitId !== unit?.id) {
+                    throw new Error(`Unit ${unitId} is not selected`);
+                }
+
+                if (unit.itemInUse?.id !== itemId) {
                     throw new Error(
-                        `Unit ${selectedUnit.id} is not using item ${throwDetails.itemId}`
+                        `Unit ${unit.id} is not using item ${itemId}`
                     );
                 }
 
-                selectedUnit.throw(new Vec2(throwDetails.worldPos));
+                unit.throw(new Vec2(worldPos));
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             })
         ];

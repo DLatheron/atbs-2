@@ -116,10 +116,27 @@ export class FurnitureDamageSystem {
             scale: this._tileSize
         });
 
-        // Start: replace the (now dead) unit with the spinning death animation placeholder.
+        // Build the corpse while the unit still has its recipe/weight available,
+        // then remove the unit from the tile so neither corpse nor body are under
+        // the spin animation placeholder.
+        const corpse = unit.createCorpseItem();
+
+        tile.removeUnit(unit);
+
+        if (unit.game.selectedUnit === unit) {
+            unit.game.selectedUnit = null;
+        }
+
+        unit.location = null;
+
+        // Start: spinning death animation on a tile with no unit and no corpse.
         this.recordDeathPlaceholderUpdate(timeMs, tile, animImageId);
 
-        // End: settle to the normal dead-sprite tile render list once the spin completes.
+        // Place the corpse so the rest update (and subsequent map state) shows it.
+        corpse.location = tile.location;
+        tile.addItem(corpse);
+
+        // End: settle to the corpse item once the spin completes.
         this.recordTileUpdate(timeMs + DEATH_DURATION_MS, tile);
     }
 

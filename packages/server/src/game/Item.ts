@@ -395,8 +395,8 @@ export class Item extends SceneObject {
         return ammo;
     }
 
-    getRenderList(context: SceneContext): RenderList {
-        const unitContext = { ...context, states: [] };
+    getRenderList(context: SceneContext): RenderList {0
+        const unitContext = { ...context, states: [], visibilityFilter: true };
 
         return super.getRenderList(unitContext);
     }

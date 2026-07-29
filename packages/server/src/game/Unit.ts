@@ -16,10 +16,12 @@ import {
     OnTarget,
     RenderList,
     RenderMode,
+    SceneChildNode,
     SceneContext,
     SceneNode,
     SceneObject,
     shotsFired,
+    ItemType,
     TrackingSpeed,
     UnitId,
     UnitSummary,
@@ -1286,6 +1288,54 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return Math.floor(this.strength / Math.pow(item.weight, 2)) * 400;
     }
 
+    /**
+     * Builds a map item representing this unit's corpse: copies weight and the
+     * `dead` branch of each render mode so the body looks and weighs like the unit.
+     */
+    createCorpseItem(): Item {
+        const renderable = Unit._extractDeadRenderable(this._recipe.renderable);
+
+        return this.itemManager.newAdHocItem({
+            id: "corpse.item",
+            type: ItemType.enum.item,
+            name: `${this.name}'s corpse`,
+            shortName: "Corpse",
+            description: [{ text: `The lifeless body of ${this.name}.` }],
+            quantity: 1,
+            weight: this.weight,
+            renderable
+        });
+    }
+
+    private static _extractDeadChild(node: SceneChildNode | undefined): SceneChildNode {
+        if (node === undefined) {
+            return [];
+        }
+
+        // Leaf / directional / frames nodes have no alive/dead states.
+        if (Array.isArray(node) || "directional" in node || "frames" in node) {
+            return cloneDeep(node);
+        }
+
+        const stateNode = node as { [key: string]: SceneChildNode; default: SceneChildNode };
+        return cloneDeep(stateNode.dead ?? stateNode.default);
+    }
+
+    private static _extractDeadRenderable(renderable: SceneNode): SceneNode {
+        return {
+            ...(renderable.UI_MODE !== undefined && {
+                UI_MODE: Unit._extractDeadChild(renderable.UI_MODE)
+            }),
+            ...(renderable.MAP_MODE !== undefined && {
+                MAP_MODE: Unit._extractDeadChild(renderable.MAP_MODE)
+            }),
+            ...(renderable.FIRE_MODE !== undefined && {
+                FIRE_MODE: Unit._extractDeadChild(renderable.FIRE_MODE)
+            }),
+            default: Unit._extractDeadChild(renderable.default)
+        };
+    }
+
     inflictDamage(_worldPos: Vec2, projectile: Projectile): boolean {
         if (!this.isAlive) {
             return false;
@@ -1359,8 +1409,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const oppositionUnits = game.getOppositionUnitsForSide(side.id);
 
-        return oppositionUnits.filter(({ mapLocation }) => {
-            const tile = game.map.getTile(mapLocation);
+        return oppositionUnits.filter((unit) => {
+            if (unit.location === null) {
+                return false;
+            }
+            const tile = game.map.getTile(unit.location);
             return visibilityManager.isPoiVisibleForMasks(tile, this.interestMasks);
         });
     }
