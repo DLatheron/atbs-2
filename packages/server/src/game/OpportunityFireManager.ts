@@ -2,6 +2,7 @@ import { Logger } from "@atbs/misc";
 import type { Game } from "./Game.js";
 import type { Unit } from "./Unit.js";
 import { config } from "../config/config.schema.js";
+import { ServerMessages } from "./ServerMessages.js";
 
 export interface Opportunity {
     unit: Unit;
@@ -54,30 +55,30 @@ export class OpportunityFireManager {
         );
     }
 
-    popOpportunity() {
+    private _popOpportunity() {
         if (this._currentOpportunity) {
             throw new Error("An opportunity is already being handled");
         }
 
-        let opportunity: Opportunity | undefined;
+        let opportunity: Opportunity | null;
 
-        while (opportunity = this._opportunities.shift()) {
+        while ((opportunity = this._opportunities.shift() ?? null)) {
             // Check that the unit can still opportunity fire -- e.g. it might have died!
             if (opportunity.unit.canOpportunityFire) {
                 break;
             }
         }
-        
-        this._currentOpportunity = opportunity ?? null;
+
+        this._currentOpportunity = opportunity;
         if (!opportunity) {
             return;
         }
-    OpportunityFireManager.Logger.info(
+        OpportunityFireManager.Logger.info(
             `Popped opportunity for ${opportunity.unit.name} with speed ${opportunity.speed}`
         );
     }
 
-    endOpportunity() {
+    private _endOpportunity() {
         if (!this._currentOpportunity) {
             throw new Error("No opportunity is being handled");
         }
@@ -93,7 +94,7 @@ export class OpportunityFireManager {
             return true;
         }
 
-        this.popOpportunity();
+        this._popOpportunity();
         if (this.opportunity) {
             const { unit } = this.opportunity;
             const { itemInUse } = unit;
@@ -108,22 +109,18 @@ export class OpportunityFireManager {
 
             OpportunityFireManager.Logger.info(`Starting opportunity fire for ${unit.name}`);
 
+            this.game.messageRouter.broadcast(
+                [ServerMessages.StartOpportunityFire],
+                undefined,
+                true
+            );
+
             if (byCurrentSide) {
                 // Send messages to the unit that won the opportunity fire.
                 this.game.messageRouter.send(
                     [
-                        {
-                            type: "server:opportunity:fire:start",
-                            payload: null
-                        },
-                        {
-                            type: "server:unit:mode:move",
-                            payload: unit.toSummary()
-                        },
-                        {
-                            type: "server:unit:mode:fire",
-                            payload: itemInUse.getFireModeItemSummary(unit)
-                        },
+                        ServerMessages.UnitMovementMode(unit),
+                        ServerMessages.StartFireMode(unit),
                         {
                             type: "server:camera:move:to",
                             payload: {
@@ -132,10 +129,7 @@ export class OpportunityFireManager {
                                 trackingSpeed: 1
                             }
                         },
-                        {
-                            type: "server:ui:disabled",
-                            payload: false
-                        }
+                        ServerMessages.EnableUI
                     ],
                     winnerSideId,
                     true
@@ -146,22 +140,15 @@ export class OpportunityFireManager {
                 this.game.messageRouter.send(
                     [
                         {
-                            type: "server:opportunity:fire:start",
-                            payload: null
-                        },
-                        {
                             type: "server:wait",
                             payload: null
                         },
-                        {
-                            type: "server:ui:disabled" as const,
-                            payload: true
-                        }
+                        ServerMessages.DisableUI
                     ],
                     winnerSideId,
                     true
                 );
-                
+
                 this.game.messageRouter.resumeMessageSending(winnerSideId);
 
                 // Send message to side currently playing.
@@ -179,14 +166,8 @@ export class OpportunityFireManager {
                                   }
                               ]
                             : []),
-                        {
-                            type: "server:unit:mode:fire:end" as const,
-                            payload: null
-                        },
-                        {
-                            type: "server:unit:mode:move" as const,
-                            payload: null
-                        }
+                        ServerMessages.EndFireMode,
+                        ServerMessages.DeselectUnit
                     ],
                     currentSideId,
                     true
@@ -209,18 +190,9 @@ export class OpportunityFireManager {
                                 trackingSpeed: 1
                             }
                         },
-                        {
-                            type: "server:unit:mode:move",
-                            payload: unit.toSummary()
-                        },
-                        {
-                            type: "server:unit:mode:fire",
-                            payload: itemInUse.getFireModeItemSummary(unit)
-                        },
-                        {
-                            type: "server:ui:disabled" as const,
-                            payload: false
-                        }
+                        ServerMessages.UnitMovementMode(unit),
+                        ServerMessages.StartFireMode(unit),
+                        ServerMessages.EnableUI
                     ],
                     winnerSideId,
                     true
@@ -237,8 +209,11 @@ export class OpportunityFireManager {
         if (this.opportunity) {
             const { unit } = this.opportunity;
 
-            // Finishing the opportunity fire for the side currently playing.
-            if (this.game.turnsSideId === unit.side.id) {
+            const byCurrentSide = this.game.turnsSideId === unit.side.id;
+            const currentSideId = this.game.turnsSideId;
+            const winnerSideId = unit.side.id;
+
+            if (byCurrentSide) {
                 // Send messages to the unit that won the opportunity fire.
                 this.game.messageRouter.send(
                     [
@@ -247,7 +222,7 @@ export class OpportunityFireManager {
                             payload: null
                         }
                     ],
-                    unit.side.id,
+                    winnerSideId,
                     true
                 );
             } else {
@@ -261,12 +236,10 @@ export class OpportunityFireManager {
                                 sides: [this.game.turnsSide.toSummary()]
                             }
                         },
-                        {
-                            type: "server:unit:mode:fire:end",
-                            payload: null
-                        }
+                        ServerMessages.EndFireMode,
+                        ServerMessages.DeselectUnit
                     ],
-                    unit.side.id,
+                    winnerSideId,
                     true
                 );
 
@@ -274,25 +247,31 @@ export class OpportunityFireManager {
 
                 this.game.messageRouter.send(
                     [
-                        {
-                            type: "server:ui:disabled" as const,
-                            payload: false
-                        },
-                        {
-                            type: "server:unit:mode:move" as const,
-                            payload: this.game.selectedUnit?.toSummary() ?? null
-                        }
+                        ServerMessages.EnableUI,
+                        ServerMessages.UnitMovementMode(
+                            this.game.selectedUnit?.isAlive ? this.game.selectedUnit : null
+                        )
                     ],
-                    this.game.turnsSideId,
+                    currentSideId,
                     true
                 );
             }
 
             OpportunityFireManager.Logger.info(`Ending opportunity fire for ${unit.name}`);
 
-            this.endOpportunity();
+            this._endOpportunity();
 
-            return this.startOpportunityFire();
+            if (!this.startOpportunityFire()) {
+                this.game.messageRouter.broadcast(
+                    [ServerMessages.EndOpportunityFire],
+                    undefined,
+                    true
+                );
+
+                return false;
+            }
+
+            return true;
         }
 
         return false;

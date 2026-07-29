@@ -158,7 +158,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                 } else {
                     game.verifyFromPlayingClient(from);
                 }
-                
+
                 const unit = game.getUnit(fireDetails.unitId);
                 const weapon = unit.itemInUse?.findByItemId(fireDetails.weaponId);
                 if (!weapon) {
