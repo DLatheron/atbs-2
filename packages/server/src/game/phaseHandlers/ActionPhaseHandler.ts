@@ -111,7 +111,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     } else {
                         game.verifyFromPlayingClient(from);
                     }
-    
+
                     const unit = game.getUnit(unitId);
                     if (unitId === unit?.id) {
                         unit.rotate(orientation);
@@ -137,7 +137,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     } else {
                         game.verifyFromPlayingClient(from);
                     }
-    
+
                     const unit = game.getUnit(unitId);
                     if (unitId !== unit?.id) {
                         throw new Error(`Unit ${unitId} is not selected`);
@@ -155,8 +155,7 @@ export class ActionPhaseHandler extends PhaseHandler {
                     // TODO: Could be a delta update...
                     from.sendMessage({
                         type: "server:unit:mode:fire",
-                        payload:
-                        unit?.itemInUse?.getFireModeItemSummary(unit) ?? null
+                        payload: unit?.itemInUse?.getFireModeItemSummary(unit) ?? null
                     });
                 }
             ),
@@ -198,27 +197,28 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
             }),
 
-            messageManager.registerHandler("client:unit:throw", ({ game }, { unitId, itemId, worldPos }, from) => {
-                if (game.opportunityFireManager.opportunity) {
-                    game.verifyFromOpportunityFireClient(from);
-                } else {
-                    game.verifyFromPlayingClient(from);
-                }
+            messageManager.registerHandler(
+                "client:unit:throw",
+                ({ game }, { unitId, itemId, worldPos }, from) => {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
 
-                const unit = game.getUnit(unitId);
-                if (unitId !== unit?.id) {
-                    throw new Error(`Unit ${unitId} is not selected`);
-                }
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
 
-                if (unit.itemInUse?.id !== itemId) {
-                    throw new Error(
-                        `Unit ${unit.id} is not using item ${itemId}`
-                    );
-                }
+                    if (unit.itemInUse?.id !== itemId) {
+                        throw new Error(`Unit ${unit.id} is not using item ${itemId}`);
+                    }
 
-                unit.throw(new Vec2(worldPos));
-                from.sendMessage({ type: "server:ui:disabled", payload: false });
-            })
+                    unit.throw(new Vec2(worldPos));
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            )
         ];
     }
 }
