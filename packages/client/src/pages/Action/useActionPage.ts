@@ -180,6 +180,7 @@ export function useActionPage() {
                     payload.tracers,
                     payload.tileUpdates,
                     payload.deaths,
+                    payload.hitSparks,
                     () => {
                         setMap((map: ClientMap | null) => map);
                     },

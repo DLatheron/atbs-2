@@ -34,6 +34,7 @@ import {
     Colour,
     DebugGraphic,
     generateRandomBetween,
+    IColour,
     ITilePos,
     Orientation,
     relativeDirection,
@@ -129,6 +130,7 @@ export const UnitRecipe = z.object({
         materials: z.array(z.string()).nonempty().default(["human.material"])
     }),
     visualType: VisualType.default(VisualType.enum.eyeball),
+    hitSparkColour: IColour.optional(),
     renderable: SceneNode,
     actions: Actions
 });
@@ -279,6 +281,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get materials(): Material[] {
         return this._materials;
+    }
+
+    getHitSparkColour(): IColour {
+        if (this._recipe.hitSparkColour) {
+            return this._recipe.hitSparkColour;
+        }
+
+        const material = this._materials[0];
+        const rgb = material.rgb;
+        if (!rgb) {
+            return { r: 255, g: 255, b: 255, a: 1 };
+        }
+
+        return { ...rgb, a: 1 };
     }
 
     get mapLocation(): TilePos {
@@ -984,7 +1000,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
-            Projectile.ProcessProjectiles(
+            const hitSparks = Projectile.ProcessProjectiles(
                 projectiles,
                 map,
                 debugGraphics,
@@ -1029,7 +1045,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                         tileUpdates,
-                        deaths
+                        deaths,
+                        hitSparks
                     }
                 }
             ]);
@@ -1172,7 +1189,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
-        Projectile.ProcessProjectiles(
+        const hitSparks = Projectile.ProcessProjectiles(
             [projectile],
             map,
             debugGraphics,
@@ -1231,7 +1248,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     tracers: [projectile.getTracer()],
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                     tileUpdates,
-                    deaths
+                    deaths,
+                    hitSparks
                 }
             }
         ]);

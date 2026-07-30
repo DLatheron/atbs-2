@@ -16,6 +16,7 @@ import {
     ThrowDetails,
     TimedTileUpdate,
     Tracer,
+    HitSpark,
     UnitSummary,
     VisibilityViewerSummary
 } from "@atbs/shared-data";
@@ -58,6 +59,7 @@ import {
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
 import { applyTimedTileUpdate } from "./mapUpdates.js";
 import { AnimationController } from "./AnimationController.js";
+import { HitSparkParticles } from "./HitSparkParticles.js";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -408,10 +410,14 @@ export class World {
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
         deaths: DeathAnimation[],
+        hitSparks: HitSpark[],
         onMapUpdated: () => void,
         completeCallback: () => void
     ): void {
         const tracerTimer = new Timer();
+        const hitSparkParticles = new HitSparkParticles();
+        const spawnedSparkIndices = new Set<number>();
+        let traceFinished = false;
 
         this._drawSights = false;
 
@@ -571,12 +577,28 @@ export class World {
             deathQueue.shift();
         };
 
+        const spawnDueHitSparks = (elapsedMs: number) => {
+            for (let index = 0; index < hitSparks.length; index++) {
+                if (spawnedSparkIndices.has(index)) {
+                    continue;
+                }
+
+                if (hitSparks[index].timeMs <= elapsedMs) {
+                    const spark = hitSparks[index];
+                    hitSparkParticles.spawnBurst(spark.pos, spark.colour, spark.direction);
+                    spawnedSparkIndices.add(index);
+                }
+            }
+        };
+
         this.addRenderPlugin({
             get name() {
                 return "Tracers";
             },
 
-            update() {
+            update({ frameDelta }: RenderPluginUpdateProps) {
+                hitSparkParticles.update(frameDelta);
+
                 // While holding on the dead unit, the tracer clock is paused, so
                 // measure the linger against the wall clock and resume once it
                 // elapses. Nothing else advances until then.
@@ -589,6 +611,8 @@ export class World {
 
                 const { time } = tracerTimer.tick();
                 const elapsedMs = Math.max(time, 0);
+
+                spawnDueHitSparks(elapsedMs);
 
                 // Kick off the next death once the (unpaused) clock reaches its
                 // start time. Only one death is active at a time; the paused
@@ -607,6 +631,8 @@ export class World {
             },
 
             render({ camera, context }: RenderPluginRenderProps) {
+                hitSparkParticles.render(camera, context);
+
                 const { time } = tracerTimer;
 
                 // A death spin/hold owns the tracer clock: don't draw projectiles
@@ -616,7 +642,7 @@ export class World {
                 // mode — the observing side stays in map mode yet must still draw
                 // tracers and complete the trace to unblock its message queue.
                 if (paused) {
-                    return false;
+                    return traceFinished && hitSparkParticles.isEmpty;
                 }
 
                 let allComplete = true;
@@ -626,8 +652,12 @@ export class World {
                     }
                 }
 
-                if (allComplete) {
+                if (allComplete && !traceFinished) {
                     finish();
+                    traceFinished = true;
+                }
+
+                if (traceFinished && hitSparkParticles.isEmpty) {
                     return true;
                 }
 

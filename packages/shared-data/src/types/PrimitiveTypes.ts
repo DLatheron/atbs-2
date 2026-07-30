@@ -786,6 +786,14 @@ export const Tracer = z.object({
 });
 export type Tracer = z.infer<typeof Tracer>;
 
+export const HitSpark = z.object({
+    pos: IVec2,
+    timeMs: z.number().nonnegative(),
+    colour: IColour,
+    direction: IVec2
+});
+export type HitSpark = z.infer<typeof HitSpark>;
+
 export const TileUpdate = z.object({
     tilePos: ITilePos,
     tileByRenderMode: z.object({

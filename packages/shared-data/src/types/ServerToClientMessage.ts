@@ -13,6 +13,7 @@ import {
     TileInfo,
     Tracer,
     TimedTileUpdate,
+    HitSpark,
     UnitSummary,
     WaitingFor,
     TileUpdate,
@@ -184,7 +185,8 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             tracers: z.array(Tracer),
             isOnTarget: OnTarget,
             tileUpdates: z.array(TimedTileUpdate).optional().default([]),
-            deaths: z.array(DeathAnimation).optional().default([])
+            deaths: z.array(DeathAnimation).optional().default([]),
+            hitSparks: z.array(HitSpark).optional().default([])
         })
     }),
     z.object({
