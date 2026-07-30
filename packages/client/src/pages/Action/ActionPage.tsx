@@ -66,6 +66,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         (event: React.MouseEvent) => world?.onDoubleClick(event),
         [world]
     );
+    const onWheel = useCallback((event: WheelEvent) => world?.onWheel(event), [world]);
 
     if (!visible) {
         return null;
@@ -129,6 +130,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onMouseDown={onMouseDown}
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
+                onWheel={onWheel}
                 sx={{ gridArea: "map " }}
                 disabled={disabled}
             ></MapComponent>

@@ -90,7 +90,8 @@ export class AnimationController {
     renderAnimation(
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         animationId: AnimationId,
-        canvasPos: Vec2
+        canvasPos: Vec2,
+        sizeScale = 1
     ) {
         const animation = this._animationMap.get(animationId);
         if (!animation) {
@@ -102,7 +103,8 @@ export class AnimationController {
         animation.renderToCanvas({
             context,
             canvasPos,
-            imageCache
+            imageCache,
+            sizeScale
         });
     }
 }

@@ -43,7 +43,9 @@ export abstract class ModeHandler implements IInteractionHandler {
         return this._cursorWorldPos;
     }
 
-    static EventToCanvasPos(event: MouseEvent | React.MouseEvent): Vec2 {
+    static EventToCanvasPos(
+        event: MouseEvent | WheelEvent | React.MouseEvent | React.WheelEvent
+    ): Vec2 {
         const rect = (event.target as HTMLElement).getBoundingClientRect();
         return new Vec2(event.clientX - rect.x, event.clientY - rect.y);
     }

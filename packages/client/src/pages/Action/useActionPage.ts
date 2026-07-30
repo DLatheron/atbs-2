@@ -88,6 +88,11 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:side:start", (_context, payload) => {
                 setSide(payload.side);
+                setUnit(null);
+                setUnitWeapon(null);
+                setTileInfo(null);
+                setSidePanelMode(MapMode.enum["map-mode"]);
+                world.mapMode = MapMode.enum["map-mode"];
             }),
 
             messageManager.registerHandler("server:game:tile:info", (_context, payload) => {

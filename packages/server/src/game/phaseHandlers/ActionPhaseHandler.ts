@@ -36,11 +36,6 @@ export class ActionPhaseHandler extends PhaseHandler {
                     type: "server:game:tile:info",
                     payload: tile.getTileInfo()
                 });
-
-                from.sendMessage({
-                    type: "server:map:update",
-                    payload: [tile.generateTileUpdate()]
-                });
             }),
 
             messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {

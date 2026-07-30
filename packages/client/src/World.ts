@@ -800,8 +800,9 @@ export class World {
             const tileTopLeft = new TilePos(viewer.location).scale(tileSize);
             const tileCenter = tileTopLeft.add(new Vec2(halfTileSize, halfTileSize));
 
-            const featherPx = 6;
-            const cornerRadiusPx = 24;
+            const zoom = this.camera.zoom;
+            const featherPx = 6 * zoom;
+            const cornerRadiusPx = 24 * zoom;
             // Origin the cone at the back of the tile (opposite corner for
             // diagonals, mid-back edge for cardinals) so it opens across the tile
             // toward the facing direction — e.g. SOUTH_WEST → NORTH_EAST corner.
@@ -810,7 +811,7 @@ export class World {
                     ? Vec2.Zero()
                     : Vec2.StepInDirection(
                           rotateOrientation(orientation, RotateBy180Degrees)
-                      ).scale(halfTileSize - cornerRadiusPx);
+                      ).scale(halfTileSize - 24);
             const coneWorldPos = tileCenter.add(backOffset);
             const unitAngle = OrientationToDegrees[orientation];
 
@@ -818,7 +819,7 @@ export class World {
                 this.camera,
                 context,
                 tileTopLeft,
-                tileSize,
+                this.camera.worldLengthToCanvas(tileSize),
                 colour,
                 featherPx,
                 cornerRadiusPx
@@ -829,7 +830,7 @@ export class World {
                     this.camera,
                     context,
                     coneWorldPos,
-                    viewer.viewRange,
+                    this.camera.worldLengthToCanvas(viewer.viewRange),
                     unitAngle,
                     viewer.viewAngleInDegrees,
                     colour
@@ -858,8 +859,9 @@ export class World {
         this.update({ time, frameDelta });
 
         const { tileSize } = this.map;
-        const scale = new Vec2(1, 1);
-        const offset = new Vec2(tileSize / 2, tileSize / 2);
+        const zoom = this.camera.zoom;
+        const scale = new Vec2(zoom, zoom);
+        const offset = new Vec2((tileSize * zoom) / 2, (tileSize * zoom) / 2);
 
         context.clearRect(0, 0, width, height);
         offscreenContexts[0].clearRect(0, 0, width, height);
@@ -934,8 +936,8 @@ export class World {
                         renderProps.camera,
                         renderProps.context,
                         this.tileToWorld(graphic.tilePos),
-                        this.map.tileSize,
-                        this.map.tileSize,
+                        renderProps.camera.worldLengthToCanvas(this.map.tileSize),
+                        renderProps.camera.worldLengthToCanvas(this.map.tileSize),
                         graphic.strokeColour,
                         graphic.strokeThickness,
                         graphic.fillColour
@@ -947,8 +949,8 @@ export class World {
                         renderProps.camera,
                         renderProps.context,
                         graphic.centerWorldPos,
-                        graphic.width,
-                        graphic.height,
+                        renderProps.camera.worldLengthToCanvas(graphic.width),
+                        renderProps.camera.worldLengthToCanvas(graphic.height),
                         graphic.strokeColour,
                         graphic.strokeThickness,
                         graphic.fillColour
@@ -986,7 +988,7 @@ export class World {
                         renderProps.context,
                         graphic.worldPos,
                         graphic.colour,
-                        graphic.size
+                        renderProps.camera.worldLengthToCanvas(graphic.size)
                     );
                     break;
 
@@ -995,7 +997,7 @@ export class World {
                         renderProps.camera,
                         renderProps.context,
                         graphic.centerWorldPos,
-                        graphic.radius,
+                        renderProps.camera.worldLengthToCanvas(graphic.radius),
                         graphic.startAngleInDegrees,
                         graphic.endAngleInDegrees,
                         graphic.clockwise,
@@ -1139,10 +1141,12 @@ export class World {
                 visibilityFilter = false
             }) => {
                 if (imageId.startsWith("anim-")) {
+                    const halfTile = (tileSize * scale.x) / 2;
                     this._animationController.renderAnimation(
                         context,
                         imageId,
-                        canvasPos.add({ x: tileSize / 2, y: tileSize / 2 })
+                        canvasPos.add({ x: halfTile, y: halfTile }),
+                        scale.x
                     );
                 } else {
                     this.imageCache.requestImage(imageId);
@@ -1240,6 +1244,15 @@ export class World {
 
     onDoubleClick(event: MouseEvent | React.MouseEvent) {
         this._interactionHandler?.onDoubleClick?.(event);
+    }
+
+    onWheel(event: WheelEvent | React.WheelEvent) {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        this.camera.zoomByWheel(event.deltaY, canvasPos);
     }
 
     onContextMenu(event: React.MouseEvent) {

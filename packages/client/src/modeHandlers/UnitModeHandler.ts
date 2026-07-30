@@ -48,7 +48,9 @@ export class UnitModeHandler extends ModeHandler {
             this._mapDrag.currCanvasPos = currPos;
             this._mapDrag.movementDelta = delta;
 
-            const totalDifference = currPos.sub(this._mapDrag.baseCanvasPos);
+            const totalDifference = this.camera.canvasDeltaToWorldDelta(
+                currPos.sub(this._mapDrag.baseCanvasPos)
+            );
             const newWorldPos = this._mapDrag.worldPos
                 .sub(totalDifference)
                 .scale(UnitModeHandler.MOUSE_SPEED_SCALER);
@@ -80,7 +82,9 @@ export class UnitModeHandler extends ModeHandler {
         if (this._mapDrag) {
             this.updateDelta(event, TrackingSpeed.enum.FAST);
 
-            this.camera.additionalVelocity = this._mapDrag.movementDelta;
+            this.camera.additionalVelocity = this.camera.canvasDeltaToWorldDelta(
+                this._mapDrag.movementDelta
+            );
 
             this._mapDrag = null;
             this.world.mouseCursor = undefined;

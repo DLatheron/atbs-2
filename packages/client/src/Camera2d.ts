@@ -1,5 +1,6 @@
-import { Aabb, clamp, Vec2 } from "@atbs/maths";
+import { Aabb, clamp, lerp, Vec2 } from "@atbs/maths";
 import { TrackingSpeed } from "@atbs/shared-data";
+import { getMinZoom, MapCameraConfig } from "./MapCameraConfig";
 
 export class Camera2d {
     private static readonly ADDITIONAL_VELOCITY_DAMPING = 0.98;
@@ -12,6 +13,15 @@ export class Camera2d {
     private _worldBounds?: Aabb;
     private _viewportDimensions?: Vec2;
     private _additionalVelocity: Vec2 | null = null;
+
+    private _zoom: number = MapCameraConfig.maxZoom;
+    private _targetZoom: number = MapCameraConfig.maxZoom;
+    private _zoomFocus: { canvasPos: Vec2; worldPos: Vec2 } | null = null;
+
+    private _maxZoom: number = MapCameraConfig.maxZoom;
+    private _minZoom: number = getMinZoom();
+    private _zoomSmoothing: number = MapCameraConfig.zoomSmoothing;
+    private _wheelZoomSensitivity: number = MapCameraConfig.wheelZoomSensitivity;
 
     get worldPos() {
         return this._worldPos;
@@ -73,8 +83,9 @@ export class Camera2d {
         this._viewportDimensions = dimensions;
     }
 
+    /** Half the viewport size in world units (accounts for zoom). */
     get viewportHalfDimensions() {
-        return this.viewportDimensions.divide(2);
+        return this.viewportDimensions.divide(2 * this.zoom);
     }
 
     get viewportTopLeft() {
@@ -113,8 +124,84 @@ export class Camera2d {
         this._additionalVelocity = value;
     }
 
+    /** Current displayed zoom (1 = max zoom-in / default view). */
+    get zoom() {
+        return this._zoom;
+    }
+
+    get targetZoom() {
+        return this._targetZoom;
+    }
+
+    get minZoom() {
+        return this._minZoom;
+    }
+
+    get maxZoom() {
+        return this._maxZoom;
+    }
+
+    /**
+     * Override zoom limits / feel. Useful for tests or runtime tuning.
+     * Values default to {@link MapCameraConfig}.
+     */
+    configureZoom(options: {
+        maxZoom?: number;
+        maxZoomOutFactor?: number;
+        zoomSmoothing?: number;
+        wheelZoomSensitivity?: number;
+    }) {
+        if (options.maxZoom !== undefined) {
+            this._maxZoom = options.maxZoom;
+        }
+        if (options.maxZoomOutFactor !== undefined || options.maxZoom !== undefined) {
+            this._minZoom = getMinZoom({
+                maxZoom: this._maxZoom,
+                maxZoomOutFactor: options.maxZoomOutFactor ?? MapCameraConfig.maxZoomOutFactor
+            });
+        }
+        if (options.zoomSmoothing !== undefined) {
+            this._zoomSmoothing = clamp(options.zoomSmoothing, 0, 1);
+        }
+        if (options.wheelZoomSensitivity !== undefined) {
+            this._wheelZoomSensitivity = Math.max(0, options.wheelZoomSensitivity);
+        }
+
+        this._zoom = clamp(this._zoom, this._minZoom, this._maxZoom);
+        this._targetZoom = clamp(this._targetZoom, this._minZoom, this._maxZoom);
+        // eslint-disable-next-line no-self-assign
+        this.worldPos = this.worldPos;
+    }
+
+    /** Convert a length in world units to canvas pixels at the current zoom. */
+    worldLengthToCanvas(length: number): number {
+        return length * this.zoom;
+    }
+
+    /** Convert a canvas-pixel delta into a world-space delta at the current zoom. */
+    canvasDeltaToWorldDelta(canvasDelta: Vec2): Vec2 {
+        return canvasDelta.divide(this.zoom);
+    }
+
+    /**
+     * Continuous zoom toward/away from `canvasPos` (typically the cursor).
+     * `deltaY` follows the wheel event convention (positive = zoom out).
+     */
+    zoomByWheel(deltaY: number, canvasPos: Vec2) {
+        if (!this.hasViewportDimensions || deltaY === 0) {
+            return;
+        }
+
+        const worldPos = this.canvasToWorld(canvasPos);
+        const zoomFactor = Math.exp(-deltaY * this._wheelZoomSensitivity);
+        this._targetZoom = clamp(this._targetZoom * zoomFactor, this._minZoom, this._maxZoom);
+        this._zoomFocus = { canvasPos, worldPos };
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update({ time: _time, frameDelta: _frameDelta }: { time: number; frameDelta: number }) {
+        this.updateZoom();
+
         const { targetPos } = this;
         if (targetPos) {
             this.worldPos = Vec2.Interpolate(this.worldPos, targetPos, this.trackingSpeed);
@@ -139,35 +226,73 @@ export class Camera2d {
         }
     }
 
+    private updateZoom() {
+        if (Math.abs(this._zoom - this._targetZoom) < 1e-5) {
+            this._zoom = this._targetZoom;
+            this._zoomFocus = null;
+            return;
+        }
+
+        this._zoom = lerp(this._zoom, this._targetZoom, this._zoomSmoothing);
+
+        if (this._zoomFocus && this.hasViewportDimensions) {
+            const { canvasPos, worldPos } = this._zoomFocus;
+            this.worldPos = this.worldPosForCanvasPoint(canvasPos, worldPos);
+        } else {
+            // eslint-disable-next-line no-self-assign
+            this.worldPos = this.worldPos;
+        }
+
+        if (Math.abs(this._zoom - this._targetZoom) < 1e-4) {
+            this._zoom = this._targetZoom;
+            this._zoomFocus = null;
+        }
+    }
+
+    /** Camera world position such that `worldPos` appears at `canvasPos`. */
+    private worldPosForCanvasPoint(canvasPos: Vec2, worldPos: Vec2): Vec2 {
+        const offsetFromCenter = canvasPos.sub(this.viewportDimensions.divide(2));
+        return worldPos.sub(offsetFromCenter.divide(this.zoom));
+    }
+
     constrainToBox(pos: Vec2, { min, max }: Aabb) {
-        const _min = min.add(this.viewportHalfDimensions);
-        const _max = max.sub(this.viewportHalfDimensions);
+        const half = this.viewportHalfDimensions;
+        const _min = min.add(half);
+        const _max = max.sub(half);
 
         const newPos = new Vec2(pos.x, pos.y);
 
-        if (newPos.x < _min.x) {
-            newPos.x = _min.x;
-        }
-        if (newPos.x > _max.x) {
-            newPos.x = _max.x;
+        if (_min.x > _max.x) {
+            newPos.x = (min.x + max.x) / 2;
+        } else {
+            if (newPos.x < _min.x) {
+                newPos.x = _min.x;
+            }
+            if (newPos.x > _max.x) {
+                newPos.x = _max.x;
+            }
         }
 
-        if (newPos.y < _min.y) {
-            newPos.y = _min.y;
-        }
-        if (newPos.y > _max.y) {
-            newPos.y = _max.y;
+        if (_min.y > _max.y) {
+            newPos.y = (min.y + max.y) / 2;
+        } else {
+            if (newPos.y < _min.y) {
+                newPos.y = _min.y;
+            }
+            if (newPos.y > _max.y) {
+                newPos.y = _max.y;
+            }
         }
 
         return newPos;
     }
 
     canvasToWorld(canvasPos: Vec2): Vec2 {
-        return this.viewportTopLeft.add(canvasPos);
+        return this.viewportTopLeft.add(canvasPos.divide(this.zoom));
     }
 
     worldToCanvas(worldPos: Vec2): Vec2 {
-        return worldPos.sub(this.viewportTopLeft);
+        return worldPos.sub(this.viewportTopLeft).scale(this.zoom);
     }
 
     interpolateToWorldPos(
