@@ -920,7 +920,10 @@ export class World {
 
         this._renderRenderPlugins(renderProps);
 
-        this._interactionHandler?.render?.(canvasLoopProps);
+        this._interactionHandler?.render?.({
+            ...canvasLoopProps,
+            context: offscreenContexts[0]
+        });
 
         this.renderSight(renderProps.context, time);
 
