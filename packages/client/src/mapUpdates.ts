@@ -45,11 +45,13 @@ function imageIdsFromDeathAnimations(deaths: DeathAnimation[]): string[] {
     return deaths.flatMap((death) => {
         const imageIds: string[] = [];
 
-        new SceneObject(death.playAnimation.recipe.stateDef.renderable).forEachImageId((imageId) => {
-            if (isCacheableImageId(imageId)) {
-                imageIds.push(imageId);
+        new SceneObject(death.playAnimation.recipe.stateDef.renderable).forEachImageId(
+            (imageId) => {
+                if (isCacheableImageId(imageId)) {
+                    imageIds.push(imageId);
+                }
             }
-        });
+        );
 
         return imageIds;
     });
