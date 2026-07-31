@@ -75,40 +75,71 @@ export class ImageCache {
             return;
         }
 
-        this._startLoad(id);
+        void this._startLoad(id);
     }
 
     /** Force a fresh fetch when server-side image bytes change but the id stays the same. */
     reloadImage(id: string): void {
+        void this.reloadImageAsync(id);
+    }
+
+    /**
+     * Refetch an id whose bytes changed server-side, keeping the currently cached
+     * image renderable until the replacement has decoded. Without this the entry
+     * would be empty for the duration of the fetch and anything drawing it would
+     * briefly disappear.
+     */
+    reloadImageAsync(id: string): Promise<void> {
         if (!id) {
-            return;
+            return Promise.resolve();
         }
 
-        this._revokeEntry(id);
-        delete this._entries[id];
-        this._startLoad(id, Date.now());
+        return this._startLoad(id, Date.now(), true);
     }
 
-    private _revokeEntry(id: string): void {
-        const dataString = this._entries[id]?.dataString;
-        if (dataString) {
-            URL.revokeObjectURL(dataString);
+    /**
+     * Resolve once every id has finished loading, so callers can guarantee a
+     * sequence never renders a half-cached frame. Pass `reload` for ids whose
+     * bytes the server has regenerated under the same id.
+     */
+    async preloadImages(
+        ids: Iterable<string>,
+        { reload = false }: { reload?: boolean } = {}
+    ): Promise<void> {
+        const uniqueIds = [...new Set(ids)].filter((id) => !!id);
+
+        await Promise.all(
+            uniqueIds.map((id) => {
+                if (reload && this.isLoaded(id)) {
+                    return this.reloadImageAsync(id);
+                }
+
+                this.requestImage(id);
+                return this.waitForLoad(id);
+            })
+        );
+    }
+
+    private _startLoad(id: string, cacheBust?: number, keepCurrent = false): Promise<void> {
+        const previous = this._entries[id];
+        const replaceOnComplete = keepCurrent && previous?.state === "loaded";
+
+        if (!replaceOnComplete) {
+            this._entries[id] = { state: "loading" };
         }
-    }
 
-    private _startLoad(id: string, cacheBust?: number): void {
-        this._entries[id] = { state: "loading" };
-
-        const loadPromise = this._load(id, cacheBust);
+        const loadPromise = this._load(id, cacheBust, replaceOnComplete ? previous : undefined);
         this._inFlight.set(id, loadPromise);
         void loadPromise.finally(() => {
             if (this._inFlight.get(id) === loadPromise) {
                 this._inFlight.delete(id);
             }
         });
+
+        return loadPromise;
     }
 
-    private async _load(id: string, cacheBust?: number): Promise<void> {
+    private async _load(id: string, cacheBust?: number, previous?: ImageEntry): Promise<void> {
         try {
             const blob = await fetchImage(id, cacheBust);
             const dataString = URL.createObjectURL(blob);
@@ -122,9 +153,13 @@ export class ImageCache {
                 dataString,
                 blob
             };
+
+            if (previous?.dataString) {
+                URL.revokeObjectURL(previous.dataString);
+            }
         } catch (error) {
             console.warn(`Failed to load image "${id}"`, error);
-            this._entries[id] = { state: "error" };
+            this._entries[id] = previous?.state === "loaded" ? previous : { state: "error" };
         }
 
         this._notify(id);

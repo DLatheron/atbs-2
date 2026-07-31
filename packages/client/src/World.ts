@@ -57,7 +57,7 @@ import {
     DrawRoundedFeatheredTile
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
-import { applyTimedTileUpdate } from "./mapUpdates.js";
+import { applyTimedTileUpdate, preloadTraceImages } from "./mapUpdates.js";
 import { AnimationController } from "./AnimationController.js";
 import { HitSparkParticles } from "./HitSparkParticles.js";
 
@@ -406,20 +406,25 @@ export class World {
         return this._animationController;
     }
 
-    setTracers(
+    async setTracers(
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
         deaths: DeathAnimation[],
         hitSparks: HitSpark[],
         onMapUpdated: () => void,
         completeCallback: () => void
-    ): void {
+    ): Promise<void> {
+        this._drawSights = false;
+
+        // Nothing in the timeline may start until every sprite it swaps in is
+        // decoded, otherwise a replaced tile renders as a gap for the duration of
+        // its fetch.
+        await preloadTraceImages(this.imageCache, tileUpdates, deaths);
+
         const tracerTimer = new Timer();
         const hitSparkParticles = new HitSparkParticles();
         const spawnedSparkIndices = new Set<number>();
         let traceFinished = false;
-
-        this._drawSights = false;
 
         const appliedUpdateIndices = new Set<number>();
 
@@ -476,10 +481,13 @@ export class World {
             );
         };
 
+        // The image cache is deliberately not passed to any applyTimedTileUpdate
+        // below: preloadTraceImages already fetched the fresh bytes, so refreshing
+        // again here would refetch mid-playback and reintroduce the gap.
         const finish = () => {
             for (let index = 0; index < tileUpdates.length; index++) {
                 if (!appliedUpdateIndices.has(index)) {
-                    applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                    applyTimedTileUpdate(world.map, tileUpdates[index]);
                     appliedUpdateIndices.add(index);
                 }
             }
@@ -505,7 +513,7 @@ export class World {
                 }
 
                 if (tileUpdates[index].timeMs <= elapsedMs) {
-                    applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                    applyTimedTileUpdate(world.map, tileUpdates[index]);
                     appliedUpdateIndices.add(index);
                     applied = true;
                 }
@@ -538,7 +546,7 @@ export class World {
                 // Reveal the dead unit immediately: apply the rest (generic-dead)
                 // tile update and mark it applied so the timeline won't re-apply it.
                 if (restUpdateIndex >= 0 && !appliedUpdateIndices.has(restUpdateIndex)) {
-                    applyTimedTileUpdate(world.map, tileUpdates[restUpdateIndex], world.imageCache);
+                    applyTimedTileUpdate(world.map, tileUpdates[restUpdateIndex]);
                     appliedUpdateIndices.add(restUpdateIndex);
                     onMapUpdated();
                 }

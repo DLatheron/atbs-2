@@ -176,7 +176,7 @@ export function useActionPage() {
                 const block = new Promise((resolve) => (resolver = resolve));
 
                 setIsOnTarget(payload.isOnTarget);
-                world.setTracers(
+                await world.setTracers(
                     payload.tracers,
                     payload.tileUpdates,
                     payload.deaths,

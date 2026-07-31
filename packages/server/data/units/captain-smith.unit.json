@@ -18,7 +18,7 @@
         "strength": { "max": 52 }
     },
     "inventory": {
-        "inUse": 2,
+        "inUse": 0,
         "items": [
             { "id": "spas-12.gun" },
             { "id": "m4+m203.gun" },
