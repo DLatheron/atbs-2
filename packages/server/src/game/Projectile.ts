@@ -27,6 +27,9 @@ import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { CollisionSample, Tile } from "./Tile.js";
 import { Material } from "./Material.js";
 
+const MIN_HIT_SPARK_COUNT = 8;
+const MAX_HIT_SPARK_COUNT = 32;
+
 function resolveHitSparkColour(material: Material, owner: unknown): IColour {
     if (isUnit(owner)) {
         return owner.getHitSparkColour();
@@ -453,19 +456,16 @@ export class Projectile implements IRayCast {
                 Projectile.Logger.info(`Commit material entry segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
-                hitSparks.push({
-                    pos,
-                    timeMs: atTime,
-                    colour: resolveHitSparkColour(material, owner),
-                    direction: projectile.directionVector.normalise()
-                });
+                let constitutionDamage = 0;
 
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
                     furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
+                    const previousConstitution = owner.constitution;
                     const died = owner.inflictDamage(pos, projectile);
+                    constitutionDamage = previousConstitution - owner.constitution;
                     if (died) {
                         furnitureDamageSystem?.onUnitDeath(
                             map.getTile(owner.mapLocation),
@@ -475,6 +475,18 @@ export class Projectile implements IRayCast {
                         );
                     }
                 }
+
+                hitSparks.push({
+                    pos,
+                    timeMs: atTime,
+                    colour: resolveHitSparkColour(material, owner),
+                    direction: projectile.directionVector.normalise(),
+                    count: clamp(
+                        Math.ceil(constitutionDamage),
+                        MIN_HIT_SPARK_COUNT,
+                        MAX_HIT_SPARK_COUNT
+                    )
+                });
 
                 const entryOutcome = PenetrationSystem.resolveMaterialEntry(
                     map,

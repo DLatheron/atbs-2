@@ -32,10 +32,10 @@ export namespace ServerMessages {
         payload: null
     };
 
-    export const StartOpportunityFire = {
+    export const StartOpportunityFire = (name: string) => ({
         type: "server:opportunity:fire:start" as const,
-        payload: null
-    };
+        payload: { unit: { name } }
+    });
 
     export const EndOpportunityFire = {
         type: "server:opportunity:fire:end" as const,

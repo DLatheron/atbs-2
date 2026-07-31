@@ -1,7 +1,6 @@
 import { colourToRGBA, generateRandomBetween, IColour, IVec2, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 
-const PARTICLE_COUNT = 16;
 const LIFETIME_MS = 300;
 const SPREAD_MIN_PX = 40;
 const SPREAD_MAX_PX = 80;
@@ -20,11 +19,11 @@ interface SparkParticle {
 export class HitSparkParticles {
     private readonly _particles: SparkParticle[] = [];
 
-    spawnBurst(worldPos: IVec2, colour: IColour, direction: IVec2): void {
+    spawnBurst(worldPos: IVec2, colour: IColour, direction: IVec2, count: number): void {
         const baseAngle = Math.atan2(direction.y, direction.x);
         const origin = new Vec2(worldPos);
 
-        for (let i = 0; i < PARTICLE_COUNT; ++i) {
+        for (let i = 0; i < count; ++i) {
             const angleOffset = generateRandomBetween(-Math.PI / 2, Math.PI / 2);
             const angle = baseAngle + angleOffset;
             const spreadPx = generateRandomBetween(SPREAD_MIN_PX, SPREAD_MAX_PX);

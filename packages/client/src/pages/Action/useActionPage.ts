@@ -35,7 +35,7 @@ export function useActionPage() {
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
     const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
-    const [opportunityFire, setOpportunityFire] = useState<boolean>(false);
+    const [opportunityFire, setOpportunityFire] = useState<string | undefined>();
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -225,12 +225,15 @@ export function useActionPage() {
             //     await delay(5000);
             // }),
 
-            messageManager.registerHandler("server:opportunity:fire:start", async () => {
-                setOpportunityFire(true);
-            }),
+            messageManager.registerHandler(
+                "server:opportunity:fire:start",
+                async (_context, payload) => {
+                    setOpportunityFire(payload.unit.name);
+                }
+            ),
 
             messageManager.registerHandler("server:opportunity:fire:end", async () => {
-                setOpportunityFire(false);
+                setOpportunityFire(undefined);
             })
         ];
 

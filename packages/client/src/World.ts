@@ -585,7 +585,12 @@ export class World {
 
                 if (hitSparks[index].timeMs <= elapsedMs) {
                     const spark = hitSparks[index];
-                    hitSparkParticles.spawnBurst(spark.pos, spark.colour, spark.direction);
+                    hitSparkParticles.spawnBurst(
+                        spark.pos,
+                        spark.colour,
+                        spark.direction,
+                        spark.count
+                    );
                     spawnedSparkIndices.add(index);
                 }
             }

@@ -131,9 +131,27 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onClick={onClick}
                 onDoubleClick={onDoubleClick}
                 onWheel={onWheel}
-                sx={{ gridArea: "map " }}
+                sx={{ gridArea: "map" }}
                 disabled={disabled}
             ></MapComponent>
+            {opportunityFire !== undefined && (
+                <Typography
+                    sx={{
+                        gridArea: "map",
+                        textAlign: "center",
+                        mt: 2,
+                        zIndex: 1,
+                        textShadow:
+                            "-3px -3px 0 black, 3px -3px 0 black, -3px 3px 0 black, 3px 3px 0 black",
+                        color: "yellow",
+                        userSelect: "none",
+                        pointerEvents: "none"
+                    }}
+                    variant="h4"
+                >
+                    Opportunity Fire by {opportunityFire}
+                </Typography>
+            )}
             <SidePanel
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
@@ -160,7 +178,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     unit={unit}
                     unitWeapon={unitWeapon}
                     isOnTarget={isOnTarget}
-                    opportunityFire={opportunityFire}
+                    opportunityFire={opportunityFire !== undefined}
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
                     onEndFireMode={onEndFireMode}

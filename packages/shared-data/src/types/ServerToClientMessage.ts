@@ -216,7 +216,11 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:opportunity:fire:start"),
-        payload: z.null()
+        payload: z.object({
+            unit: z.object({
+                name: z.string()
+            })
+        })
     }),
     z.object({
         type: z.literal("server:opportunity:fire:end"),

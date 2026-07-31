@@ -790,7 +790,8 @@ export const HitSpark = z.object({
     pos: IVec2,
     timeMs: z.number().nonnegative(),
     colour: IColour,
-    direction: IVec2
+    direction: IVec2,
+    count: z.number().int().positive()
 });
 export type HitSpark = z.infer<typeof HitSpark>;
 

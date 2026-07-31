@@ -110,7 +110,7 @@ export class OpportunityFireManager {
             OpportunityFireManager.Logger.info(`Starting opportunity fire for ${unit.name}`);
 
             this.game.messageRouter.broadcast(
-                [ServerMessages.StartOpportunityFire],
+                [ServerMessages.StartOpportunityFire(unit.name)],
                 undefined,
                 true
             );
