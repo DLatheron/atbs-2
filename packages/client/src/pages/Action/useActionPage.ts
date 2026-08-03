@@ -367,6 +367,13 @@ export function useActionPage() {
         world.throwCallback = onThrow;
     }, [world, onThrow]);
 
+    const nextUnit = useCallback(() => {
+        sendMessage({
+            type: "client:game:unit:next",
+            payload: null
+        });
+    }, [sendMessage]);
+
     return {
         map,
         unit,
@@ -379,6 +386,7 @@ export function useActionPage() {
         disabled,
         isOnTarget,
         opportunityFire,
+        nextUnit,
         onMove,
         onRotateTo,
         onChangeFireSelector,

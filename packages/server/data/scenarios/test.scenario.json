@@ -27,6 +27,10 @@
                 {
                     "id": "captain-smith.unit",
                     "overrides": { "location": { "col": 10, "row": 8 }, "orientation": 3 }
+                },
+                {
+                    "id": "corporal-barry.unit",
+                    "overrides": { "location": { "col": 10, "row": 12 }, "orientation": 1 }
                 }
             ],
             "phases": {

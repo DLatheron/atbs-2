@@ -126,6 +126,10 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
             srcWorldPos: IVec2,
             dstWorldPos: IVec2
         })
+    }),
+    z.object({
+        type: z.literal("client:game:unit:next"),
+        payload: z.null()
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

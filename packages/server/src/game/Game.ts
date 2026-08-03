@@ -796,4 +796,25 @@ export class Game {
             );
         }
     }
+
+    nextUnit(): Unit | null {
+        const numUnits = this.turnsSide.units.length;
+        if (numUnits === 0) {
+            return null;
+        }
+
+        // Transform -1 or the index of the selected unit => 0 or the index of the selected unit + 1.
+        const baseIndex =
+            this.turnsSide.units.findIndex((unit) => unit.id === this.selectedUnit?.id) + 1;
+
+        for (let index = 0; index < numUnits; index++) {
+            const unitIndex = (baseIndex + index) % numUnits;
+            const nextUnit = this.turnsSide.units[unitIndex];
+            if (nextUnit.canBeSelected) {
+                return nextUnit;
+            }
+        }
+
+        return null;
+    }
 }

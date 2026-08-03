@@ -213,7 +213,19 @@ export class ActionPhaseHandler extends PhaseHandler {
                     unit.throw(new Vec2(worldPos));
                     from.sendMessage({ type: "server:ui:disabled", payload: false });
                 }
-            )
+            ),
+
+            messageManager.registerHandler("client:game:unit:next", ({ game }, _null, from) => {
+                game.verifyFromPlayingClient(from);
+                const nextUnit = game.nextUnit();
+                if (nextUnit) {
+                    game.selectedUnit = nextUnit;
+                    from.sendMessage({
+                        type: "server:unit:mode:move",
+                        payload: nextUnit.toSummary()
+                    });
+                }
+            })
         ];
     }
 }

@@ -3,5 +3,5 @@
     "infiniteActionPoints": true,
     "infiniteAmmunition": true,
     "showProjectileDebugGraphics": false,
-    "showVisibilityDebugGraphics": true
+    "showVisibilityDebugGraphics": false
 }
