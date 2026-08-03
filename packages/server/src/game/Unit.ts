@@ -16,10 +16,12 @@ import {
     OnTarget,
     RenderList,
     RenderMode,
+    SceneChildNode,
     SceneContext,
     SceneNode,
     SceneObject,
     shotsFired,
+    ItemType,
     TrackingSpeed,
     UnitId,
     UnitSummary,
@@ -32,6 +34,7 @@ import {
     Colour,
     DebugGraphic,
     generateRandomBetween,
+    IColour,
     ITilePos,
     Orientation,
     relativeDirection,
@@ -67,6 +70,11 @@ import { Overtaking } from "./Overtaking.js";
 
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
+
+const OPPORTUNITY_FIRE_APTS_THRESHOLD = 0.5;
+
+const OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER = 0.75;
+const OPPORTUNITY_FIRE_DEFAULT_SPEED_SCALER = 1.0;
 
 const ROTATION_APT_COST = 1;
 
@@ -122,6 +130,7 @@ export const UnitRecipe = z.object({
         materials: z.array(z.string()).nonempty().default(["human.material"])
     }),
     visualType: VisualType.default(VisualType.enum.eyeball),
+    hitSparkColour: IColour.optional(),
     renderable: SceneNode,
     actions: Actions
 });
@@ -274,6 +283,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._materials;
     }
 
+    getHitSparkColour(): IColour {
+        if (this._recipe.hitSparkColour) {
+            return this._recipe.hitSparkColour;
+        }
+
+        const material = this._materials[0];
+        const rgb = material.rgb;
+        if (!rgb) {
+            return { r: 255, g: 255, b: 255, a: 1 };
+        }
+
+        return { ...rgb, a: 1 };
+    }
+
     get mapLocation(): TilePos {
         if (!this._location) {
             throw new Error(`Unit ${this.id} is not on the map`);
@@ -367,6 +390,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._attributes.strength.value;
     }
 
+    get speed(): number {
+        return this._attributes.speed.value;
+    }
+
     get canFire(): boolean {
         return !!this.itemInUse?.canFire;
     }
@@ -417,6 +444,22 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get limitedView(): boolean {
         return this.isOvertaking;
+    }
+
+    get canOpportunityFire(): boolean {
+        if (this.isDead) {
+            return false;
+        }
+
+        if (this.actionPoints < this.maxActionPoints * OPPORTUNITY_FIRE_APTS_THRESHOLD) {
+            return false;
+        }
+
+        if (!this.itemInUse?.suitableForOpportunityFire) {
+            return false;
+        }
+
+        return true;
     }
 
     getActions(): Actions {
@@ -566,7 +609,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
     }
 
-    private _refreshVisibility(): void {
+    private _refreshVisibility(speedScaler: number = OPPORTUNITY_FIRE_DEFAULT_SPEED_SCALER): void {
         const oldCanSee = this.canSee;
 
         if (config.showVisibilityDebugGraphics) {
@@ -585,7 +628,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // visibilityManager.update() refreshes every viewer; keep each unit's
         // canSee in sync so opposition units that newly see someone report the
         // correct count when later selected (toSummary → UnitsSeen).
-        this.game.syncUnitsCanSee();
+        this.game.syncUnitsCanSee((unit: Unit) => {
+            if (unit.canOpportunityFire) {
+                const speed = unit.speed * (unit === this ? speedScaler : 1);
+
+                this.game.opportunityFireManager.registerOpportunity(unit, speed);
+            }
+        });
 
         if (!isEqual(oldCanSee, this.canSee)) {
             this.messageRouter.send(
@@ -754,7 +803,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.location = dstTile.location;
         dstTile.addUnit(this);
 
-        this._refreshVisibility();
+        this._refreshVisibility(OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER);
 
         this.messageRouter.send(
             {
@@ -951,7 +1000,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
-            Projectile.ProcessProjectiles(
+            const hitSparks = Projectile.ProcessProjectiles(
                 projectiles,
                 map,
                 debugGraphics,
@@ -996,7 +1045,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                         tracers: projectiles.map((projectile) => projectile.getTracer()),
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                         tileUpdates,
-                        deaths
+                        deaths,
+                        hitSparks
                     }
                 }
             ]);
@@ -1139,7 +1189,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
 
-        Projectile.ProcessProjectiles(
+        const hitSparks = Projectile.ProcessProjectiles(
             [projectile],
             map,
             debugGraphics,
@@ -1198,7 +1248,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     tracers: [projectile.getTracer()],
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                     tileUpdates,
-                    deaths
+                    deaths,
+                    hitSparks
                 }
             }
         ]);
@@ -1253,6 +1304,54 @@ export class Unit extends SceneObject implements VisibilityViewer {
     calcThrowMaxRange(item: Item) {
         // TODO: Validate that this is good enough...
         return Math.floor(this.strength / Math.pow(item.weight, 2)) * 400;
+    }
+
+    /**
+     * Builds a map item representing this unit's corpse: copies weight and the
+     * `dead` branch of each render mode so the body looks and weighs like the unit.
+     */
+    createCorpseItem(): Item {
+        const renderable = Unit._extractDeadRenderable(this._recipe.renderable);
+
+        return this.itemManager.newAdHocItem({
+            id: "corpse.item",
+            type: ItemType.enum.item,
+            name: `${this.name}'s corpse`,
+            shortName: "Corpse",
+            description: [{ text: `The lifeless body of ${this.name}.` }],
+            quantity: 1,
+            weight: this.weight,
+            renderable
+        });
+    }
+
+    private static _extractDeadChild(node: SceneChildNode | undefined): SceneChildNode {
+        if (node === undefined) {
+            return [];
+        }
+
+        // Leaf / directional / frames nodes have no alive/dead states.
+        if (Array.isArray(node) || "directional" in node || "frames" in node) {
+            return cloneDeep(node);
+        }
+
+        const stateNode = node as { [key: string]: SceneChildNode; default: SceneChildNode };
+        return cloneDeep(stateNode.dead ?? stateNode.default);
+    }
+
+    private static _extractDeadRenderable(renderable: SceneNode): SceneNode {
+        return {
+            ...(renderable.UI_MODE !== undefined && {
+                UI_MODE: Unit._extractDeadChild(renderable.UI_MODE)
+            }),
+            ...(renderable.MAP_MODE !== undefined && {
+                MAP_MODE: Unit._extractDeadChild(renderable.MAP_MODE)
+            }),
+            ...(renderable.FIRE_MODE !== undefined && {
+                FIRE_MODE: Unit._extractDeadChild(renderable.FIRE_MODE)
+            }),
+            default: Unit._extractDeadChild(renderable.default)
+        };
     }
 
     inflictDamage(_worldPos: Vec2, projectile: Projectile): boolean {
@@ -1328,8 +1427,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const oppositionUnits = game.getOppositionUnitsForSide(side.id);
 
-        return oppositionUnits.filter(({ mapLocation }) => {
-            const tile = game.map.getTile(mapLocation);
+        return oppositionUnits.filter((unit) => {
+            if (unit.location === null) {
+                return false;
+            }
+            const tile = game.map.getTile(unit.location);
             return visibilityManager.isPoiVisibleForMasks(tile, this.interestMasks);
         });
     }

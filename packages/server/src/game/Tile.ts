@@ -193,7 +193,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     get overtaking(): boolean {
-        return true;
+        return !!this.topmostUnit;
     }
 
     intersectsRay(ray: VisibilityRay): Vec2 | undefined {

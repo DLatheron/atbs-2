@@ -14,6 +14,7 @@ export interface MapComponentProps {
     onMouseDown?: (event: React.MouseEvent) => void;
     onClick?: (event: React.MouseEvent) => void;
     onDoubleClick?: (event: React.MouseEvent) => void;
+    onWheel?: (event: WheelEvent) => void;
 
     disabled?: boolean;
     children?: ReactNode;
@@ -31,6 +32,7 @@ export function MapComponent({
     onMouseDown,
     onClick,
     onDoubleClick,
+    onWheel,
 
     // disabled = false,
     children,
@@ -38,12 +40,30 @@ export function MapComponent({
 }: MapComponentProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const onWheelRef = useRef(onWheel);
+    onWheelRef.current = onWheel;
 
     const { width, height } = useComponentSize(containerRef);
 
     useEffect(() => {
         CanvasLoop(canvasRef, (props) => renderMap?.(props));
     }, [renderMap]);
+
+    // Native non-passive listener so preventDefault can block page scroll while zooming.
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) {
+            return;
+        }
+
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            onWheelRef.current?.(event);
+        };
+
+        canvas.addEventListener("wheel", handleWheel, { passive: false });
+        return () => canvas.removeEventListener("wheel", handleWheel);
+    }, [width, height]);
 
     return (
         <Container

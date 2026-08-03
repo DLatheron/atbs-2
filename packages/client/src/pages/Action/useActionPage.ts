@@ -35,6 +35,7 @@ export function useActionPage() {
     const [error, setError] = useState<ErrorType | null>(null);
     const [disabled, setDisabled] = useState<boolean>(false);
     const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
+    const [opportunityFire, setOpportunityFire] = useState<string | undefined>();
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -76,12 +77,22 @@ export function useActionPage() {
                 }
             }),
 
+            messageManager.registerHandler("server:unit:mode:fire:end", () => {
+                setSidePanelMode(MapMode.enum["unit-mode"]);
+                world.mapMode = MapMode.enum["unit-mode"];
+            }),
+
             messageManager.registerHandler("server:turn:start", (_context, payload) => {
                 setTurn(payload.turn);
             }),
 
             messageManager.registerHandler("server:side:start", (_context, payload) => {
                 setSide(payload.side);
+                setUnit(null);
+                setUnitWeapon(null);
+                setTileInfo(null);
+                setSidePanelMode(MapMode.enum["map-mode"]);
+                world.mapMode = MapMode.enum["map-mode"];
             }),
 
             messageManager.registerHandler("server:game:tile:info", (_context, payload) => {
@@ -165,10 +176,11 @@ export function useActionPage() {
                 const block = new Promise((resolve) => (resolver = resolve));
 
                 setIsOnTarget(payload.isOnTarget);
-                world.setTracers(
+                await world.setTracers(
                     payload.tracers,
                     payload.tileUpdates,
                     payload.deaths,
+                    payload.hitSparks,
                     () => {
                         setMap((map: ClientMap | null) => map);
                     },
@@ -205,7 +217,24 @@ export function useActionPage() {
                         world.animationController.newAnimatableObject(animatableObjectRecipe);
                     }
                 }
-            )
+            ),
+
+            // messageManager.registerHandler("server:opportunity:fire", async (_context, payload) => {
+            //     console.info("$$$ Received opportunity fire message $$$", payload.unit.id);
+
+            //     await delay(5000);
+            // }),
+
+            messageManager.registerHandler(
+                "server:opportunity:fire:start",
+                async (_context, payload) => {
+                    setOpportunityFire(payload.unit.name);
+                }
+            ),
+
+            messageManager.registerHandler("server:opportunity:fire:end", async () => {
+                setOpportunityFire(undefined);
+            })
         ];
 
         return () => {
@@ -276,9 +305,11 @@ export function useActionPage() {
     }, [sendMessage, unit?.id]);
 
     const onEndFireMode = useCallback(() => {
-        setSidePanelMode(MapMode.enum["unit-mode"]);
-        world.mapMode = MapMode.enum["unit-mode"];
-    }, [world]);
+        sendMessage({
+            type: "client:unit:mode:fire:end",
+            payload: null
+        });
+    }, [sendMessage]);
 
     const onChangeFireSelector = useCallback(
         (weaponId: ItemId, fireSelector: FireSelector) => {
@@ -347,6 +378,7 @@ export function useActionPage() {
         error,
         disabled,
         isOnTarget,
+        opportunityFire,
         onMove,
         onRotateTo,
         onChangeFireSelector,

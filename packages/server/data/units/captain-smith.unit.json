@@ -14,11 +14,11 @@
         "fitness": { "max": 80 },
         "morale": { "max": 82 },
         "stamina": { "max": 60 },
-        "speed": { "max": 70 },
+        "speed": { "max": 50 },
         "strength": { "max": 52 }
     },
     "inventory": {
-        "inUse": 2,
+        "inUse": 0,
         "items": [
             { "id": "spas-12.gun" },
             { "id": "m4+m203.gun" },

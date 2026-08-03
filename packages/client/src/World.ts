@@ -16,6 +16,7 @@ import {
     ThrowDetails,
     TimedTileUpdate,
     Tracer,
+    HitSpark,
     UnitSummary,
     VisibilityViewerSummary
 } from "@atbs/shared-data";
@@ -56,8 +57,9 @@ import {
     DrawRoundedFeatheredTile
 } from "./RenderHelpers";
 import { FireModeHandler } from "./modeHandlers/FireModeHandler";
-import { applyTimedTileUpdate } from "./mapUpdates.js";
+import { applyTimedTileUpdate, preloadTraceImages } from "./mapUpdates.js";
 import { AnimationController } from "./AnimationController.js";
+import { HitSparkParticles } from "./HitSparkParticles.js";
 
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
@@ -404,16 +406,25 @@ export class World {
         return this._animationController;
     }
 
-    setTracers(
+    async setTracers(
         tracers: Tracer[],
         tileUpdates: TimedTileUpdate[],
         deaths: DeathAnimation[],
+        hitSparks: HitSpark[],
         onMapUpdated: () => void,
         completeCallback: () => void
-    ): void {
-        const tracerTimer = new Timer();
-
+    ): Promise<void> {
         this._drawSights = false;
+
+        // Nothing in the timeline may start until every sprite it swaps in is
+        // decoded, otherwise a replaced tile renders as a gap for the duration of
+        // its fetch.
+        await preloadTraceImages(this.imageCache, tileUpdates, deaths);
+
+        const tracerTimer = new Timer();
+        const hitSparkParticles = new HitSparkParticles();
+        const spawnedSparkIndices = new Set<number>();
+        let traceFinished = false;
 
         const appliedUpdateIndices = new Set<number>();
 
@@ -470,10 +481,13 @@ export class World {
             );
         };
 
+        // The image cache is deliberately not passed to any applyTimedTileUpdate
+        // below: preloadTraceImages already fetched the fresh bytes, so refreshing
+        // again here would refetch mid-playback and reintroduce the gap.
         const finish = () => {
             for (let index = 0; index < tileUpdates.length; index++) {
                 if (!appliedUpdateIndices.has(index)) {
-                    applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                    applyTimedTileUpdate(world.map, tileUpdates[index]);
                     appliedUpdateIndices.add(index);
                 }
             }
@@ -499,7 +513,7 @@ export class World {
                 }
 
                 if (tileUpdates[index].timeMs <= elapsedMs) {
-                    applyTimedTileUpdate(world.map, tileUpdates[index], world.imageCache);
+                    applyTimedTileUpdate(world.map, tileUpdates[index]);
                     appliedUpdateIndices.add(index);
                     applied = true;
                 }
@@ -532,7 +546,7 @@ export class World {
                 // Reveal the dead unit immediately: apply the rest (generic-dead)
                 // tile update and mark it applied so the timeline won't re-apply it.
                 if (restUpdateIndex >= 0 && !appliedUpdateIndices.has(restUpdateIndex)) {
-                    applyTimedTileUpdate(world.map, tileUpdates[restUpdateIndex], world.imageCache);
+                    applyTimedTileUpdate(world.map, tileUpdates[restUpdateIndex]);
                     appliedUpdateIndices.add(restUpdateIndex);
                     onMapUpdated();
                 }
@@ -571,12 +585,33 @@ export class World {
             deathQueue.shift();
         };
 
+        const spawnDueHitSparks = (elapsedMs: number) => {
+            for (let index = 0; index < hitSparks.length; index++) {
+                if (spawnedSparkIndices.has(index)) {
+                    continue;
+                }
+
+                if (hitSparks[index].timeMs <= elapsedMs) {
+                    const spark = hitSparks[index];
+                    hitSparkParticles.spawnBurst(
+                        spark.pos,
+                        spark.colour,
+                        spark.direction,
+                        spark.count
+                    );
+                    spawnedSparkIndices.add(index);
+                }
+            }
+        };
+
         this.addRenderPlugin({
             get name() {
                 return "Tracers";
             },
 
-            update() {
+            update({ frameDelta }: RenderPluginUpdateProps) {
+                hitSparkParticles.update(frameDelta);
+
                 // While holding on the dead unit, the tracer clock is paused, so
                 // measure the linger against the wall clock and resume once it
                 // elapses. Nothing else advances until then.
@@ -589,6 +624,8 @@ export class World {
 
                 const { time } = tracerTimer.tick();
                 const elapsedMs = Math.max(time, 0);
+
+                spawnDueHitSparks(elapsedMs);
 
                 // Kick off the next death once the (unpaused) clock reaches its
                 // start time. Only one death is active at a time; the paused
@@ -607,6 +644,8 @@ export class World {
             },
 
             render({ camera, context }: RenderPluginRenderProps) {
+                hitSparkParticles.render(camera, context);
+
                 const { time } = tracerTimer;
 
                 // A death spin/hold owns the tracer clock: don't draw projectiles
@@ -616,7 +655,7 @@ export class World {
                 // mode — the observing side stays in map mode yet must still draw
                 // tracers and complete the trace to unblock its message queue.
                 if (paused) {
-                    return false;
+                    return traceFinished && hitSparkParticles.isEmpty;
                 }
 
                 let allComplete = true;
@@ -626,8 +665,12 @@ export class World {
                     }
                 }
 
-                if (allComplete) {
+                if (allComplete && !traceFinished) {
                     finish();
+                    traceFinished = true;
+                }
+
+                if (traceFinished && hitSparkParticles.isEmpty) {
                     return true;
                 }
 
@@ -800,8 +843,9 @@ export class World {
             const tileTopLeft = new TilePos(viewer.location).scale(tileSize);
             const tileCenter = tileTopLeft.add(new Vec2(halfTileSize, halfTileSize));
 
-            const featherPx = 6;
-            const cornerRadiusPx = 24;
+            const zoom = this.camera.zoom;
+            const featherPx = 6 * zoom;
+            const cornerRadiusPx = 24 * zoom;
             // Origin the cone at the back of the tile (opposite corner for
             // diagonals, mid-back edge for cardinals) so it opens across the tile
             // toward the facing direction — e.g. SOUTH_WEST → NORTH_EAST corner.
@@ -810,7 +854,7 @@ export class World {
                     ? Vec2.Zero()
                     : Vec2.StepInDirection(
                           rotateOrientation(orientation, RotateBy180Degrees)
-                      ).scale(halfTileSize - cornerRadiusPx);
+                      ).scale(halfTileSize - 24);
             const coneWorldPos = tileCenter.add(backOffset);
             const unitAngle = OrientationToDegrees[orientation];
 
@@ -818,7 +862,7 @@ export class World {
                 this.camera,
                 context,
                 tileTopLeft,
-                tileSize,
+                this.camera.worldLengthToCanvas(tileSize),
                 colour,
                 featherPx,
                 cornerRadiusPx
@@ -829,7 +873,7 @@ export class World {
                     this.camera,
                     context,
                     coneWorldPos,
-                    viewer.viewRange,
+                    this.camera.worldLengthToCanvas(viewer.viewRange),
                     unitAngle,
                     viewer.viewAngleInDegrees,
                     colour
@@ -858,8 +902,9 @@ export class World {
         this.update({ time, frameDelta });
 
         const { tileSize } = this.map;
-        const scale = new Vec2(1, 1);
-        const offset = new Vec2(tileSize / 2, tileSize / 2);
+        const zoom = this.camera.zoom;
+        const scale = new Vec2(zoom, zoom);
+        const offset = new Vec2((tileSize * zoom) / 2, (tileSize * zoom) / 2);
 
         context.clearRect(0, 0, width, height);
         offscreenContexts[0].clearRect(0, 0, width, height);
@@ -888,7 +933,10 @@ export class World {
 
         this._renderRenderPlugins(renderProps);
 
-        this._interactionHandler?.render?.(canvasLoopProps);
+        this._interactionHandler?.render?.({
+            ...canvasLoopProps,
+            context: offscreenContexts[0]
+        });
 
         this.renderSight(renderProps.context, time);
 
@@ -934,8 +982,8 @@ export class World {
                         renderProps.camera,
                         renderProps.context,
                         this.tileToWorld(graphic.tilePos),
-                        this.map.tileSize,
-                        this.map.tileSize,
+                        renderProps.camera.worldLengthToCanvas(this.map.tileSize),
+                        renderProps.camera.worldLengthToCanvas(this.map.tileSize),
                         graphic.strokeColour,
                         graphic.strokeThickness,
                         graphic.fillColour
@@ -947,8 +995,8 @@ export class World {
                         renderProps.camera,
                         renderProps.context,
                         graphic.centerWorldPos,
-                        graphic.width,
-                        graphic.height,
+                        renderProps.camera.worldLengthToCanvas(graphic.width),
+                        renderProps.camera.worldLengthToCanvas(graphic.height),
                         graphic.strokeColour,
                         graphic.strokeThickness,
                         graphic.fillColour
@@ -986,7 +1034,7 @@ export class World {
                         renderProps.context,
                         graphic.worldPos,
                         graphic.colour,
-                        graphic.size
+                        renderProps.camera.worldLengthToCanvas(graphic.size)
                     );
                     break;
 
@@ -995,7 +1043,7 @@ export class World {
                         renderProps.camera,
                         renderProps.context,
                         graphic.centerWorldPos,
-                        graphic.radius,
+                        renderProps.camera.worldLengthToCanvas(graphic.radius),
                         graphic.startAngleInDegrees,
                         graphic.endAngleInDegrees,
                         graphic.clockwise,
@@ -1139,10 +1187,12 @@ export class World {
                 visibilityFilter = false
             }) => {
                 if (imageId.startsWith("anim-")) {
+                    const halfTile = (tileSize * scale.x) / 2;
                     this._animationController.renderAnimation(
                         context,
                         imageId,
-                        canvasPos.add({ x: tileSize / 2, y: tileSize / 2 })
+                        canvasPos.add({ x: halfTile, y: halfTile }),
+                        scale.x
                     );
                 } else {
                     this.imageCache.requestImage(imageId);
@@ -1240,6 +1290,15 @@ export class World {
 
     onDoubleClick(event: MouseEvent | React.MouseEvent) {
         this._interactionHandler?.onDoubleClick?.(event);
+    }
+
+    onWheel(event: WheelEvent | React.WheelEvent) {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        this.camera.zoomByWheel(event.deltaY, canvasPos);
     }
 
     onContextMenu(event: React.MouseEvent) {

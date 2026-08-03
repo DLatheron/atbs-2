@@ -23,7 +23,7 @@ import {
     SceneObject
 } from "@atbs/shared-data";
 import z from "zod";
-import { DrawVfxToCanvas } from "./RenderHelpers";
+import { DrawVfx, DrawVfxToCanvas } from "./RenderHelpers";
 import { ImageCache } from "./ImageCache";
 import { Camera2d } from "./Camera2d";
 
@@ -237,6 +237,7 @@ export class Animation extends SceneObject {
     }
 
     renderToWorld({
+        camera,
         context,
         worldPos,
         imageCache
@@ -261,11 +262,12 @@ export class Animation extends SceneObject {
                 return;
             }
 
-            DrawVfxToCanvas(
+            DrawVfx(
+                camera,
                 context,
                 imageCache.getImage(renderable.imageId),
                 worldPos,
-                scale,
+                camera.worldLengthToCanvas(scale),
                 renderable.opacity ?? opacity,
                 rotation
             );
@@ -275,11 +277,13 @@ export class Animation extends SceneObject {
     renderToCanvas({
         context,
         canvasPos,
-        imageCache
+        imageCache,
+        sizeScale = 1
     }: {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
         imageCache: ImageCache;
+        sizeScale?: number;
     }) {
         const { scale, opacity, rotation, orientation, frame } = this._state;
 
@@ -300,7 +304,7 @@ export class Animation extends SceneObject {
                 context,
                 imageCache.getImage(renderable.imageId),
                 canvasPos,
-                scale,
+                scale * sizeScale,
                 renderable.opacity ?? opacity,
                 rotation
             );

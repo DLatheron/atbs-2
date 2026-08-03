@@ -18,28 +18,10 @@ export class ActionPhaseHandler extends PhaseHandler {
 
         this.game.startActionPhase();
         this.game.startTurn();
-
-        // this.game.broadcastMessage({
-        //     type: "server:unit",
-        //     payload: {
-        //         id: "captain-smith.unit"
-        //     }
-        // });
-        // this.game.broadcastMessage({
-        //     type: "server:map",
-        //     payload: this.game.worldMap.renderClientMap()
-        // });
     }
 
     registerMessageHandlers(messageManager: ClientMessageManager): void {
         this._handlerHandles = [
-            // messageManager.registerHandler("client:game:refresh", (_context, _payload, from) => {
-            //     from.sendMessage({
-            //         type: "server:map",
-            //         payload: this.game.worldMap.renderClientMap()
-            //     });
-            // }),
-
             messageManager.registerHandler("client:game:turn:end", ({ game }, _payload, from) => {
                 game.verifyFromPlayingClient(from);
                 game.nextSide();
@@ -54,109 +36,6 @@ export class ActionPhaseHandler extends PhaseHandler {
                     type: "server:game:tile:info",
                     payload: tile.getTileInfo()
                 });
-
-                // // Temporary create a shockwave vfx.
-                // from.sendMessage({
-                //     type: "server:animations:play",
-                //     payload: [
-                //         {
-                //             instanceId: "shockwave.animation",
-                //             offset: 0,
-                //             recipe: AnimationRecipeManager.GetSingleton().getRecipe(
-                //                 "shockwave.animation"
-                //             ),
-                //             worldPos: game.map.tileCenterToWorld(tilePos)
-                //         }
-                //     ]
-                // });
-
-                // Temporary create a smoke vfx.
-                // const smokeVfx = game.vfxManager.newVfx("smoke.vfx", tilePos);
-                // tile.addVfx(smokeVfx);
-
-                // from.sendMessage({
-                //     type: "server:animations:play",
-                //     payload: [{ worldPos: game.map.tileCenterToWorld(tilePos) }]
-                // });
-
-                from.sendMessage({
-                    type: "server:map:update",
-                    payload: [tile.generateTileUpdate()]
-                });
-
-                // from.sendMessage({
-                //     type: "server:debug:graphics",
-                //     payload: [
-                //         tile.toDebugGraphic(
-                //             new Colour({ ...Colour.Green, a: 0.5 }),
-                //             Colour.Yellow,
-                //             1
-                //         ) as DebugTile,
-                //         {
-                //             type: DebugGraphicType.enum.box,
-                //             centerWorldPos: game.map.tileOffsetToWorld(tilePos, new Vec2(-50, -50)),
-                //             width: 200,
-                //             height: 200,
-                //             strokeColour: Colour.Yellow,
-                //             strokeThickness: 2
-                //         },
-                //         {
-                //             type: DebugGraphicType.enum.line,
-                //             srcWorldPos: game.map.tileOffsetToWorld(
-                //                 tilePos,
-                //                 new Vec2({ x: 0, y: 0 })
-                //             ),
-                //             dstWorldPos: game.map.tileOffsetToWorld(
-                //                 tilePos,
-                //                 new Vec2({ x: 100, y: 100 })
-                //             ),
-                //             strokeColour: Colour.White,
-                //             strokeThickness: 2
-                //         },
-                //         ...(tile.topmostUnit !== null
-                //             ? [
-                //                   {
-                //                       type: DebugGraphicType.enum.arc,
-                //                       centerWorldPos: game.map.tileCenterToWorld(tilePos),
-                //                       radius: 250,
-                //                       startAngleInDegrees:
-                //                           OrientationToDegrees[tile.topmostUnit?.orientation] - 45,
-                //                       endAngleInDegrees:
-                //                           OrientationToDegrees[tile.topmostUnit?.orientation] + 45,
-                //                       fillColour: new Colour({ ...Colour.Green, a: 0.5 }),
-                //                       strokeColour: Colour.Black
-                //                   },
-                //                   {
-                //                       type: DebugGraphicType.enum.arc,
-                //                       centerWorldPos: game.map.tileCenterToWorld(tilePos),
-                //                       radius: 200,
-                //                       startAngleInDegrees:
-                //                           OrientationToDegrees[tile.topmostUnit?.orientation] - 45,
-                //                       endAngleInDegrees:
-                //                           OrientationToDegrees[tile.topmostUnit?.orientation] + 45,
-                //                       clockwise: true,
-                //                       fillColour: new Colour({ ...Colour.Red, a: 0.5 }),
-                //                       strokeColour: Colour.Black
-                //                   },
-                //                   {
-                //                       type: DebugGraphicType.enum.point,
-                //                       worldPos: game.map.tileOffsetToWorld(
-                //                           tilePos,
-                //                           new Vec2(125, 125)
-                //                       ),
-                //                       colour: Colour.Blue,
-                //                       size: 10
-                //                   },
-                //                   {
-                //                       type: DebugGraphicType.enum.text,
-                //                       worldPos: game.map.tileCenterToWorld(tilePos),
-                //                       text: tile.topmostUnit.name,
-                //                       colour: Colour.Black
-                //                   }
-                //               ]
-                //             : [])
-                //     ]
-                // });
             }),
 
             messageManager.registerHandler("client:game:tile:click", ({ game }, payload, from) => {
@@ -172,6 +51,14 @@ export class ActionPhaseHandler extends PhaseHandler {
                 if (unit && unit.isAlive && unit.side.id === from.sideId) {
                     game.selectedUnit = unit;
 
+                    from.sendMessage({
+                        type: "server:camera:move:to",
+                        payload: {
+                            target: "tile",
+                            tilePos: unit.mapLocation,
+                            trackingSpeed: 1
+                        }
+                    });
                     from.sendMessage({
                         type: "server:unit:mode:move",
                         payload: unit.toSummary()
@@ -203,7 +90,10 @@ export class ActionPhaseHandler extends PhaseHandler {
                     const { selectedUnit } = game;
                     if (unitId === selectedUnit?.id) {
                         selectedUnit.move(orientation);
-                        from.sendMessage({ type: "server:ui:disabled", payload: false });
+
+                        if (!game.opportunityFireManager.startOpportunityFire()) {
+                            from.sendMessage({ type: "server:ui:disabled", payload: false });
+                        }
                     }
                 }
             ),
@@ -211,11 +101,15 @@ export class ActionPhaseHandler extends PhaseHandler {
             messageManager.registerHandler(
                 "client:unit:rotate",
                 ({ game }, { unitId, orientation }, from) => {
-                    game.verifyFromPlayingClient(from);
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
 
-                    const { selectedUnit } = game;
-                    if (unitId === selectedUnit?.id) {
-                        selectedUnit.rotate(orientation);
+                    const unit = game.getUnit(unitId);
+                    if (unitId === unit?.id) {
+                        unit.rotate(orientation);
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
@@ -233,13 +127,18 @@ export class ActionPhaseHandler extends PhaseHandler {
             messageManager.registerHandler(
                 "client:unit:fire:selector",
                 ({ game }, { unitId, weaponId, fireSelector }, from) => {
-                    game.verifyFromPlayingClient(from);
-                    const { selectedUnit } = game;
-                    if (unitId !== selectedUnit?.id) {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
+
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
                         throw new Error(`Unit ${unitId} is not selected`);
                     }
 
-                    const item = selectedUnit.itemInUse;
+                    const item = unit.itemInUse;
                     if (!item) {
                         throw new Error(`Unit ${unitId} is not using an item`);
                     }
@@ -251,27 +150,27 @@ export class ActionPhaseHandler extends PhaseHandler {
                     // TODO: Could be a delta update...
                     from.sendMessage({
                         type: "server:unit:mode:fire",
-                        payload:
-                            selectedUnit?.itemInUse?.getFireModeItemSummary(selectedUnit) ?? null
+                        payload: unit?.itemInUse?.getFireModeItemSummary(unit) ?? null
                     });
                 }
             ),
 
             messageManager.registerHandler("client:unit:fire", ({ game }, fireDetails, from) => {
-                game.verifyFromPlayingClient(from);
-                const { selectedUnit } = game;
-                if (fireDetails.unitId !== selectedUnit?.id) {
-                    throw new Error(`Unit ${fireDetails.unitId} is not selected`);
+                if (game.opportunityFireManager.opportunity) {
+                    game.verifyFromOpportunityFireClient(from);
+                } else {
+                    game.verifyFromPlayingClient(from);
                 }
 
-                const weapon = selectedUnit.itemInUse?.findByItemId(fireDetails.weaponId);
+                const unit = game.getUnit(fireDetails.unitId);
+                const weapon = unit.itemInUse?.findByItemId(fireDetails.weaponId);
                 if (!weapon) {
                     throw new Error(
-                        `Unit ${selectedUnit.id} does not have weapon ${fireDetails.weaponId} in use`
+                        `Unit ${unit.id} does not have weapon ${fireDetails.weaponId} in use`
                     );
                 }
 
-                selectedUnit.fire(
+                unit.fire(
                     weapon,
                     fireDetails.fireSelector,
                     fireDetails.fireMode,
@@ -281,28 +180,40 @@ export class ActionPhaseHandler extends PhaseHandler {
                 from.sendMessage({ type: "server:ui:disabled", payload: false });
             }),
 
-            messageManager.registerHandler("client:unit:throw", ({ game }, throwDetails, from) => {
-                game.verifyFromPlayingClient(from);
-                const { selectedUnit } = game;
-                if (throwDetails.unitId !== selectedUnit?.id) {
-                    throw new Error(`Unit ${throwDetails.unitId} is not selected`);
+            messageManager.registerHandler("client:unit:mode:fire:end", ({ game }, _null, from) => {
+                if (game.opportunityFireManager.opportunity) {
+                    game.verifyFromOpportunityFireClient(from);
+                } else {
+                    game.verifyFromPlayingClient(from);
                 }
 
-                if (selectedUnit.itemInUse?.id !== throwDetails.itemId) {
-                    throw new Error(
-                        `Unit ${selectedUnit.id} is not using item ${throwDetails.itemId}`
-                    );
+                if (!game.opportunityFireManager.continueOpportunityFire()) {
+                    from.sendMessage({ type: "server:unit:mode:fire:end", payload: null });
                 }
+            }),
 
-                selectedUnit.throw(new Vec2(throwDetails.worldPos));
-                from.sendMessage({ type: "server:ui:disabled", payload: false });
-            })
+            messageManager.registerHandler(
+                "client:unit:throw",
+                ({ game }, { unitId, itemId, worldPos }, from) => {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
 
-            // messageManager.registerHandler("client:raycast", ({ game }, payload, from) => {
-            //     game.verifyFromPlayingClient(from);
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
 
-            //     testRayCast(game, payload, from);
-            // })
+                    if (unit.itemInUse?.id !== itemId) {
+                        throw new Error(`Unit ${unit.id} is not using item ${itemId}`);
+                    }
+
+                    unit.throw(new Vec2(worldPos));
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            )
         ];
     }
 }

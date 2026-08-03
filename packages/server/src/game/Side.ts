@@ -3,6 +3,7 @@ import z from "zod";
 import { Unit, UnitOverrides } from "./Unit.js";
 import { UnitRecipeManager } from "./UnitRecipeManager.js";
 import type { Game } from "./Game.js";
+import { VisibilityPoi } from "./VisibilityPoi.js";
 
 export const SideRecipe = z.object({
     id: SideId,
@@ -102,6 +103,10 @@ export class Side {
 
     get allUnitsDead(): boolean {
         return this._units.every((unit) => unit.isDead);
+    }
+
+    canSee(poi: VisibilityPoi): boolean {
+        return this._game.visibilityManager.isPoiVisibleForMasks(poi, [this.id]);
     }
 
     findUnit(unitId: UnitId): Unit | undefined {

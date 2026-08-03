@@ -1,7 +1,7 @@
 import { InstanceId, ItemId } from "@atbs/shared-data";
 import { Item } from "./Item.js";
 import { ItemRecipeManager } from "./ItemRecipeManager.js";
-import { ItemOverrides } from "./ItemRecipe.js";
+import { ItemOverrides, ItemRecipe } from "./ItemRecipe.js";
 
 export class ItemManager {
     private readonly _itemRecipeManager: ItemRecipeManager;
@@ -28,6 +28,17 @@ export class ItemManager {
 
         this._itemMap.set(item.id, item);
 
+        return item;
+    }
+
+    /**
+     * Creates an item from an in-memory recipe (e.g. a unit corpse) without
+     * requiring a registered recipe id in {@link ItemRecipeManager}.
+     */
+    newAdHocItem(recipe: ItemRecipe, overrides?: ItemOverrides): Item {
+        const instanceIndex = this._getInstanceIndex(recipe.id);
+        const item = new Item(recipe, overrides ?? {}, { instanceIndex }, this);
+        this._itemMap.set(item.id, item);
         return item;
     }
 

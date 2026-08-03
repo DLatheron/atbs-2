@@ -5,7 +5,8 @@ import {
     GameId,
     Phase,
     ServerToClientMessage,
-    SideId
+    SideId,
+    UnitId
 } from "@atbs/shared-data";
 
 import { Client } from "./Client.js";
@@ -15,7 +16,7 @@ import type { PhaseHandler } from "./phaseHandlers/PhaseHandler.js";
 import { LobbyPhaseHandler } from "./phaseHandlers/LobbyPhaseHandler.js";
 import { ArmamentPhaseHandler } from "./phaseHandlers/ArmamentPhaseHandler.js";
 import { DeploymentPhaseHandler } from "./phaseHandlers/DeploymentPhaseHandler.js";
-import { CastToArray, Logger, MessageManager } from "@atbs/misc";
+import { CastToArray, Logger, MessageManager, partitionArrayMembership } from "@atbs/misc";
 import { Scenario } from "./Scenario.js";
 import { ScenarioRecipeManager } from "./ScenarioRecipeManager.js";
 import { Side } from "./Side.js";
@@ -35,6 +36,7 @@ import { VisibilityManager } from "./VisibilityManager.js";
 import { DebugGraphic } from "@atbs/maths";
 import { VfxRecipeManager } from "./VfxRecipeManager.js";
 import { VfxManager } from "./VfxManager.js";
+import { OpportunityFireManager } from "./OpportunityFireManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -76,6 +78,7 @@ export class Game {
     private readonly _visibilityManager: VisibilityManager;
     private readonly _vfxRecipeManager: VfxRecipeManager;
     private readonly _vfxManager: VfxManager;
+    private readonly _opportunityFireManager: OpportunityFireManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -110,6 +113,7 @@ export class Game {
         this._visibilityManager = new VisibilityManager(this);
         this._vfxRecipeManager = vfxRecipeManager;
         this._vfxManager = new VfxManager(this);
+        this._opportunityFireManager = new OpportunityFireManager(this);
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -335,6 +339,10 @@ export class Game {
         return this._vfxRecipeManager;
     }
 
+    get opportunityFireManager(): OpportunityFireManager {
+        return this._opportunityFireManager;
+    }
+
     set scenario(value: Scenario | null) {
         if (this.phase !== Phase.enum.lobby) {
             throw new Error(`Scenario cannot be changed whilst in ${this.phase} phase`);
@@ -548,6 +556,14 @@ export class Game {
         this._playState.selectedUnit = value;
     }
 
+    getUnit(unitId: UnitId): Unit {
+        const unit = this.sides.flatMap((side) => side.units).find((unit) => unit.id === unitId);
+        if (!unit) {
+            throw new Error(`Unit ${unitId} not found`);
+        }
+        return unit;
+    }
+
     getUnitsForSide(sideId: SideId): Unit[] {
         return this.getSide(sideId).units;
     }
@@ -607,10 +623,17 @@ export class Game {
      * otherwise an opposition unit that newly sees someone still reports 0 when
      * selected later.
      */
-    syncUnitsCanSee(): void {
+    syncUnitsCanSee(callback?: (unit: Unit) => void): void {
         for (const side of this.sides) {
             for (const unit of side.units) {
+                const oldCanSee = unit.canSee;
                 unit.canSee = unit.getVisibleUnits();
+
+                // If the unit can see new units, call the callback.
+                const { onlyInSecond } = partitionArrayMembership(oldCanSee, unit.canSee);
+                if (onlyInSecond.length > 0) {
+                    callback?.(unit);
+                }
             }
         }
     }
@@ -755,6 +778,21 @@ export class Game {
         if (from.id !== this.messageRouter.getClientForSide(this.turnsSide.id).id) {
             throw new Error(
                 `Message from client '${from.name}' (${from.id}) is unexpected - not their turn (${this.turnsSide.name})`
+            );
+        }
+    }
+
+    verifyFromOpportunityFireClient(from: Client): void | never {
+        if (!this.opportunityFireManager.opportunity) {
+            throw new Error("No opportunity fire is in progress");
+        }
+
+        const client = this.messageRouter.getClientForSide(
+            this.opportunityFireManager.opportunity?.unit.side.id
+        );
+        if (from.id !== client.id) {
+            throw new Error(
+                `Message from client '${from.name}' (${from.id}) is unexpected - not the opportunity fire unit (${this.opportunityFireManager.opportunity?.unit.name})`
             );
         }
     }

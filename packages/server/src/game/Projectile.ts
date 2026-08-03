@@ -4,6 +4,7 @@ import {
     DebugGraphic,
     DebugGraphicType,
     generateRandomBetween,
+    IColour,
     minDistanceFromPointToPathSegments,
     PathSegment,
     Vec2
@@ -13,7 +14,7 @@ import { Item } from "./Item.js";
 import { isUnit, type Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
-import { DamageType, Tracer, UnitType } from "@atbs/shared-data";
+import { DamageType, HitSpark, Tracer, UnitType } from "@atbs/shared-data";
 import { Logger, LowestFirst, Priority, PriorityQueue } from "@atbs/misc";
 import { isFurniture } from "./Furniture.js";
 import { GridRayTraceHitResult } from "./GridRayTrace.js";
@@ -24,6 +25,23 @@ import { config } from "../config/config.schema.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { CollisionSample, Tile } from "./Tile.js";
+import { Material } from "./Material.js";
+
+const MIN_HIT_SPARK_COUNT = 8;
+const MAX_HIT_SPARK_COUNT = 32;
+
+function resolveHitSparkColour(material: Material, owner: unknown): IColour {
+    if (isUnit(owner)) {
+        return owner.getHitSparkColour();
+    }
+
+    const rgb = material.rgb;
+    if (rgb) {
+        return { ...rgb, a: 1 };
+    }
+
+    return { r: 255, g: 255, b: 255, a: 1 };
+}
 
 interface CollisionEvent extends Priority, GridRayTraceHitResult {
     projectile: Projectile;
@@ -388,8 +406,9 @@ export class Projectile implements IRayCast {
             sample: CollisionSample,
             timeMs: number
         ) => void
-    ): void {
+    ): HitSpark[] {
         const imageManager = ImageManager.GetSingleton();
+        const hitSparks: HitSpark[] = [];
 
         // Sort so that fastest projectiles are first.
         projectiles.sort((a, b) => b.velocity - a.velocity);
@@ -424,7 +443,7 @@ export class Projectile implements IRayCast {
         }
 
         if (eventQueue.isEmpty) {
-            return;
+            return hitSparks;
         }
 
         let event: CollisionEvent;
@@ -437,12 +456,16 @@ export class Projectile implements IRayCast {
                 Projectile.Logger.info(`Commit material entry segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
+                let constitutionDamage = 0;
+
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
                     furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
+                    const previousConstitution = owner.constitution;
                     const died = owner.inflictDamage(pos, projectile);
+                    constitutionDamage = previousConstitution - owner.constitution;
                     if (died) {
                         furnitureDamageSystem?.onUnitDeath(
                             map.getTile(owner.mapLocation),
@@ -452,6 +475,18 @@ export class Projectile implements IRayCast {
                         );
                     }
                 }
+
+                hitSparks.push({
+                    pos,
+                    timeMs: atTime,
+                    colour: resolveHitSparkColour(material, owner),
+                    direction: projectile.directionVector.normalise(),
+                    count: clamp(
+                        Math.ceil(constitutionDamage),
+                        MIN_HIT_SPARK_COUNT,
+                        MAX_HIT_SPARK_COUNT
+                    )
+                });
 
                 const entryOutcome = PenetrationSystem.resolveMaterialEntry(
                     map,
@@ -556,5 +591,7 @@ export class Projectile implements IRayCast {
                 });
             }
         }
+
+        return hitSparks;
     }
 }

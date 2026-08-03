@@ -30,7 +30,8 @@ const Config = z
                 unit: LogLevel.optional(),
                 visibilityManager: LogLevel.optional(),
                 vfxRecipeManager: LogLevel.optional(),
-                vfxManager: LogLevel.optional()
+                vfxManager: LogLevel.optional(),
+                opportunityFireManager: LogLevel.optional()
             })
             .optional()
             .default({
@@ -51,7 +52,8 @@ const Config = z
                 unit: LogLevel.enum.info,
                 visibilityManager: LogLevel.enum.info,
                 vfxRecipeManager: LogLevel.enum.info,
-                vfxManager: LogLevel.enum.info
+                vfxManager: LogLevel.enum.info,
+                opportunityFireManager: LogLevel.enum.info
             })
     })
     .strict();

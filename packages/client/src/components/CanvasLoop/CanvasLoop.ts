@@ -2,7 +2,7 @@ import { RefObject } from "react";
 
 export interface CanvasLoopProps {
     canvas: HTMLCanvasElement;
-    context: CanvasRenderingContext2D;
+    context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
     offscreenCanvases: OffscreenCanvas[];
     offscreenContexts: OffscreenCanvasRenderingContext2D[];

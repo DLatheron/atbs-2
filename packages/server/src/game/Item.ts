@@ -247,6 +247,10 @@ export class Item extends SceneObject {
         return Math.floor(clamp(this.weight * 5, 10, 30));
     }
 
+    get suitableForOpportunityFire(): boolean {
+        return this.type === ItemType.enum.gun || this.type === ItemType.enum.grenade;
+    }
+
     hasSlot(slot: SlotType): boolean {
         return !!this.findSlotContents(slot);
     }
@@ -392,7 +396,7 @@ export class Item extends SceneObject {
     }
 
     getRenderList(context: SceneContext): RenderList {
-        const unitContext = { ...context, states: [] };
+        const unitContext = { ...context, states: [], visibilityFilter: true };
 
         return super.getRenderList(unitContext);
     }

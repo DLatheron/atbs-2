@@ -35,6 +35,7 @@ export interface FireModePanelProps {
     unit: UnitSummary | null;
     unitWeapon: FireModeItemSummary | null;
     isOnTarget: OnTarget;
+    opportunityFire: boolean;
 
     onRotateTo: (orientation: Orientation) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
@@ -49,6 +50,8 @@ export function FireModePanel({
     unit,
     unitWeapon,
     isOnTarget,
+    opportunityFire,
+
     onRotateTo,
     onChangeFireSelector,
     onEndFireMode,
@@ -233,7 +236,7 @@ export function FireModePanel({
                     onClick={onEndFireMode}
                     sx={{ gridArea: "exit-button" }}
                 >
-                    End Fire Mode
+                    {opportunityFire ? "End Opportunity Fire" : "End Fire Mode"}
                 </Button>
             </Stack>
         </Container>
