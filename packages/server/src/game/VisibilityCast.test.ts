@@ -498,6 +498,31 @@ describe("VisibilityManager debugGraphics", () => {
         expect(line.strokeColour.r).toBeGreaterThan(line.strokeColour.g);
         expect(line.lineDash).toBeUndefined();
     });
+
+    it("isPoiVisibleToViewer is per-viewer while isPoiVisibleForMasks is shared", () => {
+        const poi = createMockPoi(new TilePos(2, 0));
+        poi.interestMasks = ["baddies"] as InterestMask[];
+
+        const barry = createMockViewer("barry", new TilePos(0, 0), [poi], {
+            orientation: Orientation.EAST
+        });
+        barry.interestMasks = ["baddies"] as InterestMask[];
+
+        const smith = createMockViewer("smith", new TilePos(0, 2), [poi], {
+            orientation: Orientation.WEST,
+            viewAngleInDegrees: 90
+        });
+        smith.interestMasks = ["baddies"] as InterestMask[];
+
+        visibilityManager.addViewer(barry);
+        visibilityManager.addViewer(smith);
+        visibilityManager.update();
+
+        expect(visibilityManager.isPoiVisibleToViewer(barry.id, poi)).toBe(true);
+        expect(visibilityManager.isPoiVisibleToViewer(smith.id, poi)).toBe(false);
+        // Side fog-of-war still shared via interest masks.
+        expect(visibilityManager.isPoiVisibleForMasks(poi, ["baddies"])).toBe(true);
+    });
 });
 
 describe("isDirectionInViewCone", () => {

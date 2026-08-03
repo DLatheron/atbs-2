@@ -1,18 +1,41 @@
+import { useMemo } from "react";
 import { TileInfo } from "@atbs/shared-data";
 import { Button, Container, Stack, SxProps } from "@mui/material";
+
 import { TileInfoComponent } from "../../TileInfo";
+import { useKeyboard } from "../../../hooks";
 
 export interface MapModePanelProps {
     visible: boolean;
     disabled: boolean;
     tileInfo: TileInfo | null;
 
+    nextUnit: () => void;
     onEndTurn: () => void;
 
     sx?: SxProps;
 }
 
-export function MapModePanel({ visible, disabled, tileInfo, onEndTurn, sx }: MapModePanelProps) {
+export function MapModePanel({
+    visible,
+    disabled,
+    tileInfo,
+    nextUnit,
+    onEndTurn,
+    sx
+}: MapModePanelProps) {
+    const keyMap = useMemo(
+        () => ({
+            KeyN: () => nextUnit()
+        }),
+        [nextUnit]
+    );
+
+    useKeyboard({
+        keyMap,
+        disabled: !visible || disabled
+    });
+
     if (!visible) {
         return null;
     }

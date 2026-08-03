@@ -962,7 +962,9 @@ export class World {
         context.drawImage(offscreenCanvases[1], 0, 0);
         context.drawImage(offscreenCanvases[0], 0, 0);
 
-        this._renderDebugGraphics(renderProps);
+        context.globalCompositeOperation = "source-over";
+
+        this._renderDebugGraphics({ ...renderProps, context });
 
         if (this._renderStarted) {
             this._renderStarted();

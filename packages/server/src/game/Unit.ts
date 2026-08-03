@@ -462,6 +462,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return true;
     }
 
+    get canBeSelected(): boolean {
+        return this.isAlive && this.actionPoints > 0;
+    }
+
     getActions(): Actions {
         const actions = cloneDeep(this._recipe.actions);
 
@@ -1432,7 +1436,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 return false;
             }
             const tile = game.map.getTile(unit.location);
-            return visibilityManager.isPoiVisibleForMasks(tile, this.interestMasks);
+            // Per-viewer LOS, not side-shared fog-of-war — opportunity fire and
+            // UnitsSeen must reflect what this unit personally can see.
+            return visibilityManager.isPoiVisibleToViewer(this.id, tile);
         });
     }
 }

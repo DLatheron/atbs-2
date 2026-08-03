@@ -26,6 +26,7 @@ export interface UnitModePanelProps {
     disabled: boolean;
     unit: UnitSummary | null;
 
+    nextUnit: () => void;
     onMove: (orientation: Orientation) => void;
     onRotateTo: (orientation: Orientation) => void;
     onEndMovement: () => void;
@@ -38,6 +39,7 @@ export function UnitModePanel({
     visible,
     disabled,
     unit,
+    nextUnit,
     onMove,
     onRotateTo,
     onEndMovement,
@@ -51,6 +53,7 @@ export function UnitModePanel({
             KeyW: () => unit && onMove(Orientation.NORTH),
             KeyS: () => unit && onMove(Orientation.SOUTH),
             KeyF: () => onFireMode(),
+            KeyN: () => nextUnit(),
             // KeyI: () => onOpenInventory(),
             // KeyU: () => onActionMode(!actionMode),
             Escape: () => onEndMovement()

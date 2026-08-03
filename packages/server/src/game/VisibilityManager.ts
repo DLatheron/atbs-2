@@ -191,6 +191,15 @@ export class VisibilityManager {
         return masks.some((mask) => (byMask.get(mask) ?? 0) > 0);
     }
 
+    /** True when this specific viewer currently sees the POI (direct LOS + view cone). */
+    isPoiVisibleToViewer(viewerId: ViewerId, poi: VisibilityPoi): boolean {
+        const cache = this._cache.get(viewerId);
+        if (!cache) {
+            return false;
+        }
+        return cache.some((entry) => entry.poi === poi && entry.visible);
+    }
+
     private setEntryVisible(
         entry: VisibilityCacheEntry,
         viewer: VisibilityViewer,

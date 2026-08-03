@@ -1,0 +1,97 @@
+{
+    "id": "corporal-barry.unit",
+    "name": "Corporal Barry",
+    "description": [
+        {
+            "text": "Second-in-Command of the Hostage Rescue Team, Barry is a veteran operator who spends his spare time in the gym pumping iron."
+        }
+    ],
+    "attributes": {
+        "weight": 95,
+        "actionPoints": { "max": 47 },
+        "constitution": { "max": 50 },
+        "fitness": { "max": 80 },
+        "morale": { "max": 82, "value": 62 },
+        "stamina": { "max": 60 },
+        "speed": { "max": 40 },
+        "strength": { "max": 82 }
+    },
+    "inventory": {
+        "inUse": 0,
+        "items": [
+            { "id": "spas-12.gun" },
+            { "id": "m4+m203.gun" },
+            { "id": "m4.gun" },
+            { "id": "m16-30.magazine" },
+            { "id": "m16-30.magazine" },
+            { "id": "m16-20.magazine" },
+            { "id": "m16-20.magazine" },
+            { "id": "40mm-he.round" },
+            { "id": "40mm-he.round" },
+            { "id": "40mm-smoke.round" },
+            { "id": "40mm-smoke.round" },
+            { "id": "40mm-gas.round" },
+            { "id": "40mm-gas.round" },
+            { "id": "40mm-stun.round" },
+            { "id": "40mm-stun.round" }
+        ]
+    },
+    "collision": {
+        "shape": "circle",
+        "radius": 25,
+        "materials": ["human.material"]
+    },
+    "renderable": {
+        "UI_MODE": {
+            "alive": {
+                "item-in-use": [{ "imageId": "generic-carrying-4" }],
+                "default": [{ "imageId": "generic-4" }]
+            },
+            "dead": [{ "imageId": "generic-dead" }],
+            "default": []
+        },
+        "MAP_MODE": {
+            "alive": {
+                "default": {
+                    "directional": [
+                        [{ "imageId": "generic-0", "orientation": 8 }],
+                        [{ "imageId": "generic-1", "orientation": 8 }],
+                        [{ "imageId": "generic-2", "orientation": 8 }],
+                        [{ "imageId": "generic-3", "orientation": 8 }],
+                        [{ "imageId": "generic-4", "orientation": 8 }],
+                        [{ "imageId": "generic-5", "orientation": 8 }],
+                        [{ "imageId": "generic-6", "orientation": 8 }],
+                        [{ "imageId": "generic-7", "orientation": 8 }],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    "directional": [
+                        [{ "imageId": "generic-carrying-0", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-1", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-2", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-3", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-4", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-5", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-6", "orientation": 8 }],
+                        [{ "imageId": "generic-carrying-7", "orientation": 8 }],
+                        []
+                    ]
+                }
+            },
+            "dead": [{ "imageId": "generic-dead" }],
+            "default": []
+        },
+        "FIRE_MODE": {
+            "default": [{ "imageId": "generic-cl", "orientation": 8 }],
+            "dead": []
+        },
+        "default": []
+    },
+    "actions": {
+        "throw": {
+            "accuracy": 40,
+            "actionPoints": 20
+        }
+    }
+}

@@ -30,6 +30,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         disabled,
         isOnTarget,
         opportunityFire,
+        nextUnit,
         onMove,
         onRotateTo,
         onChangeFireSelector,
@@ -159,6 +160,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     visible={!error && sidePanelMode === MapMode.enum["map-mode"]}
                     disabled={disabled}
                     tileInfo={tileInfo}
+                    nextUnit={nextUnit}
                     onEndTurn={onEndTurn}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
@@ -166,6 +168,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     visible={!error && sidePanelMode === MapMode.enum["unit-mode"]}
                     disabled={disabled}
                     unit={unit}
+                    nextUnit={nextUnit}
                     onMove={onMove}
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
