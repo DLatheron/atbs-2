@@ -114,6 +114,9 @@ export class World {
     private _visibilityViewers: VisibilityViewerSummary[];
     private _animationController: AnimationController;
 
+    private _actionMenuRef?: React.RefObject<HTMLDivElement | null>;
+    private _actionMenuTilePos?: TilePos;
+
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
 
@@ -156,6 +159,9 @@ export class World {
         this._visibleTiles = new Set<string>();
         this._visibilityViewers = [];
         this._animationController = new AnimationController(imageCache);
+
+        this._actionMenuRef = undefined;
+        this._actionMenuTilePos = undefined;
     }
 
     get hasMap(): boolean {
@@ -174,6 +180,26 @@ export class World {
         this._map = value;
     }
 
+    get actionMenuRef() {
+        if (!this._actionMenuRef) {
+            throw new Error("Action menu ref should not be null");
+        }
+
+        return this._actionMenuRef;
+    }
+
+    set actionMenuRef(actionMenuRef: React.RefObject<HTMLDivElement | null>) {
+        this._actionMenuRef = actionMenuRef;
+    }
+
+    get actionMenuTilePos() {
+        return this._actionMenuTilePos;
+    }
+
+    set actionMenuTilePos(actionMenuTilePos: TilePos | undefined) {
+        this._actionMenuTilePos = actionMenuTilePos;
+    }
+
     get hasUnit(): boolean {
         return !!this._unit;
     }
@@ -188,6 +214,10 @@ export class World {
 
     set unit(value: UnitSummary | null) {
         this._unit = value;
+
+        if (value) {
+            this.actionMenuTilePos = new TilePos(value.location);
+        }
     }
 
     get unitWorldPos(): Vec2 {
@@ -966,6 +996,8 @@ export class World {
 
         this._renderDebugGraphics({ ...renderProps, context });
 
+        this._repositionActionMenu();
+
         if (this._renderStarted) {
             this._renderStarted();
             this._renderStarted = null;
@@ -1305,6 +1337,30 @@ export class World {
 
     onContextMenu(event: React.MouseEvent) {
         this._interactionHandler?.onContextMenu?.(event);
+    }
+
+    _repositionActionMenu() {
+        if (this.actionMenuRef && this.actionMenuRef.current) {
+            const { map, camera } = this;
+            if (map) {
+                const { viewportTopLeft } = camera;
+
+                if (this.actionMenuTilePos) {
+                    const { col, row } = this.actionMenuTilePos;
+                    const canvasPos = {
+                        x: col * map.tileSize - viewportTopLeft.x + map.tileSize / 2,
+                        y: row * map.tileSize - viewportTopLeft.y + map.tileSize / 2
+                    };
+
+                    this.actionMenuRef.current.style.left = `${canvasPos.x}px`;
+                    this.actionMenuRef.current.style.top = `${canvasPos.y}px`;
+                    this.actionMenuRef.current.style.opacity = "1";
+                } else {
+                    this.actionMenuRef.current.style.display = "none";
+                    this.actionMenuRef.current.style.opacity = "0";
+                }
+            }
+        }
     }
 
     private static readonly _singleton = new World(ImageCache.GetSingleton());

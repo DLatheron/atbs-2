@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { merge } from "lodash";
 import { useServerMessageManager, useWorld } from "../../hooks";
 import {
@@ -23,6 +23,8 @@ function delay(delayInMs: number): Promise<void> {
 }
 
 export function useActionPage() {
+    const actionMenuRef = useRef<HTMLDivElement | null>(null);
+
     const { messageManager, sendMessage } = useServerMessageManager();
     const { world } = useWorld();
     const [sidePanelMode, setSidePanelMode] = useState<MapMode>(MapMode.enum["map-mode"]);
@@ -374,7 +376,17 @@ export function useActionPage() {
         });
     }, [sendMessage]);
 
+    const onAction = useCallback(
+        (action: string, orientation: Orientation) => {
+            console.info("$$$ Dispatching action message $$$", action, orientation);
+        },
+        []
+    );
+
+    world.actionMenuRef = actionMenuRef;
+
     return {
+        actionMenuRef,
         map,
         unit,
         unitWeapon,
@@ -395,6 +407,7 @@ export function useActionPage() {
         onEndError,
         onFireMode,
         onEndFireMode,
-        setIsOnTarget
+        onAction,
+        setIsOnTarget,
     };
 }

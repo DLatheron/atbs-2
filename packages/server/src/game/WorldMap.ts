@@ -1,7 +1,18 @@
 import { ClientMap, RenderMode, MapId, type VisualType } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
-import { Aabb, clamp, DebugGraphic, ITilePos, Orientation, TilePos, Vec2 } from "@atbs/maths";
+import {
+    Aabb,
+    clamp,
+    DebugGraphic,
+    ITilePos,
+    MaxOrientations,
+    Orientation,
+    rotateOrientation,
+    TilePos,
+    Vec2
+} from "@atbs/maths";
+import { PartialRecord } from "@atbs/misc";
 import { Unit } from "./Unit.js";
 import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
 import { Material } from "./Material.js";
@@ -460,5 +471,60 @@ export class WorldMap {
         const resolvedNormal = normal.normalise();
 
         return resolvedNormal;
+    }
+
+    getSurroundingTiles(tilePos: TilePos): PartialRecord<Orientation, Tile> {
+        return {
+            [Orientation.NORTH_WEST]: this.sampleTile(
+                tilePos.stepInDirection(Orientation.NORTH_WEST)
+            ),
+            [Orientation.NORTH]: this.sampleTile(tilePos.stepInDirection(Orientation.NORTH)),
+            [Orientation.NORTH_EAST]: this.sampleTile(
+                tilePos.stepInDirection(Orientation.NORTH_EAST)
+            ),
+            [Orientation.WEST]: this.sampleTile(tilePos.stepInDirection(Orientation.WEST)),
+            [Orientation.CENTER]: this.sampleTile(tilePos),
+            [Orientation.EAST]: this.sampleTile(tilePos.stepInDirection(Orientation.EAST)),
+            [Orientation.SOUTH_WEST]: this.sampleTile(
+                tilePos.stepInDirection(Orientation.SOUTH_WEST)
+            ),
+            [Orientation.SOUTH]: this.sampleTile(tilePos.stepInDirection(Orientation.SOUTH)),
+            [Orientation.SOUTH_EAST]: this.sampleTile(
+                tilePos.stepInDirection(Orientation.SOUTH_EAST)
+            )
+        };
+    }
+
+    getImmediateActionTiles(
+        tilePos: TilePos,
+        facing: Orientation,
+        viewAngleInDegrees: number
+    ): PartialRecord<Orientation, Tile> {
+        const surroundingTiles = this.getSurroundingTiles(tilePos);
+
+        const halfViewAngleInDegrees = viewAngleInDegrees / 2;
+        const angleInSteps = Math.ceil((halfViewAngleInDegrees / 360) * MaxOrientations);
+
+        const leftViewConeOrientation = rotateOrientation(facing, -angleInSteps);
+        const rightViewConeOrientation = rotateOrientation(facing, angleInSteps);
+        const allowableOrientations = [Orientation.CENTER];
+
+        for (
+            let currentOrientation = leftViewConeOrientation;
+            currentOrientation !== rightViewConeOrientation;
+            currentOrientation = rotateOrientation(currentOrientation, 1)
+        ) {
+            allowableOrientations.push(currentOrientation);
+        }
+        allowableOrientations.push(rightViewConeOrientation);
+
+        Object.keys(surroundingTiles).forEach((orientationKey) => {
+            const orientation = parseInt(orientationKey) as Orientation;
+            if (!allowableOrientations.includes(orientation)) {
+                delete surroundingTiles[orientation];
+            }
+        });
+
+        return surroundingTiles;
     }
 }

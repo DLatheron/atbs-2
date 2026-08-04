@@ -11,7 +11,7 @@ import {
     TilePos,
     Vec2
 } from "@atbs/maths";
-import { SceneContext } from "@atbs/shared-data";
+import { SceneContext, UnitActionType } from "@atbs/shared-data";
 import z from "zod";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
@@ -774,4 +774,20 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             this._visibilityManager.removePoi(this);
         }
     }
+
+    getAvailableActions(
+        relativeOrientation: Orientation,
+        itemInUse: Item | null
+    ): UnitActionType[] {
+        return this.furniture?.getAvailableActions(relativeOrientation, itemInUse) ?? [];
+    }
+
+    // getActionDefinition(action: Action, relativeOrientation: Orientation, itemInUse?: Item) {
+    //     const actionDefinitions = this.furniture?.getAvailableActionDefinitions(relativeOrientation, itemInUse);
+    //     if (!actionDefinitions) {
+    //         return;
+    //     }
+
+    //     return actionDefinitions.find((actionDefinition) => actionDefinition.action === action);
+    // }
 }

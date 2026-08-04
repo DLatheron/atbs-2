@@ -26,7 +26,8 @@ import {
     UnitId,
     UnitSummary,
     UnitType,
-    VisualType
+    VisualType,
+    UnitActionGrid
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -38,6 +39,7 @@ import {
     ITilePos,
     Orientation,
     relativeDirection,
+    RotateBy180Degrees,
     rotateOrientation,
     TilePos,
     Vec2
@@ -121,7 +123,7 @@ export const UnitRecipe = z.object({
         stamina: AttributeDef,
         speed: AttributeDef,
         strength: AttributeDef,
-        weight: z.number().positive()
+        weight: z.number().positive() // Not really an attribute...
     }),
     inventory: InventoryRecipe,
     collision: z.object({
@@ -181,6 +183,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     private _canSee: Unit[];
     private _overtaking: Overtaking | null;
+    private _unitActionGrid: UnitActionGrid;
 
     constructor(
         recipe: Readonly<UnitRecipe>,
@@ -217,6 +220,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.visibilityManager.addViewer(this);
         this._canSee = [];
         this._overtaking = null;
+        this._unitActionGrid = {};
     }
 
     get game(): Game {
@@ -554,12 +558,12 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // this._instance.attributes.actionPoints.max - (this._instance.attributes.burden * ACTION_POINT_LOSS_PER_BURDEN) - (this._instance.attributes.wounds * ACTION_POINT_LOSS_PER_WOUND)
             this._attributes.actionPoints.value = this.maxActionPoints;
         }
-
-        // this.updateAvailableActions(game.map);
     }
 
     select() {
         this.logger.info("Selecting", this.name);
+
+        this.updateAvailableActions();
     }
 
     deselect() {
@@ -706,8 +710,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 return;
             }
 
-            // TODO: Update available actions.
-
+            this.updateAvailableActions();
             this._refreshVisibility();
 
             this.messageRouter.send(
@@ -807,6 +810,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.location = dstTile.location;
         dstTile.addUnit(this);
 
+        this.updateAvailableActions();
         this._refreshVisibility(OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER);
 
         this.messageRouter.send(
@@ -1243,6 +1247,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // Update the landing tile, because the item is now on the ground.
         tileUpdates.push(landingTile.generateTimedTileUpdate(finalTime));
 
+        this.updateAvailableActions();
+
         // TODO: Move the projectiles forward in time...
         // TODO: Psuedo tracers - how do we determine visibility?
         this.messageRouter.send([
@@ -1414,7 +1420,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 canInventory: this.canInventory
             },
             itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
-            actions: this.getActions()
+            actions: this.getActions(),
+            unitActionGrid: this._unitActionGrid
         };
     }
 
@@ -1440,5 +1447,49 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // UnitsSeen must reflect what this unit personally can see.
             return visibilityManager.isPoiVisibleToViewer(this.id, tile);
         });
+    }
+
+    updateAvailableActions(): UnitActionGrid {
+        if (this.isDead) {
+            return {};
+        }
+
+        const { map } = this.game;
+
+        const surroundingTiles = this.isDirectional
+            ? map.getImmediateActionTiles(
+                  this.mapLocation,
+                  this.orientation,
+                  this.viewAngleInDegrees
+              )
+            : map.getSurroundingTiles(this.mapLocation);
+        const { itemInUse } = this;
+
+        const unitActionGrid = Object.entries(surroundingTiles).reduce<UnitActionGrid>(
+            (acc, [orientationKey, tile]) => {
+                if (!tile) {
+                    return acc;
+                }
+
+                const orientation = parseInt(orientationKey) as Orientation;
+
+                const relativeOrientation = rotateOrientation(orientation, RotateBy180Degrees);
+                const availableActions = tile.getAvailableActions(relativeOrientation, itemInUse);
+
+                if (availableActions.length > 0) {
+                    acc[orientation] = availableActions.map((action) => ({
+                        action,
+                        disabled: false
+                    }));
+                }
+
+                return acc;
+            },
+            {}
+        );
+
+        this._unitActionGrid = unitActionGrid;
+
+        return this._unitActionGrid;
     }
 }
