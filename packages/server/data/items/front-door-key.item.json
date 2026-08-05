@@ -1,0 +1,11 @@
+{
+    "id": "front-door-key.item",
+    "type": "item",
+    "name": "Front Door Key",
+    "description": [{ "text": "High security key for the front door of the Embassy." }],
+    "weight": 0.01,
+    "renderable": {
+        "default": [{ "imageId": "front-door-key" }],
+        "fire-mode": []
+    }
+}

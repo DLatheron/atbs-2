@@ -1386,8 +1386,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 }
             },
             this.side.id
-        ); 
-        
+        );
+
         this._broadcastVisibleTiles();
     }
 

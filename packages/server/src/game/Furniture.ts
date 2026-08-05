@@ -250,7 +250,7 @@ export class Furniture extends SceneObject {
                 // Filter out any actions that require an item we don't have in use.
                 if (
                     actionDefinition.itemsToUse &&
-                    !actionDefinition.itemsToUse.includes(itemInUse?.id ?? "")
+                    !actionDefinition.itemsToUse.includes(itemInUse?.recipeId ?? "")
                 ) {
                     return acc;
                 }

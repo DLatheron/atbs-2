@@ -18,6 +18,7 @@ import {
 } from "@atbs/shared-data";
 import { Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { MapMode } from "../../MapMode";
+import { selectiveMerge } from "../../helpers/selectiveMerge";
 
 function delay(delayInMs: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, delayInMs));
@@ -148,8 +149,10 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
-                setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
-                world.unit = merge({}, world.unit, payload);
+                setUnit((unit: UnitSummary | null) =>
+                    unit ? selectiveMerge(unit, payload, { unitActionGrid: "replace" }) : null
+                );
+                world.unit = selectiveMerge(world.unit, payload, { unitActionGrid: "replace" });
 
                 if (world.unit.itemInUse === null) {
                     setSidePanelMode(MapMode.enum["unit-mode"]);
