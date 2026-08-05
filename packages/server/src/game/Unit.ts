@@ -27,7 +27,8 @@ import {
     UnitSummary,
     UnitType,
     VisualType,
-    UnitActionGrid
+    UnitActionGrid,
+    UnitActionType
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -56,7 +57,7 @@ import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
-import { Logger } from "@atbs/misc";
+import { Logger, unsafeEntries } from "@atbs/misc";
 import { IMPENETRABLE } from "./Obstruction.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
@@ -716,7 +717,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.messageRouter.send(
                 {
                     type: "server:unit:selected:update",
-                    payload: { orientation: this._orientation, canSee: this.canSee.length }
+                    payload: {
+                        orientation: this._orientation,
+                        canSee: this.canSee.length,
+                        interactions: {
+                            canFire: this.canFire,
+                            canThrow: this.canThrow,
+                            canAction: this.canAction,
+                            canInventory: this.canInventory
+                        },
+                        unitActionGrid: this._unitActionGrid
+                    }
                 },
                 this.side.id
             );
@@ -816,7 +827,16 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.messageRouter.send(
             {
                 type: "server:unit:selected:update",
-                payload: { location: this.location }
+                payload: {
+                    location: this.location,
+                    interactions: {
+                        canFire: this.canFire,
+                        canThrow: this.canThrow,
+                        canAction: this.canAction,
+                        canInventory: this.canInventory
+                    },
+                    unitActionGrid: this._unitActionGrid
+                }
             },
             this.side.id
         );
@@ -1288,6 +1308,87 @@ export class Unit extends SceneObject implements VisibilityViewer {
             },
             this.side.id
         );
+    }
+
+    performUnitAction(action: UnitActionType, orientationToAction: Orientation): void {
+        console.info(
+            "Performing action",
+            action,
+            "for unit",
+            this.id,
+            "orientation",
+            orientationToAction
+        );
+
+        const { map, visibilityManager } = this;
+        const { mapLocation, itemInUse } = this;
+        const orientationFromAction = rotateOrientation(orientationToAction, RotateBy180Degrees);
+        const actionLocation = mapLocation.stepInDirection(orientationToAction);
+        const tile = map.getTile(actionLocation);
+        const actionDefinition = tile.getActionDefinition(action, orientationFromAction, itemInUse);
+        if (!actionDefinition) {
+            throw new Error(
+                `No action definition found for action ${action} in orientation ${orientationToAction} for unit ${this.id}`
+            );
+        }
+
+        if (!this._hasSufficientActionPoints(actionDefinition.aptCost)) {
+            return;
+        }
+
+        if (!this._useActionPoints(actionDefinition.aptCost)) {
+            return;
+        }
+
+        const consumeItemInUse =
+            actionDefinition.consumeItem &&
+            itemInUse &&
+            actionDefinition.itemsToUse?.includes(itemInUse.id);
+        if (consumeItemInUse) {
+            this.inventory.removeItem(itemInUse);
+        }
+
+        if (actionDefinition.attributes) {
+            unsafeEntries(actionDefinition.attributes).forEach(([attribute, value]) => {
+                this._attributes[attribute].value += value;
+            });
+        }
+
+        const furnitureChanged = actionDefinition.furnitureAffected.performAction(actionDefinition);
+        if (furnitureChanged) {
+            visibilityManager.invalidateLocation(actionDefinition.furnitureAffected.location);
+
+            this.messageRouter.sendIfVisible(
+                {
+                    type: "server:map:update",
+                    payload: [tile.generateTileUpdate()]
+                },
+                mapLocation
+            );
+
+            this._refreshVisibility(actionDefinition.speedScaler);
+        }
+
+        this.updateAvailableActions();
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    interactions: {
+                        canFire: this.canFire,
+                        canThrow: this.canThrow,
+                        canAction: this.canAction,
+                        canInventory: this.canInventory
+                    },
+                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
+                    unitActionGrid: this._unitActionGrid
+                }
+            },
+            this.side.id
+        ); 
+        
+        this._broadcastVisibleTiles();
     }
 
     get disorientationScaler() {

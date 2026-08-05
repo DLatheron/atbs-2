@@ -121,8 +121,7 @@ const attributeTypes = [
     "morale",
     "stamina",
     "speed",
-    "strength",
-    "weight"
+    "strength"
 ] as const;
 export const AttributeTypes = z.enum(attributeTypes);
 export type AttributeTypes = z.infer<typeof AttributeTypes>;

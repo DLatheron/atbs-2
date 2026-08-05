@@ -13,6 +13,7 @@ import {
     SideSummary,
     ThrowDetails,
     TileInfo,
+    UnitActionType,
     UnitSummary
 } from "@atbs/shared-data";
 import { Orientation, TilePos, Vec2 } from "@atbs/maths";
@@ -377,10 +378,20 @@ export function useActionPage() {
     }, [sendMessage]);
 
     const onAction = useCallback(
-        (action: string, orientation: Orientation) => {
-            console.info("$$$ Dispatching action message $$$", action, orientation);
+        (action: UnitActionType, orientation: Orientation) => {
+            if (unit?.id) {
+                setDisabled(true);
+                sendMessage({
+                    type: "client:unit:action",
+                    payload: {
+                        unitId: unit.id,
+                        action,
+                        orientation
+                    }
+                });
+            }
         },
-        []
+        [sendMessage, unit?.id]
     );
 
     world.actionMenuRef = actionMenuRef;
@@ -408,6 +419,6 @@ export function useActionPage() {
         onFireMode,
         onEndFireMode,
         onAction,
-        setIsOnTarget,
+        setIsOnTarget
     };
 }

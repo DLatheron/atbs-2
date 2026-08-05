@@ -287,4 +287,16 @@ export class Furniture extends SceneObject {
             ({ action }) => action
         );
     }
+
+    performAction(actionDefinition: WorldActionInstance): boolean {
+        const { state } = actionDefinition;
+
+        if (state !== this.state) {
+            this._state = state as FurnitureState;
+
+            return true;
+        }
+
+        return false;
+    }
 }

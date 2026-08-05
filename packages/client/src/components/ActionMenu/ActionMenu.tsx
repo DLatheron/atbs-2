@@ -71,7 +71,7 @@ export const ActionMenuComponent = forwardRef(function (
                 gridTemplateColumns: `${tileSize}px ${tileSize}px ${tileSize}px`,
                 gridTemplateRows: `${tileSize}px ${tileSize}px ${tileSize}px`,
                 transition: "opacity 0.3s ease-in-out",
-                
+
                 ".orientation-7": {
                     gridArea: "nw"
                 },
@@ -99,7 +99,7 @@ export const ActionMenuComponent = forwardRef(function (
                 ".orientation-3": {
                     gridArea: "se"
                 },
-                backgroundColor: "transparent",
+                backgroundColor: "transparent"
             }}
         >
             {gridSquares.map((orientation) => {
@@ -108,9 +108,9 @@ export const ActionMenuComponent = forwardRef(function (
 
                 let boxSx: SxProps = {
                     display: "grid",
-                    m: "auto",
+                    m: "auto"
                 };
-                let buttonSx: SxProps = {
+                const buttonSx: SxProps = {
                     "&:nth-child(1)": {
                         gridArea: "button-1"
                     },
@@ -153,7 +153,7 @@ export const ActionMenuComponent = forwardRef(function (
                             ".button-2": {
                                 borderTopLeftRadius: 0,
                                 borderBottomLeftRadius: 0,
-                                borderLeftWidth: 0.5,
+                                borderLeftWidth: 0.5
                             }
                         };
                         break;
@@ -168,15 +168,15 @@ export const ActionMenuComponent = forwardRef(function (
                             ".button-1": {
                                 borderBottomLeftRadius: 0,
                                 borderBottomRightRadius: 0,
-                                borderBottom: "none",
+                                borderBottom: "none"
                             },
                             ".button-2": {
                                 borderTopRightRadius: 0,
-                                borderBottomRightRadius: 0,
+                                borderBottomRightRadius: 0
                             },
                             ".button-3": {
                                 borderTopLeftRadius: 0,
-                                borderBottomLeftRadius: 0,
+                                borderBottomLeftRadius: 0
                             }
                         };
                         break;
@@ -193,28 +193,28 @@ export const ActionMenuComponent = forwardRef(function (
                                 borderBottomRightRadius: 0,
                                 borderBottomLeftRadius: 0,
                                 borderRightWidth: 0.5,
-                                borderBottomWidth: 0.5,
+                                borderBottomWidth: 0.5
                             },
                             ".button-2": {
                                 borderTopLeftRadius: 0,
                                 borderBottomLeftRadius: 0,
                                 borderBottomRightRadius: 0,
                                 borderLeftWidth: 0.5,
-                                borderBottomWidth: 0.5,
+                                borderBottomWidth: 0.5
                             },
                             ".button-3": {
                                 borderTopLeftRadius: 0,
                                 borderTopRightRadius: 0,
                                 borderBottomRightRadius: 0,
                                 borderTopWidth: 0.5,
-                                borderRightWidth: 0.5,
+                                borderRightWidth: 0.5
                             },
                             ".button-4": {
                                 borderTopLeftRadius: 0,
                                 borderTopRightRadius: 0,
                                 borderBottomLeftRadius: 0,
                                 borderLeftWidth: 0.5,
-                                borderTopWidth: 0.5,
+                                borderTopWidth: 0.5
                             }
                         };
                         break;
@@ -229,17 +229,19 @@ export const ActionMenuComponent = forwardRef(function (
                         className={`orientation-${orientation}`}
                         sx={{ ...boxSx }}
                     >
-                        {unitActionGrid[orientation]?.map(({ action, disabled }: UnitAction, index: number) => (
-                            <ActionButtonComponent
-                                key={`button-${action}`}
-                                className={`button-${index + 1}`}
-                                tileSize={tileSize}
-                                name={action}
-                                disabled={disabled}
-                                onClick={() => onAction(action, orientation)}
-                                sx={buttonSx}
-                            />
-                        ))}
+                        {unitActionGrid[orientation]?.map(
+                            ({ action, disabled }: UnitAction, index: number) => (
+                                <ActionButtonComponent
+                                    key={`button-${action}`}
+                                    className={`button-${index + 1}`}
+                                    tileSize={tileSize}
+                                    name={action}
+                                    disabled={disabled}
+                                    onClick={() => onAction(action, orientation)}
+                                    sx={buttonSx}
+                                />
+                            )
+                        )}
                     </Box>
                 );
             })}

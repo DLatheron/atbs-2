@@ -225,7 +225,23 @@ export class ActionPhaseHandler extends PhaseHandler {
                         payload: nextUnit.toSummary()
                     });
                 }
-            })
+            }),
+
+            messageManager.registerHandler(
+                "client:unit:action",
+                ({ game }, { unitId, action, orientation }, from) => {
+                    game.verifyFromPlayingClient(from);
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
+                    unit.performUnitAction(action, orientation);
+
+                    if (!game.opportunityFireManager.startOpportunityFire()) {
+                        from.sendMessage({ type: "server:ui:disabled", payload: false });
+                    }
+                }
+            )
         ];
     }
 }

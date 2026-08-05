@@ -1,6 +1,6 @@
 import { Orientation } from "@atbs/maths";
 import z from "zod";
-import { AttributeTypes } from "./PrimitiveTypes.js";
+import { AttributeTypes, FurnitureState } from "./PrimitiveTypes.js";
 
 export const State = z.string();
 export type State = z.infer<typeof State>;
@@ -19,7 +19,7 @@ export type UnitActionGrid = z.infer<typeof UnitActionGrid>;
 
 export const WorldActionDefinition = z.object({
     // State that the action put the entity info.
-    state: z.string(),
+    state: z.string().or(FurnitureState),
 
     // Cost to perform the action.
     aptCost: z.number(),

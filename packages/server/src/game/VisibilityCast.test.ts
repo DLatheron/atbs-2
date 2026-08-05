@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
-import { TilePos, Vec2, DebugGraphic, DebugGraphicType, Orientation } from "@atbs/maths";
+import { TilePos, Vec2, DebugGraphic, DebugGraphicType, Orientation, Aabb } from "@atbs/maths";
 import { PNG } from "pngjs";
 import type { Game } from "./Game.js";
 import { FurnitureRecipe } from "./Furniture.js";
@@ -348,10 +348,17 @@ describe("visual ray casting", () => {
 
 describe("VisibilityManager debugGraphics", () => {
     const tileSize = 100;
+    const mapWidth = 10;
+    const mapHeight = 10;
+    const worldBounds = new Aabb(0, 0, mapWidth * tileSize, mapHeight * tileSize);
 
     function tileCenterToWorld(tilePos: TilePos): Vec2 {
         const half = tileSize / 2;
         return new Vec2(tilePos.col * tileSize + half, tilePos.row * tileSize + half);
+    }
+
+    function worldToTile(worldPos: Vec2): TilePos {
+        return new TilePos(Math.floor(worldPos.x / tileSize), Math.floor(worldPos.y / tileSize));
     }
 
     function createMockPoi(location: TilePos): VisibilityPoi {
@@ -428,6 +435,8 @@ describe("VisibilityManager debugGraphics", () => {
             map: {
                 tileSize,
                 tileCenterToWorld,
+                worldBounds,
+                worldToTile,
                 castVisualRay
             }
         } as unknown as Game;
@@ -497,6 +506,29 @@ describe("VisibilityManager debugGraphics", () => {
         // Out-of-cone → red-ish, and treated as updated (solid).
         expect(line.strokeColour.r).toBeGreaterThan(line.strokeColour.g);
         expect(line.lineDash).toBeUndefined();
+    });
+
+    it("recasts only rays that pass through an invalidated tile", () => {
+        const poiOnPath = createMockPoi(new TilePos(2, 0));
+        const poiOffPath = createMockPoi(new TilePos(0, 2));
+        const viewer = createMockViewer("viewer-3", new TilePos(0, 0), [poiOnPath, poiOffPath], {
+            orientation: Orientation.EAST
+        });
+        visibilityManager.addViewer(viewer);
+
+        visibilityManager.update(viewer.id);
+        expect(castVisualRay).toHaveBeenCalledTimes(2);
+
+        visibilityManager.update(viewer.id);
+        expect(castVisualRay).toHaveBeenCalledTimes(2);
+
+        visibilityManager.invalidateLocation(new TilePos(5, 5));
+        visibilityManager.update(viewer.id);
+        expect(castVisualRay).toHaveBeenCalledTimes(2);
+
+        visibilityManager.invalidateLocation(new TilePos(1, 0));
+        visibilityManager.update(viewer.id);
+        expect(castVisualRay).toHaveBeenCalledTimes(3);
     });
 
     it("isPoiVisibleToViewer is per-viewer while isPoiVisibleForMasks is shared", () => {

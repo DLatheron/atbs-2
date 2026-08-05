@@ -10,6 +10,7 @@ import {
     UnitId
 } from "./PrimitiveTypes.js";
 import { ITilePos, IVec2, Orientation } from "@atbs/maths";
+import { UnitActionType } from "./ActionTypes.js";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
@@ -119,6 +120,14 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:unit:throw"),
         payload: ThrowDetails
+    }),
+    z.object({
+        type: z.literal("client:unit:action"),
+        payload: z.object({
+            unitId: UnitId,
+            action: UnitActionType,
+            orientation: z.enum(Orientation)
+        })
     }),
     z.object({
         type: z.literal("client:raycast"),

@@ -65,7 +65,7 @@ export function ActionButtonComponent({
                     width={imageSize}
                     height={imageSize}
                     // disabled={disabled || !unit.interactions.canInventory}
-                />                
+                />
             </Button>
             {<Container ref={anchorRef}>{children}</Container>}
         </Box>
