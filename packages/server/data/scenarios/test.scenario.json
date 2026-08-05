@@ -30,7 +30,7 @@
                 },
                 {
                     "id": "corporal-barry.unit",
-                    "overrides": { "location": { "col": 10, "row": 12 }, "orientation": 1 }
+                    "overrides": { "location": { "col": 3, "row": 3 }, "orientation": 0 }
                 }
             ],
             "phases": {

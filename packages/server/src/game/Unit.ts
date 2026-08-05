@@ -395,8 +395,60 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._attributes.strength.value;
     }
 
+    set strength(value: number) {
+        this._attributes.strength.value = clamp(Math.floor(value), 0, this.maxStrength);
+    }
+
     get speed(): number {
         return this._attributes.speed.value;
+    }
+
+    set speed(value: number) {
+        this._attributes.speed.value = clamp(Math.floor(value), 0, this.maxSpeed);
+    }
+
+    get stamina(): number {
+        return this._attributes.stamina.value;
+    }
+
+    set stamina(value: number) {
+        this._attributes.stamina.value = clamp(Math.floor(value), 0, this.maxStamina);
+    }
+
+    get morale(): number {
+        return this._attributes.morale.value;
+    }
+
+    set morale(value: number) {
+        this._attributes.morale.value = clamp(Math.floor(value), 0, this.maxMorale);
+    }
+
+    get fitness(): number {
+        return this._attributes.fitness.value;
+    }
+
+    set fitness(value: number) {
+        this._attributes.fitness.value = clamp(Math.floor(value), 0, this.maxFitness);
+    }
+
+    get maxStrength(): number {
+        return this._attributes.strength.max;
+    }
+
+    get maxSpeed(): number {
+        return this._attributes.speed.max;
+    }
+
+    get maxStamina(): number {
+        return this._attributes.stamina.max;
+    }
+
+    get maxMorale(): number {
+        return this._attributes.morale.max;
+    }
+
+    get maxFitness(): number {
+        return this._attributes.fitness.max;
     }
 
     get canFire(): boolean {
@@ -1343,14 +1395,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
         const consumeItemInUse =
             actionDefinition.consumeItem &&
             itemInUse &&
-            actionDefinition.itemsToUse?.includes(itemInUse.id);
+            actionDefinition.itemsToUse?.includes(itemInUse.recipeId);
         if (consumeItemInUse) {
             this.inventory.removeItem(itemInUse);
         }
 
         if (actionDefinition.attributes) {
             unsafeEntries(actionDefinition.attributes).forEach(([attribute, value]) => {
-                this._attributes[attribute].value += value;
+                this[attribute] += value;
             });
         }
 
@@ -1374,16 +1426,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.messageRouter.send(
             {
                 type: "server:unit:selected:update",
-                payload: {
-                    interactions: {
-                        canFire: this.canFire,
-                        canThrow: this.canThrow,
-                        canAction: this.canAction,
-                        canInventory: this.canInventory
-                    },
-                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
-                    unitActionGrid: this._unitActionGrid
-                }
+                payload: this.toSummary()
             },
             this.side.id
         );
