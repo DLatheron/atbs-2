@@ -487,7 +487,6 @@ export function useActionPage() {
         };
         // Key off unit.id so location/AP updates do not re-trigger fade-in.
         // Same-unit tile tracking is handled by World.unit → updateAnchoredOverlayTile.
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- unit identity via unit?.id only
     }, [sidePanelMode, unit?.id, unitActionMode, world]);
 
     world.actionMenuRef = actionMenuRef;

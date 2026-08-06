@@ -68,6 +68,7 @@ export function spawnFadingGhost({
     onMount?.(ghost);
 
     let disposed = false;
+    // eslint-disable-next-line prefer-const -- Needs to be assigned after other assignments.
     let timeoutId: number | undefined;
     let rafId: number | undefined;
 
