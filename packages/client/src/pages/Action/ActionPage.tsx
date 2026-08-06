@@ -32,6 +32,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         disabled,
         isOnTarget,
         opportunityFire,
+        unitActionMode,
         nextUnit,
         onMove,
         onRotateTo,
@@ -41,7 +42,8 @@ export function ActionPage({ visible }: ActionPageProps) {
         onEndError,
         onFireMode,
         onEndFireMode,
-        onAction
+        onAction,
+        onUnitActionMode
     } = useActionPage();
 
     const { world } = useWorld();
@@ -138,7 +140,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                 sx={{ gridArea: "map" }}
                 disabled={disabled}
             >
-                {sidePanelMode === MapMode.enum["unit-mode"] && unit && (
+                {sidePanelMode === MapMode.enum["unit-mode"] && unit && unitActionMode && (
                     <ActionMenuComponent
                         ref={world.actionMenuRef}
                         unitActionGrid={unit.unitActionGrid}
@@ -185,6 +187,8 @@ export function ActionPage({ visible }: ActionPageProps) {
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
                     onFireMode={onFireMode}
+                    unitActionMode={unitActionMode}
+                    onUnitActionMode={onUnitActionMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <FireModePanel

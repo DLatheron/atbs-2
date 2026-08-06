@@ -68,6 +68,7 @@ import type { WorldMap } from "./WorldMap.js";
 import type { ItemManager } from "./ItemManager.js";
 import type { FurnitureManager } from "./FurnitureManager.js";
 import type { DamageCacheManager } from "./DamageCacheManager.js";
+import isEmpty from "lodash/isEmpty.js";
 import isEqual from "lodash/isEqual.js";
 import { Overtaking } from "./Overtaking.js";
 
@@ -460,7 +461,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     get canAction(): boolean {
-        return false;
+        return !isEmpty(this._unitActionGrid);
     }
 
     get canInventory(): boolean {

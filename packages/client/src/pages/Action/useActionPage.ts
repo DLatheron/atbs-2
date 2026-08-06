@@ -13,6 +13,7 @@ import {
     SideSummary,
     ThrowDetails,
     TileInfo,
+    TrackingSpeed,
     UnitActionType,
     UnitSummary
 } from "@atbs/shared-data";
@@ -40,6 +41,7 @@ export function useActionPage() {
     const [disabled, setDisabled] = useState<boolean>(false);
     const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
     const [opportunityFire, setOpportunityFire] = useState<string | undefined>();
+    const [unitActionMode, setUnitActionMode] = useState<boolean>(false);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -52,17 +54,29 @@ export function useActionPage() {
                 setMap(payload);
             }),
 
-            messageManager.registerHandler("server:unit:mode:move", (_context, payload) => {
-                console.info("$$$ Received unit message $$$", payload?.id);
+            messageManager.registerHandler("server:unit:mode:move", async (_context, unit) => {
+                console.info("$$$ Received unit message $$$", unit?.id);
 
-                setUnit(payload);
-                world.unit = payload;
-                if (payload) {
+                setUnit(unit);
+                world.unit = unit;
+                if (unit) {
                     setSidePanelMode(MapMode.enum["unit-mode"]);
                     world.mapMode = MapMode.enum["unit-mode"];
                 } else {
                     setSidePanelMode(MapMode.enum["map-mode"]);
                     world.mapMode = MapMode.enum["map-mode"];
+                }
+
+                if (unit) {
+                    const worldPos = world.tileCenterToWorld(new TilePos(unit.location));
+
+                    await new Promise<void>((resolve) =>
+                        world.camera.interpolateToWorldPos(
+                            new Vec2(worldPos),
+                            TrackingSpeed.enum.FAST,
+                            () => resolve()
+                        )
+                    );
                 }
             }),
 
@@ -397,6 +411,10 @@ export function useActionPage() {
         [sendMessage, unit?.id]
     );
 
+    const onUnitActionMode = useCallback((selected: boolean) => {
+        setUnitActionMode(selected);
+    }, []);
+
     world.actionMenuRef = actionMenuRef;
 
     return {
@@ -412,6 +430,7 @@ export function useActionPage() {
         disabled,
         isOnTarget,
         opportunityFire,
+        unitActionMode,
         nextUnit,
         onMove,
         onRotateTo,
@@ -422,6 +441,7 @@ export function useActionPage() {
         onFireMode,
         onEndFireMode,
         onAction,
+        onUnitActionMode,
         setIsOnTarget
     };
 }
