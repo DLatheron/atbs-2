@@ -70,7 +70,7 @@ export const ActionMenuComponent = forwardRef(function (
                 `,
                 gridTemplateColumns: `${tileSize}px ${tileSize}px ${tileSize}px`,
                 gridTemplateRows: `${tileSize}px ${tileSize}px ${tileSize}px`,
-                transition: "opacity 0.3s ease-in-out",
+                transition: "opacity 1s ease-in-out",
 
                 ".orientation-7": {
                     gridArea: "nw"

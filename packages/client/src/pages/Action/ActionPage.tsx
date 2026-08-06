@@ -142,6 +142,7 @@ export function ActionPage({ visible }: ActionPageProps) {
             >
                 {sidePanelMode === MapMode.enum["unit-mode"] && unit && unitActionMode && (
                     <ActionMenuComponent
+                        key={unit.id}
                         ref={world.actionMenuRef}
                         unitActionGrid={unit.unitActionGrid}
                         tileSize={tileSize}
