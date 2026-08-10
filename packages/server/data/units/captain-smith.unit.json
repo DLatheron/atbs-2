@@ -18,8 +18,9 @@
         "strength": { "max": 52 }
     },
     "inventory": {
-        "inUse": 1,
+        "inUse": 0,
         "items": [
+            { "id": "frag.grenade" },
             { "id": "front-door-key.item" },
             { "id": "spas-12.gun" },
             { "id": "m4+m203.gun" },

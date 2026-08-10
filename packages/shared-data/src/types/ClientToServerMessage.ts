@@ -4,6 +4,7 @@ import {
     FireDetails,
     FireSelector,
     ItemId,
+    Prime,
     ScenarioId,
     SideId,
     ThrowDetails,
@@ -139,6 +140,14 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:game:unit:next"),
         payload: z.null()
+    }),
+    z.object({
+        type: z.literal("client:unit:prime"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId,
+            prime: Prime
+        })
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

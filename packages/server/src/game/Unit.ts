@@ -28,7 +28,8 @@ import {
     UnitType,
     VisualType,
     UnitActionGrid,
-    UnitActionType
+    UnitActionType,
+    Prime
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -84,6 +85,9 @@ const ROTATION_APT_COST = 1;
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
+
+const PRIME_APT_COST = 4;
+const MAKE_SAFE_APT_COST = 8;
 
 const DEFAULT_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
     [Orientation.NORTH]: STRAIGHT_MOVEMENT_APT_COST,
@@ -1433,6 +1437,74 @@ export class Unit extends SceneObject implements VisibilityViewer {
         );
 
         this._broadcastVisibleTiles();
+    }
+
+    makeSafe(): void {
+        const { itemInUse: itemToMakeSafe } = this;
+        if (!itemToMakeSafe) {
+            throw new Error("No item in use - but one was expected");
+        }
+
+        if (!itemToMakeSafe.isPrimable) {
+            throw new Error(`Item ${itemToMakeSafe.id} is not primable`);
+        }
+
+        if (!this._hasSufficientActionPoints(MAKE_SAFE_APT_COST)) {
+            return;
+        }
+
+        if (!this._useActionPoints(MAKE_SAFE_APT_COST)) {
+            return;
+        }
+
+        itemToMakeSafe.primed = "safe";
+        this.game.primeManager.unregisterPrimedItem(itemToMakeSafe);
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null
+                }
+            },
+            this.side.id
+        );
+    }
+
+    prime(prime: Prime): void {
+        if (prime === "safe") {
+            throw new Error("Cannot prime an item to safe");
+        }
+
+        const { itemInUse: itemToPrime } = this;
+        if (!itemToPrime) {
+            throw new Error("No item in use - but one was expected");
+        }
+
+        if (!itemToPrime.isPrimable) {
+            throw new Error(`Item ${itemToPrime.id} is not primable`);
+        }
+
+        if (!this._hasSufficientActionPoints(PRIME_APT_COST)) {
+            return;
+        }
+
+        if (!this._useActionPoints(PRIME_APT_COST)) {
+            return;
+        }
+
+        itemToPrime.primed = prime;
+        this.game.primeManager.registerPrimedItem(itemToPrime);
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null
+                }
+            },
+            this.side.id
+        );
     }
 
     get disorientationScaler() {

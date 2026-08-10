@@ -9,6 +9,7 @@ import {
     FireSelector,
     ItemId,
     OnTarget,
+    Prime,
     RenderMode,
     SideSummary,
     ThrowDetails,
@@ -457,6 +458,22 @@ export function useActionPage() {
         [spawnActionMenuGhost]
     );
 
+    const onPrime = useCallback(
+        (prime: Prime) => {
+            if (unit?.id && unitWeapon?.id) {
+                sendMessage({
+                    type: "client:unit:prime",
+                    payload: {
+                        unitId: unit.id,
+                        itemId: unitWeapon.id,
+                        prime
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id, unitWeapon?.id]
+    );
+
     useLayoutEffect(() => {
         const unitId = unit?.id;
         const showMenu =
@@ -516,6 +533,7 @@ export function useActionPage() {
         onEndFireMode,
         onAction,
         onUnitActionMode,
-        setIsOnTarget
+        setIsOnTarget,
+        onPrime
     };
 }

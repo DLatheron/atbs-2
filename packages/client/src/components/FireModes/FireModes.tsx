@@ -4,6 +4,7 @@ import {
     FireModeWeaponSummary,
     FireSelector,
     ItemId,
+    Prime,
     UnitSummary
 } from "@atbs/shared-data";
 import { Box, SxProps, Tab, Tabs, Typography } from "@mui/material";
@@ -19,6 +20,7 @@ export interface FireModesComponentProps {
     setFireModeEx: (fireModeEx: FireModeEx) => void;
     disabled: boolean;
 
+    onPrime: (prime: Prime) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
 
     sx?: SxProps;
@@ -32,6 +34,7 @@ export function FireModesComponent({
     fireModeEx,
     setFireModeEx,
     disabled,
+    onPrime,
     onChangeFireSelector,
     sx
 }: FireModesComponentProps) {
@@ -81,6 +84,7 @@ export function FireModesComponent({
                                         fireModeEx={fireModeEx}
                                         setFireModeEx={setFireModeEx}
                                         disabled={disabled}
+                                        onPrime={onPrime}
                                         onChangeFireSelector={onChangeFireSelector}
                                     />
                                 )
@@ -97,6 +101,7 @@ export function FireModesComponent({
                         fireModeEx={fireModeEx}
                         setFireModeEx={setFireModeEx}
                         disabled={disabled}
+                        onPrime={onPrime}
                         onChangeFireSelector={onChangeFireSelector}
                     />
                 </Box>

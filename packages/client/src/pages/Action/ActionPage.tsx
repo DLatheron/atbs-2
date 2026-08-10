@@ -43,7 +43,8 @@ export function ActionPage({ visible }: ActionPageProps) {
         onFireMode,
         onEndFireMode,
         onAction,
-        onUnitActionMode
+        onUnitActionMode,
+        onPrime
     } = useActionPage();
 
     const { world } = useWorld();
@@ -201,6 +202,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                     opportunityFire={opportunityFire !== undefined}
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
+                    onPrime={onPrime}
                     onEndFireMode={onEndFireMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />

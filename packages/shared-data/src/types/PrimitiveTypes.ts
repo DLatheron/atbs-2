@@ -660,6 +660,9 @@ export const Explosion = z.discriminatedUnion("type", [
 ]);
 export type Explosion = z.infer<typeof Explosion>;
 
+export const Prime = z.literal("safe").or(z.literal("immediate").or(z.number().nonnegative()));
+export type Prime = z.infer<typeof Prime>;
+
 export const ItemSummary = z.object({
     id: ItemId,
     name: z.string(),
@@ -667,6 +670,7 @@ export const ItemSummary = z.object({
     description: Description,
     quantity: Quantity,
     weight: Weight,
+    primed: Prime.optional(),
     maxThrowRange: z.number().nonnegative(),
     uiImage: RenderList
 });

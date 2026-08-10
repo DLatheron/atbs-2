@@ -241,6 +241,32 @@ export class ActionPhaseHandler extends PhaseHandler {
                         from.sendMessage({ type: "server:ui:disabled", payload: false });
                     }
                 }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:prime",
+                ({ game }, { unitId, itemId, prime }, from) => {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
+
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
+
+                    if (unit.itemInUse?.id !== itemId) {
+                        throw new Error(`Unit ${unit.id} is not using item ${itemId}`);
+                    }
+
+                    if (prime === "safe") {
+                        unit.makeSafe();
+                    } else {
+                        unit.prime(prime);
+                    }
+                }
             )
         ];
     }

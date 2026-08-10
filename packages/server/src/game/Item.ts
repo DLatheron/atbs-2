@@ -16,7 +16,8 @@ import {
     SightType,
     FireType,
     SceneObject,
-    SceneContext
+    SceneContext,
+    Prime
 } from "@atbs/shared-data";
 import { clamp, degreesToRadians, TilePos, Vec2 } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
@@ -39,6 +40,7 @@ export class Item extends SceneObject {
     private _location: TilePos | null;
     private _quantity;
     private _fireSelector: FireSelector | null;
+    private _primed: Prime | undefined;
 
     constructor(
         recipe: ItemRecipe,
@@ -55,6 +57,7 @@ export class Item extends SceneObject {
         this._location = overrides.location ? new TilePos(overrides.location) : null;
         this._quantity = overrides.quantity ?? recipe.quantity;
         this._fireSelector = recipe.type === ItemType.enum.gun ? recipe.fireSelector : null;
+        this._primed = undefined;
 
         this._slots = new Map<SlotType, Item>();
         const { slots } = recipe;
@@ -249,6 +252,18 @@ export class Item extends SceneObject {
 
     get suitableForOpportunityFire(): boolean {
         return this.type === ItemType.enum.gun || this.type === ItemType.enum.grenade;
+    }
+
+    get primed(): Prime | undefined {
+        return this._primed;
+    }
+
+    set primed(value: Prime) {
+        this._primed = value;
+    }
+
+    get isPrimable(): boolean {
+        return this.type === ItemType.enum.grenade;
     }
 
     hasSlot(slot: SlotType): boolean {
@@ -493,6 +508,7 @@ export class Item extends SceneObject {
             description: this.description,
             quantity: this.quantity,
             weight: this.weight,
+            primed: this.primed,
             maxThrowRange: unit.calcThrowMaxRange(this),
             uiImage: this.getRenderList({
                 renderMode: RenderMode.enum.UI_MODE,

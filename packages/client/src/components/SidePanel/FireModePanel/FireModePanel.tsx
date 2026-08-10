@@ -4,6 +4,7 @@ import {
     FireSelector,
     ItemId,
     OnTarget,
+    Prime,
     UnitSummary
 } from "@atbs/shared-data";
 import { Box, Button, Container, Stack, SxProps } from "@mui/material";
@@ -39,6 +40,7 @@ export interface FireModePanelProps {
 
     onRotateTo: (orientation: Orientation) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
+    onPrime: (prime: Prime) => void;
     onEndFireMode: () => void;
 
     sx?: SxProps;
@@ -54,6 +56,7 @@ export function FireModePanel({
 
     onRotateTo,
     onChangeFireSelector,
+    onPrime,
     onEndFireMode,
     sx
 }: FireModePanelProps) {
@@ -70,6 +73,9 @@ export function FireModePanel({
             const newMode = getModeHelper(unit, weapon);
             setFireModeEx(newMode);
             world.fireModeEx = newMode;
+        } else {
+            setFireModeEx(FireModeEx.enum.throw);
+            world.fireModeEx = FireModeEx.enum.throw;
         }
     }, [fireModeEx, unit, weapon, world]);
 
@@ -224,6 +230,7 @@ export function FireModePanel({
                     fireModeEx={fireModeEx}
                     setFireModeEx={onSetFireModeEx}
                     disabled={disabled}
+                    onPrime={onPrime}
                     onChangeFireSelector={onChangeFireSelector}
                 />
             </Stack>

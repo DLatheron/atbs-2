@@ -5,7 +5,8 @@ import {
     FireModeEx,
     FireModeItemSummary,
     UnitSummary,
-    Action
+    Action,
+    Prime
 } from "@atbs/shared-data";
 import {
     Typography,
@@ -25,6 +26,7 @@ import {
 import { AttributesComponent } from "../../Attributes";
 import { ImageComponent } from "../../Image";
 import { getFireModeDetailsHelper } from "../../../helpers/fireModeHelpers";
+import { PrimeComponent } from "../../Prime";
 
 export interface FireModeComponentProps {
     unit: UnitSummary;
@@ -33,6 +35,7 @@ export interface FireModeComponentProps {
     fireModeEx: FireModeEx;
     setFireModeEx: (fireModeEx: FireModeEx) => void;
     disabled: boolean;
+    onPrime: (prime: Prime) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
 }
 
@@ -60,6 +63,7 @@ export function FireModeComponent({
     fireModeEx,
     setFireModeEx,
     disabled,
+    onPrime,
     onChangeFireSelector
 }: FireModeComponentProps) {
     const { value: actionPoints } = unit.attributes.actionPoints;
@@ -188,6 +192,13 @@ export function FireModeComponent({
                             </Stack>
                         );
                     })}
+                {unitWeapon && (
+                    <PrimeComponent
+                        primed={unitWeapon.primed}
+                        disabled={disabled}
+                        onPrime={onPrime}
+                    />
+                )}
                 {FireModeEx.enum.throw in unit.actions && (
                     <Stack key={fireModeEx} spacing={1}>
                         <ToggleButton
