@@ -1,5 +1,5 @@
 import { UnitSummary } from "@atbs/shared-data";
-import { Box, Button, Container, Grid, Stack, SxProps } from "@mui/material";
+import { Box, Button, Container, Grid, Stack, SxProps, ToggleButton } from "@mui/material";
 import { AttributesComponent } from "../../Attributes";
 import {
     CONSTITUTION_LEVELS,
@@ -25,12 +25,14 @@ export interface UnitModePanelProps {
     visible: boolean;
     disabled: boolean;
     unit: UnitSummary | null;
+    unitActionMode: boolean;
 
     nextUnit: () => void;
     onMove: (orientation: Orientation) => void;
     onRotateTo: (orientation: Orientation) => void;
     onEndMovement: () => void;
     onFireMode: () => void;
+    onUnitActionMode: (selected: boolean) => void;
 
     sx?: SxProps;
 }
@@ -39,11 +41,13 @@ export function UnitModePanel({
     visible,
     disabled,
     unit,
+    unitActionMode,
     nextUnit,
     onMove,
     onRotateTo,
     onEndMovement,
     onFireMode,
+    onUnitActionMode,
     sx
 }: UnitModePanelProps) {
     const keyMap = useMemo(
@@ -55,10 +59,19 @@ export function UnitModePanel({
             KeyF: () => onFireMode(),
             KeyN: () => nextUnit(),
             // KeyI: () => onOpenInventory(),
-            // KeyU: () => onActionMode(!actionMode),
+            KeyU: () => onUnitActionMode(!unitActionMode),
             Escape: () => onEndMovement()
         }),
-        [unit, onMove, onRotateTo, onFireMode, onEndMovement]
+        [
+            unit,
+            unitActionMode,
+            nextUnit,
+            onMove,
+            onRotateTo,
+            onFireMode,
+            onEndMovement,
+            onUnitActionMode
+        ]
     );
 
     useKeyboard({
@@ -174,7 +187,12 @@ export function UnitModePanel({
                         disabled={
                             disabled || (!unit.interactions.canFire && !unit.interactions.canThrow)
                         }
-                        sx={{ gridArea: "fire-mode", aspectRatio: 1 }}
+                        sx={{
+                            gridArea: "fire-mode",
+                            aspectRatio: 1,
+                            borderTopRightRadius: 0,
+                            borderBottomRightRadius: 0
+                        }}
                         onClick={onFireMode}
                     >
                         <ImageComponent
@@ -187,12 +205,14 @@ export function UnitModePanel({
                             }
                         />
                     </Button>
-                    <Button
+                    <ToggleButton
                         id="action-mode"
                         title="Action mode"
-                        variant="outlined"
-                        disabled={disabled || !unit.interactions.canAction}
-                        sx={{ gridArea: "action-mode", aspectRatio: 1 }}
+                        value={unitActionMode}
+                        selected={unitActionMode}
+                        disabled={disabled}
+                        sx={{ gridArea: "action-mode", aspectRatio: 1, borderRadius: 0 }}
+                        onClick={() => onUnitActionMode(!unitActionMode)}
                     >
                         <ImageComponent
                             images={[{ imageId: "action" }]}
@@ -200,7 +220,7 @@ export function UnitModePanel({
                             height={40}
                             disabled={disabled || !unit.interactions.canAction}
                         />
-                    </Button>
+                    </ToggleButton>
                     {/* <Button
                         id="throw-mode"
                         title="Throw mode"
@@ -221,7 +241,12 @@ export function UnitModePanel({
                         title="Inventory"
                         variant="outlined"
                         disabled={disabled || !unit.interactions.canInventory}
-                        sx={{ gridArea: "inventory", aspectRatio: 1 }}
+                        sx={{
+                            gridArea: "inventory",
+                            aspectRatio: 1,
+                            borderTopLeftRadius: 0,
+                            borderBottomLeftRadius: 0
+                        }}
                     >
                         <ImageComponent
                             images={[{ imageId: "inventory" }]}

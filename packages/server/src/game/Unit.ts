@@ -26,7 +26,9 @@ import {
     UnitId,
     UnitSummary,
     UnitType,
-    VisualType
+    VisualType,
+    UnitActionGrid,
+    UnitActionType
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -38,6 +40,7 @@ import {
     ITilePos,
     Orientation,
     relativeDirection,
+    RotateBy180Degrees,
     rotateOrientation,
     TilePos,
     Vec2
@@ -54,7 +57,7 @@ import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
-import { Logger } from "@atbs/misc";
+import { Logger, unsafeEntries } from "@atbs/misc";
 import { IMPENETRABLE } from "./Obstruction.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
@@ -65,6 +68,7 @@ import type { WorldMap } from "./WorldMap.js";
 import type { ItemManager } from "./ItemManager.js";
 import type { FurnitureManager } from "./FurnitureManager.js";
 import type { DamageCacheManager } from "./DamageCacheManager.js";
+import isEmpty from "lodash/isEmpty.js";
 import isEqual from "lodash/isEqual.js";
 import { Overtaking } from "./Overtaking.js";
 
@@ -121,7 +125,7 @@ export const UnitRecipe = z.object({
         stamina: AttributeDef,
         speed: AttributeDef,
         strength: AttributeDef,
-        weight: z.number().positive()
+        weight: z.number().positive() // Not really an attribute...
     }),
     inventory: InventoryRecipe,
     collision: z.object({
@@ -181,6 +185,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     private _canSee: Unit[];
     private _overtaking: Overtaking | null;
+    private _unitActionGrid: UnitActionGrid;
 
     constructor(
         recipe: Readonly<UnitRecipe>,
@@ -217,6 +222,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.visibilityManager.addViewer(this);
         this._canSee = [];
         this._overtaking = null;
+        this._unitActionGrid = {};
     }
 
     get game(): Game {
@@ -390,8 +396,60 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._attributes.strength.value;
     }
 
+    set strength(value: number) {
+        this._attributes.strength.value = clamp(Math.floor(value), 0, this.maxStrength);
+    }
+
     get speed(): number {
         return this._attributes.speed.value;
+    }
+
+    set speed(value: number) {
+        this._attributes.speed.value = clamp(Math.floor(value), 0, this.maxSpeed);
+    }
+
+    get stamina(): number {
+        return this._attributes.stamina.value;
+    }
+
+    set stamina(value: number) {
+        this._attributes.stamina.value = clamp(Math.floor(value), 0, this.maxStamina);
+    }
+
+    get morale(): number {
+        return this._attributes.morale.value;
+    }
+
+    set morale(value: number) {
+        this._attributes.morale.value = clamp(Math.floor(value), 0, this.maxMorale);
+    }
+
+    get fitness(): number {
+        return this._attributes.fitness.value;
+    }
+
+    set fitness(value: number) {
+        this._attributes.fitness.value = clamp(Math.floor(value), 0, this.maxFitness);
+    }
+
+    get maxStrength(): number {
+        return this._attributes.strength.max;
+    }
+
+    get maxSpeed(): number {
+        return this._attributes.speed.max;
+    }
+
+    get maxStamina(): number {
+        return this._attributes.stamina.max;
+    }
+
+    get maxMorale(): number {
+        return this._attributes.morale.max;
+    }
+
+    get maxFitness(): number {
+        return this._attributes.fitness.max;
     }
 
     get canFire(): boolean {
@@ -403,7 +461,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     get canAction(): boolean {
-        return false;
+        return !isEmpty(this._unitActionGrid);
     }
 
     get canInventory(): boolean {
@@ -554,12 +612,12 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // this._instance.attributes.actionPoints.max - (this._instance.attributes.burden * ACTION_POINT_LOSS_PER_BURDEN) - (this._instance.attributes.wounds * ACTION_POINT_LOSS_PER_WOUND)
             this._attributes.actionPoints.value = this.maxActionPoints;
         }
-
-        // this.updateAvailableActions(game.map);
     }
 
     select() {
         this.logger.info("Selecting", this.name);
+
+        this.updateAvailableActions();
     }
 
     deselect() {
@@ -706,14 +764,23 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 return;
             }
 
-            // TODO: Update available actions.
-
+            this.updateAvailableActions();
             this._refreshVisibility();
 
             this.messageRouter.send(
                 {
                     type: "server:unit:selected:update",
-                    payload: { orientation: this._orientation, canSee: this.canSee.length }
+                    payload: {
+                        orientation: this._orientation,
+                        canSee: this.canSee.length,
+                        interactions: {
+                            canFire: this.canFire,
+                            canThrow: this.canThrow,
+                            canAction: this.canAction,
+                            canInventory: this.canInventory
+                        },
+                        unitActionGrid: this._unitActionGrid
+                    }
                 },
                 this.side.id
             );
@@ -807,12 +874,22 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.location = dstTile.location;
         dstTile.addUnit(this);
 
+        this.updateAvailableActions();
         this._refreshVisibility(OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER);
 
         this.messageRouter.send(
             {
                 type: "server:unit:selected:update",
-                payload: { location: this.location }
+                payload: {
+                    location: this.location,
+                    interactions: {
+                        canFire: this.canFire,
+                        canThrow: this.canThrow,
+                        canAction: this.canAction,
+                        canInventory: this.canInventory
+                    },
+                    unitActionGrid: this._unitActionGrid
+                }
             },
             this.side.id
         );
@@ -1243,6 +1320,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // Update the landing tile, because the item is now on the ground.
         tileUpdates.push(landingTile.generateTimedTileUpdate(finalTime));
 
+        this.updateAvailableActions();
+
         // TODO: Move the projectiles forward in time...
         // TODO: Psuedo tracers - how do we determine visibility?
         this.messageRouter.send([
@@ -1282,6 +1361,78 @@ export class Unit extends SceneObject implements VisibilityViewer {
             },
             this.side.id
         );
+    }
+
+    performUnitAction(action: UnitActionType, orientationToAction: Orientation): void {
+        console.info(
+            "Performing action",
+            action,
+            "for unit",
+            this.id,
+            "orientation",
+            orientationToAction
+        );
+
+        const { map, visibilityManager } = this;
+        const { mapLocation, itemInUse } = this;
+        const orientationFromAction = rotateOrientation(orientationToAction, RotateBy180Degrees);
+        const actionLocation = mapLocation.stepInDirection(orientationToAction);
+        const tile = map.getTile(actionLocation);
+        const actionDefinition = tile.getActionDefinition(action, orientationFromAction, itemInUse);
+        if (!actionDefinition) {
+            throw new Error(
+                `No action definition found for action ${action} in orientation ${orientationToAction} for unit ${this.id}`
+            );
+        }
+
+        if (!this._hasSufficientActionPoints(actionDefinition.aptCost)) {
+            return;
+        }
+
+        if (!this._useActionPoints(actionDefinition.aptCost)) {
+            return;
+        }
+
+        const consumeItemInUse =
+            actionDefinition.consumeItem &&
+            itemInUse &&
+            actionDefinition.itemsToUse?.includes(itemInUse.recipeId);
+        if (consumeItemInUse) {
+            this.inventory.removeItem(itemInUse);
+        }
+
+        if (actionDefinition.attributes) {
+            unsafeEntries(actionDefinition.attributes).forEach(([attribute, value]) => {
+                this[attribute] += value;
+            });
+        }
+
+        const furnitureChanged = actionDefinition.furnitureAffected.performAction(actionDefinition);
+        if (furnitureChanged) {
+            visibilityManager.invalidateLocation(actionDefinition.furnitureAffected.location);
+
+            this.messageRouter.sendIfVisible(
+                {
+                    type: "server:map:update",
+                    payload: [tile.generateTileUpdate()]
+                },
+                mapLocation
+            );
+
+            this._refreshVisibility(actionDefinition.speedScaler);
+        }
+
+        this.updateAvailableActions();
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: this.toSummary()
+            },
+            this.side.id
+        );
+
+        this._broadcastVisibleTiles();
     }
 
     get disorientationScaler() {
@@ -1414,7 +1565,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 canInventory: this.canInventory
             },
             itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
-            actions: this.getActions()
+            actions: this.getActions(),
+            unitActionGrid: this._unitActionGrid
         };
     }
 
@@ -1440,5 +1592,49 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // UnitsSeen must reflect what this unit personally can see.
             return visibilityManager.isPoiVisibleToViewer(this.id, tile);
         });
+    }
+
+    updateAvailableActions(): UnitActionGrid {
+        if (this.isDead) {
+            return {};
+        }
+
+        const { map } = this.game;
+
+        const surroundingTiles = this.isDirectional
+            ? map.getImmediateActionTiles(
+                  this.mapLocation,
+                  this.orientation,
+                  this.viewAngleInDegrees
+              )
+            : map.getSurroundingTiles(this.mapLocation);
+        const { itemInUse } = this;
+
+        const unitActionGrid = Object.entries(surroundingTiles).reduce<UnitActionGrid>(
+            (acc, [orientationKey, tile]) => {
+                if (!tile) {
+                    return acc;
+                }
+
+                const orientation = parseInt(orientationKey) as Orientation;
+
+                const relativeOrientation = rotateOrientation(orientation, RotateBy180Degrees);
+                const availableActions = tile.getAvailableActions(relativeOrientation, itemInUse);
+
+                if (availableActions.length > 0) {
+                    acc[orientation] = availableActions.map((action) => ({
+                        action,
+                        disabled: false
+                    }));
+                }
+
+                return acc;
+            },
+            {}
+        );
+
+        this._unitActionGrid = unitActionGrid;
+
+        return this._unitActionGrid;
     }
 }

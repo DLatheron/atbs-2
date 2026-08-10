@@ -8,4 +8,6 @@ export * from "./RestTypes.js";
 export * from "./TrackingSpeed.js";
 export * from "./SceneObject.js";
 export * from "./ServerToClientMessage.js";
+export * from "./ActionTypes.js";
+export * from "./UnitSummary.js";
 export * from "./VfxTypes.js";

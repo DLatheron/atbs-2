@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { merge } from "lodash";
 import { useServerMessageManager, useWorld } from "../../hooks";
 import {
@@ -13,16 +13,26 @@ import {
     SideSummary,
     ThrowDetails,
     TileInfo,
+    TrackingSpeed,
+    UnitActionType,
     UnitSummary
 } from "@atbs/shared-data";
 import { Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { MapMode } from "../../MapMode";
+import { selectiveMerge } from "../../helpers/selectiveMerge";
+import { fadeInElement, spawnFadingGhost } from "../../utils/ghostOverlay";
+import { World } from "../../World";
 
 function delay(delayInMs: number): Promise<void> {
     return new Promise((resolve) => window.setTimeout(resolve, delayInMs));
 }
 
+let actionMenuGhostId = 0;
+
 export function useActionPage() {
+    const actionMenuRef = useRef<HTMLDivElement | null>(null);
+    const unitActionModeRef = useRef(false);
+
     const { messageManager, sendMessage } = useServerMessageManager();
     const { world } = useWorld();
     const [sidePanelMode, setSidePanelMode] = useState<MapMode>(MapMode.enum["map-mode"]);
@@ -36,6 +46,34 @@ export function useActionPage() {
     const [disabled, setDisabled] = useState<boolean>(false);
     const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
     const [opportunityFire, setOpportunityFire] = useState<string | undefined>();
+    const [unitActionMode, setUnitActionMode] = useState<boolean>(false);
+
+    unitActionModeRef.current = unitActionMode;
+
+    const spawnActionMenuGhost = useCallback(() => {
+        const source = actionMenuRef.current;
+        const tilePos = world.actionMenuTilePos;
+        if (!source?.parentElement || !tilePos) {
+            return;
+        }
+
+        const frozenTile = new TilePos(tilePos);
+        const overlayId = `action-menu-ghost-${++actionMenuGhostId}`;
+
+        spawnFadingGhost({
+            source,
+            container: source.parentElement,
+            onMount: (ghost) => {
+                world.registerAnchoredOverlay(overlayId, () => ghost, frozenTile);
+            },
+            onUnmount: () => {
+                world.unregisterAnchoredOverlay(overlayId);
+            }
+        });
+
+        // Stop repositioning the live menu so it does not jump before React unmounts/remounts it.
+        world.unregisterAnchoredOverlay(World.ACTION_MENU_OVERLAY_ID);
+    }, [world]);
 
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
@@ -48,17 +86,33 @@ export function useActionPage() {
                 setMap(payload);
             }),
 
-            messageManager.registerHandler("server:unit:mode:move", (_context, payload) => {
-                console.info("$$$ Received unit message $$$", payload?.id);
+            messageManager.registerHandler("server:unit:mode:move", async (_context, unit) => {
+                console.info("$$$ Received unit message $$$", unit?.id);
 
-                setUnit(payload);
-                world.unit = payload;
-                if (payload) {
+                if (unitActionModeRef.current && actionMenuRef.current) {
+                    spawnActionMenuGhost();
+                }
+
+                setUnit(unit);
+                world.unit = unit;
+                if (unit) {
                     setSidePanelMode(MapMode.enum["unit-mode"]);
                     world.mapMode = MapMode.enum["unit-mode"];
                 } else {
                     setSidePanelMode(MapMode.enum["map-mode"]);
                     world.mapMode = MapMode.enum["map-mode"];
+                }
+
+                if (unit) {
+                    const worldPos = world.tileCenterToWorld(new TilePos(unit.location));
+
+                    await new Promise<void>((resolve) =>
+                        world.camera.interpolateToWorldPos(
+                            new Vec2(worldPos),
+                            TrackingSpeed.enum.FAST,
+                            () => resolve()
+                        )
+                    );
                 }
             }),
 
@@ -145,8 +199,10 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
-                setUnit((unit: UnitSummary | null) => (unit ? merge({}, unit, payload) : null));
-                world.unit = merge({}, world.unit, payload);
+                setUnit((unit: UnitSummary | null) =>
+                    unit ? selectiveMerge(unit, payload, { unitActionGrid: "replace" }) : null
+                );
+                world.unit = selectiveMerge(world.unit, payload, { unitActionGrid: "replace" });
 
                 if (world.unit.itemInUse === null) {
                     setSidePanelMode(MapMode.enum["unit-mode"]);
@@ -241,7 +297,7 @@ export function useActionPage() {
             console.info("Unmounting ActionPage Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
         };
-    }, [messageManager, sendMessage, world]);
+    }, [messageManager, sendMessage, world, spawnActionMenuGhost]);
 
     const onMove = useCallback(
         (orientation: Orientation) => {
@@ -374,7 +430,69 @@ export function useActionPage() {
         });
     }, [sendMessage]);
 
+    const onAction = useCallback(
+        (action: UnitActionType, orientation: Orientation) => {
+            if (unit?.id) {
+                setDisabled(true);
+                sendMessage({
+                    type: "client:unit:action",
+                    payload: {
+                        unitId: unit.id,
+                        action,
+                        orientation
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onUnitActionMode = useCallback(
+        (selected: boolean) => {
+            if (!selected && unitActionModeRef.current && actionMenuRef.current) {
+                spawnActionMenuGhost();
+            }
+            setUnitActionMode(selected);
+        },
+        [spawnActionMenuGhost]
+    );
+
+    useLayoutEffect(() => {
+        const unitId = unit?.id;
+        const showMenu =
+            sidePanelMode === MapMode.enum["unit-mode"] && unitActionMode && unitId != null;
+
+        if (!showMenu) {
+            world.unregisterAnchoredOverlay(World.ACTION_MENU_OVERLAY_ID);
+            return;
+        }
+
+        const tilePos = world.actionMenuTilePos;
+        if (!tilePos) {
+            return;
+        }
+
+        world.registerAnchoredOverlay(
+            World.ACTION_MENU_OVERLAY_ID,
+            () => actionMenuRef.current,
+            new TilePos(tilePos)
+        );
+
+        if (actionMenuRef.current) {
+            fadeInElement(actionMenuRef.current);
+        }
+
+        return () => {
+            world.unregisterAnchoredOverlay(World.ACTION_MENU_OVERLAY_ID);
+        };
+        // Key off unit.id so location/AP updates do not re-trigger fade-in.
+        // Same-unit tile tracking is handled by World.unit → updateAnchoredOverlayTile.
+    }, [sidePanelMode, unit?.id, unitActionMode, world]);
+
+    world.actionMenuRef = actionMenuRef;
+
     return {
+        actionMenuRef,
         map,
         unit,
         unitWeapon,
@@ -386,6 +504,7 @@ export function useActionPage() {
         disabled,
         isOnTarget,
         opportunityFire,
+        unitActionMode,
         nextUnit,
         onMove,
         onRotateTo,
@@ -395,6 +514,8 @@ export function useActionPage() {
         onEndError,
         onFireMode,
         onEndFireMode,
+        onAction,
+        onUnitActionMode,
         setIsOnTarget
     };
 }

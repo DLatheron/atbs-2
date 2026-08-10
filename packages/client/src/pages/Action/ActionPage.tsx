@@ -10,6 +10,7 @@ import { UnitModePanel } from "../../components/SidePanel/UnitModePanel";
 import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
 import { MapMode } from "../../MapMode";
+import { ActionMenuComponent } from "../../components/ActionMenu";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -18,6 +19,7 @@ export interface ActionPageProps {
 export function ActionPage({ visible }: ActionPageProps) {
     const statusBarHeight = 60;
     const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
+    const tileSize = 100; // TODO: get from map
 
     const {
         unit,
@@ -30,6 +32,7 @@ export function ActionPage({ visible }: ActionPageProps) {
         disabled,
         isOnTarget,
         opportunityFire,
+        unitActionMode,
         nextUnit,
         onMove,
         onRotateTo,
@@ -38,7 +41,9 @@ export function ActionPage({ visible }: ActionPageProps) {
         onEndTurn,
         onEndError,
         onFireMode,
-        onEndFireMode
+        onEndFireMode,
+        onAction,
+        onUnitActionMode
     } = useActionPage();
 
     const { world } = useWorld();
@@ -134,7 +139,17 @@ export function ActionPage({ visible }: ActionPageProps) {
                 onWheel={onWheel}
                 sx={{ gridArea: "map" }}
                 disabled={disabled}
-            ></MapComponent>
+            >
+                {sidePanelMode === MapMode.enum["unit-mode"] && unit && unitActionMode && (
+                    <ActionMenuComponent
+                        key={unit.id}
+                        ref={world.actionMenuRef}
+                        unitActionGrid={unit.unitActionGrid}
+                        tileSize={tileSize}
+                        onAction={onAction}
+                    />
+                )}
+            </MapComponent>
             {opportunityFire !== undefined && (
                 <Typography
                     sx={{
@@ -173,6 +188,8 @@ export function ActionPage({ visible }: ActionPageProps) {
                     onRotateTo={onRotateTo}
                     onEndMovement={onEndMovement}
                     onFireMode={onFireMode}
+                    unitActionMode={unitActionMode}
+                    onUnitActionMode={onUnitActionMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <FireModePanel

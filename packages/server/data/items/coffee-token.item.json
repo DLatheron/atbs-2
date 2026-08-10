@@ -1,0 +1,15 @@
+{
+    "id": "coffee-token.item",
+    "type": "item",
+    "name": "Coffee Token",
+    "description": [
+        { "text": "A single use Coffee Token." },
+        { "text": "As it says, good for one cup only..." }
+    ],
+    "quantity": 1,
+    "weight": 0.01,
+    "renderable": {
+        "default": [{ "imageId": "coffee-token" }],
+        "fire-mode": []
+    }
+}

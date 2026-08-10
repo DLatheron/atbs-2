@@ -14,7 +14,6 @@ import {
     Tracer,
     TimedTileUpdate,
     HitSpark,
-    UnitSummary,
     WaitingFor,
     TileUpdate,
     VisibilityUpdate,
@@ -24,6 +23,7 @@ import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import { AnimatableObjectRecipe, DeathAnimation, PlayAnimation } from "./AnimationTypes.js";
+import { UnitSummary } from "./UnitSummary.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({

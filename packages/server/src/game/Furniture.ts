@@ -9,15 +9,19 @@ import {
     RenderMode,
     SceneContext,
     SceneObject,
-    SceneNode
+    SceneNode,
+    FurnitureStateToActionDefMap,
+    WorldActionDefinition,
+    UnitActionType
 } from "@atbs/shared-data";
 import z from "zod";
-import { clamp, Orientation, TilePos } from "@atbs/maths";
+import { clamp, Orientation, rotateOrientation, TilePos } from "@atbs/maths";
 import { FurnitureManager } from "./FurnitureManager.js";
-import { Material } from "./Material.js";
+import type { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { calcMovementObstruction } from "./Obstruction.js";
+import type { Item } from "./Item.js";
 
 export const FurnitureRecipe = z.object({
     id: FurnitureId,
@@ -27,8 +31,8 @@ export const FurnitureRecipe = z.object({
     hitPoints: AttributeDef.optional(),
     movementObstruction: FurnitureStateMovementObstructionMap,
     materials: z.array(z.string()),
-    pixelDestruction: z.boolean().optional().default(false)
-    // action: z.record(z.string().nonempty(), z.unknown()).optional()
+    pixelDestruction: z.boolean().optional().default(false),
+    actions: FurnitureStateToActionDefMap.optional()
 });
 export type FurnitureRecipe = z.infer<typeof FurnitureRecipe>;
 
@@ -37,6 +41,11 @@ export interface FurnitureOverrides {
     orientation?: Orientation;
     state?: FurnitureState;
 }
+
+export type WorldActionInstance = WorldActionDefinition & {
+    action: UnitActionType;
+    furnitureAffected: Furniture;
+};
 
 export interface FurnitureAdditionalData {
     instanceIndex: number;
@@ -218,5 +227,76 @@ export class Furniture extends SceneObject {
 
     getMovementObstruction(type: string) {
         return calcMovementObstruction(this._recipe.movementObstruction, this.state, type);
+    }
+
+    getAvailableActionDefinitions(
+        relativeOrientation: Orientation,
+        itemInUse: Item | null
+    ): WorldActionInstance[] {
+        if (!this._recipe.actions) {
+            return [];
+        }
+
+        const state = this.state ?? "default";
+        const stateActionsMap = this._recipe.actions[state];
+        if (!stateActionsMap) {
+            return [];
+        }
+
+        const furnitureOrientation = this.orientation;
+
+        return Object.entries(stateActionsMap).reduce<WorldActionInstance[]>(
+            (acc, [action, actionDefinition]) => {
+                // Filter out any actions that require an item we don't have in use.
+                if (
+                    actionDefinition.itemsToUse &&
+                    !actionDefinition.itemsToUse.includes(itemInUse?.recipeId ?? "")
+                ) {
+                    return acc;
+                }
+
+                // Filter out any actions that are being performed from an invalid direction.
+                if (actionDefinition.orientations) {
+                    // Rotate action orientations by furniture orientation.
+                    const orientations = actionDefinition.orientations.map((orientation) =>
+                        rotateOrientation(orientation, furnitureOrientation)
+                    );
+
+                    if (!orientations.includes(relativeOrientation)) {
+                        return acc;
+                    }
+                }
+
+                acc.push({
+                    ...actionDefinition,
+                    action,
+                    furnitureAffected: this
+                });
+
+                return acc;
+            },
+            []
+        );
+    }
+
+    getAvailableActions(
+        relativeOrientation: Orientation,
+        itemInUse: Item | null
+    ): UnitActionType[] {
+        return this.getAvailableActionDefinitions(relativeOrientation, itemInUse).map(
+            ({ action }) => action
+        );
+    }
+
+    performAction(actionDefinition: WorldActionInstance): boolean {
+        const { state } = actionDefinition;
+
+        if (state !== this.state) {
+            this._state = state as FurnitureState;
+
+            return true;
+        }
+
+        return false;
     }
 }

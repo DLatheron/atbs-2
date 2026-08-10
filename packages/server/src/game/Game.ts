@@ -548,8 +548,8 @@ export class Game {
         if (value) {
             this.logger.info("Selecting unit", value.name);
 
-            if (selectedUnit) {
-                selectedUnit.select();
+            if (value) {
+                value.select();
             }
         }
 

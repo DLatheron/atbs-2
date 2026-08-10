@@ -12,9 +12,11 @@ import {
     DebugGraphicType,
     Orientation,
     radiansToDegrees,
+    TilePos,
     Vec2,
     type IVec2
 } from "@atbs/maths";
+import { walkGridCells } from "./GridRayTrace.js";
 
 interface VisibilityCacheEntry {
     poi: VisibilityPoi;
@@ -242,6 +244,52 @@ export class VisibilityManager {
         for (const entry of cache) {
             entry.angleValid = false;
         }
+    }
+
+    /**
+     * Invalidates cached LOS rays for every viewer whose line of sight to a POI
+     * passes through `tilePos`, so the next visibility refresh recasts those rays.
+     */
+    invalidateLocation(tilePos: TilePos): void {
+        for (const [viewerId, cache] of this._cache.entries()) {
+            const viewer = this._viewers.get(viewerId);
+            if (!viewer?.location) {
+                continue;
+            }
+
+            const srcWorldPos = this.map.tileCenterToWorld(viewer.location);
+
+            for (const entry of cache) {
+                if (!entry.rayValid) {
+                    continue;
+                }
+
+                const dstWorldPos = this.map.tileCenterToWorld(entry.poi.location);
+                if (this.rayPassesThroughTile(srcWorldPos, dstWorldPos, tilePos)) {
+                    entry.rayValid = false;
+                    entry.angleValid = false;
+                }
+            }
+        }
+    }
+
+    private rayPassesThroughTile(srcWorldPos: Vec2, dstWorldPos: Vec2, tilePos: TilePos): boolean {
+        const grid = { aabb: this.map.worldBounds, gridScale: this.map.tileSize };
+
+        for (const cellWalk of walkGridCells(srcWorldPos, dstWorldPos, grid)) {
+            if ("outOfBounds" in cellWalk) {
+                return false;
+            }
+
+            const walkedTilePos = this.map.worldToTile(
+                this.map.worldBounds.topLeft.add(cellWalk.cellOrigin)
+            );
+            if (TilePos.IsEqual(walkedTilePos, tilePos)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private getViewerCache(viewerId: ViewerId): VisibilityCacheEntry[] {

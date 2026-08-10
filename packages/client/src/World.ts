@@ -114,6 +114,13 @@ export class World {
     private _visibilityViewers: VisibilityViewerSummary[];
     private _animationController: AnimationController;
 
+    private _actionMenuRef?: React.RefObject<HTMLDivElement | null>;
+    private _actionMenuTilePos?: TilePos;
+    private _anchoredOverlays = new Map<
+        string,
+        { getElement: () => HTMLElement | null; tilePos: TilePos }
+    >();
+
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
 
@@ -156,6 +163,31 @@ export class World {
         this._visibleTiles = new Set<string>();
         this._visibilityViewers = [];
         this._animationController = new AnimationController(imageCache);
+
+        this._actionMenuRef = undefined;
+        this._actionMenuTilePos = undefined;
+        this._anchoredOverlays = new Map();
+    }
+
+    static readonly ACTION_MENU_OVERLAY_ID = "action-menu";
+
+    registerAnchoredOverlay(
+        id: string,
+        getElement: () => HTMLElement | null,
+        tilePos: TilePos
+    ): void {
+        this._anchoredOverlays.set(id, { getElement, tilePos });
+    }
+
+    updateAnchoredOverlayTile(id: string, tilePos: TilePos): void {
+        const overlay = this._anchoredOverlays.get(id);
+        if (overlay) {
+            overlay.tilePos = tilePos;
+        }
+    }
+
+    unregisterAnchoredOverlay(id: string): void {
+        this._anchoredOverlays.delete(id);
     }
 
     get hasMap(): boolean {
@@ -174,6 +206,26 @@ export class World {
         this._map = value;
     }
 
+    get actionMenuRef() {
+        if (!this._actionMenuRef) {
+            throw new Error("Action menu ref should not be null");
+        }
+
+        return this._actionMenuRef;
+    }
+
+    set actionMenuRef(actionMenuRef: React.RefObject<HTMLDivElement | null>) {
+        this._actionMenuRef = actionMenuRef;
+    }
+
+    get actionMenuTilePos() {
+        return this._actionMenuTilePos;
+    }
+
+    set actionMenuTilePos(actionMenuTilePos: TilePos | undefined) {
+        this._actionMenuTilePos = actionMenuTilePos;
+    }
+
     get hasUnit(): boolean {
         return !!this._unit;
     }
@@ -188,6 +240,12 @@ export class World {
 
     set unit(value: UnitSummary | null) {
         this._unit = value;
+
+        if (value) {
+            const tilePos = new TilePos(value.location);
+            this.actionMenuTilePos = tilePos;
+            this.updateAnchoredOverlayTile(World.ACTION_MENU_OVERLAY_ID, tilePos);
+        }
     }
 
     get unitWorldPos(): Vec2 {
@@ -966,6 +1024,8 @@ export class World {
 
         this._renderDebugGraphics({ ...renderProps, context });
 
+        this._repositionAnchoredOverlays();
+
         if (this._renderStarted) {
             this._renderStarted();
             this._renderStarted = null;
@@ -1305,6 +1365,29 @@ export class World {
 
     onContextMenu(event: React.MouseEvent) {
         this._interactionHandler?.onContextMenu?.(event);
+    }
+
+    _repositionAnchoredOverlays() {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const { camera } = this;
+        const { zoom } = camera;
+
+        for (const overlay of this._anchoredOverlays.values()) {
+            const element = overlay.getElement();
+            if (!element) {
+                continue;
+            }
+
+            const canvasPos = camera.worldToCanvas(this.tileCenterToWorld(overlay.tilePos));
+
+            element.style.left = `${canvasPos.x}px`;
+            element.style.top = `${canvasPos.y}px`;
+            // Scale with zoom so a world-sized overlay (e.g. 3×3 tile action menu) stays aligned.
+            element.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+        }
     }
 
     private static readonly _singleton = new World(ImageCache.GetSingleton());

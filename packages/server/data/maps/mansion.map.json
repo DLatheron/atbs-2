@@ -1062,7 +1062,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "open"
+                    "state": "locked"
                 }
             },
             { "terrain": { "id": "concrete.terrain", "orientation": 0 } },

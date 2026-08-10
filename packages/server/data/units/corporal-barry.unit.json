@@ -12,13 +12,14 @@
         "constitution": { "max": 50 },
         "fitness": { "max": 80 },
         "morale": { "max": 82, "value": 62 },
-        "stamina": { "max": 60 },
+        "stamina": { "max": 60, "value": 40 },
         "speed": { "max": 40 },
         "strength": { "max": 82 }
     },
     "inventory": {
         "inUse": 0,
         "items": [
+            { "id": "coffee-token.item" },
             { "id": "spas-12.gun" },
             { "id": "m4+m203.gun" },
             { "id": "m4.gun" },

@@ -114,6 +114,18 @@ export type FurnitureStateMovementObstructionMap = z.infer<
     typeof FurnitureStateMovementObstructionMap
 >;
 
+const attributeTypes = [
+    "actionPoints",
+    "constitution",
+    "fitness",
+    "morale",
+    "stamina",
+    "speed",
+    "strength"
+] as const;
+export const AttributeTypes = z.enum(attributeTypes);
+export type AttributeTypes = z.infer<typeof AttributeTypes>;
+
 export const materialTransition = ["enter", "exit", "transition"] as const;
 export const MaterialTransition = z.enum(materialTransition);
 export type MaterialTransition = z.infer<typeof MaterialTransition>;
@@ -659,40 +671,6 @@ export const ItemSummary = z.object({
     uiImage: RenderList
 });
 export type ItemSummary = z.infer<typeof ItemSummary>;
-
-export const UnitSummary = z.object({
-    id: UnitId,
-    name: z.string().nonempty(),
-    description: Description,
-    location: ITilePos,
-    orientation: z.enum(Orientation),
-    disorientation: z.int().nonnegative(),
-    viewAngleInDegrees: z.int().positive(),
-    collisionRadius: z.number().positive(),
-    isDirectional: z.boolean().optional().default(true),
-    canSee: z.number().nonnegative(),
-    isOvertaking: z.boolean(),
-    attributes: z.object({
-        actionPoints: Attribute,
-        constitution: Attribute,
-        fitness: Attribute,
-        morale: Attribute,
-        stamina: Attribute,
-        speed: Attribute,
-        strength: Attribute,
-        weight: z.number().positive()
-    }),
-    uiImage: RenderList,
-    interactions: z.object({
-        canFire: z.boolean(),
-        canThrow: z.boolean(),
-        canAction: z.boolean(),
-        canInventory: z.boolean()
-    }),
-    itemInUse: ItemSummary.nullable(),
-    actions: Actions
-});
-export type UnitSummary = z.infer<typeof UnitSummary>;
 
 /**
  * A friendly viewer's cone parameters for client-side fog / view-cone rendering.
