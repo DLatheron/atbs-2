@@ -43,6 +43,7 @@ import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityRay } from "./VisibilityRay.js";
 import type { VisibilityManager } from "./VisibilityManager.js";
 import { Vfx } from "./Vfx.js";
+import { IMPENETRABLE } from "./Obstruction.js";
 
 export interface CollisionSample {
     material: Material;
@@ -722,6 +723,11 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
 
     getMovementObstruction(type: string) {
         return this.furniture?.getMovementObstruction(type) ?? 0;
+    }
+
+    blocksMovement(type: string): boolean {
+        const o = this.getMovementObstruction(type);
+        return o === IMPENETRABLE || o > 10;
     }
 
     generateTileUpdate(): TileUpdate {

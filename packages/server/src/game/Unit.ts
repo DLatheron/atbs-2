@@ -59,7 +59,6 @@ import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger, unsafeEntries } from "@atbs/misc";
-import { IMPENETRABLE } from "./Obstruction.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
@@ -833,8 +832,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return;
         }
 
-        const movementObstruction = dstTile.getMovementObstruction(this.type);
-        if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
+        if (dstTile.blocksMovement(this.type)) {
             this.messageRouter.send(
                 { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MOVE_THERE },
                 this.side.id
@@ -1281,7 +1279,6 @@ export class Unit extends SceneObject implements VisibilityViewer {
             roundDamageCache,
             furnitureDamageSystem,
             (projectile, tile, samplePos, sample, timeMs) => {
-                // TODO: Work out what to do with the item when it hits a surface.
                 furnitureDamageSystem.onMaterialPixel(projectile, tile, samplePos, sample, timeMs);
             }
         );
@@ -1308,21 +1305,42 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
 
-        // Work out which tile the item landed in.
-        const landingTilePos = map.worldToTile(finalWorldPos);
-        console.info({ landingTile: landingTilePos });
+        // ProcessProjectiles commits each hit into `segments` before stop/ricochet.
+        // Thrown items with bounce=1 ricochet and often continue full maxRange — frequently
+        // back off the map — so finalWorldPos is a bad landing focus after a wall spark.
+        // When the last committed hit sits on a movement-blocking tile, drop in front of
+        // that surface using the inbound leg (previous segment → hit).
+        const segments = projectile.segments;
+        const lastSegPos = new Vec2(segments.at(-1)!.pos);
+        const lastHitTile = map.sampleTile(map.worldToTile(lastSegPos));
+        const dropInFrontOfHit =
+            segments.length >= 2 && !!lastHitTile?.blocksMovement(this.type);
 
-        const landingTile = map.getTile(landingTilePos);
+        const landingFocusWorldPos = dropInFrontOfHit ? lastSegPos : finalWorldPos;
+        const approachFromWorldPos = dropInFrontOfHit
+            ? new Vec2(segments.at(-2)!.pos)
+            : segments.length >= 2 && lastSegPos.isEqual(finalWorldPos)
+              ? new Vec2(segments.at(-2)!.pos)
+              : lastSegPos;
+        const landingTime = dropInFrontOfHit ? segments.at(-1)!.time : finalTime;
+
+        const landingTile = map.resolveNonObstructedLandingTile(
+            landingFocusWorldPos,
+            approachFromWorldPos,
+            this.type,
+            this.mapLocation
+        );
+        const landingTilePos = landingTile.location;
 
         itemToThrow.location = landingTilePos;
         landingTile.addItem(itemToThrow);
         this.inventory.removeItem(itemToThrow);
 
         // Update the unit's tile, because they are no longer holding the item.
-        tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(finalTime));
+        tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
 
         // Update the landing tile, because the item is now on the ground.
-        tileUpdates.push(landingTile.generateTimedTileUpdate(finalTime));
+        tileUpdates.push(landingTile.generateTimedTileUpdate(landingTime));
 
         this.updateAvailableActions();
 
@@ -1341,14 +1359,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
         ]);
 
-        // A death can remove a viewer/blocker and open up sightlines, so
-        // recompute visibility and push each side its updated visible tiles.
-        // Queued after the trace, this applies once playback of the death has
-        // finished on the observing client.
-        if (deaths.length > 0) {
-            this._refreshVisibility();
-            this._broadcastVisibleTiles();
-        }
+        this._refreshVisibility();
+        this._broadcastVisibleTiles();
 
         this.messageRouter.send(
             {
