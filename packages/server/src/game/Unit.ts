@@ -1313,8 +1313,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         const segments = projectile.segments;
         const lastSegPos = new Vec2(segments.at(-1)!.pos);
         const lastHitTile = map.sampleTile(map.worldToTile(lastSegPos));
-        const dropInFrontOfHit =
-            segments.length >= 2 && !!lastHitTile?.blocksMovement(this.type);
+        const dropInFrontOfHit = segments.length >= 2 && !!lastHitTile?.blocksMovement(this.type);
 
         const landingFocusWorldPos = dropInFrontOfHit ? lastSegPos : finalWorldPos;
         const approachFromWorldPos = dropInFrontOfHit

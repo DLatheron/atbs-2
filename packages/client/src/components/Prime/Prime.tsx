@@ -37,7 +37,7 @@ export function PrimeComponent({ primed, disabled = false, onPrime }: PrimeCompo
                     sx={{
                         "&.MuiToggleButton-root.Mui-selected": {
                             backgroundColor: "red",
-                            color: "white",
+                            color: "white"
                         }
                     }}
                 >
@@ -53,7 +53,7 @@ export function PrimeComponent({ primed, disabled = false, onPrime }: PrimeCompo
                     sx={{
                         "&.MuiToggleButton-root.Mui-selected": {
                             backgroundColor: "green",
-                            color: "white",
+                            color: "white"
                         }
                     }}
                 >

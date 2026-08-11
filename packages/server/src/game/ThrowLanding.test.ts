@@ -27,7 +27,11 @@ import { WorldMap, MapRecipe } from "./WorldMap.js";
 const WALL_RGB = { r: 107, g: 66, b: 0 };
 const UNIT_TYPE = "human";
 
-function createSolidImage(id: string, size: number, rgb: { r: number; g: number; b: number }): Image {
+function createSolidImage(
+    id: string,
+    size: number,
+    rgb: { r: number; g: number; b: number }
+): Image {
     const png = new PNG({ width: size, height: size });
     for (let y = 0; y < size; y++) {
         for (let x = 0; x < size; x++) {
@@ -312,8 +316,7 @@ describe("thrown projectile landing after wall impact", () => {
     let damageCache: DamageCacheManager;
 
     beforeEach(() => {
-        ({ tileSize, tempDir, imageManager, game, damageCache } =
-            setupThrowLandingFixture(gameId));
+        ({ tileSize, tempDir, imageManager, game, damageCache } = setupThrowLandingFixture(gameId));
     });
 
     afterEach(() => {

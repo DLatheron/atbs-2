@@ -52,7 +52,9 @@ export class PrimeManager {
 
                 default:
                     if (typeof item.primed !== "number") {
-                        throw new Error(`Item ${item.id} has an invalid primed value: ${item.primed}`);
+                        throw new Error(
+                            `Item ${item.id} has an invalid primed value: ${item.primed}`
+                        );
                     }
 
                     if (--item.primed < 0) {
