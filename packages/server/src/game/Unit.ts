@@ -1462,10 +1462,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.messageRouter.send(
             {
-                type: "server:unit:selected:update",
-                payload: {
-                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null
-                }
+                type: "server:unit:weapon:update",
+                payload: itemToMakeSafe.getFireModeItemSummary(this)
             },
             this.side.id
         );
@@ -1498,10 +1496,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.messageRouter.send(
             {
-                type: "server:unit:selected:update",
-                payload: {
-                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null
-                }
+                type: "server:unit:weapon:update",
+                payload: itemToPrime.getFireModeItemSummary(this)
             },
             this.side.id
         );

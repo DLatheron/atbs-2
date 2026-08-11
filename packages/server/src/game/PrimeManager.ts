@@ -42,12 +42,23 @@ export class PrimeManager {
 
     triggerEndTurn(): void {
         for (const item of this._primedItems.values()) {
-            if (typeof item.primed !== "number") {
-                continue;
-            }
+            switch (item.primed) {
+                case "safe":
+                    continue;
 
-            if (--item.primed < 0) {
-                // Trigger an explosion.
+                case "immediate":
+                    // Trigger an explosion.
+                    break;
+
+                default:
+                    if (typeof item.primed !== "number") {
+                        throw new Error(`Item ${item.id} has an invalid primed value: ${item.primed}`);
+                    }
+
+                    if (--item.primed < 0) {
+                        // Trigger an explosion.
+                    }
+                    break;
             }
         }
     }

@@ -11,32 +11,51 @@ export interface PrimeComponentProps {
 }
 
 export function PrimeComponent({ primed, disabled = false, onPrime }: PrimeComponentProps) {
+    if (primed === undefined) {
+        return null;
+    }
+
     return (
         <Box data-testid="prime-component">
             <ToggleButtonGroup
-                value={primed === "safe" ? "safe" : "primed"}
+                value={primed === "immediate" ? "immediate" : "safe"}
                 onChange={(_event, value) => {
-                    if (value === "safe") {
-                        onPrime("immediate");
-                    } else {
+                    if (value === "safe" && primed !== "safe") {
                         onPrime("safe");
+                    } else if (primed === "safe") {
+                        onPrime("immediate");
                     }
                 }}
+                exclusive
                 fullWidth
             >
                 <ToggleButton
-                    value="primed"
+                    id="primed"
+                    title="Primed"
+                    value="immediate"
                     disabled={disabled}
-                    sx={{ backgroundColor: "red", color: "white" }}
+                    sx={{
+                        "&.MuiToggleButton-root.Mui-selected": {
+                            backgroundColor: "red",
+                            color: "white",
+                        }
+                    }}
                 >
                     <Typography variant="body1" sx={{ fontWeight: "semibold" }}>
                         Primed
                     </Typography>
                 </ToggleButton>
                 <ToggleButton
+                    id="safe"
+                    title="Safe"
                     value="safe"
                     disabled={disabled}
-                    sx={{ backgroundColor: "green", color: "white" }}
+                    sx={{
+                        "&.MuiToggleButton-root.Mui-selected": {
+                            backgroundColor: "green",
+                            color: "white",
+                        }
+                    }}
                 >
                     <Typography variant="body1" sx={{ fontWeight: "semibold" }}>
                         Safe

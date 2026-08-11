@@ -508,7 +508,7 @@ export class Item extends SceneObject {
             description: this.description,
             quantity: this.quantity,
             weight: this.weight,
-            primed: this.primed,
+            primed: this.isPrimable ? this.primed ?? "safe" : undefined,
             maxThrowRange: unit.calcThrowMaxRange(this),
             uiImage: this.getRenderList({
                 renderMode: RenderMode.enum.UI_MODE,
