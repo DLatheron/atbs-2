@@ -623,12 +623,32 @@ export type Action = z.infer<typeof Action>;
 export const Actions = z.union([z.object({ [Action.enum.throw]: FireModeDetail }), z.object({})]);
 export type Actions = z.infer<typeof Actions>;
 
+export const FragmentExplosionVisual = z.object({
+    intensity: JitteredValue,
+    velocity: JitteredValue,
+    length: JitteredValue.describe("Trail length in pixels"),
+    rangeFallOff: JitteredValue
+});
+export type FragmentExplosionVisual = z.infer<typeof FragmentExplosionVisual>;
+
 export const FragmentExplosion = z.object({
     type: z.literal(ExplosionType.enum.fragment),
     maxRange: JitteredValue,
     numFragments: JitteredValue,
+    penetration: z.number().nonnegative().default(0),
+    visual: FragmentExplosionVisual,
+    /** Per-fragment aim jitter in degrees (same convention as gun spreadAngle). */
+    angleJitter: z.number().nonnegative().default(5),
+    variability: z
+        .object({
+            min: z.number().positive().max(2).default(1),
+            max: z.number().positive().max(2).default(1)
+        })
+        .refine((data) => data.min <= data.max, {
+            message: "Variability 'max' must be greater than or equal to 'min'"
+        })
+        .optional(),
     damage: DamageMap
-    // TODO: Other properties...
 });
 export type FragmentExplosion = z.infer<typeof FragmentExplosion>;
 

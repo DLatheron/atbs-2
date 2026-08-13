@@ -488,6 +488,14 @@ export class Projectile implements IRayCast {
                     )
                 });
 
+                // Explosive rounds (e.g. 40mm HE) stop on the first solid hit —
+                // no penetrate / ricochet — so the explosion can bloom at impact.
+                if (projectile.projectileRecipe.explosion) {
+                    projectile.life = 0;
+                    projectile.impact = { pos, time: atTime };
+                    continue;
+                }
+
                 const entryOutcome = PenetrationSystem.resolveMaterialEntry(
                     map,
                     imageManager,

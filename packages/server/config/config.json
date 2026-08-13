@@ -3,5 +3,6 @@
     "infiniteActionPoints": true,
     "infiniteAmmunition": true,
     "showProjectileDebugGraphics": false,
-    "showVisibilityDebugGraphics": false
+    "showVisibilityDebugGraphics": false,
+    "showFragmentExplosionTracers": true
 }

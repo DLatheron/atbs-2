@@ -21,6 +21,8 @@
         "maxRange": { "min": 150, "max": 300 },
         "numFragments": 200,
         "penetration": 10,
+        "angleJitter": 5,
+        "variability": { "min": 0.9, "max": 1.1 },
         "visual": {
             "intensity": { "min": 0.7, "max": 1 },
             "velocity": { "min": 300, "max": 500 },

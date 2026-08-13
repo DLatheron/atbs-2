@@ -54,12 +54,28 @@ export function DrawProjectile(
     const time = Math.max(timeNow - baseTime, 0);
     const strokeThickness = 2;
 
+    if (tracer.segments.length < 2) {
+        return true;
+    }
+
+    const tracerStartTime = tracer.segments[0].time;
+
+    // Fragment / delayed tracers are offset on the shared fire-trace clock. Until
+    // that offset is reached they have not started — do not treat them as complete
+    // (which would tear down the render plugin before they draw).
+    if (time < tracerStartTime) {
+        return false;
+    }
+
     const headStartTime = time;
     const tailEndTime = headStartTime - tracer.trailLengthInMs;
 
+    // Falloff is relative to when *this* tracer began, not absolute timeline time.
+    // Using absolute time made delayed explosion fragments fully transparent once
+    // their start offset was >= maxRangeInMs.
     const rangeOpacity = calcFalloff(
         1,
-        headStartTime,
+        headStartTime - tracerStartTime,
         tracer.maxRangeInMs,
         tracer.rangeFalloffPower
     );

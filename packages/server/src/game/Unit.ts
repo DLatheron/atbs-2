@@ -56,6 +56,11 @@ import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
 import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
+import {
+    consumeExplodedItem,
+    detonateExplosion,
+    type ExplosionDetonationResult
+} from "./ExplosionSystem.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger, unsafeEntries } from "@atbs/misc";
@@ -1112,6 +1117,38 @@ export class Unit extends SceneObject implements VisibilityViewer {
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
             this.logger.dir({ onTarget });
 
+            const pendingExplosions = projectiles.flatMap((projectile) => {
+                const { explosion } = projectile.projectileRecipe;
+                const { impact } = projectile;
+                if (!explosion || explosion.type !== "fragment" || !impact) {
+                    return [];
+                }
+                return [{ explosion, origin: impact.pos.clone(), timeOffsetMs: impact.time }];
+            });
+
+            const tracers = projectiles.map((projectile) => projectile.getTracer());
+            let combinedTileUpdates = tileUpdates;
+            let combinedDeaths = deaths;
+            let combinedHitSparks = hitSparks;
+
+            for (const pending of pendingExplosions) {
+                const explosionResult = detonateExplosion({
+                    game: this.game,
+                    origin: pending.origin,
+                    explosion: pending.explosion,
+                    firingUnit: this,
+                    firingWeapon: weapon,
+                    timeOffsetMs: pending.timeOffsetMs,
+                    debugGraphics: showDebugGraphics ? debugGraphics : undefined
+                });
+                tracers.push(...explosionResult.tracers);
+                combinedTileUpdates = [...combinedTileUpdates, ...explosionResult.tileUpdates].sort(
+                    (a, b) => a.timeMs - b.timeMs
+                );
+                combinedDeaths = [...combinedDeaths, ...explosionResult.deaths];
+                combinedHitSparks = [...combinedHitSparks, ...explosionResult.hitSparks];
+            }
+
             if (showDebugGraphics && debugGraphics) {
                 this.messageRouter.send({
                     type: "server:debug:graphics",
@@ -1125,11 +1162,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 {
                     type: "server:fire:trace",
                     payload: {
-                        tracers: projectiles.map((projectile) => projectile.getTracer()),
+                        tracers,
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                        tileUpdates,
-                        deaths,
-                        hitSparks
+                        tileUpdates: combinedTileUpdates,
+                        deaths: combinedDeaths,
+                        hitSparks: combinedHitSparks
                     }
                 }
             ]);
@@ -1138,7 +1175,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // recompute visibility and push each side its updated visible tiles.
             // Queued after the trace, this applies once playback of the death has
             // finished on the observing client.
-            if (deaths.length > 0) {
+            if (combinedDeaths.length > 0) {
                 this._refreshVisibility();
                 this._broadcastVisibleTiles();
             }
@@ -1331,17 +1368,57 @@ export class Unit extends SceneObject implements VisibilityViewer {
         );
         const landingTilePos = landingTile.location;
 
-        itemToThrow.location = landingTilePos;
-        landingTile.addItem(itemToThrow);
         this.inventory.removeItem(itemToThrow);
 
-        // Update the unit's tile, because they are no longer holding the item.
-        tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
+        const explodeOnLanding =
+            itemToThrow.primed === "immediate" &&
+            itemToThrow.willExplode &&
+            itemToThrow.getExplosion.type === "fragment";
 
-        // Update the landing tile, because the item is now on the ground.
-        tileUpdates.push(landingTile.generateTimedTileUpdate(landingTime));
+        let explosionResult: ExplosionDetonationResult | null = null;
+
+        if (explodeOnLanding) {
+            const explosion = itemToThrow.getExplosion;
+
+            const { tileUpdates: consumeUpdates } = consumeExplodedItem(
+                this.game,
+                itemToThrow,
+                this,
+                landingTime
+            );
+            tileUpdates.push(...consumeUpdates);
+
+            // Update the unit's tile, because they are no longer holding the item.
+            tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
+
+            explosionResult = detonateExplosion({
+                game: this.game,
+                origin: map.tileCenterToWorld(landingTilePos),
+                explosion,
+                firingUnit: this,
+                firingWeapon: itemToThrow,
+                timeOffsetMs: landingTime,
+                debugGraphics: showDebugGraphics ? debugGraphics : undefined
+            });
+            tileUpdates.push(...explosionResult.tileUpdates);
+            deaths.push(...explosionResult.deaths);
+            hitSparks.push(...explosionResult.hitSparks);
+        } else {
+            itemToThrow.location = landingTilePos;
+            landingTile.addItem(itemToThrow);
+
+            // Update the unit's tile, because they are no longer holding the item.
+            tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
+
+            // Update the landing tile, because the item is now on the ground.
+            tileUpdates.push(landingTile.generateTimedTileUpdate(landingTime));
+        }
+
+        tileUpdates.sort((a, b) => a.timeMs - b.timeMs);
 
         this.updateAvailableActions();
+
+        const tracers = [projectile.getTracer(), ...(explosionResult?.tracers ?? [])];
 
         // TODO: Move the projectiles forward in time...
         // TODO: Psuedo tracers - how do we determine visibility?
@@ -1349,7 +1426,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             {
                 type: "server:fire:trace",
                 payload: {
-                    tracers: [projectile.getTracer()],
+                    tracers,
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                     tileUpdates,
                     deaths,
@@ -1503,7 +1580,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         itemToPrime.primed = prime;
-        this.game.primeManager.registerPrimedItem(itemToPrime);
+        this.game.primeManager.registerPrimedItem(itemToPrime, this);
 
         this.messageRouter.send(
             {
