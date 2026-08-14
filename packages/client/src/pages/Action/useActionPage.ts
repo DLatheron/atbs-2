@@ -244,7 +244,8 @@ export function useActionPage() {
                     () => {
                         setIsOnTarget(OnTarget.enum.none);
                         resolver(undefined);
-                    }
+                    },
+                    payload.animations
                 );
 
                 console.info("!!! Queue blocked");

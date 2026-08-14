@@ -20,6 +20,7 @@
     "inventory": {
         "inUse": 0,
         "items": [
+            { "id": "stun.grenade" },
             { "id": "frag.grenade" },
             { "id": "front-door-key.item" },
             { "id": "spas-12.gun" },

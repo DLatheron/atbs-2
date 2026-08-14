@@ -1,0 +1,35 @@
+{
+    "id": "stun.grenade",
+    "type": "grenade",
+    "name": "M84 Stun Grenade",
+    "description": [
+        {
+            "text": "Upon detonation, it emits an intensely loud \"bang\" of 170–180 decibels and a blinding flash of more than one million candela within 5 feet (1.524 meters) of initiation, sufficient to cause immediate flash blindness, deafness, tinnitus, and inner ear disturbance."
+        }
+    ],
+    "quantity": 1,
+    "weight": 0.37,
+    "renderable": {
+        "default": [{ "imageId": "stun" }],
+        "fire-mode": []
+    },
+    "explosion": {
+        "type": "shockwave",
+        "maxRange": 200,
+        "numFragments": 40,
+        "penetration": 10,
+        "angleJitter": 5,
+        "variability": { "min": 0.9, "max": 1.1 },
+        "visual": {
+            "intensity": 1,
+            "velocity": 500,
+            "length": 150,
+            "rangeFallOff": 20
+        },
+        "damage": {
+            "type": "disorientation",
+            "default": 100
+        },
+        "animationId": "shockwave.animation"
+    }
+}

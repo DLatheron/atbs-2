@@ -456,16 +456,30 @@ export class Projectile implements IRayCast {
                 Projectile.Logger.info(`Commit material entry segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
-                let constitutionDamage = 0;
+                let sparkDamageAmount = 0;
+                let emitHitSpark = true;
+                const damagePreview = isUnit(owner)
+                    ? projectile.calcDamage(owner.type)
+                    : projectile.calcDamage("default");
+                const isDisorientation = damagePreview.type === DamageType.enum.disorientation;
 
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
                     furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
+                    // Disorientation affects units only — no sparks/💫 on furniture.
+                    if (isDisorientation) {
+                        emitHitSpark = false;
+                    }
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                     const previousConstitution = owner.constitution;
+                    const previousDisorientation = owner.disorientation;
                     const died = owner.inflictDamage(pos, projectile);
-                    constitutionDamage = previousConstitution - owner.constitution;
+                    if (isDisorientation) {
+                        sparkDamageAmount = owner.disorientation - previousDisorientation;
+                    } else {
+                        sparkDamageAmount = previousConstitution - owner.constitution;
+                    }
                     if (died) {
                         furnitureDamageSystem?.onUnitDeath(
                             map.getTile(owner.mapLocation),
@@ -474,19 +488,25 @@ export class Projectile implements IRayCast {
                             projectile.roundIndex
                         );
                     }
+                } else if (isDisorientation) {
+                    // Unknown owner with disorientation damage — skip VFX.
+                    emitHitSpark = false;
                 }
 
-                hitSparks.push({
-                    pos,
-                    timeMs: atTime,
-                    colour: resolveHitSparkColour(material, owner),
-                    direction: projectile.directionVector.normalise(),
-                    count: clamp(
-                        Math.ceil(constitutionDamage),
-                        MIN_HIT_SPARK_COUNT,
-                        MAX_HIT_SPARK_COUNT
-                    )
-                });
+                if (emitHitSpark) {
+                    hitSparks.push({
+                        pos,
+                        timeMs: atTime,
+                        colour: resolveHitSparkColour(material, owner),
+                        direction: projectile.directionVector.normalise(),
+                        count: clamp(
+                            Math.ceil(sparkDamageAmount),
+                            MIN_HIT_SPARK_COUNT,
+                            MAX_HIT_SPARK_COUNT
+                        ),
+                        kind: isDisorientation ? "disorientation" : "spark"
+                    });
+                }
 
                 // Explosive rounds (e.g. 40mm HE) stop on the first solid hit —
                 // no penetrate / ricochet — so the explosion can bloom at impact.

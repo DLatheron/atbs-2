@@ -6,6 +6,7 @@ import type { Tracer } from "@atbs/shared-data";
 
 function makeTracer(overrides: Partial<Tracer> & { startTimeMs?: number } = {}): Tracer {
     const startTimeMs = overrides.startTimeMs ?? 0;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { startTimeMs: _, ...rest } = overrides;
     return {
         segments: [

@@ -4,5 +4,6 @@
     "infiniteAmmunition": true,
     "showProjectileDebugGraphics": false,
     "showVisibilityDebugGraphics": false,
-    "showFragmentExplosionTracers": true
+    "showFragmentExplosionTracers": true,
+    "showShockwaveExplosionTracers": true
 }

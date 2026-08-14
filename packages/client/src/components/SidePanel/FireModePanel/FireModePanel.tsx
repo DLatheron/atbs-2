@@ -94,6 +94,9 @@ export function FireModePanel({
 
             KeyT: () => unit && onSetFireModeEx(FireModeEx.enum.throw),
 
+            KeyP: () => unit && onPrime("immediate"),
+            KeyS: () => unit && onPrime("safe"),
+
             Digit1: () => unitWeapon && unitWeapon.weapons?.length > 0 && setWeaponIndex(0),
             Digit2: () => unitWeapon && unitWeapon.weapons?.length > 1 && setWeaponIndex(1),
             Digit3: () => unitWeapon && unitWeapon.weapons?.length > 2 && setWeaponIndex(2),

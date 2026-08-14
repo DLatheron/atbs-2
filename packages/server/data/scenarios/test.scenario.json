@@ -50,7 +50,7 @@
             "units": [
                 {
                     "id": "hans-gruber.unit",
-                    "overrides": { "location": { "col": 14, "row": 10 }, "orientation": 6 }
+                    "overrides": { "location": { "col": 13, "row": 10 }, "orientation": 6 }
                 }
             ],
             "phases": {

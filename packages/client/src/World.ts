@@ -17,6 +17,7 @@ import {
     TimedTileUpdate,
     Tracer,
     HitSpark,
+    TimedPlayAnimation,
     UnitSummary,
     VisibilityViewerSummary
 } from "@atbs/shared-data";
@@ -470,7 +471,8 @@ export class World {
         deaths: DeathAnimation[],
         hitSparks: HitSpark[],
         onMapUpdated: () => void,
-        completeCallback: () => void
+        completeCallback: () => void,
+        animations: TimedPlayAnimation[] = []
     ): Promise<void> {
         this._drawSights = false;
 
@@ -482,7 +484,14 @@ export class World {
         const tracerTimer = new Timer();
         const hitSparkParticles = new HitSparkParticles();
         const spawnedSparkIndices = new Set<number>();
+        const startedAnimationIndices = new Set<number>();
         let traceFinished = false;
+
+        const timelineEndMs = Math.max(
+            0,
+            ...hitSparks.map((spark) => spark.timeMs),
+            ...animations.map((animation) => animation.startTimeMs)
+        );
 
         const appliedUpdateIndices = new Set<number>();
 
@@ -655,9 +664,23 @@ export class World {
                         spark.pos,
                         spark.colour,
                         spark.direction,
-                        spark.count
+                        spark.count,
+                        spark.kind ?? "spark"
                     );
                     spawnedSparkIndices.add(index);
+                }
+            }
+        };
+
+        const spawnDueAnimations = (elapsedMs: number) => {
+            for (let index = 0; index < animations.length; index++) {
+                if (startedAnimationIndices.has(index)) {
+                    continue;
+                }
+
+                if (animations[index].startTimeMs <= elapsedMs) {
+                    world.animationController.newAnimation(animations[index].playAnimation);
+                    startedAnimationIndices.add(index);
                 }
             }
         };
@@ -684,6 +707,7 @@ export class World {
                 const elapsedMs = Math.max(time, 0);
 
                 spawnDueHitSparks(elapsedMs);
+                spawnDueAnimations(elapsedMs);
 
                 // Kick off the next death once the (unpaused) clock reaches its
                 // start time. Only one death is active at a time; the paused
@@ -723,7 +747,17 @@ export class World {
                     }
                 }
 
-                if (allComplete && !traceFinished) {
+                // Empty-tracer traces (shockwave-only) must still wait for timed
+                // effects to start before completing the message queue.
+                if (tracers.length === 0 && time < timelineEndMs) {
+                    allComplete = false;
+                }
+
+                if (
+                    allComplete &&
+                    startedAnimationIndices.size >= animations.length &&
+                    !traceFinished
+                ) {
                     finish();
                     traceFinished = true;
                 }

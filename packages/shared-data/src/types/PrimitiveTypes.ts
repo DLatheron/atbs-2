@@ -334,14 +334,11 @@ const damageType = ["default", "disorientation"] as const;
 export const DamageType = z.enum(damageType);
 export type DamageType = z.infer<typeof DamageType>;
 
-export const DamageMap = z
-    .partialRecord(UnitType.or(z.literal("default")), z.number().nonnegative())
-    .and(
-        z.object({
-            type: DamageType.default(DamageType.enum.default),
-            default: z.number().nonnegative()
-        })
-    );
+export const DamageMap = z.object({
+    type: DamageType.default(DamageType.enum.default),
+    default: z.number().nonnegative(),
+    human: z.number().nonnegative().optional()
+});
 export type DamageMap = z.infer<typeof DamageMap>;
 
 const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
@@ -667,8 +664,24 @@ export const GasExplosion = z.object({
 export type GasExplosion = z.infer<typeof GasExplosion>;
 
 export const ShockwaveExplosion = z.object({
-    type: z.literal(ExplosionType.enum.shockwave)
-    // TODO: Other properties.
+    type: z.literal(ExplosionType.enum.shockwave),
+    maxRange: JitteredValue,
+    numFragments: JitteredValue,
+    penetration: z.number().nonnegative().default(0),
+    visual: FragmentExplosionVisual,
+    /** Per-ray aim jitter in degrees (same convention as gun spreadAngle). */
+    angleJitter: z.number().nonnegative().default(5),
+    variability: z
+        .object({
+            min: z.number().positive().max(2).default(1),
+            max: z.number().positive().max(2).default(1)
+        })
+        .refine((data) => data.min <= data.max, {
+            message: "Variability 'max' must be greater than or equal to 'min'"
+        })
+        .optional(),
+    damage: DamageMap,
+    animationId: z.string().nonempty().default("shockwave.animation")
 });
 export type ShockwaveExplosion = z.infer<typeof ShockwaveExplosion>;
 
@@ -788,12 +801,16 @@ export const Tracer = z.object({
 });
 export type Tracer = z.infer<typeof Tracer>;
 
+export const HitSparkKind = z.enum(["spark", "disorientation"]);
+export type HitSparkKind = z.infer<typeof HitSparkKind>;
+
 export const HitSpark = z.object({
     pos: IVec2,
     timeMs: z.number().nonnegative(),
     colour: IColour,
     direction: IVec2,
-    count: z.number().int().positive()
+    count: z.number().int().positive(),
+    kind: HitSparkKind.default("spark")
 });
 export type HitSpark = z.infer<typeof HitSpark>;
 

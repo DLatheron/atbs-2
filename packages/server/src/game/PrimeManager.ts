@@ -49,7 +49,10 @@ export class PrimeManager {
         return this._primedBy.get(item.id);
     }
 
-    private _resolveDetonationOrigin(item: Item, primedBy: Unit | undefined): {
+    private _resolveDetonationOrigin(
+        item: Item,
+        primedBy: Unit | undefined
+    ): {
         origin: ReturnType<WorldMap["tileCenterToWorld"]>;
         firingUnit: Unit;
     } {

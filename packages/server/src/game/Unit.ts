@@ -1120,7 +1120,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
             const pendingExplosions = projectiles.flatMap((projectile) => {
                 const { explosion } = projectile.projectileRecipe;
                 const { impact } = projectile;
-                if (!explosion || explosion.type !== "fragment" || !impact) {
+                if (
+                    !explosion ||
+                    (explosion.type !== "fragment" && explosion.type !== "shockwave") ||
+                    !impact
+                ) {
                     return [];
                 }
                 return [{ explosion, origin: impact.pos.clone(), timeOffsetMs: impact.time }];
@@ -1130,6 +1134,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             let combinedTileUpdates = tileUpdates;
             let combinedDeaths = deaths;
             let combinedHitSparks = hitSparks;
+            let combinedAnimations = [] as ExplosionDetonationResult["animations"];
 
             for (const pending of pendingExplosions) {
                 const explosionResult = detonateExplosion({
@@ -1147,6 +1152,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 );
                 combinedDeaths = [...combinedDeaths, ...explosionResult.deaths];
                 combinedHitSparks = [...combinedHitSparks, ...explosionResult.hitSparks];
+                combinedAnimations = [...combinedAnimations, ...explosionResult.animations];
             }
 
             if (showDebugGraphics && debugGraphics) {
@@ -1166,7 +1172,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                         isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                         tileUpdates: combinedTileUpdates,
                         deaths: combinedDeaths,
-                        hitSparks: combinedHitSparks
+                        hitSparks: combinedHitSparks,
+                        animations: combinedAnimations
                     }
                 }
             ]);
@@ -1370,10 +1377,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.inventory.removeItem(itemToThrow);
 
+        const explosionType = itemToThrow.willExplode ? itemToThrow.getExplosion.type : undefined;
         const explodeOnLanding =
             itemToThrow.primed === "immediate" &&
             itemToThrow.willExplode &&
-            itemToThrow.getExplosion.type === "fragment";
+            (explosionType === "fragment" || explosionType === "shockwave");
 
         let explosionResult: ExplosionDetonationResult | null = null;
 
@@ -1430,7 +1438,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
                     tileUpdates,
                     deaths,
-                    hitSparks
+                    hitSparks,
+                    animations: explosionResult?.animations ?? []
                 }
             }
         ]);

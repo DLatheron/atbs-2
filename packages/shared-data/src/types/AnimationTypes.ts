@@ -172,6 +172,16 @@ export const DeathAnimation = z
     .describe("A unit death animation folded into the fire trace timeline");
 export type DeathAnimation = z.infer<typeof DeathAnimation>;
 
+/** A world-positioned animation scheduled on the fire-trace timeline (e.g. shockwave). */
+export const TimedPlayAnimation = z.object({
+    playAnimation: PlayAnimation,
+    startTimeMs: z
+        .number()
+        .nonnegative()
+        .describe("When the animation begins on the fire trace timeline")
+});
+export type TimedPlayAnimation = z.infer<typeof TimedPlayAnimation>;
+
 export function interpolateNumber(fromValue: number, toValue: number, t: number) {
     return fromValue + (toValue - fromValue) * t;
 }
