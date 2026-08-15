@@ -393,7 +393,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             const { materials } = this.furniture;
 
             this.furniture.getRenderList(context).forEach((layerImage, layerIndex) => {
-                if (layerImage.imageId) {
+                if (layerImage.imageId && !layerImage.imageId.startsWith("anim-")) {
                     const originalImageId = layerImage.imageId;
                     const displayImageId = damageCache
                         ? damageCache.getImageIdOverride(originalImageId, this.location)
@@ -415,7 +415,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             const { materials } = unit;
 
             unit.getRenderList(context).forEach((layerImage, layerIndex) => {
-                if (layerImage.imageId) {
+                if (layerImage.imageId && !layerImage.imageId.startsWith("anim-")) {
                     collisionLayers.push({
                         owner: unit,
                         image: imageManager.getImage(layerImage.imageId),

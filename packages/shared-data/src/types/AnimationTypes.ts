@@ -109,6 +109,9 @@ export const AnimationStateDef = z.object({
     rotation: RotationState.or(RotationSequence)
         .describe("The rotation of the animation or its sequence over time")
         .optional(),
+    orbitRadius: ScaleState.or(ScaleSequence)
+        .describe("When set, rotation orbits the sprite around the draw origin without spinning it")
+        .optional(),
     orientation: z
         .enum(Orientation)
         .or(OrientationSequence)
@@ -125,6 +128,7 @@ export const AnimationState = z.object({
     scale: ScaleState,
     opacity: OpacityState,
     rotation: RotationState,
+    orbitRadius: ScaleState,
     orientation: OrientationState,
     frame: FrameState
 });

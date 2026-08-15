@@ -464,6 +464,16 @@ function createMockUnit(
     return unit;
 }
 
+function shockwaveAnimations(result: ExplosionDetonationResult) {
+    return result.animations.filter((animation) => animation.playAnimation.worldPos);
+}
+
+function disorientationOrbitAnimations(result: ExplosionDetonationResult) {
+    return result.animations.filter((animation) =>
+        animation.playAnimation.instanceId.startsWith("anim-disorient-")
+    );
+}
+
 function tracerDirectionFromOrigin(
     tracer: ExplosionDetonationResult["tracers"][number],
     origin: Vec2
@@ -821,7 +831,11 @@ describe("ExplosionSystem shockwave", () => {
         expect(exposed.disorientation).toBeGreaterThan(0);
         expect(sheltered.disorientation).toBe(0);
         expect(result.tracers).toHaveLength(0);
-        expect(result.animations).toHaveLength(1);
+        expect(shockwaveAnimations(result)).toHaveLength(1);
+        expect(disorientationOrbitAnimations(result).length).toBeGreaterThan(0);
+        expect(
+            disorientationOrbitAnimations(result).every((animation) => animation.startTimeMs > 0)
+        ).toBe(true);
         expect(result.hitSparks.length).toBeGreaterThan(0);
         expect(result.hitSparks.every((spark) => spark.kind === "disorientation")).toBe(true);
     });
@@ -873,14 +887,18 @@ describe("ExplosionSystem shockwave", () => {
         });
 
         expect(result.tracers).toHaveLength(0);
-        expect(result.animations).toHaveLength(1);
+        expect(shockwaveAnimations(result)).toHaveLength(1);
 
-        const scale = result.animations[0].playAnimation.recipe.stateDef.scale;
+        const scale = shockwaveAnimations(result)[0].playAnimation.recipe.stateDef.scale;
         expect(Array.isArray(scale)).toBe(true);
         const [, sequence] = scale as [number, { toValue: number }[]];
         expect(sequence[0].toValue).toBe(maxRange * 2);
 
         expect(target.disorientation).toBeGreaterThan(0);
+        expect(disorientationOrbitAnimations(result).length).toBeGreaterThan(0);
+        expect(
+            disorientationOrbitAnimations(result).every((animation) => animation.startTimeMs > 0)
+        ).toBe(true);
         expect(result.hitSparks.length).toBeGreaterThan(0);
         for (const spark of result.hitSparks) {
             expect(spark.kind).toBe("disorientation");

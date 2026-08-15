@@ -14,6 +14,7 @@ import {
     getRpm,
     InterestMask,
     OnTarget,
+    PlayAnimation,
     RenderList,
     RenderMode,
     SceneChildNode,
@@ -55,8 +56,15 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
-import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import {
+    buildDisorientationPlayAnimations,
+    buildUnitDeathAnimation,
+    DISORIENTATION_FADE_MS,
+    disorientationStarCount,
+    unitDisorientAnimId
+} from "../AnimationDefinitions.js";
+import {
+    collectDeferredDisorientationVisuals,
     consumeExplodedItem,
     detonateExplosion,
     type ExplosionDetonationResult
@@ -189,7 +197,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
     private _location: TilePos | null;
     private _orientation: Orientation;
 
+    private static _disorientationVisualDeferDepth = 0;
+
     private _disorientation: number;
+    private _disorientationFadeStarCount: number | null;
+    private _disorientationFadeTimer: ReturnType<typeof setTimeout> | null;
+    private _syncedDisorientationStarCount: number;
+    private _deferredDisorientationHitTimeMs: number | undefined;
 
     private _canSee: Unit[];
     private _overtaking: Overtaking | null;
@@ -223,6 +237,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
             : (overrides.orientation ?? Orientation.CENTER);
         this._side = additionalData.side;
         this._disorientation = 0;
+        this._disorientationFadeStarCount = null;
+        this._disorientationFadeTimer = null;
+        this._syncedDisorientationStarCount = 0;
+        this._deferredDisorientationHitTimeMs = undefined;
         this._materials = recipe.collision.materials.map((materialId) =>
             MaterialManager.GetSingleton().getMaterial(materialId)
         );
@@ -356,8 +374,71 @@ export class Unit extends SceneObject implements VisibilityViewer {
     set disorientation(value: number) {
         value = clamp(value, 0, MAX_DISORIENTATION);
 
-        console.info("Setting disorientation to", value);
+        if (value === this._disorientation) {
+            return;
+        }
+
+        this.logger.debug("Setting disorientation to", value);
         this._disorientation = value;
+        if (!Unit.disorientationVisualsDeferred) {
+            this._syncDisorientationVisual();
+        }
+    }
+
+    static beginDeferredDisorientationVisuals(): void {
+        Unit._disorientationVisualDeferDepth++;
+    }
+
+    static endDeferredDisorientationVisuals(): void {
+        Unit._disorientationVisualDeferDepth = Math.max(
+            0,
+            Unit._disorientationVisualDeferDepth - 1
+        );
+    }
+
+    static get disorientationVisualsDeferred(): boolean {
+        return Unit._disorientationVisualDeferDepth > 0;
+    }
+
+    noteDeferredDisorientationHit(timeMs: number): void {
+        if (
+            this._deferredDisorientationHitTimeMs === undefined ||
+            timeMs < this._deferredDisorientationHitTimeMs
+        ) {
+            this._deferredDisorientationHitTimeMs = timeMs;
+        }
+    }
+
+    takeDeferredDisorientationVisual(): {
+        timeMs: number;
+        playAnimations: PlayAnimation[];
+    } | null {
+        const timeMs = this._deferredDisorientationHitTimeMs;
+        this._deferredDisorientationHitTimeMs = undefined;
+        if (timeMs === undefined) {
+            return null;
+        }
+
+        const newCount = disorientationStarCount(this.disorientation);
+        if (newCount === this._syncedDisorientationStarCount) {
+            return null;
+        }
+
+        this._clearDisorientationFade();
+        this._syncedDisorientationStarCount = newCount;
+        if (newCount <= 0) {
+            return null;
+        }
+
+        return {
+            timeMs,
+            playAnimations: buildDisorientationPlayAnimations({
+                unitId: this.id,
+                starCount: newCount,
+                tileSize: this._game?.map?.tileSize ?? 100,
+                fade: false
+            })
+        };
     }
 
     get isAlive(): boolean {
@@ -555,7 +636,100 @@ export class Unit extends SceneObject implements VisibilityViewer {
             visibilityFilter: true
         };
 
-        return super.getRenderList(unitContext);
+        const renderList = super.getRenderList(unitContext);
+
+        if (context.renderMode === RenderMode.enum.UI_MODE) {
+            return renderList;
+        }
+
+        const starCount = this._visualDisorientationStarCount;
+        for (let index = 0; index < starCount; index++) {
+            renderList.push({ imageId: unitDisorientAnimId(this.id, index) });
+        }
+
+        return renderList;
+    }
+
+    private get _visualDisorientationStarCount(): number {
+        return this._disorientationFadeStarCount ?? disorientationStarCount(this._disorientation);
+    }
+
+    private _clearDisorientationFade(): void {
+        if (this._disorientationFadeTimer) {
+            clearTimeout(this._disorientationFadeTimer);
+            this._disorientationFadeTimer = null;
+        }
+        this._disorientationFadeStarCount = null;
+    }
+
+    private _syncDisorientationVisual(): void {
+        const newCount = disorientationStarCount(this._disorientation);
+        const previousVisual =
+            this._disorientationFadeStarCount ?? this._syncedDisorientationStarCount;
+
+        if (newCount > 0) {
+            this._clearDisorientationFade();
+            if (newCount === this._syncedDisorientationStarCount) {
+                return;
+            }
+
+            this._syncedDisorientationStarCount = newCount;
+            this._broadcastDisorientationAnimations(false);
+            this._broadcastDisorientationTileUpdate();
+            return;
+        }
+
+        if (previousVisual === 0) {
+            return;
+        }
+
+        if (this._disorientationFadeStarCount !== null) {
+            return;
+        }
+
+        this._disorientationFadeStarCount = previousVisual;
+        this._syncedDisorientationStarCount = 0;
+        this._broadcastDisorientationAnimations(true);
+
+        this._disorientationFadeTimer = setTimeout(() => {
+            this._disorientationFadeStarCount = null;
+            this._disorientationFadeTimer = null;
+            this._broadcastDisorientationTileUpdate();
+        }, DISORIENTATION_FADE_MS);
+        this._disorientationFadeTimer.unref?.();
+    }
+
+    private _broadcastDisorientationAnimations(fade: boolean): void {
+        const starCount = fade
+            ? this._disorientationFadeStarCount
+            : disorientationStarCount(this._disorientation);
+        if (!starCount) {
+            return;
+        }
+
+        const tileSize = this.game.map.tileSize;
+        const payload = buildDisorientationPlayAnimations({
+            unitId: this.id,
+            starCount,
+            tileSize,
+            fade
+        });
+
+        this.game.broadcastMessage({ type: "server:animations:play", payload });
+    }
+
+    private _broadcastDisorientationTileUpdate(): void {
+        if (!this._location) {
+            return;
+        }
+
+        this.messageRouter.sendIfVisible(
+            {
+                type: "server:map:update",
+                payload: [this.map.getTile(this.mapLocation).generateTileUpdate()]
+            },
+            this.mapLocation
+        );
     }
 
     private _hasSufficientActionPoints(aptCost: number): boolean {
@@ -1131,10 +1305,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
             });
 
             const tracers = projectiles.map((projectile) => projectile.getTracer());
-            let combinedTileUpdates = tileUpdates;
+            const flightDisorientation = collectDeferredDisorientationVisuals(this.game);
+            let combinedTileUpdates = [...tileUpdates, ...flightDisorientation.tileUpdates].sort(
+                (a, b) => a.timeMs - b.timeMs
+            );
             let combinedDeaths = deaths;
             let combinedHitSparks = hitSparks;
-            let combinedAnimations = [] as ExplosionDetonationResult["animations"];
+            let combinedAnimations = [...flightDisorientation.animations];
 
             for (const pending of pendingExplosions) {
                 const explosionResult = detonateExplosion({
@@ -1347,6 +1524,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
+        const flightDisorientation = collectDeferredDisorientationVisuals(this.game);
+        tileUpdates.push(...flightDisorientation.tileUpdates);
+
         const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
 
         // ProcessProjectiles commits each hit into `segments` before stop/ricochet.
@@ -1439,7 +1619,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     tileUpdates,
                     deaths,
                     hitSparks,
-                    animations: explosionResult?.animations ?? []
+                    animations: [
+                        ...flightDisorientation.animations,
+                        ...(explosionResult?.animations ?? [])
+                    ]
                 }
             }
         ]);

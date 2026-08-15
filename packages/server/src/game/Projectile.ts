@@ -11,7 +11,7 @@ import {
 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
-import { isUnit, type Unit } from "./Unit.js";
+import { isUnit, Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
 import { DamageType, HitSpark, Tracer, UnitType } from "@atbs/shared-data";
@@ -407,6 +407,35 @@ export class Projectile implements IRayCast {
             timeMs: number
         ) => void
     ): HitSpark[] {
+        Unit.beginDeferredDisorientationVisuals();
+        try {
+            return Projectile._processProjectiles(
+                projectiles,
+                map,
+                debugGraphics,
+                damageCache,
+                furnitureDamageSystem,
+                onMaterialPixel
+            );
+        } finally {
+            Unit.endDeferredDisorientationVisuals();
+        }
+    }
+
+    private static _processProjectiles(
+        projectiles: Projectile[],
+        map: WorldMap,
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        furnitureDamageSystem?: FurnitureDamageSystem,
+        onMaterialPixel?: (
+            projectile: Projectile,
+            tile: Tile,
+            samplePos: Vec2,
+            sample: CollisionSample,
+            timeMs: number
+        ) => void
+    ): HitSpark[] {
         const imageManager = ImageManager.GetSingleton();
         const hitSparks: HitSpark[] = [];
 
@@ -477,6 +506,7 @@ export class Projectile implements IRayCast {
                     const died = owner.inflictDamage(pos, projectile);
                     if (isDisorientation) {
                         sparkDamageAmount = owner.disorientation - previousDisorientation;
+                        owner.noteDeferredDisorientationHit(atTime);
                     } else {
                         sparkDamageAmount = previousConstitution - owner.constitution;
                     }

@@ -65,6 +65,8 @@ import { HitSparkParticles } from "./HitSparkParticles.js";
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
 
+type DeferredTileAnimation = { imageId: string; canvasPos: Vec2; sizeScale: number };
+
 export interface RenderPluginUpdateProps {
     time: number;
     frameDelta: number;
@@ -1012,7 +1014,14 @@ export class World {
             this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffffff" : "#001000ff";
         offscreenContexts[0].fillRect(0, 0, width, height);
 
-        this.renderTerrainAndFurniture(offscreenContexts[0], tileSize, scale, offset);
+        const seenDeferredAnimations: DeferredTileAnimation[] = [];
+        this.renderTerrainAndFurniture(
+            offscreenContexts[0],
+            tileSize,
+            scale,
+            offset,
+            seenDeferredAnimations
+        );
 
         // TODO: Render tracers...
         const renderProps: RenderPluginRenderProps = {
@@ -1032,6 +1041,9 @@ export class World {
 
         this.renderSight(renderProps.context, time);
 
+        // Tile-anchored animations after the full map (and overlays) so later
+        // tiles cannot clip them — the same layering as worldPos VFX (shockwave).
+        this._drawDeferredAnimations(offscreenContexts[0], seenDeferredAnimations);
         this._animationController.render({
             camera: this.camera,
             context: renderProps.context
@@ -1048,7 +1060,15 @@ export class World {
         offscreenContexts[1].fillRect(0, 0, width, height);
         offscreenContexts[1].globalCompositeOperation = "source-atop";
 
-        this.renderTerrainAndFurniture(offscreenContexts[1], tileSize, scale, offset);
+        const unseenDeferredAnimations: DeferredTileAnimation[] = [];
+        this.renderTerrainAndFurniture(
+            offscreenContexts[1],
+            tileSize,
+            scale,
+            offset,
+            unseenDeferredAnimations
+        );
+        this._drawDeferredAnimations(offscreenContexts[1], unseenDeferredAnimations);
 
         context.globalCompositeOperation = "source-over";
         context.drawImage(offscreenCanvases[1], 0, 0);
@@ -1243,7 +1263,8 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         tileSize: number,
         scale: Vec2,
-        offset: Vec2
+        offset: Vec2,
+        deferredAnimations: DeferredTileAnimation[] = []
     ) {
         this.iterateViewportTiles((renderList, tilePos, worldPos) => {
             this.drawRenderList({
@@ -1253,9 +1274,19 @@ export class World {
                 tilePos,
                 tileSize,
                 scale,
-                offset
+                offset,
+                deferredAnimations
             });
         });
+    }
+
+    private _drawDeferredAnimations(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        deferredAnimations: DeferredTileAnimation[]
+    ) {
+        for (const { imageId, canvasPos, sizeScale } of deferredAnimations) {
+            this._animationController.renderAnimation(context, imageId, canvasPos, sizeScale);
+        }
     }
 
     drawRenderList({
@@ -1265,7 +1296,8 @@ export class World {
         tilePos,
         tileSize,
         scale,
-        offset
+        offset,
+        deferredAnimations
     }: {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
@@ -1274,6 +1306,7 @@ export class World {
         tileSize: number;
         scale: Vec2;
         offset: Vec2;
+        deferredAnimations?: DeferredTileAnimation[];
     }): void {
         renderList.forEach(
             ({
@@ -1284,12 +1317,21 @@ export class World {
             }) => {
                 if (imageId.startsWith("anim-")) {
                     const halfTile = (tileSize * scale.x) / 2;
-                    this._animationController.renderAnimation(
-                        context,
+                    const anim = {
                         imageId,
-                        canvasPos.add({ x: halfTile, y: halfTile }),
-                        scale.x
-                    );
+                        canvasPos: canvasPos.add({ x: halfTile, y: halfTile }),
+                        sizeScale: scale.x
+                    };
+                    if (deferredAnimations) {
+                        deferredAnimations.push(anim);
+                    } else {
+                        this._animationController.renderAnimation(
+                            context,
+                            anim.imageId,
+                            anim.canvasPos,
+                            anim.sizeScale
+                        );
+                    }
                 } else {
                     this.imageCache.requestImage(imageId);
                     if (!this.imageCache.isLoaded(imageId)) {

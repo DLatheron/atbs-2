@@ -727,20 +727,17 @@ export function DrawVfx(
     worldCenterPos: Vec2,
     size: number,
     alpha: number,
-    rotationInDegrees = 0
+    rotationInDegrees = 0,
+    orbitRadius = 0
 ): void {
     const centerCanvasPos = camera.worldToCanvas(worldCenterPos);
+    DrawVfxToCanvas(context, image, centerCanvasPos, size, alpha, rotationInDegrees, orbitRadius);
+}
 
+/** Clockwise from the top: 0° is above the origin, 90° is to the right. */
+export function orbitalCanvasOffset(rotationInDegrees: number, radius: number): Vec2 {
     const angleInRadians = degreesToRadians(rotationInDegrees);
-    const halfSize = size / 2;
-
-    context.globalAlpha = alpha;
-    context.translate(centerCanvasPos.x, centerCanvasPos.y);
-    context.rotate(angleInRadians);
-    context.drawImage(image, -halfSize, -halfSize, size, size);
-    context.rotate(-angleInRadians);
-    context.translate(-centerCanvasPos.x, -centerCanvasPos.y);
-    context.globalAlpha = 1;
+    return new Vec2(Math.sin(angleInRadians) * radius, -Math.cos(angleInRadians) * radius);
 }
 
 export function DrawVfxToCanvas(
@@ -749,19 +746,25 @@ export function DrawVfxToCanvas(
     canvasPos: Vec2,
     size: number,
     alpha: number,
-    rotationInDegrees = 0
+    rotationInDegrees = 0,
+    orbitRadius = 0
 ): void {
-    const angleInRadians = degreesToRadians(rotationInDegrees);
+    const drawPos =
+        orbitRadius > 0
+            ? canvasPos.add(orbitalCanvasOffset(rotationInDegrees, orbitRadius))
+            : canvasPos;
+    const imageRotation = orbitRadius > 0 ? 0 : rotationInDegrees;
+    const angleInRadians = degreesToRadians(imageRotation);
     const halfSize = size / 2;
 
     // Rotate about the centre of the drawn image: translate to the centre,
     // rotate, then draw the image offset by half its size in each axis.
     context.globalAlpha = alpha;
-    context.translate(canvasPos.x, canvasPos.y);
+    context.translate(drawPos.x, drawPos.y);
     context.rotate(angleInRadians);
     context.drawImage(image, -halfSize, -halfSize, size, size);
     context.rotate(-angleInRadians);
-    context.translate(-canvasPos.x, -canvasPos.y);
+    context.translate(-drawPos.x, -drawPos.y);
     context.globalAlpha = 1;
 }
 

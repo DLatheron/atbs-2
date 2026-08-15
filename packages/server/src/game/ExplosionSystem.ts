@@ -30,6 +30,41 @@ export interface ExplosionDetonationResult {
     animations: TimedPlayAnimation[];
 }
 
+export function collectDeferredDisorientationVisuals(game: Game): {
+    tileUpdates: TimedTileUpdate[];
+    animations: TimedPlayAnimation[];
+} {
+    const tileUpdates: TimedTileUpdate[] = [];
+    const animations: TimedPlayAnimation[] = [];
+
+    for (const side of game.sides ?? []) {
+        for (const unit of side.units ?? []) {
+            const deferred = unit.takeDeferredDisorientationVisual?.();
+            if (!deferred) {
+                continue;
+            }
+
+            animations.push(
+                ...deferred.playAnimations.map((playAnimation) => ({
+                    playAnimation,
+                    startTimeMs: deferred.timeMs
+                }))
+            );
+
+            const location = unit.mapLocation ?? unit.location;
+            if (!location || !game.map) {
+                continue;
+            }
+
+            tileUpdates.push(game.map.getTile(location).generateTimedTileUpdate(deferred.timeMs));
+        }
+    }
+
+    tileUpdates.sort((a, b) => a.timeMs - b.timeMs);
+    animations.sort((a, b) => a.startTimeMs - b.startTimeMs);
+    return { tileUpdates, animations };
+}
+
 export interface DetonateExplosionProps {
     game: Game;
     origin: Vec2;
@@ -297,13 +332,17 @@ function detonateFragmentExplosion(props: DetonateExplosionProps): ExplosionDeto
         ? projectiles.map((projectile) => projectile.getTracer())
         : [];
 
+    const disorientationVisuals = collectDeferredDisorientationVisuals(game);
+
     return offsetTimedTracePayload(
         {
             tracers,
-            tileUpdates,
+            tileUpdates: [...tileUpdates, ...disorientationVisuals.tileUpdates].sort(
+                (a, b) => a.timeMs - b.timeMs
+            ),
             deaths,
             hitSparks,
-            animations: []
+            animations: disorientationVisuals.animations
         },
         props.timeOffsetMs ?? 0
     );
@@ -342,13 +381,15 @@ function detonateShockwaveExplosion(props: DetonateExplosionProps): ExplosionDet
         ? projectiles.map((projectile) => projectile.getTracer())
         : [];
 
+    const disorientationVisuals = collectDeferredDisorientationVisuals(game);
+
     return offsetTimedTracePayload(
         {
             tracers,
-            tileUpdates: [],
+            tileUpdates: disorientationVisuals.tileUpdates,
             deaths: [],
             hitSparks: toDisorientationParticles(hitSparks),
-            animations: [animation]
+            animations: [animation, ...disorientationVisuals.animations]
         },
         props.timeOffsetMs ?? 0
     );
@@ -370,7 +411,13 @@ export function detonateExplosion(props: DetonateExplosionProps): ExplosionDeton
         case "gas":
         case "smoke":
             // TODO: Implement gas / smoke explosion types.
-            return { tracers: [], tileUpdates: [], deaths: [], hitSparks: [], animations: [] };
+            return {
+                tracers: [],
+                tileUpdates: [],
+                deaths: [],
+                hitSparks: [],
+                animations: []
+            };
 
         default: {
             const _exhaustive: never = props.explosion;

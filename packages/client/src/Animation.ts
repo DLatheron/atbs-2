@@ -199,6 +199,14 @@ export class Animation extends SceneObject {
                       interpolateNumber
                   )
                 : 0,
+            orbitRadius: this._recipe.stateDef.orbitRadius
+                ? this.evaluateStateValue<ScaleState, ScaleSequence>(
+                      "orbitRadius",
+                      this._recipe.stateDef.orbitRadius,
+                      elapsedTimeIntoAnimation,
+                      interpolateNumber
+                  )
+                : 0,
             orientation: this._recipe.stateDef.orientation
                 ? this.evaluateStateValue<OrientationState, OrientationSequence>(
                       "orientation",
@@ -247,7 +255,7 @@ export class Animation extends SceneObject {
         worldPos: Vec2;
         imageCache: ImageCache;
     }) {
-        const { scale, opacity, rotation, orientation, frame } = this._state;
+        const { scale, opacity, rotation, orientation, frame, orbitRadius } = this._state;
 
         const renderList = this.getRenderList({
             renderMode: RenderMode.enum.MAP_MODE,
@@ -269,7 +277,8 @@ export class Animation extends SceneObject {
                 worldPos,
                 camera.worldLengthToCanvas(scale),
                 renderable.opacity ?? opacity,
-                rotation
+                rotation,
+                camera.worldLengthToCanvas(orbitRadius)
             );
         }
     }
@@ -285,7 +294,7 @@ export class Animation extends SceneObject {
         imageCache: ImageCache;
         sizeScale?: number;
     }) {
-        const { scale, opacity, rotation, orientation, frame } = this._state;
+        const { scale, opacity, rotation, orientation, frame, orbitRadius } = this._state;
 
         const renderList = this.getRenderList({
             renderMode: RenderMode.enum.MAP_MODE,
@@ -306,7 +315,8 @@ export class Animation extends SceneObject {
                 canvasPos,
                 scale * sizeScale,
                 renderable.opacity ?? opacity,
-                rotation
+                rotation,
+                orbitRadius * sizeScale
             );
         }
     }

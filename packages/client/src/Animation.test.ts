@@ -21,6 +21,7 @@ describe("Animation", () => {
             scale: 0,
             opacity: 0,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
             frame: 0
         });
@@ -34,6 +35,7 @@ describe("Animation", () => {
             scale: 100,
             opacity: 1,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
             frame: 0
         });
@@ -47,6 +49,7 @@ describe("Animation", () => {
             scale: 0,
             opacity: 0,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
             frame: 0
         });
@@ -60,6 +63,7 @@ describe("Animation", () => {
             scale: 100,
             opacity: 1,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
             frame: 0
         });
@@ -73,6 +77,7 @@ describe("Animation", () => {
             scale: 50,
             opacity: 0.5,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
             frame: 0
         });

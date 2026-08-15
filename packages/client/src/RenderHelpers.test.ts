@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
-import { DrawProjectile } from "./RenderHelpers";
+import { DrawProjectile, orbitalCanvasOffset } from "./RenderHelpers";
 import type { Tracer } from "@atbs/shared-data";
 
 function makeTracer(overrides: Partial<Tracer> & { startTimeMs?: number } = {}): Tracer {
@@ -88,5 +88,17 @@ describe("DrawProjectile", () => {
         expect(alphas.length).toBeGreaterThan(0);
         // Pre-fix, absolute-time falloff made every alpha 0 at this clock time.
         expect(Math.max(...alphas)).toBeGreaterThan(0.9);
+    });
+});
+
+describe("orbitalCanvasOffset", () => {
+    it("places 0° at the top and proceeds clockwise", () => {
+        expect(orbitalCanvasOffset(0, 10)).toEqual({ x: 0, y: -10 });
+        expect(orbitalCanvasOffset(90, 10).x).toBeCloseTo(10);
+        expect(orbitalCanvasOffset(90, 10).y).toBeCloseTo(0);
+        expect(orbitalCanvasOffset(180, 10).x).toBeCloseTo(0);
+        expect(orbitalCanvasOffset(180, 10).y).toBeCloseTo(10);
+        expect(orbitalCanvasOffset(270, 10).x).toBeCloseTo(-10);
+        expect(orbitalCanvasOffset(270, 10).y).toBeCloseTo(0);
     });
 });
