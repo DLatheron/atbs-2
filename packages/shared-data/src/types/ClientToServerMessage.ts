@@ -2,6 +2,7 @@ import z from "zod";
 import {
     ClientId,
     FireDetails,
+    FireMode,
     FireSelector,
     ItemId,
     Prime,
@@ -112,6 +113,20 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
             unitId: UnitId,
             weaponId: ItemId,
             fireSelector: FireSelector
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:fire:mode"),
+        payload: z.object({
+            unitId: UnitId,
+            fireMode: FireMode
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:weapon:index"),
+        payload: z.object({
+            unitId: UnitId,
+            weaponIndex: z.int().nonnegative()
         })
     }),
     z.object({

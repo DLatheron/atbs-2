@@ -120,6 +120,14 @@ export class Aabb {
         );
     }
 
+    intersectsSegment(a: IVec2, b: IVec2): boolean {
+        if (this.isPointInside(a) || this.isPointInside(b)) {
+            return true;
+        }
+
+        return this.intersectRay(new Vec2(a), new Vec2(b)) !== undefined;
+    }
+
     intersectionWith(otherAabb: Aabb) {
         const newAabb = new Aabb(this);
 

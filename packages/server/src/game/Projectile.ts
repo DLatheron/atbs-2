@@ -1,5 +1,6 @@
 import {
     clamp,
+    clipPathAfterLeavingWorld,
     Colour,
     DebugGraphic,
     DebugGraphicType,
@@ -308,12 +309,6 @@ export class Projectile implements IRayCast {
 
     getTracer(): Tracer {
         const path = this._buildCompletePath();
-        const lastSegment = path[path.length - 1];
-
-        Projectile.Logger.info(`Commit end segment ${lastSegment.time}:${lastSegment.pos}`);
-        this.commitSegmentTo(lastSegment.time, new Vec2(lastSegment.pos));
-
-        const { velocity } = this;
         const {
             headColour,
             headRadiusInPixels,
@@ -321,6 +316,17 @@ export class Projectile implements IRayCast {
             trailLengthInPixels,
             rangeFalloffPower
         } = this._props.projectileRecipe.visual;
+        const clippedPath = clipPathAfterLeavingWorld(
+            path,
+            this.map.worldBounds,
+            trailLengthInPixels
+        );
+        const lastSegment = clippedPath[clippedPath.length - 1];
+
+        Projectile.Logger.info(`Commit end segment ${lastSegment.time}:${lastSegment.pos}`);
+        this.commitSegmentTo(lastSegment.time, new Vec2(lastSegment.pos));
+
+        const { velocity } = this;
         const trailLengthInMs = (trailLengthInPixels / velocity) * 1000;
         const maxRangeInMs = (this.maxRange / velocity) * 1000;
 

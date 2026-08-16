@@ -5,6 +5,7 @@ import {
     ClientMap,
     ErrorType,
     FireDetails,
+    FireMode,
     FireModeItemSummary,
     FireSelector,
     ItemId,
@@ -122,7 +123,7 @@ export function useActionPage() {
 
                 setUnitWeapon(payload);
                 world.unitWeapon = payload;
-                world.unitWeaponIndex = 0;
+                world.throwing = false;
                 if (payload) {
                     setSidePanelMode(MapMode.enum["fire-mode"]);
                     world.mapMode = MapMode.enum["fire-mode"];
@@ -385,6 +386,36 @@ export function useActionPage() {
         [sendMessage, unit?.id]
     );
 
+    const onChangeFireMode = useCallback(
+        (fireMode: FireMode) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:fire:mode",
+                    payload: {
+                        unitId: unit.id,
+                        fireMode
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onChangeWeaponIndex = useCallback(
+        (weaponIndex: number) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:weapon:index",
+                    payload: {
+                        unitId: unit.id,
+                        weaponIndex
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
     const onFire = useCallback(
         (details: FireDetails) => {
             if (disabled) {
@@ -527,6 +558,8 @@ export function useActionPage() {
         onMove,
         onRotateTo,
         onChangeFireSelector,
+        onChangeFireMode,
+        onChangeWeaponIndex,
         onEndMovement,
         onEndTurn,
         onEndError,

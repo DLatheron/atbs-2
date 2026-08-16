@@ -1,4 +1,5 @@
 import {
+    FireMode,
     FireModeEx,
     FireModeItemSummary,
     FireSelector,
@@ -26,7 +27,6 @@ import { FireModesComponent } from "../../FireModes";
 import { useKeyboard, useWorld } from "../../../hooks";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OnTargetComponent } from "../../OnTarget";
-import { getModeHelper, isModeAvailable } from "../../../helpers/fireModeHelpers";
 import { DisorientedComponent } from "../../Disoriented/Disoriented";
 import { UnitsSeenComponent } from "../../UnitsSeen";
 
@@ -40,6 +40,8 @@ export interface FireModePanelProps {
 
     onRotateTo: (orientation: Orientation) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
+    onChangeFireMode: (fireMode: FireMode) => void;
+    onChangeWeaponIndex: (weaponIndex: number) => void;
     onPrime: (prime: Prime) => void;
     onEndFireMode: () => void;
 
@@ -56,35 +58,43 @@ export function FireModePanel({
 
     onRotateTo,
     onChangeFireSelector,
+    onChangeFireMode,
+    onChangeWeaponIndex,
     onPrime,
     onEndFireMode,
     sx
 }: FireModePanelProps) {
-    const initialWeaponIndex = 0;
-    const [weaponIndex, setWeaponIndex] = useState(initialWeaponIndex);
+    const weaponIndex = unitWeapon?.weaponIndex ?? 0;
 
-    const weapon = unitWeapon?.weapons?.[weaponIndex] || null;
-
-    const [fireModeEx, setFireModeEx] = useState<FireModeEx>(FireModeEx.enum.none);
+    const [throwing, setThrowing] = useState(false);
     const { world } = useWorld();
 
     useEffect(() => {
-        if (unit && weapon && !isModeAvailable(fireModeEx, unit, weapon)) {
-            const newMode = getModeHelper(unit, weapon);
-            setFireModeEx(newMode);
-            world.fireModeEx = newMode;
-        } else {
-            setFireModeEx(FireModeEx.enum.throw);
-            world.fireModeEx = FireModeEx.enum.throw;
-        }
-    }, [fireModeEx, unit, weapon, world]);
+        setThrowing(false);
+        world.throwing = false;
+    }, [unitWeapon?.id, world]);
+
+    const fireModeEx: FireModeEx | undefined = throwing
+        ? FireModeEx.enum.throw
+        : unitWeapon?.fireModeEx;
 
     const onSetFireModeEx = useCallback(
-        (fireModeEx: FireModeEx) => {
-            setFireModeEx(fireModeEx);
-            world.fireModeEx = fireModeEx;
+        (nextFireModeEx: FireModeEx | null) => {
+            if (!nextFireModeEx) {
+                return;
+            }
+
+            if (nextFireModeEx === FireModeEx.enum.throw) {
+                setThrowing(true);
+                world.throwing = true;
+                return;
+            }
+
+            setThrowing(false);
+            world.throwing = false;
+            onChangeFireMode(nextFireModeEx);
         },
-        [world]
+        [onChangeFireMode, world]
     );
 
     const keyMap = useMemo(
@@ -97,9 +107,9 @@ export function FireModePanel({
             KeyP: () => unit && onPrime("immediate"),
             KeyS: () => unit && onPrime("safe"),
 
-            Digit1: () => unitWeapon && unitWeapon.weapons?.length > 0 && setWeaponIndex(0),
-            Digit2: () => unitWeapon && unitWeapon.weapons?.length > 1 && setWeaponIndex(1),
-            Digit3: () => unitWeapon && unitWeapon.weapons?.length > 2 && setWeaponIndex(2),
+            Digit1: () => unitWeapon && unitWeapon.weapons?.length > 0 && onChangeWeaponIndex(0),
+            Digit2: () => unitWeapon && unitWeapon.weapons?.length > 1 && onChangeWeaponIndex(1),
+            Digit3: () => unitWeapon && unitWeapon.weapons?.length > 2 && onChangeWeaponIndex(2),
 
             Digit5: () =>
                 unitWeapon &&
@@ -126,8 +136,9 @@ export function FireModePanel({
             unitWeapon,
             weaponIndex,
             onChangeFireSelector,
+            onChangeWeaponIndex,
             onSetFireModeEx,
-            setWeaponIndex
+            onPrime
         ]
     );
 
@@ -229,12 +240,12 @@ export function FireModePanel({
                     unit={unit}
                     unitWeapon={unitWeapon}
                     weaponIndex={weaponIndex}
-                    setWeaponIndex={setWeaponIndex}
-                    fireModeEx={fireModeEx}
+                    fireModeEx={fireModeEx ?? unitWeapon.fireModeEx}
                     setFireModeEx={onSetFireModeEx}
                     disabled={disabled}
                     onPrime={onPrime}
                     onChangeFireSelector={onChangeFireSelector}
+                    onChangeWeaponIndex={onChangeWeaponIndex}
                 />
             </Stack>
             <Stack spacing={1} sx={{ gridArea: "bottom-bar", px: 1, pb: 1 }}>

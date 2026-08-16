@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { Vec2 } from "@atbs/maths";
+import { Aabb, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
 import { DrawProjectile, orbitalCanvasOffset } from "./RenderHelpers";
 import type { Tracer } from "@atbs/shared-data";
@@ -23,9 +23,12 @@ function makeTracer(overrides: Partial<Tracer> & { startTimeMs?: number } = {}):
     };
 }
 
-function makeCamera(): Camera2d {
+function makeCamera(worldBounds?: Aabb): Camera2d {
     const camera = new Camera2d();
     camera.viewportDimensions = new Vec2(800, 600);
+    if (worldBounds) {
+        camera.worldBounds = worldBounds;
+    }
     return camera;
 }
 
@@ -88,6 +91,38 @@ describe("DrawProjectile", () => {
         expect(alphas.length).toBeGreaterThan(0);
         // Pre-fix, absolute-time falloff made every alpha 0 at this clock time.
         expect(Math.max(...alphas)).toBeGreaterThan(0.9);
+    });
+
+    it("is complete once the head and full tail are outside world bounds", () => {
+        const { context } = createMockContext();
+        const camera = makeCamera(new Aabb(0, 0, 200, 200));
+        const tracer = makeTracer({
+            segments: [
+                { pos: { x: 50, y: 50 }, time: 0 },
+                { pos: { x: 5000, y: 50 }, time: 10000 }
+            ],
+            trailLengthInMs: 40,
+            maxRangeInMs: 10000
+        });
+
+        // Head at x≈223, tail at x≈203 — both past the right edge, trail does not cut the map.
+        expect(DrawProjectile(camera, context, 0, 350, tracer)).toBe(true);
+    });
+
+    it("is not complete while the tail still intersects the world", () => {
+        const { context } = createMockContext();
+        const camera = makeCamera(new Aabb(0, 0, 200, 200));
+        const tracer = makeTracer({
+            segments: [
+                { pos: { x: 50, y: 50 }, time: 0 },
+                { pos: { x: 5000, y: 50 }, time: 10000 }
+            ],
+            trailLengthInMs: 40,
+            maxRangeInMs: 10000
+        });
+
+        // Head just past the edge, tail still on the map.
+        expect(DrawProjectile(camera, context, 0, 320, tracer)).toBe(false);
     });
 });
 

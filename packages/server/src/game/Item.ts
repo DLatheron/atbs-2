@@ -17,7 +17,9 @@ import {
     FireType,
     SceneObject,
     SceneContext,
-    Prime
+    Prime,
+    FireModeEx,
+    FireModeDetail
 } from "@atbs/shared-data";
 import { clamp, degreesToRadians, TilePos, Vec2 } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
@@ -437,41 +439,34 @@ export class Item extends SceneObject {
         }
 
         const fireModes = cloneDeep(this._recipe.fireModes);
+        const { actionPoints } = unit;
 
-        if (FireSelector.enum.single in fireModes) {
-            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
-            const { fireModeDetails } = fireModes[FireSelector.enum.single]!;
-
+        const applyUnitFireModeDetails = (fireModeDetails: Record<FireMode, FireModeDetail>) => {
             fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.aimed].accuracy
             );
             fireModeDetails[FireMode.enum.snapshot].accuracy = unit.calcWeaponAccuracy(
                 fireModeDetails[FireMode.enum.snapshot].accuracy
             );
+            fireModeDetails[FireMode.enum.aimed].available =
+                actionPoints >= fireModeDetails[FireMode.enum.aimed].actionPoints;
+            fireModeDetails[FireMode.enum.snapshot].available =
+                actionPoints >= fireModeDetails[FireMode.enum.snapshot].actionPoints;
+        };
+
+        if (FireSelector.enum.single in fireModes) {
+            // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
+            applyUnitFireModeDetails(fireModes[FireSelector.enum.single]!.fireModeDetails);
         }
 
         if (FireSelector.enum.burst in fireModes) {
             // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
-            const { fireModeDetails } = fireModes[FireSelector.enum.burst]!;
-
-            fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
-                fireModeDetails[FireMode.enum.aimed].accuracy
-            );
-            fireModeDetails[FireMode.enum.snapshot].accuracy = unit.calcWeaponAccuracy(
-                fireModeDetails[FireMode.enum.snapshot].accuracy
-            );
+            applyUnitFireModeDetails(fireModes[FireSelector.enum.burst]!.fireModeDetails);
         }
 
         if (FireSelector.enum.auto in fireModes) {
             // TODO: I don't like the '!', but how do I make this property not-required as a key AND not set to an undefined value?
-            const { fireModeDetails } = fireModes[FireSelector.enum.auto]!;
-
-            fireModeDetails[FireMode.enum.aimed].accuracy = unit.calcWeaponAccuracy(
-                fireModeDetails[FireMode.enum.aimed].accuracy
-            );
-            fireModeDetails[FireMode.enum.snapshot].accuracy = unit.calcWeaponAccuracy(
-                fireModeDetails[FireMode.enum.snapshot].accuracy
-            );
+            applyUnitFireModeDetails(fireModes[FireSelector.enum.auto]!.fireModeDetails);
         }
 
         // console.info({ id: this.id, fireModes: this._recipe.fireModes });
@@ -518,57 +513,67 @@ export class Item extends SceneObject {
     }
 
     getFireModeItemSummary(unit: Unit): FireModeItemSummary {
+        const fireModeEx = this.canFire ? unit.fireMode : FireModeEx.enum.throw;
+
         if (this.type === ItemType.enum.gun) {
             const { loadedMagazine } = this;
             const { loadedRound } = this;
-
-            return {
-                ...this.getItemSummary(unit),
-                weapons: [
-                    {
-                        id: this.id,
-                        name: this.name,
-                        shortName: this.shortName,
-                        description: this.description,
-                        capacity: (loadedMagazine ?? this).capacity,
-                        maxCapacity: (loadedMagazine ?? this).maxCapacity,
-                        sight: this.sight,
-                        maxRange: loadedRound?.maxRange,
-                        fireSelector: this.fireSelector,
-                        fireModes: this.getFireModes(unit),
-                        loadedRound: loadedRound?.name,
-                        uiImage: this.getRenderList({
-                            renderMode: RenderMode.enum.UI_MODE,
-                            states: []
-                        })
-                    }
-                ]
-            };
-        }
-
-        return {
-            ...this.getItemSummary(unit),
-            weapons: this.getWeapons().map((weapon) => {
-                const { loadedMagazine } = weapon;
-                const { loadedRound } = weapon;
-
-                return {
-                    id: weapon.id,
-                    name: weapon.name,
-                    shortName: weapon.shortName,
-                    description: weapon.description,
-                    capacity: (loadedMagazine ?? weapon).capacity,
-                    maxCapacity: (loadedMagazine ?? weapon).maxCapacity,
-                    fireSelector: weapon.fireSelector,
-                    fireModes: weapon.getFireModes(unit),
+            const weapons = [
+                {
+                    id: this.id,
+                    name: this.name,
+                    shortName: this.shortName,
+                    description: this.description,
+                    capacity: (loadedMagazine ?? this).capacity,
+                    maxCapacity: (loadedMagazine ?? this).maxCapacity,
+                    sight: this.sight,
+                    maxRange: loadedRound?.maxRange,
+                    fireSelector: this.fireSelector,
+                    fireModes: this.getFireModes(unit),
                     loadedRound: loadedRound?.name,
-                    sight: weapon.sight,
-                    uiImage: weapon.getRenderList({
+                    uiImage: this.getRenderList({
                         renderMode: RenderMode.enum.UI_MODE,
                         states: []
                     })
-                };
-            })
+                }
+            ];
+
+            return {
+                ...this.getItemSummary(unit),
+                weapons,
+                fireModeEx,
+                weaponIndex: Math.min(unit.inventory.weaponIndex, weapons.length - 1)
+            };
+        }
+
+        const weapons = this.getWeapons().map((weapon) => {
+            const { loadedMagazine } = weapon;
+            const { loadedRound } = weapon;
+
+            return {
+                id: weapon.id,
+                name: weapon.name,
+                shortName: weapon.shortName,
+                description: weapon.description,
+                capacity: (loadedMagazine ?? weapon).capacity,
+                maxCapacity: (loadedMagazine ?? weapon).maxCapacity,
+                fireSelector: weapon.fireSelector,
+                fireModes: weapon.getFireModes(unit),
+                loadedRound: loadedRound?.name,
+                sight: weapon.sight,
+                uiImage: weapon.getRenderList({
+                    renderMode: RenderMode.enum.UI_MODE,
+                    states: []
+                })
+            };
+        });
+
+        return {
+            ...this.getItemSummary(unit),
+            weapons,
+            fireModeEx,
+            weaponIndex:
+                weapons.length === 0 ? 0 : Math.min(unit.inventory.weaponIndex, weapons.length - 1)
         };
     }
 

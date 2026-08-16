@@ -196,6 +196,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     private _location: TilePos | null;
     private _orientation: Orientation;
+    private _fireMode: FireMode;
 
     private static _disorientationVisualDeferDepth = 0;
 
@@ -249,6 +250,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this._canSee = [];
         this._overtaking = null;
         this._unitActionGrid = {};
+        this._fireMode = FireMode.enum.aimed;
     }
 
     get game(): Game {
@@ -305,6 +307,29 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get itemInUse(): Item | null {
         return this.inventory.itemInUse;
+    }
+
+    get fireMode(): FireMode {
+        return this._fireMode;
+    }
+
+    set fireMode(value: FireMode) {
+        this._fireMode = value;
+    }
+
+    setWeaponIndex(weaponIndex: number): void {
+        const item = this.itemInUse;
+        if (!item) {
+            throw new Error(`Unit ${this.id} is not using an item`);
+        }
+
+        const weaponCount = item.type === ItemType.enum.gun ? 1 : item.getWeapons().length;
+        const maxIndex = Math.max(weaponCount - 1, 0);
+        if (weaponIndex > maxIndex) {
+            throw new Error(`Weapon index ${weaponIndex} is out of range for item ${item.id}`);
+        }
+
+        this.inventory.weaponIndex = weaponIndex;
     }
 
     get location(): TilePos | null {
@@ -621,6 +646,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 actions[Action.enum.throw].accuracy
             );
             actions[Action.enum.throw].actionPoints = this.itemInUse?.throwActionPointCost ?? 0;
+            actions[Action.enum.throw].available =
+                this.actionPoints >= actions[Action.enum.throw].actionPoints;
         }
 
         this.logger.dir({ actions });
@@ -763,11 +790,22 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     payload: {
                         attributes: {
                             actionPoints: { value: this._attributes.actionPoints.value }
-                        }
+                        },
+                        actions: this.getActions()
                     }
                 },
                 this.side.id
             );
+
+            if (this.itemInUse) {
+                this.messageRouter.send(
+                    {
+                        type: "server:unit:weapon:update",
+                        payload: this.itemInUse.getFireModeItemSummary(this)
+                    },
+                    this.side.id
+                );
+            }
         }
 
         // return this._inflictOngoingDamage(game, aptCost, eventList);

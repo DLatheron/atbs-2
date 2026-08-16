@@ -6,6 +6,7 @@ import {
     DISORIENTATION_FADE_MS,
     DISORIENTATION_ORBIT_IMAGE_ID,
     DISORIENTATION_ORBIT_MS,
+    DISORIENTATION_ORBIT_RADIUS_FACTOR,
     DISORIENTATION_STAR_SIZE,
     UnitDeathRecord,
     buildDisorientationPlayAnimations,
@@ -207,7 +208,9 @@ describe("buildDisorientationPlayAnimations", () => {
             expect(animation.worldPos).toBeUndefined();
             expect(animation.recipe.flags?.loop).toBe(true);
             expect(animation.recipe.stateDef.scale).toBe(DISORIENTATION_STAR_SIZE);
-            expect(animation.recipe.stateDef.orbitRadius).toBe(50);
+            expect(animation.recipe.stateDef.orbitRadius).toBe(
+                (100 / 2) * DISORIENTATION_ORBIT_RADIUS_FACTOR
+            );
             expect(animation.recipe.stateDef.opacity).toBe(1);
             expect(animation.recipe.stateDef.renderable).toStrictEqual({
                 default: [{ imageId: DISORIENTATION_ORBIT_IMAGE_ID }]
@@ -236,7 +239,9 @@ describe("buildDisorientationPlayAnimations", () => {
         expect(animation.recipe.flags?.loop).toBeUndefined();
         expect(() => PlayAnimation.parse(animation)).not.toThrow();
         expect(animation.recipe.stateDef.scale).toBe(DISORIENTATION_STAR_SIZE);
-        expect(animation.recipe.stateDef.orbitRadius).toBe(32);
+        expect(animation.recipe.stateDef.orbitRadius).toBe(
+            (64 / 2) * DISORIENTATION_ORBIT_RADIUS_FACTOR
+        );
         expect(fromOpacity).toBe(1);
         expect(opacitySteps[0]).toMatchObject({
             type: "linear",

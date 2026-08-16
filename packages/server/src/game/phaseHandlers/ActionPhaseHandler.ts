@@ -155,6 +155,62 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
             ),
 
+            messageManager.registerHandler(
+                "client:unit:fire:mode",
+                ({ game }, { unitId, fireMode }, from) => {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
+
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
+
+                    const item = unit.itemInUse;
+                    if (!item) {
+                        throw new Error(`Unit ${unitId} is not using an item`);
+                    }
+
+                    unit.fireMode = fireMode;
+
+                    from.sendMessage({
+                        type: "server:unit:weapon:update",
+                        payload: item.getFireModeItemSummary(unit)
+                    });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:weapon:index",
+                ({ game }, { unitId, weaponIndex }, from) => {
+                    if (game.opportunityFireManager.opportunity) {
+                        game.verifyFromOpportunityFireClient(from);
+                    } else {
+                        game.verifyFromPlayingClient(from);
+                    }
+
+                    const unit = game.getUnit(unitId);
+                    if (unitId !== unit?.id) {
+                        throw new Error(`Unit ${unitId} is not selected`);
+                    }
+
+                    const item = unit.itemInUse;
+                    if (!item) {
+                        throw new Error(`Unit ${unitId} is not using an item`);
+                    }
+
+                    unit.setWeaponIndex(weaponIndex);
+
+                    from.sendMessage({
+                        type: "server:unit:weapon:update",
+                        payload: item.getFireModeItemSummary(unit)
+                    });
+                }
+            ),
+
             messageManager.registerHandler("client:unit:fire", ({ game }, fireDetails, from) => {
                 if (game.opportunityFireManager.opportunity) {
                     game.verifyFromOpportunityFireClient(from);

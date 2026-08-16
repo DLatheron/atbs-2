@@ -97,7 +97,6 @@ export class World {
     private _mapMode: MapMode;
     private _unit: UnitSummary | null;
     private _unitWeapon: FireModeItemSummary | null;
-    private _unitWeaponIndex: number;
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
     private _mouseCursor: CSSProperties["cursor"];
@@ -108,7 +107,7 @@ export class World {
 
     private _fireCallback: FireCallback;
     private _throwCallback: ThrowCallback;
-    private _fireModeEx: FireModeEx;
+    private _throwing: boolean;
     private _frameTime: number;
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
@@ -136,7 +135,6 @@ export class World {
         this._map = null;
         this._unit = null;
         this._unitWeapon = null;
-        this._unitWeaponIndex = 0;
 
         this._mapMode = MapMode.enum["map-mode"];
         this._mapModeHandler = new MapModeHandler(this);
@@ -158,7 +156,7 @@ export class World {
         this._throwCallback = () => {
             throw new Error("World:throwCallback function not set");
         };
-        this._fireModeEx = FireModeEx.enum.aimed;
+        this._throwing = false;
         this._frameTime = 0;
         this._renderPlugins = [];
         this._drawSights = false;
@@ -271,18 +269,10 @@ export class World {
 
     set unitWeapon(value: FireModeItemSummary | null) {
         this._unitWeapon = value;
-
-        if (this.unitWeaponIndex > (this._unitWeapon?.weapons.length ?? 0)) {
-            this._unitWeaponIndex = 0;
-        }
     }
 
     get unitWeaponIndex(): number {
-        return this._unitWeaponIndex;
-    }
-
-    set unitWeaponIndex(value: number) {
-        this._unitWeaponIndex = value;
+        return this._unitWeapon?.weaponIndex ?? 0;
     }
 
     get camera(): Camera2d {
@@ -404,17 +394,25 @@ export class World {
         return this.weapon.fireSelector;
     }
 
-    get fireModeEx(): FireModeEx {
-        return this._fireModeEx;
+    get throwing(): boolean {
+        return this._throwing;
     }
 
-    set fireModeEx(value: FireModeEx) {
-        this._fireModeEx = value;
+    set throwing(value: boolean) {
+        this._throwing = value;
+    }
+
+    get fireModeEx(): FireModeEx {
+        if (this._throwing) {
+            return FireModeEx.enum.throw;
+        }
+
+        return this.unitWeapon.fireModeEx;
     }
 
     get fireMode(): FireMode {
         const fireModeEx = this.fireModeEx;
-        if (fireModeEx === FireModeEx.enum.throw || fireModeEx === FireModeEx.enum.none) {
+        if (fireModeEx === FireModeEx.enum.throw) {
             throw new Error("Cannot get fireMode because the fireModeEx is throw");
         }
 

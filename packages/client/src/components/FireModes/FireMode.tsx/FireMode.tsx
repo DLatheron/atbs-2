@@ -6,7 +6,8 @@ import {
     FireModeItemSummary,
     UnitSummary,
     Action,
-    Prime
+    Prime,
+    getFireModeDetails
 } from "@atbs/shared-data";
 import {
     Typography,
@@ -25,7 +26,6 @@ import {
 } from "../../../helpers/formattingHelpers";
 import { AttributesComponent } from "../../Attributes";
 import { ImageComponent } from "../../Image";
-import { getFireModeDetailsHelper } from "../../../helpers/fireModeHelpers";
 import { PrimeComponent } from "../../Prime";
 
 export interface FireModeComponentProps {
@@ -33,7 +33,7 @@ export interface FireModeComponentProps {
     unitWeapon: FireModeItemSummary;
     weapon: FireModeWeaponSummary | null;
     fireModeEx: FireModeEx;
-    setFireModeEx: (fireModeEx: FireModeEx) => void;
+    setFireModeEx: (fireModeEx: FireModeEx | null) => void;
     disabled: boolean;
     onPrime: (prime: Prime) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
@@ -66,8 +66,6 @@ export function FireModeComponent({
     onPrime,
     onChangeFireSelector
 }: FireModeComponentProps) {
-    const { value: actionPoints } = unit.attributes.actionPoints;
-
     return (
         <Stack spacing={1}>
             <Typography variant="h6" sx={{ m: "auto", textAlign: "center" }}>
@@ -150,7 +148,7 @@ export function FireModeComponent({
             >
                 {weapon &&
                     [FireModeEx.enum.aimed, FireModeEx.enum.snapshot].map((fireMode) => {
-                        const fireModeDetails = getFireModeDetailsHelper(
+                        const fireModeDetails = getFireModeDetails(
                             weapon.fireModes,
                             weapon.fireSelector
                         )[fireMode];
@@ -171,7 +169,7 @@ export function FireModeComponent({
                                     id={fireMode}
                                     title={FIRE_MODE_EX_LOOKUP[fireMode]}
                                     value={fireMode}
-                                    disabled={disabled || actionPoints < actionPointCost}
+                                    disabled={disabled || fireModeDetails.available === false}
                                 >
                                     {FIRE_MODE_EX_LOOKUP[fireMode]}
                                 </ToggleButton>
@@ -206,8 +204,7 @@ export function FireModeComponent({
                             title={FIRE_MODE_EX_LOOKUP[FireModeEx.enum.throw]}
                             value={FireModeEx.enum.throw}
                             disabled={
-                                disabled ||
-                                actionPoints < unit.actions[Action.enum.throw].actionPoints
+                                disabled || unit.actions[Action.enum.throw].available === false
                             }
                         >
                             {FIRE_MODE_EX_LOOKUP[FireModeEx.enum.throw]}

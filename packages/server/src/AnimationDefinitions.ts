@@ -96,6 +96,7 @@ export const DISORIENTATION_POINTS_PER_STAR = 20;
 export const DISORIENTATION_ORBIT_MS = 7500;
 export const DISORIENTATION_FADE_MS = 500;
 export const DISORIENTATION_STAR_SIZE = 28;
+export const DISORIENTATION_ORBIT_RADIUS_FACTOR = 0.8;
 export const DISORIENTATION_ORBIT_IMAGE_ID = "disorientation-shadow";
 
 /**
@@ -132,7 +133,7 @@ export function buildDisorientationPlayAnimations({
     }
 
     const fadeRotationDelta = 360 * (DISORIENTATION_FADE_MS / DISORIENTATION_ORBIT_MS);
-    const orbitRadius = (tileSize / 2) * 0.8;
+    const orbitRadius = (tileSize / 2) * DISORIENTATION_ORBIT_RADIUS_FACTOR;
 
     return Array.from({ length: starCount }, (_unused, index) => {
         const startDeg = (360 / starCount) * index;

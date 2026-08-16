@@ -5,6 +5,7 @@ import {
     IColour,
     IVec2,
     PathSegment,
+    positionOnPathAtTime,
     Vec2
 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
@@ -69,6 +70,19 @@ export function DrawProjectile(
 
     const headStartTime = time;
     const tailEndTime = headStartTime - tracer.trailLengthInMs;
+
+    if (camera.hasWorldBounds) {
+        const headPos = positionOnPathAtTime(tracer.segments, headStartTime);
+        const tailPos = positionOnPathAtTime(tracer.segments, tailEndTime);
+        const { worldBounds } = camera;
+        if (
+            !worldBounds.isPointInside(headPos) &&
+            !worldBounds.isPointInside(tailPos) &&
+            !worldBounds.intersectsSegment(headPos, tailPos)
+        ) {
+            return true;
+        }
+    }
 
     // Falloff is relative to when *this* tracer began, not absolute timeline time.
     // Using absolute time made delayed explosion fragments fully transparent once

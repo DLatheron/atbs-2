@@ -37,6 +37,8 @@ export function ActionPage({ visible }: ActionPageProps) {
         onMove,
         onRotateTo,
         onChangeFireSelector,
+        onChangeFireMode,
+        onChangeWeaponIndex,
         onEndMovement,
         onEndTurn,
         onEndError,
@@ -202,6 +204,8 @@ export function ActionPage({ visible }: ActionPageProps) {
                     opportunityFire={opportunityFire !== undefined}
                     onRotateTo={onRotateTo}
                     onChangeFireSelector={onChangeFireSelector}
+                    onChangeFireMode={onChangeFireMode}
+                    onChangeWeaponIndex={onChangeWeaponIndex}
                     onPrime={onPrime}
                     onEndFireMode={onEndFireMode}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}

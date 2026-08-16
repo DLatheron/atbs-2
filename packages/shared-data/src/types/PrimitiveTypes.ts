@@ -365,13 +365,14 @@ const fireMode = ["aimed", "snapshot"] as const;
 export const FireMode = z.enum(fireMode);
 export type FireMode = z.infer<typeof FireMode>;
 
-const fireModeEx = ["none", ...fireMode, "throw"] as const;
+const fireModeEx = [...fireMode, "throw"] as const;
 export const FireModeEx = z.enum(fireModeEx);
 export type FireModeEx = z.infer<typeof FireModeEx>;
 
 export const FireModeDetail = z.object({
     accuracy: z.number().min(0).max(100),
-    actionPoints: z.int().positive()
+    actionPoints: z.int().positive(),
+    available: z.boolean().optional().default(true)
 });
 export type FireModeDetail = z.infer<typeof FireModeDetail>;
 
@@ -461,6 +462,23 @@ export function getRpm(fireModes: FireModes, fireSelector: FireSelector): number
     }
 
     throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function getFireModeDetails(
+    fireModes: FireModes,
+    fireSelector: FireSelector
+): FireModeDetails | FireModeExtendedDetails {
+    if (fireSelector === FireSelector.enum.single && fireSelector in fireModes) {
+        return fireModes[FireSelector.enum.single].fireModeDetails;
+    } else if (fireSelector === FireSelector.enum.burst && fireSelector in fireModes) {
+        return fireModes[FireSelector.enum.burst].fireModeDetails;
+    } else if (fireSelector === FireSelector.enum.auto && fireSelector in fireModes) {
+        return fireModes[FireSelector.enum.auto].fireModeDetails;
+    }
+
+    throw new Error(
+        `Failed to get fire mode details for ${fireSelector} from ${JSON.stringify(fireModes)}`
+    );
 }
 
 export function getAccuracy(
@@ -744,7 +762,9 @@ export const FireModeWeaponSummary = z.object({
 export type FireModeWeaponSummary = z.infer<typeof FireModeWeaponSummary>;
 
 export const FireModeItemSummary = ItemSummary.extend({
-    weapons: z.array(FireModeWeaponSummary)
+    weapons: z.array(FireModeWeaponSummary),
+    fireModeEx: FireModeEx,
+    weaponIndex: z.int().nonnegative()
 });
 export type FireModeItemSummary = z.infer<typeof FireModeItemSummary>;
 
