@@ -4,11 +4,16 @@ import {
     Explosion,
     FragmentExplosion,
     HitSpark,
+    isCloudExplosion,
     OnTarget,
     resolveJitteredValue,
     ShockwaveExplosion,
+    SideId,
+    TimedAnimatableObject,
+    TimedAnimatableObjectRemoval,
     TimedPlayAnimation,
     TimedTileUpdate,
+    TimedVisibilityUpdate,
     Tracer
 } from "@atbs/shared-data";
 import { DebugGraphic, degreesToRadians, generateRandomBetween, Vec2 } from "@atbs/maths";
@@ -21,6 +26,7 @@ import { ImageManager } from "./ImageManager.js";
 import type { Item } from "./Item.js";
 import { Projectile } from "./Projectile.js";
 import type { Unit } from "./Unit.js";
+import { CloudGenerator } from "./CloudGenerator.js";
 
 export interface ExplosionDetonationResult {
     tracers: Tracer[];
@@ -28,6 +34,9 @@ export interface ExplosionDetonationResult {
     deaths: DeathAnimation[];
     hitSparks: HitSpark[];
     animations: TimedPlayAnimation[];
+    animObjects?: TimedAnimatableObject[];
+    animObjectRemovals?: TimedAnimatableObjectRemoval[];
+    visibilityUpdatesBySide?: Map<SideId, TimedVisibilityUpdate[]>;
 }
 
 export function collectDeferredDisorientationVisuals(game: Game): {
@@ -108,7 +117,23 @@ function offsetTimedTracePayload(
         animations: result.animations.map((animation) => ({
             ...animation,
             startTimeMs: animation.startTimeMs + timeOffsetMs
-        }))
+        })),
+        animObjects: result.animObjects?.map((animObject) => ({
+            ...animObject,
+            startTimeMs: animObject.startTimeMs + timeOffsetMs
+        })),
+        animObjectRemovals: result.animObjectRemovals?.map((removal) => ({
+            ...removal,
+            startTimeMs: removal.startTimeMs + timeOffsetMs
+        })),
+        visibilityUpdatesBySide: result.visibilityUpdatesBySide
+            ? new Map(
+                  [...result.visibilityUpdatesBySide.entries()].map(([sideId, updates]) => [
+                      sideId,
+                      updates.map((update) => ({ ...update, timeMs: update.timeMs + timeOffsetMs }))
+                  ])
+              )
+            : undefined
     };
 }
 
@@ -395,10 +420,23 @@ function detonateShockwaveExplosion(props: DetonateExplosionProps): ExplosionDet
     );
 }
 
+function detonateCloudExplosion(props: DetonateExplosionProps): ExplosionDetonationResult {
+    const { game, explosion, origin } = props;
+    if (!isCloudExplosion(explosion)) {
+        throw new Error(`Expected smoke or gas explosion, got ${explosion.type}`);
+    }
+
+    const generator = new CloudGenerator({ game, worldPos: origin, explosion });
+    const result = generator.tick(props.timeOffsetMs ?? 0);
+    game.cloudManager.addCloudGenerator(props.firingUnit.side.id, generator);
+
+    return result;
+}
+
 /**
  * Detonate an explosion at a world position. Fragment explosions spawn damaging
- * tracers; shockwave explosions apply LOS-blocked disorientation with a ring VFX.
- * Gas / smoke remain stubs.
+ * tracers; shockwave explosions apply LOS-blocked disorientation with a ring VFX;
+ * smoke / gas spawn a cloud generator that spreads over subsequent turns.
  */
 export function detonateExplosion(props: DetonateExplosionProps): ExplosionDetonationResult {
     switch (props.explosion.type) {
@@ -410,14 +448,7 @@ export function detonateExplosion(props: DetonateExplosionProps): ExplosionDeton
 
         case "gas":
         case "smoke":
-            // TODO: Implement gas / smoke explosion types.
-            return {
-                tracers: [],
-                tileUpdates: [],
-                deaths: [],
-                hitSparks: [],
-                animations: []
-            };
+            return detonateCloudExplosion(props);
 
         default: {
             const _exhaustive: never = props.explosion;
@@ -462,19 +493,42 @@ export function broadcastExplosionTrace(
     result: ExplosionDetonationResult,
     isOnTarget: OnTarget = OnTarget.enum.none
 ): void {
-    game.messageRouter.send({
-        type: "server:fire:trace",
-        payload: {
-            tracers: result.tracers,
-            isOnTarget,
-            tileUpdates: result.tileUpdates,
-            deaths: result.deaths,
-            hitSparks: result.hitSparks,
-            animations: result.animations
-        }
-    });
+    const basePayload = {
+        tracers: result.tracers,
+        isOnTarget,
+        tileUpdates: result.tileUpdates,
+        deaths: result.deaths,
+        hitSparks: result.hitSparks,
+        animations: result.animations,
+        animObjects: result.animObjects ?? [],
+        animObjectRemovals: result.animObjectRemovals ?? []
+    };
 
-    if (result.deaths.length > 0) {
+    const visibilityBySide = result.visibilityUpdatesBySide;
+    if (visibilityBySide && visibilityBySide.size > 0) {
+        for (const side of game.sides) {
+            game.messageRouter.send(
+                {
+                    type: "server:fire:trace",
+                    payload: {
+                        ...basePayload,
+                        visibilityUpdates: visibilityBySide.get(side.id) ?? []
+                    }
+                },
+                side.id
+            );
+        }
+    } else {
+        game.messageRouter.send({
+            type: "server:fire:trace",
+            payload: {
+                ...basePayload,
+                visibilityUpdates: []
+            }
+        });
+    }
+
+    if (result.deaths.length > 0 || (visibilityBySide && visibilityBySide.size > 0)) {
         game.visibilityManager.update();
         game.syncUnitsCanSee();
         for (const side of game.sides) {

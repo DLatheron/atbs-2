@@ -10,6 +10,7 @@ import {
     PathSegment
 } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
+import { VfxId } from "./VfxTypes.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
 
@@ -667,19 +668,31 @@ export const FragmentExplosion = z.object({
 });
 export type FragmentExplosion = z.infer<typeof FragmentExplosion>;
 
+const CloudExplosionFields = {
+    particles: z.array(JitteredValue).min(1),
+    /** Turns each puff remains after it appears. */
+    lifetime: JitteredValue.default({ min: 2, max: 4 }),
+    vfxId: VfxId.optional(),
+    materials: z.array(MaterialId).optional(),
+    /** Hit-point damage for a full turn of exposure (scaled by AP spent / max AP). */
+    damage: DamageMap.optional(),
+    /** Disorientation for a full turn of exposure (scaled the same way as damage). */
+    disorientation: z.number().nonnegative().optional()
+};
+
 export const SmokeExplosion = z.object({
-    type: z.literal(ExplosionType.enum.gas),
-    particles: z.array(JitteredValue)
-    // TODO: Other properties.
+    type: z.literal(ExplosionType.enum.smoke),
+    ...CloudExplosionFields
 });
 export type SmokeExplosion = z.infer<typeof SmokeExplosion>;
 
 export const GasExplosion = z.object({
-    type: z.literal(ExplosionType.enum.smoke),
-    particles: z.array(JitteredValue)
-    // TODO: Other properties.
+    type: z.literal(ExplosionType.enum.gas),
+    ...CloudExplosionFields
 });
 export type GasExplosion = z.infer<typeof GasExplosion>;
+
+export type CloudExplosion = SmokeExplosion | GasExplosion;
 
 export const ShockwaveExplosion = z.object({
     type: z.literal(ExplosionType.enum.shockwave),
@@ -710,6 +723,10 @@ export const Explosion = z.discriminatedUnion("type", [
     ShockwaveExplosion
 ]);
 export type Explosion = z.infer<typeof Explosion>;
+
+export function isCloudExplosion(explosion: Explosion): explosion is CloudExplosion {
+    return explosion.type === ExplosionType.enum.smoke || explosion.type === ExplosionType.enum.gas;
+}
 
 export const Prime = z.literal("safe").or(z.literal("immediate").or(z.number().nonnegative()));
 export type Prime = z.infer<typeof Prime>;
@@ -744,6 +761,12 @@ export const VisibilityUpdate = z.object({
     viewers: z.array(VisibilityViewerSummary)
 });
 export type VisibilityUpdate = z.infer<typeof VisibilityUpdate>;
+
+export const TimedVisibilityUpdate = z.object({
+    timeMs: z.number().nonnegative(),
+    visibility: VisibilityUpdate
+});
+export type TimedVisibilityUpdate = z.infer<typeof TimedVisibilityUpdate>;
 
 export const FireModeWeaponSummary = z.object({
     id: ItemId,

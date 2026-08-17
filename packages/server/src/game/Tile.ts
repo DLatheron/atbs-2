@@ -47,7 +47,7 @@ import { IMPENETRABLE } from "./Obstruction.js";
 
 export interface CollisionSample {
     material: Material;
-    owner: Furniture | Unit;
+    owner: Furniture | Unit | Vfx;
     imageId: string;
     layerIndex: number;
     orientation: Orientation;
@@ -93,7 +93,7 @@ export const TileRecipe = z.object({
 export type TileRecipe = z.infer<typeof TileRecipe>;
 
 export interface LayerCollision {
-    owner: Furniture | Unit;
+    owner: Furniture | Unit | Vfx;
     image: Image;
     imageId: string;
     layerIndex: number;
@@ -361,7 +361,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     get anythingCollidable() {
-        return this.furniture || this.units.length > 0; // || this.vfx.length > 0;
+        return this.furniture || this.units.length > 0 || this.vfx.length > 0;
     }
 
     toDebugGraphic(
@@ -380,7 +380,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
 
     getCollisionLayers(
         imageManager: ImageManager,
-        damageCache?: DamageCacheManager
+        damageCache?: DamageCacheManager,
+        options?: { includeVfx?: boolean }
     ): LayerCollision[] {
         const collisionLayers: LayerCollision[] = [];
 
@@ -428,20 +429,23 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             });
         });
 
-        // TODO: VFX
-        // this.vfx.forEach((vfx) => {
-        //     const { materials } = vfx;
+        if (options?.includeVfx) {
+            this.vfx.forEach((vfx, layerIndex) => {
+                const { materials, collisionImageId } = vfx;
+                if (!collisionImageId || materials.length === 0) {
+                    return;
+                }
 
-        //     vfx.getRenderList(context).forEach((layerImage) => {
-        //         if (layerImage.imageId) {
-        //             layerCollision.push({
-        //                 image: imageManager.getImage(layerImage.imageId),
-        //                 orientation: layerImage.orientation ?? Orientation.NORTH,
-        //                 materials
-        //             });
-        //         }
-        //     });
-        // });
+                collisionLayers.push({
+                    owner: vfx,
+                    image: imageManager.getImage(collisionImageId),
+                    imageId: collisionImageId,
+                    layerIndex,
+                    orientation: Orientation.NORTH,
+                    materials
+                });
+            });
+        }
 
         return collisionLayers;
     }
@@ -530,7 +534,9 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
             return;
         }
 
-        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton());
+        const collisionLayers = this.getCollisionLayers(ImageManager.GetSingleton(), undefined, {
+            includeVfx: true
+        });
         if (collisionLayers.length === 0) {
             this.logger.info("  - Has no collision layers (but is collidable?");
             return;
@@ -719,6 +725,17 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
                 };
             }
         }
+    }
+
+    getVfxHpDamage(unitType = "default"): number {
+        return this.vfx.reduce((damage, vfx) => damage + vfx.calcHpDamage(unitType), 0);
+    }
+
+    getVfxDisorientation(unitType = "default"): number {
+        return this.vfx.reduce(
+            (disorientation, vfx) => disorientation + vfx.calcDisorientation(unitType),
+            0
+        );
     }
 
     getMovementObstruction(type: string) {

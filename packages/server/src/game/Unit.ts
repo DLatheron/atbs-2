@@ -30,7 +30,9 @@ import {
     VisualType,
     UnitActionGrid,
     UnitActionType,
-    Prime
+    Prime,
+    TimedAnimatableObject,
+    TimedAnimatableObjectRemoval
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -205,6 +207,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     private _disorientationFadeTimer: ReturnType<typeof setTimeout> | null;
     private _syncedDisorientationStarCount: number;
     private _deferredDisorientationHitTimeMs: number | undefined;
+    private _cloudHpRemainder: number;
 
     private _canSee: Unit[];
     private _overtaking: Overtaking | null;
@@ -242,6 +245,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this._disorientationFadeTimer = null;
         this._syncedDisorientationStarCount = 0;
         this._deferredDisorientationHitTimeMs = undefined;
+        this._cloudHpRemainder = 0;
         this._materials = recipe.collision.materials.map((materialId) =>
             MaterialManager.GetSingleton().getMaterial(materialId)
         );
@@ -808,9 +812,75 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
         }
 
-        // return this._inflictOngoingDamage(game, aptCost, eventList);
+        return this._applyCloudExposure(aptCost);
+    }
+
+    /**
+     * Respirators are not implemented yet. When they exist, a unit wearing one
+     * should ignore gas damage and disorientation.
+     */
+    private _ignoresGas(): boolean {
+        return false;
+    }
+
+    /**
+     * Apply gas HP / disorientation scaled so recipe `damage` is a full-turn dose
+     * (`damage * aptCost / maxAP`).
+     */
+    private _applyCloudExposure(aptCost: number): boolean {
+        if (this._ignoresGas() || !this.isAlive || aptCost <= 0) {
+            return true;
+        }
+
+        const tile = this.map.getTile(this.mapLocation);
+        const hpPerFullTurn = tile.getVfxHpDamage(this.type);
+        const disorientationPerFullTurn = tile.getVfxDisorientation(this.type);
+        if (hpPerFullTurn <= 0 && disorientationPerFullTurn <= 0) {
+            return true;
+        }
+
+        const scale = aptCost / this.maxActionPoints;
+        const hpRaw = hpPerFullTurn * scale + this._cloudHpRemainder;
+        const hpApplied = Math.floor(hpRaw);
+        this._cloudHpRemainder = hpRaw - hpApplied;
+
+        if (hpApplied > 0) {
+            this.constitution -= hpApplied;
+        }
+        if (disorientationPerFullTurn > 0) {
+            this.disorientation += disorientationPerFullTurn * scale;
+        }
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    disorientation: this.disorientation,
+                    attributes: {
+                        constitution: this._attributes.constitution
+                    }
+                }
+            },
+            this.side.id
+        );
+
+        if (this.isDead) {
+            this._refreshVisibility();
+            this._broadcastVisibleTiles();
+            this.messageRouter.send({
+                type: "server:map:update",
+                payload: [this.map.getTile(this.mapLocation).generateTileUpdate()]
+            });
+            return false;
+        }
 
         return true;
+    }
+
+    endTurn() {
+        if (this.isAlive && this.actionPoints > 0) {
+            this._applyCloudExposure(this.actionPoints);
+        }
     }
 
     private _verifyDirectional(): void | never {
@@ -1332,11 +1402,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             const pendingExplosions = projectiles.flatMap((projectile) => {
                 const { explosion } = projectile.projectileRecipe;
                 const { impact } = projectile;
-                if (
-                    !explosion ||
-                    (explosion.type !== "fragment" && explosion.type !== "shockwave") ||
-                    !impact
-                ) {
+                if (!explosion || !impact) {
                     return [];
                 }
                 return [{ explosion, origin: impact.pos.clone(), timeOffsetMs: impact.time }];
@@ -1350,6 +1416,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
             let combinedDeaths = deaths;
             let combinedHitSparks = hitSparks;
             let combinedAnimations = [...flightDisorientation.animations];
+            let combinedAnimObjects: TimedAnimatableObject[] = [];
+            let combinedAnimObjectRemovals: TimedAnimatableObjectRemoval[] = [];
+            let combinedVisibilityBySide: ExplosionDetonationResult["visibilityUpdatesBySide"];
 
             for (const pending of pendingExplosions) {
                 const explosionResult = detonateExplosion({
@@ -1368,6 +1437,23 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 combinedDeaths = [...combinedDeaths, ...explosionResult.deaths];
                 combinedHitSparks = [...combinedHitSparks, ...explosionResult.hitSparks];
                 combinedAnimations = [...combinedAnimations, ...explosionResult.animations];
+                combinedAnimObjects = [
+                    ...combinedAnimObjects,
+                    ...(explosionResult.animObjects ?? [])
+                ];
+                combinedAnimObjectRemovals = [
+                    ...combinedAnimObjectRemovals,
+                    ...(explosionResult.animObjectRemovals ?? [])
+                ];
+                if (explosionResult.visibilityUpdatesBySide) {
+                    combinedVisibilityBySide = combinedVisibilityBySide ?? new Map();
+                    for (const [sideId, updates] of explosionResult.visibilityUpdatesBySide) {
+                        combinedVisibilityBySide.set(sideId, [
+                            ...(combinedVisibilityBySide.get(sideId) ?? []),
+                            ...updates
+                        ]);
+                    }
+                }
             }
 
             if (showDebugGraphics && debugGraphics) {
@@ -1377,27 +1463,46 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 });
             }
 
-            // TODO: Move the projectiles forward in time...
-            // TODO: Psuedo tracers - how do we determine visibility?
-            this.messageRouter.send([
-                {
+            const isOnTarget = onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget;
+            const basePayload = {
+                tracers,
+                isOnTarget,
+                tileUpdates: combinedTileUpdates,
+                deaths: combinedDeaths,
+                hitSparks: combinedHitSparks,
+                animations: combinedAnimations,
+                animObjects: combinedAnimObjects,
+                animObjectRemovals: combinedAnimObjectRemovals
+            };
+
+            if (combinedVisibilityBySide && combinedVisibilityBySide.size > 0) {
+                for (const side of this.game.sides) {
+                    this.messageRouter.send(
+                        {
+                            type: "server:fire:trace",
+                            payload: {
+                                ...basePayload,
+                                visibilityUpdates: combinedVisibilityBySide.get(side.id) ?? []
+                            }
+                        },
+                        side.id
+                    );
+                }
+            } else {
+                this.messageRouter.send({
                     type: "server:fire:trace",
                     payload: {
-                        tracers,
-                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                        tileUpdates: combinedTileUpdates,
-                        deaths: combinedDeaths,
-                        hitSparks: combinedHitSparks,
-                        animations: combinedAnimations
+                        ...basePayload,
+                        visibilityUpdates: []
                     }
-                }
-            ]);
+                });
+            }
 
             // A death can remove a viewer/blocker and open up sightlines, so
             // recompute visibility and push each side its updated visible tiles.
             // Queued after the trace, this applies once playback of the death has
             // finished on the observing client.
-            if (combinedDeaths.length > 0) {
+            if (combinedDeaths.length > 0 || (combinedVisibilityBySide?.size ?? 0) > 0) {
                 this._refreshVisibility();
                 this._broadcastVisibleTiles();
             }
@@ -1595,11 +1700,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.inventory.removeItem(itemToThrow);
 
-        const explosionType = itemToThrow.willExplode ? itemToThrow.getExplosion.type : undefined;
-        const explodeOnLanding =
-            itemToThrow.primed === "immediate" &&
-            itemToThrow.willExplode &&
-            (explosionType === "fragment" || explosionType === "shockwave");
+        const explodeOnLanding = itemToThrow.primed === "immediate" && itemToThrow.willExplode;
 
         let explosionResult: ExplosionDetonationResult | null = null;
 
@@ -1645,25 +1746,44 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.updateAvailableActions();
 
         const tracers = [projectile.getTracer(), ...(explosionResult?.tracers ?? [])];
+        const isOnTarget = onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget;
+        const basePayload = {
+            tracers,
+            isOnTarget,
+            tileUpdates,
+            deaths,
+            hitSparks,
+            animations: [
+                ...flightDisorientation.animations,
+                ...(explosionResult?.animations ?? [])
+            ],
+            animObjects: explosionResult?.animObjects ?? [],
+            animObjectRemovals: explosionResult?.animObjectRemovals ?? []
+        };
+        const visibilityBySide = explosionResult?.visibilityUpdatesBySide;
 
-        // TODO: Move the projectiles forward in time...
-        // TODO: Psuedo tracers - how do we determine visibility?
-        this.messageRouter.send([
-            {
+        if (visibilityBySide && visibilityBySide.size > 0) {
+            for (const side of this.game.sides) {
+                this.messageRouter.send(
+                    {
+                        type: "server:fire:trace",
+                        payload: {
+                            ...basePayload,
+                            visibilityUpdates: visibilityBySide.get(side.id) ?? []
+                        }
+                    },
+                    side.id
+                );
+            }
+        } else {
+            this.messageRouter.send({
                 type: "server:fire:trace",
                 payload: {
-                    tracers,
-                    isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                    tileUpdates,
-                    deaths,
-                    hitSparks,
-                    animations: [
-                        ...flightDisorientation.animations,
-                        ...(explosionResult?.animations ?? [])
-                    ]
+                    ...basePayload,
+                    visibilityUpdates: []
                 }
-            }
-        ]);
+            });
+        }
 
         this._refreshVisibility();
         this._broadcastVisibleTiles();

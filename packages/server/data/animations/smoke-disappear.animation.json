@@ -1,0 +1,30 @@
+{
+    "id": "smoke-disappear.animation",
+    "stateDef": {
+        "scale": [
+            100,
+            [
+                {
+                    "type": "linear",
+                    "startOffset": 0,
+                    "duration": 500,
+                    "toValue": 0
+                }
+            ]
+        ],
+        "opacity": [
+            1,
+            [
+                {
+                    "type": "linear",
+                    "startOffset": 0,
+                    "duration": 500,
+                    "toValue": 0
+                }
+            ]
+        ],
+        "renderable": {
+            "default": [{ "imageId": "smoke15" }]
+        }
+    }
+}

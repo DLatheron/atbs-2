@@ -1,8 +1,18 @@
-import { VfxId } from "@atbs/shared-data";
+import { DamageMap, VfxId } from "@atbs/shared-data";
 import { Vfx } from "./Vfx.js";
 import { ITilePos } from "@atbs/maths";
 import { Game } from "./Game.js";
 import type { VfxRecipeManager } from "./VfxRecipeManager.js";
+import { Material } from "./Material.js";
+
+export interface NewVfxProps {
+    location: ITilePos;
+    fromLocation: ITilePos;
+    lifetimeTurns: number;
+    damageMap?: DamageMap;
+    disorientationPerFullTurn?: number;
+    materials: Material[];
+}
 
 export class VfxManager {
     private readonly _game: Game;
@@ -23,10 +33,13 @@ export class VfxManager {
         return this.game.vfxRecipeManager;
     }
 
-    newVfx(recipeId: VfxId, location: ITilePos): Vfx {
+    newVfx(recipeId: VfxId, props: NewVfxProps): Vfx {
         const vfxRecipe = this.vfxRecipeManager.getRecipe(recipeId);
 
-        const vfx = new Vfx(this, vfxRecipe, { location, instanceIndex: this._instanceIndex++ });
+        const vfx = new Vfx(this, vfxRecipe, {
+            ...props,
+            instanceIndex: this._instanceIndex++
+        });
         this._vfxMap.set(vfx.id, vfx);
         return vfx;
     }

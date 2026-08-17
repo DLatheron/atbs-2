@@ -246,7 +246,12 @@ export function useActionPage() {
                         setIsOnTarget(OnTarget.enum.none);
                         resolver(undefined);
                     },
-                    payload.animations
+                    payload.animations,
+                    {
+                        animObjects: payload.animObjects,
+                        animObjectRemovals: payload.animObjectRemovals,
+                        visibilityUpdates: payload.visibilityUpdates
+                    }
                 );
 
                 console.info("!!! Queue blocked");
@@ -274,6 +279,16 @@ export function useActionPage() {
                 async (_context, payload) => {
                     for (const animatableObjectRecipe of payload) {
                         world.animationController.newAnimatableObject(animatableObjectRecipe);
+                    }
+                }
+            ),
+
+            messageManager.registerHandler(
+                "server:anim:objects:remove",
+                async (_context, payload) => {
+                    for (const instanceId of payload) {
+                        world.animationController.removeAnimatableObject(instanceId);
+                        world.animationController.removeAnimation(instanceId);
                     }
                 }
             ),

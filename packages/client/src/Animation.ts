@@ -10,6 +10,7 @@ import {
     interpolateFrame,
     interpolateNumber,
     interpolateOrientation,
+    interpolateVec2,
     OpacitySequence,
     OpacityState,
     OrientationSequence,
@@ -20,7 +21,9 @@ import {
     RotationState,
     ScaleSequence,
     ScaleState,
-    SceneObject
+    SceneObject,
+    TranslationSequence,
+    TranslationState
 } from "@atbs/shared-data";
 import z from "zod";
 import { DrawVfx, DrawVfxToCanvas } from "./RenderHelpers";
@@ -222,7 +225,15 @@ export class Animation extends SceneObject {
                       elapsedTimeIntoAnimation,
                       interpolateFrame
                   )
-                : 0
+                : 0,
+            translation: this._recipe.stateDef.translation
+                ? this.evaluateStateValue<TranslationState, TranslationSequence>(
+                      "translation",
+                      this._recipe.stateDef.translation,
+                      elapsedTimeIntoAnimation,
+                      interpolateVec2
+                  )
+                : { x: 50, y: 50 }
         };
     }
 
@@ -248,14 +259,17 @@ export class Animation extends SceneObject {
         camera,
         context,
         worldPos,
-        imageCache
+        imageCache,
+        tileSize = 100
     }: {
         camera: Camera2d;
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         worldPos: Vec2;
         imageCache: ImageCache;
+        tileSize?: number;
     }) {
-        const { scale, opacity, rotation, orientation, frame, orbitRadius } = this._state;
+        const { scale, opacity, rotation, orientation, frame, orbitRadius, translation } =
+            this._state;
 
         const renderList = this.getRenderList({
             renderMode: RenderMode.enum.MAP_MODE,
@@ -263,6 +277,11 @@ export class Animation extends SceneObject {
             opacity,
             frame,
             states: ["default"]
+        });
+
+        const translatedWorldPos = worldPos.add({
+            x: ((translation.x - 50) / 100) * tileSize,
+            y: ((translation.y - 50) / 100) * tileSize
         });
 
         for (const renderable of renderList) {
@@ -274,7 +293,7 @@ export class Animation extends SceneObject {
                 camera,
                 context,
                 imageCache.getImage(renderable.imageId),
-                worldPos,
+                translatedWorldPos,
                 camera.worldLengthToCanvas(scale),
                 renderable.opacity ?? opacity,
                 rotation,
@@ -287,14 +306,17 @@ export class Animation extends SceneObject {
         context,
         canvasPos,
         imageCache,
-        sizeScale = 1
+        sizeScale = 1,
+        tileSize = 100
     }: {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
         imageCache: ImageCache;
         sizeScale?: number;
+        tileSize?: number;
     }) {
-        const { scale, opacity, rotation, orientation, frame, orbitRadius } = this._state;
+        const { scale, opacity, rotation, orientation, frame, orbitRadius, translation } =
+            this._state;
 
         const renderList = this.getRenderList({
             renderMode: RenderMode.enum.MAP_MODE,
@@ -302,6 +324,11 @@ export class Animation extends SceneObject {
             opacity,
             frame,
             states: ["default"]
+        });
+
+        const translatedCanvasPos = canvasPos.add({
+            x: ((translation.x - 50) / 100) * tileSize * sizeScale,
+            y: ((translation.y - 50) / 100) * tileSize * sizeScale
         });
 
         for (const renderable of renderList) {
@@ -312,7 +339,7 @@ export class Animation extends SceneObject {
             DrawVfxToCanvas(
                 context,
                 imageCache.getImage(renderable.imageId),
-                canvasPos,
+                translatedCanvasPos,
                 scale * sizeScale,
                 renderable.opacity ?? opacity,
                 rotation,

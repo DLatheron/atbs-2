@@ -99,6 +99,21 @@ export const FrameSequence = z
     .describe("The sequence of frame indices over time");
 export type FrameSequence = z.infer<typeof FrameSequence>;
 
+export const TranslationState = IVec2.describe(
+    "Sub-tile position in 0-100 tile coordinates; (50, 50) is the tile centre"
+);
+export type TranslationState = z.infer<typeof TranslationState>;
+
+export const TranslationSequence = z
+    .tuple([
+        TranslationState,
+        z
+            .array(makeSequenceDef(TranslationState))
+            .describe("The sequence of translation values over time")
+    ])
+    .describe("The sequence of translation values over time");
+export type TranslationSequence = z.infer<typeof TranslationSequence>;
+
 export const AnimationStateDef = z.object({
     scale: ScaleState.or(ScaleSequence)
         .describe("The scale of the animation or its sequence over time")
@@ -120,6 +135,11 @@ export const AnimationStateDef = z.object({
     frame: FrameState.or(FrameSequence)
         .describe("The scene node frame index or its sequence over time")
         .optional(),
+    translation: IVec2.or(TranslationSequence)
+        .describe(
+            "Sub-tile position in 0-100 tile coordinates (50,50 is the tile centre), or its sequence over time"
+        )
+        .optional(),
     renderable: SceneNode.describe("The renderable of the animation")
 });
 export type AnimationStateDef = z.infer<typeof AnimationStateDef>;
@@ -130,7 +150,8 @@ export const AnimationState = z.object({
     rotation: RotationState,
     orbitRadius: ScaleState,
     orientation: OrientationState,
-    frame: FrameState
+    frame: FrameState,
+    translation: TranslationState
 });
 export type AnimationState = z.infer<typeof AnimationState>;
 
@@ -226,3 +247,15 @@ export const AnimatableObjectRecipe = z.object({
     recipes: z.array(AnimationRecipe).describe("The recipes of the animatable object")
 });
 export type AnimatableObjectRecipe = z.infer<typeof AnimatableObjectRecipe>;
+
+export const TimedAnimatableObject = z.object({
+    recipe: AnimatableObjectRecipe,
+    startTimeMs: z.number().nonnegative()
+});
+export type TimedAnimatableObject = z.infer<typeof TimedAnimatableObject>;
+
+export const TimedAnimatableObjectRemoval = z.object({
+    instanceId: InstanceId,
+    startTimeMs: z.number().nonnegative()
+});
+export type TimedAnimatableObjectRemoval = z.infer<typeof TimedAnimatableObjectRemoval>;

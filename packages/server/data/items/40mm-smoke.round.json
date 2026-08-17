@@ -32,7 +32,10 @@
         "damage": { "default": 1 },
         "explosion": {
             "type": "smoke",
-            "particles": [12, 8, 4]
+            "particles": [12, 8, 4],
+            "lifetime": { "min": 2, "max": 4 },
+            "vfxId": "smoke.vfx",
+            "materials": ["smoke.material"]
         }
     },
     "renderable": {
