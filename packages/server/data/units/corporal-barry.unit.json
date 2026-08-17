@@ -17,7 +17,7 @@
         "strength": { "max": 82 }
     },
     "inventory": {
-        "inUse": 0,
+        "inUse": 2,
         "items": [
             { "id": "coffee-token.item" },
             { "id": "spas-12.gun" },

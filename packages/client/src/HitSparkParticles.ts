@@ -1,4 +1,5 @@
 import { colourToRGBA, generateRandomBetween, IColour, IVec2, Vec2 } from "@atbs/maths";
+import { HitSparkKind } from "@atbs/shared-data";
 import { Camera2d } from "./Camera2d";
 
 const LIFETIME_MS = 300;
@@ -7,6 +8,8 @@ const SPREAD_MAX_PX = 80;
 const GRAVITY_PX_PER_S2 = 200;
 const SIZE_MIN_PX = 2;
 const SIZE_MAX_PX = 4;
+const DISORIENTATION_GLYPH = "💫";
+const DISORIENTATION_FONT_PX = 14;
 
 interface SparkParticle {
     worldPos: Vec2;
@@ -14,12 +17,19 @@ interface SparkParticle {
     colour: IColour;
     radius: number;
     ageMs: number;
+    kind: HitSparkKind;
 }
 
 export class HitSparkParticles {
     private readonly _particles: SparkParticle[] = [];
 
-    spawnBurst(worldPos: IVec2, colour: IColour, direction: IVec2, count: number): void {
+    spawnBurst(
+        worldPos: IVec2,
+        colour: IColour,
+        direction: IVec2,
+        count: number,
+        kind: HitSparkKind = "spark"
+    ): void {
         const baseAngle = Math.atan2(direction.y, direction.x);
         const origin = new Vec2(worldPos);
 
@@ -34,7 +44,8 @@ export class HitSparkParticles {
                 velocity: new Vec2(Math.cos(angle) * speed, Math.sin(angle) * speed),
                 colour,
                 radius: generateRandomBetween(SIZE_MIN_PX, SIZE_MAX_PX),
-                ageMs: 0
+                ageMs: 0,
+                kind
             });
         }
     }
@@ -66,6 +77,18 @@ export class HitSparkParticles {
             }
 
             const canvasPos = camera.worldToCanvas(particle.worldPos);
+
+            if (particle.kind === "disorientation") {
+                context.save();
+                context.globalAlpha = alpha;
+                context.font = `${DISORIENTATION_FONT_PX}px sans-serif`;
+                context.textAlign = "center";
+                context.textBaseline = "middle";
+                context.fillText(DISORIENTATION_GLYPH, canvasPos.x, canvasPos.y);
+                context.restore();
+                continue;
+            }
+
             context.fillStyle = colourToRGBA({ ...particle.colour, a: alpha });
             context.beginPath();
             context.arc(canvasPos.x, canvasPos.y, particle.radius, 0, 2 * Math.PI);

@@ -27,13 +27,22 @@
         "hardness": 1,
         "shape": 0,
         "stability": 1,
-        "bounce": 1,
+        "bounce": 0,
         "integrity": 0,
 
         "explosion": {
             "type": "fragment",
             "maxRange": { "min": 150, "max": 300 },
             "numFragments": 200,
+            "penetration": 10,
+            "angleJitter": 5,
+            "variability": { "min": 0.9, "max": 1.1 },
+            "visual": {
+                "intensity": { "min": 0.7, "max": 1 },
+                "velocity": { "min": 300, "max": 500 },
+                "length": { "min": 10, "max": 20 },
+                "rangeFallOff": { "min": 5, "max": 20 }
+            },
             "damage": { "default": 10 }
         }
     },

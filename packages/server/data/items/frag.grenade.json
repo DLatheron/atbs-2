@@ -1,0 +1,36 @@
+{
+    "id": "frag.grenade",
+    "type": "grenade",
+    "name": "M67 Frag Grenade",
+    "description": [
+        {
+            "text": "The M67 grenade is a fragmentation hand grenade used by the United States military."
+        },
+        {
+            "text": "The M67 is a further development of the M33 grenade, itself a replacement for the M26-series grenades used during the Korean and Vietnam Wars, and the older Mk 2 \"pineapple\" grenade used since World War I."
+        }
+    ],
+    "quantity": 1,
+    "weight": 0.4,
+    "renderable": {
+        "default": [{ "imageId": "frag" }],
+        "fire-mode": []
+    },
+    "explosion": {
+        "type": "fragment",
+        "maxRange": { "min": 150, "max": 300 },
+        "numFragments": 200,
+        "penetration": 10,
+        "angleJitter": 5,
+        "variability": { "min": 0.9, "max": 1.1 },
+        "visual": {
+            "intensity": { "min": 0.7, "max": 1 },
+            "velocity": { "min": 300, "max": 500 },
+            "length": { "min": 10, "max": 20 },
+            "rangeFallOff": { "min": 5, "max": 20 }
+        },
+        "damage": {
+            "default": 10
+        }
+    }
+}

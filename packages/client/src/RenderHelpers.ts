@@ -5,6 +5,7 @@ import {
     IColour,
     IVec2,
     PathSegment,
+    positionOnPathAtTime,
     Vec2
 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
@@ -54,12 +55,41 @@ export function DrawProjectile(
     const time = Math.max(timeNow - baseTime, 0);
     const strokeThickness = 2;
 
+    if (tracer.segments.length < 2) {
+        return true;
+    }
+
+    const tracerStartTime = tracer.segments[0].time;
+
+    // Fragment / delayed tracers are offset on the shared fire-trace clock. Until
+    // that offset is reached they have not started — do not treat them as complete
+    // (which would tear down the render plugin before they draw).
+    if (time < tracerStartTime) {
+        return false;
+    }
+
     const headStartTime = time;
     const tailEndTime = headStartTime - tracer.trailLengthInMs;
 
+    if (camera.hasWorldBounds) {
+        const headPos = positionOnPathAtTime(tracer.segments, headStartTime);
+        const tailPos = positionOnPathAtTime(tracer.segments, tailEndTime);
+        const { worldBounds } = camera;
+        if (
+            !worldBounds.isPointInside(headPos) &&
+            !worldBounds.isPointInside(tailPos) &&
+            !worldBounds.intersectsSegment(headPos, tailPos)
+        ) {
+            return true;
+        }
+    }
+
+    // Falloff is relative to when *this* tracer began, not absolute timeline time.
+    // Using absolute time made delayed explosion fragments fully transparent once
+    // their start offset was >= maxRangeInMs.
     const rangeOpacity = calcFalloff(
         1,
-        headStartTime,
+        headStartTime - tracerStartTime,
         tracer.maxRangeInMs,
         tracer.rangeFalloffPower
     );
@@ -711,20 +741,17 @@ export function DrawVfx(
     worldCenterPos: Vec2,
     size: number,
     alpha: number,
-    rotationInDegrees = 0
+    rotationInDegrees = 0,
+    orbitRadius = 0
 ): void {
     const centerCanvasPos = camera.worldToCanvas(worldCenterPos);
+    DrawVfxToCanvas(context, image, centerCanvasPos, size, alpha, rotationInDegrees, orbitRadius);
+}
 
+/** Clockwise from the top: 0° is above the origin, 90° is to the right. */
+export function orbitalCanvasOffset(rotationInDegrees: number, radius: number): Vec2 {
     const angleInRadians = degreesToRadians(rotationInDegrees);
-    const halfSize = size / 2;
-
-    context.globalAlpha = alpha;
-    context.translate(centerCanvasPos.x, centerCanvasPos.y);
-    context.rotate(angleInRadians);
-    context.drawImage(image, -halfSize, -halfSize, size, size);
-    context.rotate(-angleInRadians);
-    context.translate(-centerCanvasPos.x, -centerCanvasPos.y);
-    context.globalAlpha = 1;
+    return new Vec2(Math.sin(angleInRadians) * radius, -Math.cos(angleInRadians) * radius);
 }
 
 export function DrawVfxToCanvas(
@@ -733,19 +760,25 @@ export function DrawVfxToCanvas(
     canvasPos: Vec2,
     size: number,
     alpha: number,
-    rotationInDegrees = 0
+    rotationInDegrees = 0,
+    orbitRadius = 0
 ): void {
-    const angleInRadians = degreesToRadians(rotationInDegrees);
+    const drawPos =
+        orbitRadius > 0
+            ? canvasPos.add(orbitalCanvasOffset(rotationInDegrees, orbitRadius))
+            : canvasPos;
+    const imageRotation = orbitRadius > 0 ? 0 : rotationInDegrees;
+    const angleInRadians = degreesToRadians(imageRotation);
     const halfSize = size / 2;
 
     // Rotate about the centre of the drawn image: translate to the centre,
     // rotate, then draw the image offset by half its size in each axis.
     context.globalAlpha = alpha;
-    context.translate(canvasPos.x, canvasPos.y);
+    context.translate(drawPos.x, drawPos.y);
     context.rotate(angleInRadians);
     context.drawImage(image, -halfSize, -halfSize, size, size);
     context.rotate(-angleInRadians);
-    context.translate(-canvasPos.x, -canvasPos.y);
+    context.translate(-drawPos.x, -drawPos.y);
     context.globalAlpha = 1;
 }
 

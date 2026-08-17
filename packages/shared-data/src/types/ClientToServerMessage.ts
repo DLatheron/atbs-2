@@ -2,8 +2,10 @@ import z from "zod";
 import {
     ClientId,
     FireDetails,
+    FireMode,
     FireSelector,
     ItemId,
+    Prime,
     ScenarioId,
     SideId,
     ThrowDetails,
@@ -114,6 +116,20 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
+        type: z.literal("client:unit:fire:mode"),
+        payload: z.object({
+            unitId: UnitId,
+            fireMode: FireMode
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:weapon:index"),
+        payload: z.object({
+            unitId: UnitId,
+            weaponIndex: z.int().nonnegative()
+        })
+    }),
+    z.object({
         type: z.literal("client:unit:fire"),
         payload: FireDetails
     }),
@@ -139,6 +155,14 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:game:unit:next"),
         payload: z.null()
+    }),
+    z.object({
+        type: z.literal("client:unit:prime"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId,
+            prime: Prime
+        })
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

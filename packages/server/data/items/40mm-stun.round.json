@@ -27,17 +27,27 @@
         "hardness": 1,
         "shape": 0,
         "stability": 0.25,
-        "bounce": 1,
+        "bounce": 0,
         "integrity": 0.2,
 
         "explosion": {
             "type": "shockwave",
             "maxRange": { "min": 150, "max": 300 },
-            "numFragments": 200,
+            "numFragments": 40,
+            "penetration": 10,
+            "angleJitter": 5,
+            "variability": { "min": 0.9, "max": 1.1 },
+            "visual": {
+                "intensity": 1,
+                "velocity": 500,
+                "length": 150,
+                "rangeFallOff": 20
+            },
             "damage": {
                 "type": "disorientation",
                 "default": 100
-            }
+            },
+            "animationId": "shockwave.animation"
         }
     },
     "renderable": {

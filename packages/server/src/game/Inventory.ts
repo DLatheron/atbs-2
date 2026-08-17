@@ -12,12 +12,14 @@ export type InventoryRecipe = z.infer<typeof InventoryRecipe>;
 
 export class Inventory {
     protected _inUse: number;
+    protected _weaponIndex: number;
     protected _items: Item[];
     protected readonly _itemsMap: Map<ItemId, Item>;
     protected readonly _itemManager: ItemManager;
 
     constructor(recipe: InventoryRecipe, itemManager: ItemManager) {
         this._inUse = recipe.inUse !== null ? recipe.inUse : -1;
+        this._weaponIndex = 0;
 
         this._items = [];
         this._itemsMap = new Map<ItemId, Item>();
@@ -33,16 +35,26 @@ export class Inventory {
         return this._inUse >= 0 ? this._items[this._inUse] : null;
     }
 
+    get weaponIndex(): number {
+        return this._weaponIndex;
+    }
+
+    set weaponIndex(value: number) {
+        this._weaponIndex = value;
+    }
+
     selectItem(item: Item) {
         const atIndex = this._items.findIndex(({ id }) => item.id === id);
         if (atIndex === -1) {
             throw new Error(`Item ${item.id} is not in the inventory`);
         }
         this._inUse = atIndex;
+        this._weaponIndex = 0;
     }
 
     deselectItem(): void {
         this._inUse = -1;
+        this._weaponIndex = 0;
     }
 
     addItem(item: Item, atIndex = 0): Item {
@@ -83,6 +95,7 @@ export class Inventory {
 
         if (this._inUse === atIndex) {
             this._inUse = -1;
+            this._weaponIndex = 0;
         }
 
         return item;
@@ -104,6 +117,7 @@ export class Inventory {
         const droppedItems = this._items;
         this._itemsMap.clear();
         this._inUse = -1;
+        this._weaponIndex = 0;
         return droppedItems;
     }
 

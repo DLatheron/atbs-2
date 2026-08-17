@@ -5,10 +5,12 @@ import {
     ClientMap,
     ErrorType,
     FireDetails,
+    FireMode,
     FireModeItemSummary,
     FireSelector,
     ItemId,
     OnTarget,
+    Prime,
     RenderMode,
     SideSummary,
     ThrowDetails,
@@ -121,7 +123,7 @@ export function useActionPage() {
 
                 setUnitWeapon(payload);
                 world.unitWeapon = payload;
-                world.unitWeaponIndex = 0;
+                world.throwing = false;
                 if (payload) {
                     setSidePanelMode(MapMode.enum["fire-mode"]);
                     world.mapMode = MapMode.enum["fire-mode"];
@@ -243,6 +245,12 @@ export function useActionPage() {
                     () => {
                         setIsOnTarget(OnTarget.enum.none);
                         resolver(undefined);
+                    },
+                    payload.animations,
+                    {
+                        animObjects: payload.animObjects,
+                        animObjectRemovals: payload.animObjectRemovals,
+                        visibilityUpdates: payload.visibilityUpdates
                     }
                 );
 
@@ -271,6 +279,16 @@ export function useActionPage() {
                 async (_context, payload) => {
                     for (const animatableObjectRecipe of payload) {
                         world.animationController.newAnimatableObject(animatableObjectRecipe);
+                    }
+                }
+            ),
+
+            messageManager.registerHandler(
+                "server:anim:objects:remove",
+                async (_context, payload) => {
+                    for (const instanceId of payload) {
+                        world.animationController.removeAnimatableObject(instanceId);
+                        world.animationController.removeAnimation(instanceId);
                     }
                 }
             ),
@@ -383,6 +401,36 @@ export function useActionPage() {
         [sendMessage, unit?.id]
     );
 
+    const onChangeFireMode = useCallback(
+        (fireMode: FireMode) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:fire:mode",
+                    payload: {
+                        unitId: unit.id,
+                        fireMode
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onChangeWeaponIndex = useCallback(
+        (weaponIndex: number) => {
+            if (unit?.id) {
+                sendMessage({
+                    type: "client:unit:weapon:index",
+                    payload: {
+                        unitId: unit.id,
+                        weaponIndex
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id]
+    );
+
     const onFire = useCallback(
         (details: FireDetails) => {
             if (disabled) {
@@ -457,6 +505,22 @@ export function useActionPage() {
         [spawnActionMenuGhost]
     );
 
+    const onPrime = useCallback(
+        (prime: Prime) => {
+            if (unit?.id && unitWeapon?.id) {
+                sendMessage({
+                    type: "client:unit:prime",
+                    payload: {
+                        unitId: unit.id,
+                        itemId: unitWeapon.id,
+                        prime
+                    }
+                });
+            }
+        },
+        [sendMessage, unit?.id, unitWeapon?.id]
+    );
+
     useLayoutEffect(() => {
         const unitId = unit?.id;
         const showMenu =
@@ -509,6 +573,8 @@ export function useActionPage() {
         onMove,
         onRotateTo,
         onChangeFireSelector,
+        onChangeFireMode,
+        onChangeWeaponIndex,
         onEndMovement,
         onEndTurn,
         onEndError,
@@ -516,6 +582,7 @@ export function useActionPage() {
         onEndFireMode,
         onAction,
         onUnitActionMode,
-        setIsOnTarget
+        setIsOnTarget,
+        onPrime
     };
 }

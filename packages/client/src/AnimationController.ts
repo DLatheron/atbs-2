@@ -68,15 +68,21 @@ export class AnimationController {
 
     render({
         camera,
-        context
+        context,
+        shouldRenderWorldPos
     }: {
         camera: Camera2d;
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+        shouldRenderWorldPos?: (worldPos: Vec2) => boolean;
     }) {
         const { imageCache } = this;
 
         for (const animation of this._animationMap.values()) {
             if (animation.hasWorldPos) {
+                if (shouldRenderWorldPos && !shouldRenderWorldPos(animation.worldPos)) {
+                    continue;
+                }
+
                 animation.renderToWorld({
                     camera,
                     context,
@@ -91,7 +97,8 @@ export class AnimationController {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         animationId: AnimationId,
         canvasPos: Vec2,
-        sizeScale = 1
+        sizeScale = 1,
+        tileSize = 100
     ) {
         const animation = this._animationMap.get(animationId);
         if (!animation) {
@@ -104,7 +111,8 @@ export class AnimationController {
             context,
             canvasPos,
             imageCache,
-            sizeScale
+            sizeScale,
+            tileSize
         });
     }
 }

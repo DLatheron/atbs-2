@@ -96,8 +96,7 @@ export const SPEED_LEVELS: LevelThreshold[] = [
 export const FIRE_MODE_EX_LOOKUP: Record<FireModeEx, string> = {
     [FireModeEx.enum.aimed]: "Aimed",
     [FireModeEx.enum.snapshot]: "Snapshot",
-    [FireModeEx.enum.throw]: "Throw",
-    [FireModeEx.enum.none]: "None"
+    [FireModeEx.enum.throw]: "Throw"
 };
 
 export function levelToText(value: number, levels: LevelThreshold[]): string {

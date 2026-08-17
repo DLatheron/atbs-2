@@ -1,0 +1,19 @@
+{
+    "id": "smoke.grenade",
+    "type": "grenade",
+    "name": "M18 Smoke Grenade",
+    "description": [{ "text": "Emits a thick cloud of smoke to cover unit movements." }],
+    "quantity": 1,
+    "weight": 0.4,
+    "renderable": {
+        "default": [{ "imageId": "smoke" }],
+        "fire-mode": []
+    },
+    "explosion": {
+        "type": "smoke",
+        "particles": [12, 8, 4],
+        "lifetime": { "min": 2, "max": 4 },
+        "vfxId": "smoke.vfx",
+        "materials": ["smoke.material"]
+    }
+}
