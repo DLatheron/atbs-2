@@ -3,6 +3,7 @@ import type { InventoryCosts, InventoryItemView, InventorySnapshot } from "@atbs
 import {
     collectAmmoCounts,
     collectAmmoSlots,
+    collectContentSlots,
     findCompatibleAmmo,
     formatAmmoCount,
     getItemMenu,
@@ -244,6 +245,51 @@ describe("getItemMenu", () => {
         expect(rows[0]?.children?.[0]?.pendingCostText).toBe("Load 5.56 — 16 AP");
     });
 
+    it("offers Load/Unload on the slot owner for a gun ammo well", () => {
+        const snapshot = makeSnapshot({
+            items: [m4, spareMag],
+            inUseItemId: m4.id
+        });
+        const rows = getItemMenu({
+            snapshot,
+            item: m4,
+            location: "slot",
+            actionScope: "inUse",
+            emptySlot: false
+        });
+
+        expect(rows.map((row) => row.id)).toEqual(["load", "unload"]);
+        expect(rows.find((row) => row.id === "unload")?.action).toEqual({
+            type: "unload",
+            itemId: m4.id
+        });
+        expect(
+            rows.find((row) => row.id === "load")?.children?.map((child) => child.action)
+        ).toEqual([{ type: "load", receiverId: m4.id, ammoId: spareMag.id }]);
+    });
+
+    it("offers only Load for an empty slot on the in-use item", () => {
+        const emptyM4 = makeItem({
+            ...m4,
+            slots: [{ ...m4.slots[0]!, contents: null }]
+        });
+        const snapshot = makeSnapshot({ items: [emptyM4, spareMag], inUseItemId: emptyM4.id });
+        const rows = getItemMenu({
+            snapshot,
+            item: emptyM4,
+            location: "slot",
+            actionScope: "inUse",
+            emptySlot: true
+        });
+
+        expect(rows.map((row) => row.id)).toEqual(["load"]);
+        expect(rows[0]?.children?.[0]?.action).toEqual({
+            type: "load",
+            receiverId: emptyM4.id,
+            ammoId: spareMag.id
+        });
+    });
+
     it("returns no slot actions for a nested item outside the in-use tree", () => {
         const otherGun = makeItem({
             id: "spas-12.gun-1",
@@ -401,6 +447,34 @@ describe("collectAmmoCounts", () => {
 
     it("returns no counts for items without ammo slots", () => {
         expect(collectAmmoCounts(coffee)).toEqual([]);
+    });
+});
+
+describe("collectContentSlots", () => {
+    it("returns the gun as owner of a loaded ammo well", () => {
+        const refs = collectContentSlots(m4);
+        expect(refs).toHaveLength(1);
+        expect(refs[0]?.owner.id).toBe(m4.id);
+        expect(refs[0]?.slot.slot).toBe("ammo");
+        expect(refs[0]?.slot.contents?.id).toBe(magInPack.id);
+    });
+
+    it("includes empty wells", () => {
+        const emptyM4 = makeItem({
+            ...m4,
+            slots: [{ ...m4.slots[0]!, contents: null }]
+        });
+        const refs = collectContentSlots(emptyM4);
+        expect(refs).toHaveLength(1);
+        expect(refs[0]?.slot.contents).toBeNull();
+        expect(refs[0]?.slot.slot).toBe("ammo");
+    });
+
+    it("ignores nested item slots 0 and 1 and walks into them", () => {
+        const refs = collectContentSlots(combo);
+        expect(refs.map((ref) => ref.slot.slot)).toEqual(["ammo", "ammo"]);
+        expect(refs.map((ref) => ref.owner.id)).toEqual([m4.id, m203.id]);
+        expect(refs.every((ref) => ref.slot.slot !== "0" && ref.slot.slot !== "1")).toBe(true);
     });
 });
 

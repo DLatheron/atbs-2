@@ -11,9 +11,22 @@ import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@d
 import { CSS } from "@dnd-kit/utilities";
 import { Box, Menu, MenuItem, SxProps, Typography } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type MouseEvent,
+    type ReactNode
+} from "react";
 import { ItemInspector } from "./ItemInspector";
-import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
+import {
+    ITEM_TILE_SIZE,
+    InventoryTooltipDismissProvider,
+    ItemTile,
+    useDismissInventoryTooltips
+} from "./ItemTile";
 import {
     type InventoryActionScope,
     type InventoryMode,
@@ -22,8 +35,7 @@ import {
     type ItemMenuRow,
     findItemInSnapshot,
     getInUseItem,
-    getItemMenu,
-    isInUseTree
+    getItemMenu
 } from "./itemMenu";
 
 export interface InventoryBoardProps {
@@ -55,10 +67,6 @@ const panelSx = {
     backgroundColor: "beige",
     p: 1
 } as const;
-
-/** Title + tight padding around the in-use tile; keeps row 1 independent of inspector text. */
-const IN_USE_CHROME = 36;
-const ROW1_HEIGHT = ITEM_TILE_SIZE + IN_USE_CHROME;
 
 function dispatchMenuAction(
     action: ItemMenuAction,
@@ -92,19 +100,19 @@ function dispatchMenuAction(
 function SortableBackpackTile({
     item,
     selected,
-    disabled,
+    dragDisabled,
     onClick,
     onMenuClick
 }: {
     item: InventoryItemView;
     selected: boolean;
-    disabled: boolean;
+    dragDisabled: boolean;
     onClick: () => void;
     onMenuClick?: (event: MouseEvent<HTMLElement>) => void;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: item.id,
-        disabled
+        disabled: dragDisabled
     });
 
     return (
@@ -122,13 +130,61 @@ function SortableBackpackTile({
             <ItemTile
                 item={item}
                 selected={selected}
-                disabled={disabled}
-                draggable={!disabled}
+                draggable
                 dragHandleAttributes={attributes}
                 dragHandleListeners={listeners}
                 onClick={onClick}
                 onMenuClick={onMenuClick}
             />
+        </Box>
+    );
+}
+
+function InventoryBoardFrame({
+    disabled,
+    sx,
+    children
+}: {
+    disabled: boolean;
+    sx?: SxProps;
+    children: ReactNode;
+}) {
+    const dismissTooltips = useDismissInventoryTooltips();
+    const rootRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const node = rootRef.current;
+        if (!node) {
+            return;
+        }
+
+        const onScroll = () => dismissTooltips();
+        node.addEventListener("scroll", onScroll, { capture: true, passive: true });
+        return () => node.removeEventListener("scroll", onScroll, { capture: true });
+    }, [dismissTooltips]);
+
+    return (
+        <Box
+            ref={rootRef}
+            data-testid="inventory-board"
+            sx={{
+                display: "grid",
+                gridTemplateAreas: `
+                    'in-use inspector'
+                    'inventory inventory'
+                    'ground ground'
+                `,
+                gridTemplateColumns: "auto 1fr",
+                gridTemplateRows: `auto 1fr auto`,
+                gap: 1,
+                height: "100%",
+                minHeight: 0,
+                overflow: "hidden",
+                pointerEvents: disabled ? "none" : "auto",
+                ...sx
+            }}
+        >
+            {children}
         </Box>
     );
 }
@@ -155,7 +211,7 @@ export function InventoryBoard({
 
     useEffect(() => {
         setItems(snapshot.items);
-    }, [snapshot.items, disabled]);
+    }, [snapshot.items]);
 
     useEffect(() => {
         if (selectedItemId && !findItemInSnapshot(snapshot, selectedItemId)) {
@@ -171,8 +227,7 @@ export function InventoryBoard({
 
     const inUseItem = getInUseItem(snapshot);
     const selectedItem = selectedItemId ? findItemInSnapshot(snapshot, selectedItemId) : null;
-    const slotsInteractive =
-        actionScope === "all" || (selectedItem != null && isInUseTree(snapshot, selectedItem.id));
+    const slotsInteractive = actionScope === "all" || selectedItem?.id === snapshot.inUseItemId;
     const menuRows: ItemMenuRow[] = useMemo(() => {
         if (!menu) {
             return [];
@@ -207,7 +262,9 @@ export function InventoryBoard({
             }
 
             event.stopPropagation();
-            setSelectedItemId(item.id);
+            if (location !== "slot") {
+                setSelectedItemId(item.id);
+            }
             setSubMenuAnchor(null);
             onPendingCostChange(null);
 
@@ -235,10 +292,6 @@ export function InventoryBoard({
 
     const getMenuClickHandler = useCallback(
         (item: InventoryItemView, location: ItemMenuLocation, emptySlot = false) => {
-            if (disabled) {
-                return undefined;
-            }
-
             const rows = getItemMenu({
                 snapshot,
                 item,
@@ -254,7 +307,7 @@ export function InventoryBoard({
                 openMenu(item, location, event, emptySlot);
             };
         },
-        [disabled, snapshot, actionScope, openMenu]
+        [snapshot, actionScope, openMenu]
     );
 
     const handleAction = useCallback(
@@ -291,224 +344,249 @@ export function InventoryBoard({
     const inUseMenuClick = inUseItem ? getMenuClickHandler(inUseItem, "inUse") : undefined;
 
     return (
-        <Box
-            data-testid="inventory-board"
-            sx={{
-                display: "grid",
-                gridTemplateAreas: `
-                    'in-use inspector'
-                    'inventory inventory'
-                    'ground ground'
-                `,
-                gridTemplateColumns: "auto 1fr",
-                gridTemplateRows: `auto 1fr auto`,
-                gap: 1,
-                height: "100%",
-                minHeight: 0,
-                overflow: "hidden",
-                pointerEvents: disabled ? "none" : "auto",
-                opacity: disabled ? 0.6 : 1,
-                ...sx
-            }}
-        >
-            <Box
-                sx={{
-                    gridArea: "in-use",
-                    ...panelSx,
-                    p: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 1
-                }}
-            >
-                <Typography variant="subtitle2" sx={{ textAlign: "center", lineHeight: 1.2 }}>
-                    In use
-                </Typography>
-                {inUseItem ? (
-                    <ItemTile
-                        item={inUseItem}
-                        selected={selectedItemId === inUseItem.id}
-                        disabled={disabled}
-                        onClick={() => setSelectedItemId(inUseItem.id)}
-                        onMenuClick={inUseMenuClick}
-                    />
-                ) : (
-                    <Box
-                        sx={{
-                            width: ITEM_TILE_SIZE,
-                            height: ITEM_TILE_SIZE,
-                            flexShrink: 0,
-                            borderRadius: 1,
-                            border: "1px dashed #666",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                        }}
-                    >
-                        <Typography variant="body2" sx={{ color: "#666", textAlign: "center" }}>
-                            None
-                        </Typography>
-                    </Box>
-                )}
-            </Box>
-
-            <Box sx={{ gridArea: "inspector", overflow: "hidden", height: "100%" }}>
-                <ItemInspector
-                    item={selectedItem}
-                    disabled={disabled}
-                    slotsInteractive={slotsInteractive}
-                    selectedSlotItemId={selectedItemId}
-                    onSlotClick={(slotItem) => setSelectedItemId(slotItem.id)}
-                    onEmptySlotClick={(owner) => setSelectedItemId(owner.id)}
-                    getSlotMenuClick={(slotItem) => getMenuClickHandler(slotItem, "slot")}
-                    getEmptySlotMenuClick={(owner) => getMenuClickHandler(owner, "slot", true)}
-                />
-            </Box>
-
-            <Box
-                sx={{
-                    gridArea: "inventory",
-                    ...panelSx,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                    p: 0
-                }}
-            >
-                <Typography variant="subtitle2" sx={{ textAlign: "center", p: 1, flexShrink: 0 }}>
-                    Inventory
-                </Typography>
-                <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1, pb: 1 }}>
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                    >
-                        <SortableContext
-                            items={items.map((item: InventoryItemView) => item.id)}
-                            strategy={rectSortingStrategy}
+        <InventoryTooltipDismissProvider>
+            <InventoryBoardFrame disabled={disabled} sx={sx}>
+                <Box
+                    sx={{
+                        gridArea: "in-use",
+                        ...panelSx,
+                        p: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 1
+                    }}
+                >
+                    <Typography variant="subtitle2" sx={{ textAlign: "center", lineHeight: 1.2 }}>
+                        In use
+                    </Typography>
+                    {inUseItem ? (
+                        <ItemTile
+                            item={inUseItem}
+                            selected={selectedItemId === inUseItem.id}
+                            onClick={() => setSelectedItemId(inUseItem.id)}
+                            onMenuClick={inUseMenuClick}
+                        />
+                    ) : (
+                        <Box
+                            sx={{
+                                width: ITEM_TILE_SIZE,
+                                height: ITEM_TILE_SIZE,
+                                flexShrink: 0,
+                                borderRadius: 1,
+                                border: "1px dashed #666",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center"
+                            }}
                         >
-                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                                {items.map((item: InventoryItemView) => (
-                                    <SortableBackpackTile
+                            <Typography variant="body2" sx={{ color: "#666", textAlign: "center" }}>
+                                None
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
+
+                <Box sx={{ gridArea: "inspector", overflow: "hidden", height: "100%" }}>
+                    <ItemInspector
+                        item={selectedItem}
+                        slotsInteractive={slotsInteractive}
+                        getSlotMenuClick={(owner, empty) =>
+                            getMenuClickHandler(owner, "slot", empty)
+                        }
+                    />
+                </Box>
+
+                <Box
+                    sx={{
+                        gridArea: "inventory",
+                        ...panelSx,
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                        p: 0
+                    }}
+                >
+                    <Typography
+                        variant="subtitle2"
+                        sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
+                    >
+                        Inventory
+                    </Typography>
+                    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1, pb: 1 }}>
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={items.map((item: InventoryItemView) => item.id)}
+                                strategy={rectSortingStrategy}
+                            >
+                                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                                    {items.map((item: InventoryItemView) => (
+                                        <SortableBackpackTile
+                                            key={item.id}
+                                            item={item}
+                                            selected={selectedItemId === item.id}
+                                            dragDisabled={disabled}
+                                            onClick={() => setSelectedItemId(item.id)}
+                                            onMenuClick={getMenuClickHandler(
+                                                item,
+                                                item.id === snapshot.inUseItemId
+                                                    ? "inUse"
+                                                    : "inventory"
+                                            )}
+                                        />
+                                    ))}
+                                    {items.length === 0 && (
+                                        <Typography variant="body2" sx={{ color: "#666" }}>
+                                            Empty
+                                        </Typography>
+                                    )}
+                                </Box>
+                            </SortableContext>
+                        </DndContext>
+                    </Box>
+                </Box>
+
+                <Box
+                    sx={{
+                        gridArea: "ground",
+                        ...panelSx,
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                        p: 0
+                    }}
+                >
+                    {mode === "shop" ? (
+                        <Typography
+                            variant="subtitle2"
+                            sx={{ textAlign: "center", color: "#666", p: 1 }}
+                        >
+                            Store
+                        </Typography>
+                    ) : (
+                        <>
+                            <Typography
+                                variant="subtitle2"
+                                sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
+                            >
+                                On ground
+                            </Typography>
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    minHeight: 0,
+                                    display: "flex",
+                                    flexWrap: "nowrap",
+                                    gap: 1,
+                                    p: 1,
+                                    pb: 2,
+                                    overflow: "auto"
+                                }}
+                            >
+                                {snapshot.groundItems.map((item: InventoryItemView) => (
+                                    <ItemTile
                                         key={item.id}
                                         item={item}
                                         selected={selectedItemId === item.id}
-                                        disabled={disabled}
                                         onClick={() => setSelectedItemId(item.id)}
-                                        onMenuClick={getMenuClickHandler(
-                                            item,
-                                            item.id === snapshot.inUseItemId ? "inUse" : "inventory"
-                                        )}
+                                        onMenuClick={getMenuClickHandler(item, "ground")}
                                     />
                                 ))}
-                                {items.length === 0 && (
+                                {snapshot.groundItems.length === 0 && (
                                     <Typography variant="body2" sx={{ color: "#666" }}>
-                                        Empty
+                                        Nothing on the ground
                                     </Typography>
                                 )}
                             </Box>
-                        </SortableContext>
-                    </DndContext>
+                        </>
+                    )}
                 </Box>
-            </Box>
 
-            <Box
-                sx={{
-                    gridArea: "ground",
-                    ...panelSx,
-                    display: "flex",
-                    flexDirection: "column",
-                    overflow: "hidden",
-                    p: 0
-                }}
-            >
-                {mode === "shop" ? (
-                    <Typography
-                        variant="subtitle2"
-                        sx={{ textAlign: "center", color: "#666", p: 1 }}
-                    >
-                        Store
-                    </Typography>
-                ) : (
-                    <>
-                        <Typography
-                            variant="subtitle2"
-                            sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
-                        >
-                            On ground
-                        </Typography>
-                        <Box
-                            sx={{
-                                flex: 1,
-                                minHeight: 0,
-                                display: "flex",
-                                flexWrap: "nowrap",
-                                gap: 1,
-                                p: 1,
-                                pb: 2,
-                                overflow: "auto",
-                            }}
-                        >
-                            {snapshot.groundItems.map((item: InventoryItemView) => (
-                                <ItemTile
-                                    key={item.id}
-                                    item={item}
-                                    selected={selectedItemId === item.id}
-                                    disabled={disabled}
-                                    onClick={() => setSelectedItemId(item.id)}
-                                    onMenuClick={getMenuClickHandler(item, "ground")}
-                                />
-                            ))}
-                            {snapshot.groundItems.length === 0 && (
-                                <Typography variant="body2" sx={{ color: "#666" }}>
-                                    Nothing on the ground
-                                </Typography>
-                            )}
-                        </Box>
-                    </>
-                )}
-            </Box>
+                <Menu
+                    open={Boolean(menu) && menuRows.length > 0}
+                    onClose={closeMenu}
+                    anchorEl={menu?.anchorEl}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    transformOrigin={{ vertical: "top", horizontal: "right" }}
+                    slotProps={{
+                        list: { dense: true }
+                    }}
+                >
+                    {menuRows.map((row) => {
+                        const hasChildren = Boolean(row.children);
 
-            <Menu
-                open={Boolean(menu) && menuRows.length > 0}
-                onClose={closeMenu}
-                anchorEl={menu?.anchorEl}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-                slotProps={{
-                    list: { dense: true }
-                }}
-            >
-                {menuRows.map((row) => {
-                    const hasChildren = Boolean(row.children);
+                        return (
+                            <MenuItem
+                                key={row.id}
+                                disabled={row.disabled}
+                                onMouseEnter={(event) => {
+                                    onPendingCostChange(row.pendingCostText);
+                                    if (hasChildren && !row.disabled) {
+                                        setSubMenuAnchor(event.currentTarget);
+                                    } else {
+                                        setSubMenuAnchor(null);
+                                    }
+                                }}
+                                onMouseLeave={() => {
+                                    if (!hasChildren) {
+                                        onPendingCostChange(null);
+                                    }
+                                }}
+                                onClick={(event) => {
+                                    if (hasChildren) {
+                                        event.stopPropagation();
+                                        setSubMenuAnchor(event.currentTarget);
+                                        return;
+                                    }
+                                    handleAction(row.action);
+                                }}
+                            >
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        width: "100%",
+                                        gap: 1,
+                                        justifyContent: "space-between"
+                                    }}
+                                >
+                                    <Typography variant="caption">{row.label}</Typography>
+                                    {!hasChildren && (
+                                        <Typography
+                                            variant="caption"
+                                            sx={{ color: "#666", textAlign: "right" }}
+                                        >
+                                            {row.cost} AP
+                                        </Typography>
+                                    )}
+                                    {hasChildren && <ChevronRightIcon fontSize="small" />}
+                                </Box>
+                            </MenuItem>
+                        );
+                    })}
+                </Menu>
 
-                    return (
+                <Menu
+                    anchorEl={subMenuAnchor}
+                    open={Boolean(subMenuAnchor) && loadSubmenu.length > 0}
+                    onClose={() => setSubMenuAnchor(null)}
+                    anchorOrigin={{ vertical: "top", horizontal: "right" }}
+                    transformOrigin={{ vertical: "top", horizontal: "left" }}
+                    slotProps={{
+                        list: { dense: true }
+                    }}
+                >
+                    {loadSubmenu.map((row) => (
                         <MenuItem
                             key={row.id}
                             disabled={row.disabled}
-                            onMouseEnter={(event) => {
-                                onPendingCostChange(row.pendingCostText);
-                                if (hasChildren && !row.disabled) {
-                                    setSubMenuAnchor(event.currentTarget);
-                                } else {
-                                    setSubMenuAnchor(null);
-                                }
-                            }}
-                            onMouseLeave={() => {
-                                if (!hasChildren) {
-                                    onPendingCostChange(null);
-                                }
-                            }}
-                            onClick={(event) => {
-                                if (hasChildren) {
-                                    event.stopPropagation();
-                                    setSubMenuAnchor(event.currentTarget);
-                                    return;
-                                }
-                                handleAction(row.action);
-                            }}
+                            onMouseEnter={() => onPendingCostChange(row.pendingCostText)}
+                            onMouseLeave={() => onPendingCostChange(null)}
+                            onClick={() => handleAction(row.action)}
                         >
                             <Box
                                 sx={{
@@ -520,51 +598,17 @@ export function InventoryBoard({
                                 }}
                             >
                                 <Typography variant="caption">{row.label}</Typography>
-                                {!hasChildren && (
-                                    <Typography variant="caption" sx={{ color: "#666", textAlign: "right" }}>
-                                        {row.cost} AP
-                                    </Typography>
-                                )}
-                                {hasChildren && <ChevronRightIcon fontSize="small" />}
+                                <Typography
+                                    variant="caption"
+                                    sx={{ color: "#666", textAlign: "right" }}
+                                >
+                                    {row.cost} AP
+                                </Typography>
                             </Box>
                         </MenuItem>
-                    );
-                })}
-            </Menu>
-
-            <Menu
-                anchorEl={subMenuAnchor}
-                open={Boolean(subMenuAnchor) && loadSubmenu.length > 0}
-                onClose={() => setSubMenuAnchor(null)}
-                anchorOrigin={{ vertical: "top", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "left" }}
-                slotProps={{
-                    list: { dense: true }
-                }}
-            >
-                {loadSubmenu.map((row) => (
-                    <MenuItem
-                        key={row.id}
-                        disabled={row.disabled}
-                        onMouseEnter={() => onPendingCostChange(row.pendingCostText)}
-                        onMouseLeave={() => onPendingCostChange(null)}
-                        onClick={() => handleAction(row.action)}
-                    >
-                        <Box sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            width: "100%",
-                            gap: 1,
-                            justifyContent: "space-between"
-                        }}>
-                            <Typography variant="caption">{row.label}</Typography>
-                            <Typography variant="caption" sx={{ color: "#666", textAlign: "right" }}>
-                                {row.cost} AP
-                            </Typography>
-                        </Box>
-                    </MenuItem>
-                ))}
-            </Menu>
-        </Box>
+                    ))}
+                </Menu>
+            </InventoryBoardFrame>
+        </InventoryTooltipDismissProvider>
     );
 }

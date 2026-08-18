@@ -323,6 +323,13 @@ export function getItemMenu({
     }
 }
 
+/** Combo parents nest real items under these; they are walked, never shown as content tiles. */
+const NESTED_ITEM_SLOT_TYPES: ReadonlySet<InventorySlotType> = new Set(["0", "1"]);
+
+export function isNestedItemSlot(slot: InventorySlotType): boolean {
+    return NESTED_ITEM_SLOT_TYPES.has(slot);
+}
+
 export function slotLabel(slot: InventorySlotType): string {
     switch (slot) {
         case "ammo":
@@ -341,11 +348,13 @@ export interface AmmoCount {
 
 export type InventorySlotView = InventoryItemView["slots"][number];
 
-/** An `"ammo"` slot plus the item that owns it (gun or magazine, not a combo parent). */
-export interface AmmoSlotRef {
+/** A displayed content slot plus the item that owns it (not a combo parent). */
+export interface ContentSlotRef {
     owner: InventoryItemView;
     slot: InventorySlotView;
 }
+
+export type AmmoSlotRef = ContentSlotRef;
 
 export function formatAmmoCount(count: AmmoCount): string {
     return `${count.current}/${count.max}`;
@@ -369,28 +378,34 @@ function ammoCountFromSlot(slot: InventorySlotView): AmmoCount {
 }
 
 /**
- * Recursively collect `"ammo"` slots. Combo items (e.g. M4+M203) nest guns under
- * `"0"` / `"1"`; those are walked, not presented. Empty ammo wells are included.
- * Does not descend into ammo contents (a loaded magazine is one slot, not two).
+ * Recursively collect content slots for the inspector. Combo items (e.g. M4+M203)
+ * nest guns under `"0"` / `"1"`; those are walked, not presented. Empty wells are
+ * included. Does not descend into a displayed slot's contents (a loaded magazine
+ * is one tile, not two).
  */
-export function collectAmmoSlots(item: InventoryItemView): AmmoSlotRef[] {
-    const refs: AmmoSlotRef[] = [];
+export function collectContentSlots(item: InventoryItemView): ContentSlotRef[] {
+    const refs: ContentSlotRef[] = [];
 
     const walk = (node: InventoryItemView) => {
         for (const slot of node.slots) {
-            if (slot.slot === "ammo") {
-                refs.push({ owner: node, slot });
+            if (isNestedItemSlot(slot.slot)) {
+                if (slot.contents) {
+                    walk(slot.contents);
+                }
                 continue;
             }
 
-            if (slot.contents) {
-                walk(slot.contents);
-            }
+            refs.push({ owner: node, slot });
         }
     };
 
     walk(item);
     return refs;
+}
+
+/** Ammo wells only — used for tile counts. Same walk rules as {@link collectContentSlots}. */
+export function collectAmmoSlots(item: InventoryItemView): ContentSlotRef[] {
+    return collectContentSlots(item).filter(({ slot }) => slot.slot === "ammo");
 }
 
 /**
