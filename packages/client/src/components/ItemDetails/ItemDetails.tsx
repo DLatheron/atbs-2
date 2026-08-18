@@ -22,6 +22,8 @@ export function ItemDetailsComponent({
         return null;
     }
 
+    const hasTitle = Boolean(title);
+
     return (
         <Box
             sx={{
@@ -29,13 +31,21 @@ export function ItemDetailsComponent({
                 border: "1px black solid",
                 display: "grid",
                 backgroundColor: "beige",
-                gridTemplateAreas: `
+                gridTemplateAreas: hasTitle
+                    ? `
                     'title'
                     'name'
                     'image'
                     'description'
+                `
+                    : `
+                    'name'
+                    'image'
+                    'description'
                 `,
-                gridTemplateRows: "minmax(0, auto) auto minmax(0, auto) minmax(0, auto)",
+                gridTemplateRows: hasTitle
+                    ? "minmax(0, auto) auto minmax(0, auto) minmax(0, auto)"
+                    : "auto minmax(0, auto) minmax(0, auto)",
                 rowGap: 2,
                 p: 1,
                 ...sx

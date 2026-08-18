@@ -620,7 +620,14 @@ const action = ["throw"] as const;
 export const Action = z.enum(action);
 export type Action = z.infer<typeof Action>;
 
-export const Actions = z.union([z.object({ [Action.enum.throw]: FireModeDetail }), z.object({})]);
+export const Actions = z.union([
+    z.object({
+        [Action.enum.throw]: FireModeDetail.extend({
+            available: z.boolean().optional().default(true)
+        })
+    }),
+    z.object({})
+]);
 export type Actions = z.infer<typeof Actions>;
 
 export const FragmentExplosion = z.object({
@@ -711,11 +718,55 @@ export const FireModeItemSummary = ItemSummary.extend({
 });
 export type FireModeItemSummary = z.infer<typeof FireModeItemSummary>;
 
-export const InventorySummary = z.object({
-    inUse: z.number().min(-1),
-    items: ItemSummary
+/** Matches server `SlotType` in ItemRecipe (`"0" | "1" | "ammo"`). */
+const inventorySlotType = ["0", "1", "ammo"] as const;
+export const InventorySlotType = z.enum(inventorySlotType);
+export type InventorySlotType = z.infer<typeof InventorySlotType>;
+
+// Recursive types: written by hand to break the inference cycle.
+export type InventoryItemView = ItemSummary & {
+    type: ItemType;
+    slots: Array<{
+        slot: InventorySlotType;
+        compatibleIds: ItemId[];
+        maxQuantity: Quantity;
+        contents: InventoryItemView | null;
+    }>;
+};
+
+export const InventoryItemView: z.ZodType<InventoryItemView> = ItemSummary.extend({
+    type: ItemType,
+    slots: z.array(
+        z.object({
+            slot: InventorySlotType,
+            compatibleIds: z.array(ItemId),
+            maxQuantity: Quantity,
+            contents: z.lazy(() => InventoryItemView).nullable()
+        })
+    )
 });
-export type InventorySummary = z.infer<typeof InventorySummary>;
+
+export const InventoryCosts = z.object({
+    use: z.int().nonnegative(),
+    unuse: z.int().nonnegative(),
+    drop: z.int().nonnegative(),
+    pickup: z.int().nonnegative(),
+    pickupAndUse: z.int().nonnegative(),
+    load: z.int().nonnegative(),
+    loadFromGround: z.int().nonnegative(),
+    unload: z.int().nonnegative()
+});
+export type InventoryCosts = z.infer<typeof InventoryCosts>;
+
+export const InventorySnapshot = z.object({
+    unitId: UnitId,
+    actionPoints: Attribute,
+    costs: InventoryCosts,
+    inUseItemId: InstanceId.nullable(),
+    items: z.array(InventoryItemView),
+    groundItems: z.array(InventoryItemView)
+});
+export type InventorySnapshot = z.infer<typeof InventorySnapshot>;
 
 export const FireDetails = z.object({
     unitId: UnitId,

@@ -21,6 +21,10 @@ import {
     SceneNode,
     SceneObject,
     shotsFired,
+    InventoryCosts,
+    InventoryItemView,
+    InventorySnapshot,
+    ItemId,
     ItemType,
     TrackingSpeed,
     UnitId,
@@ -50,6 +54,7 @@ import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { Item } from "./Item.js";
+import { SlotType, slotType } from "./ItemRecipe.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
@@ -81,6 +86,26 @@ const OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER = 0.75;
 const OPPORTUNITY_FIRE_DEFAULT_SPEED_SCALER = 1.0;
 
 const ROTATION_APT_COST = 1;
+
+const INVENTORY_USE_APT_COST = 8;
+const INVENTORY_UNUSE_APT_COST = 4;
+const INVENTORY_DROP_APT_COST = 4;
+const INVENTORY_PICKUP_APT_COST = 12;
+const INVENTORY_PICKUP_AND_USE_APT_COST = 8;
+const INVENTORY_LOAD_APT_COST = 8;
+const INVENTORY_LOAD_FROM_GROUND_EXTRA_APT_COST = 8;
+const INVENTORY_UNLOAD_APT_COST = 8;
+
+const INVENTORY_COSTS: InventoryCosts = {
+    use: INVENTORY_USE_APT_COST,
+    unuse: INVENTORY_UNUSE_APT_COST,
+    drop: INVENTORY_DROP_APT_COST,
+    pickup: INVENTORY_PICKUP_APT_COST,
+    pickupAndUse: INVENTORY_PICKUP_AND_USE_APT_COST,
+    load: INVENTORY_LOAD_APT_COST,
+    loadFromGround: INVENTORY_LOAD_APT_COST + INVENTORY_LOAD_FROM_GROUND_EXTRA_APT_COST,
+    unload: INVENTORY_UNLOAD_APT_COST
+};
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
@@ -465,7 +490,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     get canInventory(): boolean {
-        return false;
+        return this.isAlive;
     }
 
     get weaponInaccuracyAngle() {
@@ -532,6 +557,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 actions[Action.enum.throw].accuracy
             );
             actions[Action.enum.throw].actionPoints = this.itemInUse?.throwActionPointCost ?? 0;
+            actions[Action.enum.throw].available =
+                this.actionPoints >= actions[Action.enum.throw].actionPoints;
         }
 
         this.logger.dir({ actions });
@@ -1361,6 +1388,276 @@ export class Unit extends SceneObject implements VisibilityViewer {
             },
             this.side.id
         );
+    }
+
+    useItem(itemId: ItemId): boolean {
+        const item = this.inventory.getItem(itemId);
+
+        if (this.itemInUse?.id === item.id) {
+            return true;
+        }
+
+        const aptCost = this.itemInUse
+            ? INVENTORY_USE_APT_COST + INVENTORY_UNUSE_APT_COST
+            : INVENTORY_USE_APT_COST;
+
+        if (!this._hasSufficientActionPoints(aptCost)) {
+            return false;
+        }
+        if (!this._useActionPoints(aptCost)) {
+            return false;
+        }
+
+        this.inventory.selectItem(item);
+        this._sendSelectedItemUpdate();
+        return true;
+    }
+
+    unuseItem(): boolean {
+        if (!this.itemInUse) {
+            throw new Error(`Unit ${this.id} is not using an item`);
+        }
+
+        if (!this._hasSufficientActionPoints(INVENTORY_UNUSE_APT_COST)) {
+            return false;
+        }
+        if (!this._useActionPoints(INVENTORY_UNUSE_APT_COST)) {
+            return false;
+        }
+
+        this.inventory.deselectItem();
+        this._sendSelectedItemUpdate();
+        return true;
+    }
+
+    dropItem(itemId: ItemId): boolean {
+        const { itemInUse } = this;
+        if (!itemInUse || itemInUse.id !== itemId) {
+            throw new Error(`Unit ${this.id} can only drop the in-use item`);
+        }
+
+        if (!this._hasSufficientActionPoints(INVENTORY_DROP_APT_COST)) {
+            return false;
+        }
+        if (!this._useActionPoints(INVENTORY_DROP_APT_COST)) {
+            return false;
+        }
+
+        const tile = this.map.getTile(this.mapLocation);
+        this.inventory.removeItem(itemInUse);
+        itemInUse.location = this.mapLocation;
+        tile.addItem(itemInUse);
+
+        this._updateCurrentTileOnMap();
+        this._sendSelectedItemUpdate();
+        return true;
+    }
+
+    pickupItem(itemId: ItemId, use = false): boolean {
+        const tile = this.map.getTile(this.mapLocation);
+        const item = tile.items.find(({ id }) => id === itemId);
+        if (!item) {
+            throw new Error(`Item ${itemId} is not on the current tile of unit ${this.id}`);
+        }
+
+        const aptCost = use ? INVENTORY_PICKUP_AND_USE_APT_COST : INVENTORY_PICKUP_APT_COST;
+
+        if (!this._hasSufficientActionPoints(aptCost)) {
+            return false;
+        }
+        if (!this._useActionPoints(aptCost)) {
+            return false;
+        }
+
+        tile.removeItem(item);
+        item.location = null;
+        this.inventory.addItem(item);
+        if (use) {
+            this.inventory.selectItem(item);
+        }
+
+        this._updateCurrentTileOnMap();
+        this._sendSelectedItemUpdate();
+        return true;
+    }
+
+    loadItem(receiverId: ItemId, ammoId: ItemId): boolean {
+        if (!this.itemInUse) {
+            throw new Error(`Unit ${this.id} has no item in use to load`);
+        }
+
+        const receiver = this.itemInUse.findByItemId(receiverId);
+        if (!receiver) {
+            throw new Error(
+                `Receiver ${receiverId} is not the in-use item or a slot inside it for unit ${this.id}`
+            );
+        }
+
+        const tile = this.map.getTile(this.mapLocation);
+        const inventoryAmmo = this.inventory.findItem(ammoId);
+        const groundAmmo = tile.items.find(({ id }) => id === ammoId);
+        const ammo = inventoryAmmo ?? groundAmmo;
+        if (!ammo) {
+            throw new Error(
+                `Ammo ${ammoId} is not in inventory or on the current tile of unit ${this.id}`
+            );
+        }
+
+        const fromGround = !inventoryAmmo;
+        const aptCost = fromGround
+            ? INVENTORY_LOAD_APT_COST + INVENTORY_LOAD_FROM_GROUND_EXTRA_APT_COST
+            : INVENTORY_LOAD_APT_COST;
+
+        if (!this._hasSufficientActionPoints(aptCost)) {
+            return false;
+        }
+
+        if (ammo.type === ItemType.enum.magazine) {
+            const previousMagazine = receiver.load(ammo);
+            if (fromGround) {
+                tile.removeItem(ammo);
+                ammo.location = null;
+            } else {
+                this.inventory.removeItem(ammo);
+            }
+            if (previousMagazine) {
+                previousMagazine.location = null;
+                this.inventory.addOrCollapseItem(previousMagazine);
+            }
+        } else {
+            const leftover = receiver.load(ammo);
+            if (!leftover) {
+                if (fromGround) {
+                    tile.removeItem(ammo);
+                    ammo.location = null;
+                } else {
+                    this.inventory.removeItem(ammo);
+                }
+            }
+        }
+
+        if (!this._useActionPoints(aptCost)) {
+            return false;
+        }
+
+        if (fromGround) {
+            this._updateCurrentTileOnMap();
+        }
+        this._sendSelectedItemUpdate();
+        return true;
+    }
+
+    unloadItem(itemId: ItemId): boolean {
+        if (!this.itemInUse) {
+            throw new Error(`Unit ${this.id} has no item in use to unload`);
+        }
+
+        const item = this.itemInUse.findByItemId(itemId);
+        if (!item) {
+            throw new Error(
+                `Item ${itemId} is not the in-use item or a slot inside it for unit ${this.id}`
+            );
+        }
+
+        if (!item.canLoad()) {
+            throw new Error(`Item ${itemId} cannot be unloaded`);
+        }
+        if (!item.findSlotContents(SlotType.enum.ammo)) {
+            throw new Error(`Item ${itemId} has nothing to unload`);
+        }
+
+        if (!this._hasSufficientActionPoints(INVENTORY_UNLOAD_APT_COST)) {
+            return false;
+        }
+        if (!this._useActionPoints(INVENTORY_UNLOAD_APT_COST)) {
+            return false;
+        }
+
+        const unloaded = item.unload();
+        if (unloaded) {
+            unloaded.location = null;
+            this.inventory.addOrCollapseItem(unloaded);
+        }
+
+        this._sendSelectedItemUpdate();
+        return true;
+    }
+
+    reorderInventory(fromIndex: number, toIndex: number): boolean {
+        this.inventory.reorderItem(fromIndex, toIndex);
+        return true;
+    }
+
+    toInventorySnapshot(): InventorySnapshot {
+        const groundItems = this.map
+            .getTile(this.mapLocation)
+            .items.map((item) => this._toInventoryItemView(item));
+
+        return {
+            unitId: this.id,
+            actionPoints: this._attributes.actionPoints,
+            costs: INVENTORY_COSTS,
+            inUseItemId: this.itemInUse?.id ?? null,
+            items: this.inventory.items.map((item) => this._toInventoryItemView(item)),
+            groundItems
+        };
+    }
+
+    private _toInventoryItemView(item: Item): InventoryItemView {
+        const slots: InventoryItemView["slots"] = [];
+        for (const slot of slotType) {
+            const slotProps = item.findSlotProps(slot);
+            if (!slotProps) {
+                continue;
+            }
+
+            const contents = item.findSlotContents(slot);
+            slots.push({
+                slot,
+                compatibleIds: slotProps.compatibleIds,
+                maxQuantity: slotProps.maxQuantity,
+                contents: contents ? this._toInventoryItemView(contents) : null
+            });
+        }
+
+        return {
+            ...item.getItemSummary(this),
+            type: item.type,
+            slots
+        };
+    }
+
+    private _sendSelectedItemUpdate(): void {
+        this.updateAvailableActions();
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    interactions: {
+                        canFire: this.canFire,
+                        canThrow: this.canThrow,
+                        canAction: this.canAction,
+                        canInventory: this.canInventory
+                    },
+                    itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
+                    unitActionGrid: this._unitActionGrid
+                }
+            },
+            this.side.id
+        );
+    }
+
+    private _updateCurrentTileOnMap(): void {
+        const tile = this.map.getTile(this.mapLocation);
+        this._refreshVisibility();
+        this.messageRouter.sendIfVisible(
+            {
+                type: "server:map:update",
+                payload: [tile.generateTileUpdate()]
+            },
+            this.mapLocation
+        );
+        this._broadcastVisibleTiles();
     }
 
     performUnitAction(action: UnitActionType, orientationToAction: Orientation): void {

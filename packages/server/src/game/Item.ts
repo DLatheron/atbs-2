@@ -280,7 +280,12 @@ export class Item extends SceneObject {
             return this;
         }
 
-        return Array.from(this._slots.values()).find((slotItem) => slotItem.id === id);
+        for (const slotItem of this._slots.values()) {
+            const nested = slotItem.findByItemId(id);
+            if (nested) {
+                return nested;
+            }
+        }
     }
 
     getByItemId(id: ItemId): Item {
@@ -317,7 +322,7 @@ export class Item extends SceneObject {
      * @returns The existing magazine (if applicable) or what remains in of the passed ammo.
      */
     load(ammo: Item): Item | null {
-        if (!this.canLoad) {
+        if (!this.canLoad()) {
             throw new Error(`Item ${this.id} cannot be loaded`);
         }
 
@@ -337,7 +342,7 @@ export class Item extends SceneObject {
             //
             // Magazines
             //
-            const existingMagazine = this.getSlotContents(SlotType.enum.ammo);
+            const existingMagazine = this.findSlotContents(SlotType.enum.ammo) ?? null;
 
             this.setSlotContents(SlotType.enum.ammo, ammo);
 
@@ -348,7 +353,7 @@ export class Item extends SceneObject {
             //
             const { maxQuantity } = slotProps;
 
-            let itemsRounds = this.getSlotContents(SlotType.enum.ammo);
+            let itemsRounds = this.findSlotContents(SlotType.enum.ammo);
             let spaceForRounds: number;
 
             if (itemsRounds) {
@@ -361,6 +366,7 @@ export class Item extends SceneObject {
                 spaceForRounds = maxQuantity - itemsRounds.quantity;
             } else {
                 itemsRounds = this._itemManager.newItem(ammo.recipeId, { quantity: 0 });
+                this.setSlotContents(SlotType.enum.ammo, itemsRounds);
                 spaceForRounds = maxQuantity;
             }
             if (spaceForRounds <= 0) {
@@ -381,11 +387,11 @@ export class Item extends SceneObject {
      * @returns The unloaded ammo, if any.
      */
     unload(): Item | null {
-        if (!this.canLoad) {
+        if (!this.canLoad()) {
             throw new Error(`Item ${this.id} cannot be loaded`);
         }
 
-        const ammo = this.getSlotContents(SlotType.enum.ammo);
+        const ammo = this.findSlotContents(SlotType.enum.ammo);
         if (!ammo) {
             return null;
         }

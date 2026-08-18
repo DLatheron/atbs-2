@@ -11,6 +11,7 @@ import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
 import { MapMode } from "../../MapMode";
 import { ActionMenuComponent } from "../../components/ActionMenu";
+import { InventoryModal } from "../../modals";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -43,7 +44,18 @@ export function ActionPage({ visible }: ActionPageProps) {
         onFireMode,
         onEndFireMode,
         onAction,
-        onUnitActionMode
+        onUnitActionMode,
+        inventoryOpen,
+        inventorySnapshot,
+        onOpenInventory,
+        onCloseInventory,
+        onInventoryUse,
+        onInventoryUnuse,
+        onInventoryDrop,
+        onInventoryPickup,
+        onInventoryLoad,
+        onInventoryUnload,
+        onInventoryReorder
     } = useActionPage();
 
     const { world } = useWorld();
@@ -190,6 +202,8 @@ export function ActionPage({ visible }: ActionPageProps) {
                     onFireMode={onFireMode}
                     unitActionMode={unitActionMode}
                     onUnitActionMode={onUnitActionMode}
+                    inventoryOpen={inventoryOpen}
+                    onOpenInventory={onOpenInventory}
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
                 <FireModePanel
@@ -211,6 +225,21 @@ export function ActionPage({ visible }: ActionPageProps) {
                     sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
                 />
             </SidePanel>
+            <InventoryModal
+                open={inventoryOpen}
+                snapshot={inventorySnapshot}
+                mode="action"
+                actionScope="inUse"
+                disabled={disabled}
+                onClose={onCloseInventory}
+                onUse={onInventoryUse}
+                onUnuse={onInventoryUnuse}
+                onDrop={onInventoryDrop}
+                onPickup={onInventoryPickup}
+                onLoad={onInventoryLoad}
+                onUnload={onInventoryUnload}
+                onReorder={onInventoryReorder}
+            />
         </Container>
     );
 }

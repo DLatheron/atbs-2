@@ -11,7 +11,7 @@
     },
     "slotProps": {
         "ammo": {
-            "compatible": ["5.56mm.round"],
+            "compatibleIds": ["5.56mm-nato.round"],
             "maxQuantity": 30
         }
     },

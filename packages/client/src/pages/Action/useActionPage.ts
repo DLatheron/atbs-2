@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { merge } from "lodash";
 import { useServerMessageManager, useWorld } from "../../hooks";
 import {
     ClientMap,
@@ -7,6 +6,7 @@ import {
     FireDetails,
     FireModeItemSummary,
     FireSelector,
+    InventorySnapshot,
     ItemId,
     OnTarget,
     RenderMode,
@@ -32,6 +32,7 @@ let actionMenuGhostId = 0;
 export function useActionPage() {
     const actionMenuRef = useRef<HTMLDivElement | null>(null);
     const unitActionModeRef = useRef(false);
+    const inventoryOpenRef = useRef(false);
 
     const { messageManager, sendMessage } = useServerMessageManager();
     const { world } = useWorld();
@@ -47,8 +48,11 @@ export function useActionPage() {
     const [isOnTarget, setIsOnTarget] = useState<OnTarget>(OnTarget.enum.none);
     const [opportunityFire, setOpportunityFire] = useState<string | undefined>();
     const [unitActionMode, setUnitActionMode] = useState<boolean>(false);
+    const [inventoryOpen, setInventoryOpen] = useState(false);
+    const [inventorySnapshot, setInventorySnapshot] = useState<InventorySnapshot | null>(null);
 
     unitActionModeRef.current = unitActionMode;
+    inventoryOpenRef.current = inventoryOpen;
 
     const spawnActionMenuGhost = useCallback(() => {
         const source = actionMenuRef.current;
@@ -199,10 +203,16 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {
+                const fieldModes = {
+                    unitActionGrid: "replace",
+                    itemInUse: "replace",
+                    description: "replace",
+                    uiImage: "replace"
+                } as const;
                 setUnit((unit: UnitSummary | null) =>
-                    unit ? selectiveMerge(unit, payload, { unitActionGrid: "replace" }) : null
+                    unit ? selectiveMerge(unit, payload, fieldModes) : null
                 );
-                world.unit = selectiveMerge(world.unit, payload, { unitActionGrid: "replace" });
+                world.unit = selectiveMerge(world.unit, payload, fieldModes);
 
                 if (world.unit.itemInUse === null) {
                     setSidePanelMode(MapMode.enum["unit-mode"]);
@@ -213,10 +223,15 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:unit:weapon:update", (_context, payload) => {
+                const fieldModes = {
+                    description: "replace",
+                    weapons: "replace",
+                    uiImage: "replace"
+                } as const;
                 setUnitWeapon((weap: FireModeItemSummary | null) =>
-                    weap ? merge({}, weap, payload) : null
+                    weap ? selectiveMerge(weap, payload, fieldModes) : null
                 );
-                world.unitWeapon = merge({}, world.unitWeapon, payload);
+                world.unitWeapon = selectiveMerge(world.unitWeapon, payload, fieldModes);
             }),
 
             messageManager.registerHandler("server:error", (_context, error) => {
@@ -290,6 +305,13 @@ export function useActionPage() {
 
             messageManager.registerHandler("server:opportunity:fire:end", async () => {
                 setOpportunityFire(undefined);
+            }),
+
+            messageManager.registerHandler("server:unit:inventory", (_context, payload) => {
+                if (inventoryOpenRef.current) {
+                    setInventorySnapshot(payload);
+                }
+                setDisabled(false);
             })
         ];
 
@@ -457,6 +479,131 @@ export function useActionPage() {
         [spawnActionMenuGhost]
     );
 
+    const onCloseInventory = useCallback(() => {
+        setInventoryOpen(false);
+        setInventorySnapshot(null);
+    }, []);
+
+    const onOpenInventory = useCallback(() => {
+        if (!unit?.id || !unit.interactions.canInventory) {
+            return;
+        }
+
+        setInventoryOpen(true);
+        setInventorySnapshot(null);
+        sendMessage({
+            type: "client:unit:inventory",
+            payload: { unitId: unit.id }
+        });
+    }, [sendMessage, unit?.id, unit?.interactions.canInventory]);
+
+    const onInventoryUse = useCallback(
+        (itemId: ItemId) => {
+            if (!unit?.id) {
+                return;
+            }
+            setDisabled(true);
+            sendMessage({
+                type: "client:unit:inventory:use",
+                payload: { unitId: unit.id, itemId }
+            });
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onInventoryUnuse = useCallback(() => {
+        if (!unit?.id) {
+            return;
+        }
+        setDisabled(true);
+        sendMessage({
+            type: "client:unit:inventory:unuse",
+            payload: { unitId: unit.id }
+        });
+    }, [sendMessage, unit?.id]);
+
+    const onInventoryDrop = useCallback(
+        (itemId: ItemId) => {
+            if (!unit?.id) {
+                return;
+            }
+            setDisabled(true);
+            sendMessage({
+                type: "client:unit:inventory:drop",
+                payload: { unitId: unit.id, itemId }
+            });
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onInventoryPickup = useCallback(
+        (itemId: ItemId, use?: boolean) => {
+            if (!unit?.id) {
+                return;
+            }
+            setDisabled(true);
+            sendMessage({
+                type: "client:unit:inventory:pickup",
+                payload: { unitId: unit.id, itemId, use }
+            });
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onInventoryLoad = useCallback(
+        (receiverId: ItemId, ammoId: ItemId) => {
+            if (!unit?.id) {
+                return;
+            }
+            setDisabled(true);
+            sendMessage({
+                type: "client:unit:inventory:load",
+                payload: { unitId: unit.id, receiverId, ammoId }
+            });
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onInventoryUnload = useCallback(
+        (itemId: ItemId) => {
+            if (!unit?.id) {
+                return;
+            }
+            setDisabled(true);
+            sendMessage({
+                type: "client:unit:inventory:unload",
+                payload: { unitId: unit.id, itemId }
+            });
+        },
+        [sendMessage, unit?.id]
+    );
+
+    const onInventoryReorder = useCallback(
+        (fromIndex: number, toIndex: number) => {
+            if (!unit?.id) {
+                return;
+            }
+            setDisabled(true);
+            sendMessage({
+                type: "client:unit:inventory:reorder",
+                payload: { unitId: unit.id, fromIndex, toIndex }
+            });
+        },
+        [sendMessage, unit?.id]
+    );
+
+    useEffect(() => {
+        setInventoryOpen(false);
+        setInventorySnapshot(null);
+    }, [unit?.id]);
+
+    useEffect(() => {
+        if (sidePanelMode !== MapMode.enum["unit-mode"]) {
+            setInventoryOpen(false);
+            setInventorySnapshot(null);
+        }
+    }, [sidePanelMode]);
+
     useLayoutEffect(() => {
         const unitId = unit?.id;
         const showMenu =
@@ -516,6 +663,17 @@ export function useActionPage() {
         onEndFireMode,
         onAction,
         onUnitActionMode,
+        inventoryOpen,
+        inventorySnapshot,
+        onOpenInventory,
+        onCloseInventory,
+        onInventoryUse,
+        onInventoryUnuse,
+        onInventoryDrop,
+        onInventoryPickup,
+        onInventoryLoad,
+        onInventoryUnload,
+        onInventoryReorder,
         setIsOnTarget
     };
 }

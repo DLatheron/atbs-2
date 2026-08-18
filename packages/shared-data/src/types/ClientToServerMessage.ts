@@ -122,6 +122,63 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: ThrowDetails
     }),
     z.object({
+        type: z.literal("client:unit:inventory"),
+        payload: z.object({
+            unitId: UnitId
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:use"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:unuse"),
+        payload: z.object({
+            unitId: UnitId
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:drop"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:pickup"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId,
+            use: z.boolean().optional()
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:load"),
+        payload: z.object({
+            unitId: UnitId,
+            receiverId: ItemId,
+            ammoId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:unload"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:unit:inventory:reorder"),
+        payload: z.object({
+            unitId: UnitId,
+            fromIndex: z.int().nonnegative(),
+            toIndex: z.int().nonnegative()
+        })
+    }),
+    z.object({
         type: z.literal("client:unit:action"),
         payload: z.object({
             unitId: UnitId,

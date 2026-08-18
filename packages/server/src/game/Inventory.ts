@@ -29,6 +29,10 @@ export class Inventory {
         });
     }
 
+    get items(): Item[] {
+        return this._items;
+    }
+
     get itemInUse(): Item | null {
         return this._inUse >= 0 ? this._items[this._inUse] : null;
     }
@@ -50,8 +54,14 @@ export class Inventory {
             throw new Error(`Item ${item.id} has already been added to the inventory`);
         }
 
+        const previousInUseItemId = this.itemInUse?.id;
+
         this._items.splice(atIndex, 0, item);
         this._itemsMap.set(item.id, item);
+
+        if (previousInUseItemId !== undefined) {
+            this._inUse = this._items.findIndex(({ id }) => previousInUseItemId === id);
+        }
 
         return item;
     }
@@ -78,11 +88,13 @@ export class Inventory {
             throw new Error(`Item ${item.id} is not in the inventory`);
         }
 
+        const previousInUseItemId = this.itemInUse?.id;
+
         this._items.splice(atIndex, 1);
         this._itemsMap.delete(item.id);
 
-        if (this._inUse === atIndex) {
-            this._inUse = -1;
+        if (previousInUseItemId !== undefined) {
+            this._inUse = this._items.findIndex(({ id }) => previousInUseItemId === id);
         }
 
         return item;
@@ -102,24 +114,26 @@ export class Inventory {
 
     dropAllItem(): Item[] {
         const droppedItems = this._items;
+        this._items = [];
         this._itemsMap.clear();
         this._inUse = -1;
         return droppedItems;
     }
 
     reorderItem(fromIndex: number, toIndex: number) {
-        const previousInUseItemId = this.itemInUse?.id;
-
-        function arrayMove<T>(items: T[], fromIndex: number, toIndex: number): T[] {
-            const before = fromIndex < toIndex;
-
-            const item = items[fromIndex];
-            items.splice(fromIndex, 1);
-            items.splice(toIndex - (before ? 1 : 0), 0, item);
-            return [...items];
+        if (
+            fromIndex < 0 ||
+            toIndex < 0 ||
+            fromIndex >= this._items.length ||
+            toIndex >= this._items.length
+        ) {
+            throw new Error(`Cannot reorder inventory from index ${fromIndex} to ${toIndex}`);
         }
 
-        arrayMove(this._items, fromIndex, toIndex);
+        const previousInUseItemId = this.itemInUse?.id;
+
+        const [item] = this._items.splice(fromIndex, 1);
+        this._items.splice(toIndex, 0, item);
 
         if (previousInUseItemId !== undefined) {
             this._inUse = this._items.findIndex(({ id }) => previousInUseItemId === id);
