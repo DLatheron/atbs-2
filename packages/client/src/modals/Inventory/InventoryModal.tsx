@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
     InventoryBoard,
     type InventoryActionScope,
+    type InventoryInspectorFocus,
     type InventoryMode
 } from "../../components/Inventory";
 import { getAttributeValue } from "../../helpers/formattingHelpers";
@@ -13,6 +14,7 @@ export interface InventoryModalProps {
     snapshot: InventorySnapshot | null;
     mode?: InventoryMode;
     actionScope?: InventoryActionScope;
+    inspectorFocus?: InventoryInspectorFocus;
     disabled?: boolean;
     onClose: () => void;
     onUse: (itemId: ItemId) => void;
@@ -29,6 +31,7 @@ export function InventoryModal({
     snapshot,
     mode = "action",
     actionScope = "inUse",
+    inspectorFocus = "inUse",
     disabled = false,
     onClose,
     onUse,
@@ -57,14 +60,16 @@ export function InventoryModal({
             onClose={onClose}
             aria-labelledby="inventory-modal-title"
             aria-describedby="inventory-modal-description"
+            sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+            }}
         >
             <Box
                 data-testid="inventory-modal-content"
                 sx={{
-                    position: "absolute",
-                    top: "50%",
-                    left: "50%",
-                    transform: "translate(-50%, -50%)",
+                    position: "relative",
                     width: "960px",
                     maxWidth: "1200px",
                     height: "800px",
@@ -76,7 +81,8 @@ export function InventoryModal({
                     border: "2px solid #000",
                     boxShadow: 24,
                     borderRadius: 4,
-                    p: 1
+                    p: 1,
+                    outline: "none"
                 }}
             >
                 <Box
@@ -87,7 +93,12 @@ export function InventoryModal({
                         gridTemplateAreas: "'title action budget'"
                     }}
                 >
-                    <Typography id="inventory-modal-title" variant="h6" component="h2" sx={{ gridArea: "title" }}>
+                    <Typography
+                        id="inventory-modal-title"
+                        variant="h6"
+                        component="h2"
+                        sx={{ gridArea: "title" }}
+                    >
                         Inventory
                     </Typography>
                     <Typography
@@ -101,7 +112,10 @@ export function InventoryModal({
                     >
                         {pendingCost ?? ""}
                     </Typography>
-                    <Box id="inventory-modal-description" sx={{ textAlign: "right", gridArea: "budget" }}>
+                    <Box
+                        id="inventory-modal-description"
+                        sx={{ textAlign: "right", gridArea: "budget" }}
+                    >
                         <Typography variant="h6" component="p">
                             AP {getAttributeValue(snapshot.actionPoints)}
                         </Typography>
@@ -111,6 +125,7 @@ export function InventoryModal({
                     snapshot={snapshot}
                     mode={mode}
                     actionScope={actionScope}
+                    inspectorFocus={inspectorFocus}
                     disabled={disabled}
                     onUse={onUse}
                     onUnuse={onUnuse}

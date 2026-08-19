@@ -1,6 +1,7 @@
 import type { InventoryItemView } from "@atbs/shared-data";
 import { Box, IconButton, Stack, SxProps, Typography } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { MouseEvent } from "react";
 import { DescriptionComponent } from "../Description";
 import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
@@ -16,6 +17,7 @@ const panelSx = {
 interface ItemContentSlotsProps {
     item: InventoryItemView | null;
     interactive?: boolean;
+    highlightedSlotId?: string | null;
     getSlotMenuClick?: (
         owner: InventoryItemView,
         empty: boolean
@@ -25,8 +27,10 @@ interface ItemContentSlotsProps {
 
 export interface ItemInspectorProps {
     item: InventoryItemView | null;
+    emptyText?: string;
     /** When true, slot tiles expose load/unload menus. Defaults to read-only. */
     slotsInteractive?: boolean;
+    highlightedSlotId?: string | null;
     getSlotMenuClick?: (
         owner: InventoryItemView,
         empty: boolean
@@ -37,19 +41,40 @@ export interface ItemInspectorProps {
 function ContentSlotTile({
     slotRef,
     interactive,
+    highlighted,
     getSlotMenuClick
 }: {
     slotRef: ContentSlotRef;
     interactive: boolean;
+    highlighted: boolean;
     getSlotMenuClick?: ItemContentSlotsProps["getSlotMenuClick"];
 }) {
     const { owner, slot } = slotRef;
     const contents = slot.contents;
     const empty = contents == null;
     const onMenuClick = interactive ? getSlotMenuClick?.(owner, empty) : undefined;
+    const droppableId = `slot:${owner.id}:${slot.slot}`;
+    const { setNodeRef: setDropRef } = useDroppable({
+        id: droppableId,
+        data: { target: { type: "slot", owner } }
+    });
+    const {
+        attributes,
+        listeners,
+        setNodeRef: setDragRef,
+        isDragging
+    } = useDraggable({
+        id: `slotContents:${owner.id}:${slot.slot}`,
+        disabled: !interactive || empty,
+        data: contents ? { source: { type: "slot", owner, item: contents } } : undefined
+    });
 
     return (
         <Box
+            ref={(node: HTMLElement | null) => {
+                setDropRef(node);
+                setDragRef(node);
+            }}
             data-testid={
                 empty
                     ? `empty-slot-${slot.slot}-${owner.id}`
@@ -59,18 +84,26 @@ function ContentSlotTile({
                 position: "relative",
                 width: ITEM_TILE_SIZE,
                 height: ITEM_TILE_SIZE,
-                flexShrink: 0
+                flexShrink: 0,
+                outline: highlighted ? "2px solid #333" : "none",
+                outlineOffset: 2,
+                opacity: isDragging ? 0.4 : 1
             }}
         >
             {contents ? (
-                <ItemTile item={contents} sx={{ width: "100%", height: "100%" }} />
+                <ItemTile
+                    item={contents}
+                    draggable={interactive}
+                    dragHandleAttributes={attributes}
+                    dragHandleListeners={listeners}
+                    sx={{ width: "100%", height: "100%" }}
+                />
             ) : (
                 <Box
                     sx={{
                         boxSizing: "border-box",
                         width: "100%",
                         height: "100%",
-                        // borderRadius: 1,
                         border: "1px dashed #666",
                         backgroundColor: "beige",
                         display: "flex",
@@ -113,6 +146,7 @@ function ContentSlotTile({
 function ItemContentSlots({
     item,
     interactive = false,
+    highlightedSlotId = null,
     getSlotMenuClick,
     sx
 }: ItemContentSlotsProps) {
@@ -132,10 +166,7 @@ function ItemContentSlots({
                 ...sx
             }}
         >
-            <Typography
-                variant="subtitle2"
-                sx={{ textAlign: "center", lineHeight: 1.2 }}
-            >
+            <Typography variant="subtitle2" sx={{ textAlign: "center", lineHeight: 1.2 }}>
                 Contents
             </Typography>
             <Box
@@ -157,6 +188,9 @@ function ItemContentSlots({
                         key={`${slotRef.owner.id}-${slotRef.slot.slot}`}
                         slotRef={slotRef}
                         interactive={interactive}
+                        highlighted={
+                            highlightedSlotId === `slot:${slotRef.owner.id}:${slotRef.slot.slot}`
+                        }
                         getSlotMenuClick={getSlotMenuClick}
                     />
                 ))}
@@ -165,7 +199,15 @@ function ItemContentSlots({
     );
 }
 
-function InspectorDetails({ item, sx }: { item: InventoryItemView | null; sx?: SxProps }) {
+function InspectorDetails({
+    item,
+    emptyText = "Select an item",
+    sx
+}: {
+    item: InventoryItemView | null;
+    emptyText?: string;
+    sx?: SxProps;
+}) {
     if (!item) {
         return (
             <Stack
@@ -176,7 +218,7 @@ function InspectorDetails({ item, sx }: { item: InventoryItemView | null; sx?: S
                 }}
             >
                 <Typography variant="body2" sx={{ textAlign: "center", color: "#666" }}>
-                    Select an item
+                    {emptyText}
                 </Typography>
             </Stack>
         );
@@ -203,7 +245,9 @@ function InspectorDetails({ item, sx }: { item: InventoryItemView | null; sx?: S
 
 export function ItemInspector({
     item,
+    emptyText,
     slotsInteractive = false,
+    highlightedSlotId = null,
     getSlotMenuClick,
     sx
 }: ItemInspectorProps) {
@@ -219,10 +263,11 @@ export function ItemInspector({
                 ...sx
             }}
         >
-            <InspectorDetails item={item} sx={{ gridArea: "details" }} />
+            <InspectorDetails item={item} emptyText={emptyText} sx={{ gridArea: "details" }} />
             <ItemContentSlots
                 item={item}
                 interactive={slotsInteractive}
+                highlightedSlotId={highlightedSlotId}
                 getSlotMenuClick={getSlotMenuClick}
                 sx={{ gridArea: "contents", gap: 1 }}
             />

@@ -288,6 +288,19 @@ export class Item extends SceneObject {
         }
     }
 
+    /** The item that directly holds `contentsId` in one of its slots. */
+    findOwnerOfContents(contentsId: ItemId): Item | undefined {
+        for (const child of this._slots.values()) {
+            if (child.id === contentsId) {
+                return this;
+            }
+            const nested = child.findOwnerOfContents(contentsId);
+            if (nested) {
+                return nested;
+            }
+        }
+    }
+
     getByItemId(id: ItemId): Item {
         const item = this.findByItemId(id);
         if (!item) {

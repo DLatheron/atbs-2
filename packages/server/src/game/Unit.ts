@@ -1428,26 +1428,54 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     dropItem(itemId: ItemId): boolean {
-        const { itemInUse } = this;
-        if (!itemInUse || itemInUse.id !== itemId) {
-            throw new Error(`Unit ${this.id} can only drop the in-use item`);
-        }
-
-        if (!this._hasSufficientActionPoints(INVENTORY_DROP_APT_COST)) {
-            return false;
-        }
-        if (!this._useActionPoints(INVENTORY_DROP_APT_COST)) {
-            return false;
-        }
-
         const tile = this.map.getTile(this.mapLocation);
-        this.inventory.removeItem(itemInUse);
-        itemInUse.location = this.mapLocation;
-        tile.addItem(itemInUse);
+        const backpackItem = this.inventory.findItem(itemId);
+        if (backpackItem) {
+            if (!this._hasSufficientActionPoints(INVENTORY_DROP_APT_COST)) {
+                return false;
+            }
+            if (!this._useActionPoints(INVENTORY_DROP_APT_COST)) {
+                return false;
+            }
 
-        this._updateCurrentTileOnMap();
-        this._sendSelectedItemUpdate();
-        return true;
+            this.inventory.removeItem(backpackItem);
+            backpackItem.location = this.mapLocation;
+            tile.addItem(backpackItem);
+            this._updateCurrentTileOnMap();
+            this._sendSelectedItemUpdate();
+            return true;
+        }
+
+        for (const item of this.inventory.items) {
+            const owner = item.findOwnerOfContents(itemId);
+            if (!owner?.canLoad()) {
+                continue;
+            }
+            const contents = owner.findSlotContents(SlotType.enum.ammo);
+            if (contents?.id !== itemId) {
+                continue;
+            }
+
+            const aptCost = INVENTORY_UNLOAD_APT_COST + INVENTORY_DROP_APT_COST;
+            if (!this._hasSufficientActionPoints(aptCost)) {
+                return false;
+            }
+            if (!this._useActionPoints(aptCost)) {
+                return false;
+            }
+
+            const unloaded = owner.unload();
+            if (!unloaded) {
+                return false;
+            }
+            unloaded.location = this.mapLocation;
+            tile.addItem(unloaded);
+            this._updateCurrentTileOnMap();
+            this._sendSelectedItemUpdate();
+            return true;
+        }
+
+        throw new Error(`Item ${itemId} is not in inventory or a loaded slot for unit ${this.id}`);
     }
 
     pickupItem(itemId: ItemId, use = false): boolean {

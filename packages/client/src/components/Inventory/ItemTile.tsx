@@ -1,6 +1,5 @@
 import type { Description, InventoryItemView } from "@atbs/shared-data";
 import { Box, IconButton, SxProps, Tooltip, Typography } from "@mui/material";
-import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import MenuIcon from "@mui/icons-material/Menu";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import {
@@ -150,6 +149,8 @@ export function ItemTile({
         <Box
             data-testid={`item-tile-${item.id}`}
             onClick={disabled ? undefined : onClick}
+            {...(draggable ? dragHandleAttributes : undefined)}
+            {...(draggable ? dragHandleListeners : undefined)}
             sx={{
                 boxSizing: "border-box",
                 position: "relative",
@@ -163,7 +164,9 @@ export function ItemTile({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                cursor: disabled ? "default" : onClick ? "pointer" : "default",
+                cursor: disabled ? "default" : draggable ? "grab" : onClick ? "pointer" : "default",
+                touchAction: draggable ? "none" : undefined,
+                "&:active": draggable && !disabled ? { cursor: "grabbing" } : undefined,
                 opacity: disabled ? 0.5 : 1,
                 p: 0.5,
                 pt: 2,
@@ -171,28 +174,6 @@ export function ItemTile({
                 ...sx
             }}
         >
-            {draggable && (
-                <Box
-                    component="span"
-                    {...dragHandleAttributes}
-                    {...dragHandleListeners}
-                    onClick={stopTileChromePointer}
-                    sx={{
-                        position: "absolute",
-                        top: 2,
-                        left: 2,
-                        zIndex: 1,
-                        display: "flex",
-                        cursor: disabled ? "default" : "grab",
-                        color: "#666",
-                        touchAction: "none",
-                        "&:active": { cursor: disabled ? "default" : "grabbing" }
-                    }}
-                    aria-label="Reorder"
-                >
-                    <DragIndicatorIcon sx={{ fontSize: 20 }} />
-                </Box>
-            )}
             {onMenuClick && (
                 <IconButton
                     size="small"
@@ -220,9 +201,7 @@ export function ItemTile({
                 </IconButton>
             )}
             <ImageComponent images={item.uiImage} width={100} height={100} disabled={disabled} />
-            {item.quantity > 1 && (
-                <TileBadge sx={{ top: 2, left: draggable ? 18 : 2 }}>{item.quantity}</TileBadge>
-            )}
+            {item.quantity > 1 && <TileBadge sx={{ top: 2, left: 2 }}>{item.quantity}</TileBadge>}
             {ammoCounts.length > 0 && (
                 <Box
                     sx={{

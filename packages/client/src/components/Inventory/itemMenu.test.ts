@@ -8,7 +8,8 @@ import {
     formatAmmoCount,
     getItemMenu,
     getUseCost,
-    matchesCompatibleId
+    matchesCompatibleId,
+    resolveInventoryDrag
 } from "./itemMenu.js";
 
 const costs: InventoryCosts = {
@@ -530,5 +531,136 @@ describe("collectAmmoSlots", () => {
 
     it("returns no slots for items without ammo", () => {
         expect(collectAmmoSlots(coffee)).toEqual([]);
+    });
+});
+
+describe("resolveInventoryDrag", () => {
+    const snapshot = makeSnapshot({
+        items: [m4, spareMag, coffee],
+        inUseItemId: m4.id,
+        groundItems: [coffee]
+    });
+
+    it("uses a backpack item on the in-use zone", () => {
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "inventory", item: coffee },
+                target: { type: "inUse" }
+            })
+        ).toEqual({
+            action: { type: "use", itemId: coffee.id },
+            pendingCostText: "Use Coffee — 12 AP"
+        });
+    });
+
+    it("puts the in-use item away on the inventory zone", () => {
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "inUse", item: m4 },
+                target: { type: "inventory" }
+            })?.action
+        ).toEqual({ type: "unuse" });
+    });
+
+    it("drops a backpack item on the ground", () => {
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "inventory", item: spareMag },
+                target: { type: "ground" }
+            })?.action
+        ).toEqual({ type: "drop", itemId: spareMag.id });
+    });
+
+    it("picks up a ground item, or picks up and uses it on the in-use zone", () => {
+        const groundCoffee = coffee;
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "ground", item: groundCoffee },
+                target: { type: "inventory" }
+            })?.action
+        ).toEqual({ type: "pickup", itemId: groundCoffee.id });
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "ground", item: groundCoffee },
+                target: { type: "inUse" }
+            })?.action
+        ).toEqual({ type: "pickup", itemId: groundCoffee.id, use: true });
+    });
+
+    it("loads compatible ammo onto an in-use content slot", () => {
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "inventory", item: spareMag },
+                target: { type: "slot", owner: m4 }
+            })?.action
+        ).toEqual({ type: "load", receiverId: m4.id, ammoId: spareMag.id });
+    });
+
+    it("unloads a content slot onto inventory, or unloads and drops onto the ground", () => {
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "slot", owner: m4, item: magInPack },
+                target: { type: "inventory" }
+            })
+        ).toEqual({
+            action: { type: "unload", itemId: m4.id },
+            pendingCostText: "Unload M16x30 — 8 AP"
+        });
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "slot", owner: m4, item: magInPack },
+                target: { type: "ground" }
+            })
+        ).toEqual({
+            action: { type: "drop", itemId: magInPack.id },
+            pendingCostText: "Unload and drop M16x30 — 12 AP"
+        });
+    });
+
+    it("ignores incompatible, unaffordable, and no-op drops", () => {
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "inventory", item: coffee },
+                target: { type: "slot", owner: m4 }
+            })
+        ).toBeNull();
+        expect(
+            resolveInventoryDrag({
+                snapshot,
+                actionScope: "inUse",
+                source: { type: "inventory", item: m4 },
+                target: { type: "inUse" }
+            })
+        ).toBeNull();
+        expect(
+            resolveInventoryDrag({
+                snapshot: makeSnapshot({
+                    items: [m4, spareMag],
+                    inUseItemId: m4.id,
+                    actionPoints: { value: 3, max: 47 }
+                }),
+                actionScope: "inUse",
+                source: { type: "inventory", item: spareMag },
+                target: { type: "ground" }
+            })
+        ).toBeNull();
     });
 });

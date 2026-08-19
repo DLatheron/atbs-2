@@ -396,7 +396,7 @@ describe("Unit inventory", () => {
         });
     });
 
-    it("drops only the in-use item onto the current tile", () => {
+    it("drops the in-use item onto the current tile", () => {
         const { unit, tile, messageRouter } = createHarness(
             InventoryRecipe.parse({
                 inUse: 0,
@@ -404,9 +404,6 @@ describe("Unit inventory", () => {
             })
         );
         const token = unit.itemInUse!;
-        const backpackGun = unit.inventory.items[1];
-
-        expect(() => unit.dropItem(backpackGun.id)).toThrow(/can only drop the in-use item/);
 
         expect(unit.dropItem(token.id)).toBe(true);
         expect(unit.itemInUse).toBeNull();
@@ -415,6 +412,39 @@ describe("Unit inventory", () => {
         expect(token.location).toEqual(new TilePos(0, 0));
         expect(unit.actionPoints).toBe(43);
         expect(messageRouter.sendIfVisible).toHaveBeenCalled();
+    });
+
+    it("drops a backpack item onto the current tile", () => {
+        const { unit, tile } = createHarness(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: TOKEN_RECIPE.id }, { id: EMPTY_GUN_RECIPE.id }]
+            })
+        );
+        const backpackGun = unit.inventory.items[1];
+
+        expect(unit.dropItem(backpackGun.id)).toBe(true);
+        expect(unit.itemInUse?.recipeId).toBe(TOKEN_RECIPE.id);
+        expect(unit.inventory.findItem(backpackGun.id)).toBeUndefined();
+        expect(tile.items.map(({ id }) => id)).toEqual([backpackGun.id]);
+        expect(unit.actionPoints).toBe(43);
+    });
+
+    it("unloads a chambered item onto the ground when dropping it", () => {
+        const { unit, tile } = createHarness(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: LOADED_GUN_RECIPE.id }]
+            })
+        );
+        const gun = unit.itemInUse!;
+        const mag = gun.getSlotContents(SlotType.enum.ammo);
+
+        expect(unit.dropItem(mag.id)).toBe(true);
+        expect(gun.findSlotContents(SlotType.enum.ammo)).toBeUndefined();
+        expect(unit.inventory.findItem(mag.id)).toBeUndefined();
+        expect(tile.items.map(({ id }) => id)).toEqual([mag.id]);
+        expect(unit.actionPoints).toBe(35);
     });
 
     it("picks up a ground item into the backpack or into use", () => {

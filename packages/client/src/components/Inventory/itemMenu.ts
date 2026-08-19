@@ -8,6 +8,8 @@ import type {
 export type ItemMenuLocation = "inUse" | "inventory" | "ground" | "slot";
 export type InventoryActionScope = "inUse" | "all";
 export type InventoryMode = "action" | "shop";
+/** What the inspector panel shows. `"inUse"` stays on the equipped item; `"selected"` follows clicks. */
+export type InventoryInspectorFocus = "inUse" | "selected";
 
 export type ItemMenuAction =
     | { type: "use"; itemId: ItemId }
@@ -415,4 +417,226 @@ export function collectAmmoSlots(item: InventoryItemView): ContentSlotRef[] {
  */
 export function collectAmmoCounts(item: InventoryItemView): AmmoCount[] {
     return collectAmmoSlots(item).map(({ slot }) => ammoCountFromSlot(slot));
+}
+
+export type InventoryDragSource =
+    | { type: "inventory"; item: InventoryItemView }
+    | { type: "inUse"; item: InventoryItemView }
+    | { type: "ground"; item: InventoryItemView }
+    | { type: "slot"; owner: InventoryItemView; item: InventoryItemView };
+
+export type InventoryDragTarget =
+    | { type: "inUse" }
+    | { type: "inventory"; overItemId?: ItemId }
+    | { type: "ground" }
+    | { type: "slot"; owner: InventoryItemView };
+
+export interface InventoryDragResult {
+    action: ItemMenuAction;
+    pendingCostText: string;
+}
+
+function canAfford(snapshot: InventorySnapshot, cost: number): boolean {
+    return !unaffordable(snapshot, cost);
+}
+
+export function canLoadIntoSlot(owner: InventoryItemView, ammo: InventoryItemView): boolean {
+    if (owner.id === ammo.id) {
+        return false;
+    }
+
+    const slot = getAmmoSlot(owner);
+    if (!slot || slot.contents?.id === ammo.id) {
+        return false;
+    }
+
+    return slot.compatibleIds.some((compatibleId: ItemId) =>
+        matchesCompatibleId(ammo.id, compatibleId)
+    );
+}
+
+function slotActionsAllowed(
+    snapshot: InventorySnapshot,
+    actionScope: InventoryActionScope,
+    owner: InventoryItemView
+): boolean {
+    return actionScope === "all" || isInUseTree(snapshot, owner.id);
+}
+
+function loadResult(
+    snapshot: InventorySnapshot,
+    owner: InventoryItemView,
+    ammo: InventoryItemView,
+    fromGround: boolean
+): InventoryDragResult | null {
+    if (!canLoadIntoSlot(owner, ammo)) {
+        return null;
+    }
+
+    const cost = fromGround ? snapshot.costs.loadFromGround : snapshot.costs.load;
+    if (!canAfford(snapshot, cost)) {
+        return null;
+    }
+
+    return {
+        action: { type: "load", receiverId: owner.id, ammoId: ammo.id },
+        pendingCostText: formatPendingCost("Load", ammo.shortName, cost)
+    };
+}
+
+export function resolveInventoryDrag({
+    snapshot,
+    actionScope,
+    source,
+    target
+}: {
+    snapshot: InventorySnapshot;
+    actionScope: InventoryActionScope;
+    source: InventoryDragSource;
+    target: InventoryDragTarget;
+}): InventoryDragResult | null {
+    switch (source.type) {
+        case "inventory": {
+            switch (target.type) {
+                case "inUse": {
+                    if (source.item.id === snapshot.inUseItemId) {
+                        return null;
+                    }
+                    const cost = getUseCost(snapshot);
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "use", itemId: source.item.id },
+                        pendingCostText: formatPendingCost("Use", source.item.shortName, cost)
+                    };
+                }
+                case "ground": {
+                    const cost = snapshot.costs.drop;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "drop", itemId: source.item.id },
+                        pendingCostText: formatPendingCost("Drop", source.item.shortName, cost)
+                    };
+                }
+                case "slot": {
+                    if (!slotActionsAllowed(snapshot, actionScope, target.owner)) {
+                        return null;
+                    }
+                    return loadResult(snapshot, target.owner, source.item, false);
+                }
+                case "inventory":
+                    return null;
+            }
+            break;
+        }
+        case "inUse": {
+            switch (target.type) {
+                case "inventory": {
+                    const cost = snapshot.costs.unuse;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "unuse" },
+                        pendingCostText: formatPendingCost("Put away", source.item.shortName, cost)
+                    };
+                }
+                case "ground": {
+                    const cost = snapshot.costs.drop;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "drop", itemId: source.item.id },
+                        pendingCostText: formatPendingCost("Drop", source.item.shortName, cost)
+                    };
+                }
+                case "slot": {
+                    if (!slotActionsAllowed(snapshot, actionScope, target.owner)) {
+                        return null;
+                    }
+                    return loadResult(snapshot, target.owner, source.item, false);
+                }
+                case "inUse":
+                    return null;
+            }
+            break;
+        }
+        case "ground": {
+            switch (target.type) {
+                case "inventory": {
+                    const cost = snapshot.costs.pickup;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "pickup", itemId: source.item.id },
+                        pendingCostText: formatPendingCost("Pickup", source.item.shortName, cost)
+                    };
+                }
+                case "inUse": {
+                    const cost = snapshot.costs.pickupAndUse;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "pickup", itemId: source.item.id, use: true },
+                        pendingCostText: formatPendingCost(
+                            "Pickup and use",
+                            source.item.shortName,
+                            cost
+                        )
+                    };
+                }
+                case "slot": {
+                    if (!slotActionsAllowed(snapshot, actionScope, target.owner)) {
+                        return null;
+                    }
+                    return loadResult(snapshot, target.owner, source.item, true);
+                }
+                case "ground":
+                    return null;
+            }
+            break;
+        }
+        case "slot": {
+            if (!slotActionsAllowed(snapshot, actionScope, source.owner)) {
+                return null;
+            }
+            switch (target.type) {
+                case "inventory": {
+                    const cost = snapshot.costs.unload;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "unload", itemId: source.owner.id },
+                        pendingCostText: formatPendingCost("Unload", source.item.shortName, cost)
+                    };
+                }
+                case "ground": {
+                    const cost = snapshot.costs.unload + snapshot.costs.drop;
+                    if (!canAfford(snapshot, cost)) {
+                        return null;
+                    }
+                    return {
+                        action: { type: "drop", itemId: source.item.id },
+                        pendingCostText: formatPendingCost(
+                            "Unload and drop",
+                            source.item.shortName,
+                            cost
+                        )
+                    };
+                }
+                case "inUse":
+                case "slot":
+                    return null;
+            }
+        }
+    }
+
+    return null;
 }

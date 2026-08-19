@@ -230,6 +230,7 @@ export function ActionPage({ visible }: ActionPageProps) {
                 snapshot={inventorySnapshot}
                 mode="action"
                 actionScope="inUse"
+                inspectorFocus="inUse"
                 disabled={disabled}
                 onClose={onCloseInventory}
                 onUse={onInventoryUse}
