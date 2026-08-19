@@ -148,7 +148,7 @@ function ItemContentSlots({
                     display: "flex",
                     flexDirection: "row",
                     flexWrap: "nowrap",
-                    alignItems: "center",
+                    alignItems: "flex-start",
                     gap: 1
                 }}
             >
