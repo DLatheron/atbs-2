@@ -8,9 +8,9 @@ import { collectContentSlots, slotLabel, type ContentSlotRef } from "./itemMenu"
 
 const panelSx = {
     // borderRadius: 2,
-    // border: "1px black solid",
-    // backgroundColor: "beige",
-    // p: 1
+    border: "1px black solid",
+    backgroundColor: "beige",
+    p: 1
 } as const;
 
 interface ItemContentSlotsProps {
@@ -70,7 +70,7 @@ function ContentSlotTile({
                         boxSizing: "border-box",
                         width: "100%",
                         height: "100%",
-                        borderRadius: 1,
+                        // borderRadius: 1,
                         border: "1px dashed #666",
                         backgroundColor: "beige",
                         display: "flex",
@@ -125,18 +125,16 @@ function ItemContentSlots({
         <Box
             data-testid="item-contents"
             sx={{
-                ...panelSx,
-                p: 1,
+                p: 0,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 1,
                 ...sx
             }}
         >
             <Typography
                 variant="subtitle2"
-                sx={{ gridArea: "title", textAlign: "center", m: "auto", lineHeight: 1.2 }}
+                sx={{ textAlign: "center", lineHeight: 1.2 }}
             >
                 Contents
             </Typography>
@@ -188,8 +186,6 @@ function InspectorDetails({ item, sx }: { item: InventoryItemView | null; sx?: S
         <Stack
             data-testid="inspector-details-item"
             sx={{
-                ...panelSx,
-                p: 1,
                 columnGap: 1.5,
                 rowGap: 0.5,
                 ...sx
@@ -218,11 +214,6 @@ export function ItemInspector({
                 display: "grid",
                 gridTemplateColumns: "1fr auto",
                 gridTemplateAreas: "'details contents'",
-                overflowY: "auto",
-                backgroundColor: "beige",
-                borderRadius: 2,
-                border: "1px black solid",
-                boxSizing: "border-box",
                 height: "100%",
                 columnGap: 2,
                 ...sx
@@ -233,7 +224,7 @@ export function ItemInspector({
                 item={item}
                 interactive={slotsInteractive}
                 getSlotMenuClick={getSlotMenuClick}
-                sx={{ gridArea: "contents" }}
+                sx={{ gridArea: "contents", gap: 1 }}
             />
         </Box>
     );

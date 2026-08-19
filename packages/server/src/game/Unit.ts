@@ -1014,15 +1014,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             this.logger.dir({ shot, srcWorldPos: fromWorldPos, dstWorldPos: toWorldPos });
 
-            const range =
+            const targetDistance = toWorldPos.sub(fromWorldPos).length;
+            const perturbedTargetDistance = Item.PerturbRange(targetDistance);
+            const travelDistance =
                 weapon.fireType === FireType.enum.indirect
-                    ? maxRange
-                    : toWorldPos.sub(fromWorldPos).length;
-            this.logger.dir({ range });
-
-            // Perturb the range of this shot based on accuracy.
-            const perturbedRange = Item.PerturbRange(range);
-            this.logger.dir({ perturbedRange });
+                    ? Math.min(perturbedTargetDistance, maxRange)
+                    : maxRange;
+            this.logger.dir({ targetDistance, perturbedTargetDistance, travelDistance });
 
             // Calculate the direction of the shot.
             const dirVector = toWorldPos.sub(fromWorldPos).normalise();
@@ -1093,10 +1091,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     roundIndex: shot,
                     srcPos: fromWorldPos,
                     directionVector,
-                    // TEMPORARY: Override the maxium range of the projectile to be the target position.
                     projectileRecipe: {
-                        ...projectileRecipe
-                        // maxRange: toWorldPos.sub(fromWorldPos).length
+                        ...projectileRecipe,
+                        maxRange: travelDistance
                     }
                 });
             });
@@ -1512,17 +1509,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return false;
         }
 
-        if (ammo.type === ItemType.enum.magazine) {
-            const previousMagazine = receiver.load(ammo);
+        if (receiver.replacesAmmoAsWholeItem(ammo)) {
+            const previous = receiver.load(ammo);
             if (fromGround) {
                 tile.removeItem(ammo);
                 ammo.location = null;
             } else {
                 this.inventory.removeItem(ammo);
             }
-            if (previousMagazine) {
-                previousMagazine.location = null;
-                this.inventory.addOrCollapseItem(previousMagazine);
+            if (previous) {
+                previous.location = null;
+                this.inventory.addOrCollapseItem(previous);
             }
         } else {
             const leftover = receiver.load(ammo);

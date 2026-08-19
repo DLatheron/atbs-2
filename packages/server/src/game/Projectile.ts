@@ -106,10 +106,8 @@ export class Projectile implements IRayCast {
         this._props = props;
 
         this._srcPos = new Vec2(props.srcPos);
-        this._dstPos = this.srcPos.add(
-            props.directionVector.scale(props.projectileRecipe.maxRange)
-        );
         this._maxRange = props.projectileRecipe.maxRange * variability;
+        this._dstPos = this.srcPos.add(props.directionVector.scale(this._maxRange));
         this._directionVector = props.directionVector;
         this._velocity = props.projectileRecipe.velocity * variability;
         this._syncAnimationToImpact = props.projectileRecipe.impactVelocity == null;

@@ -135,6 +135,42 @@ const TOKEN_RECIPE = ItemRecipe.parse({
     renderable: { default: [{ imageId: "coffee-token" }] }
 });
 
+const GRENADE_ROUND_RECIPE = ItemRecipe.parse({
+    id: "40mm-he.round",
+    type: "round",
+    name: "40mm HE",
+    description: [{ text: "Test grenade" }],
+    weight: 0.368,
+    renderable: { default: [{ imageId: "40mm-he" }] },
+    projectile: { ...PROJECTILE, diameter: 40, velocity: 84 }
+});
+
+const SMOKE_ROUND_RECIPE = ItemRecipe.parse({
+    id: "40mm-smoke.round",
+    type: "round",
+    name: "40mm Smoke",
+    description: [{ text: "Test smoke grenade" }],
+    weight: 0.368,
+    renderable: { default: [{ imageId: "40mm-smoke" }] },
+    projectile: { ...PROJECTILE, diameter: 40, velocity: 84 }
+});
+
+const GRENADE_LAUNCHER_RECIPE = ItemRecipe.parse({
+    id: "m203.gun",
+    type: "gun",
+    name: "M203",
+    description: [{ text: "Test grenade launcher" }],
+    weight: 1.36,
+    renderable: { default: [] },
+    fireSelector: "single",
+    fireType: "indirect",
+    fireModes: SINGLE_FIRE_MODES,
+    slotProps: {
+        ammo: { compatibleIds: ["40mm-he.round", "40mm-smoke.round"], maxQuantity: 1 }
+    },
+    slots: { ammo: { id: "40mm-he.round", quantity: 1 } }
+});
+
 const PARTIAL_MAG_RECIPE = ItemRecipe.parse({
     id: "m16-30-partial.magazine",
     type: "magazine",
@@ -158,7 +194,10 @@ function createItemManager(): ItemManager {
         LOADED_GUN_RECIPE,
         COMBO_RECIPE,
         TOKEN_RECIPE,
-        PARTIAL_MAG_RECIPE
+        PARTIAL_MAG_RECIPE,
+        GRENADE_ROUND_RECIPE,
+        SMOKE_ROUND_RECIPE,
+        GRENADE_LAUNCHER_RECIPE
     ]) {
         recipes.addRecipe(recipe);
     }
@@ -418,6 +457,41 @@ describe("Unit inventory", () => {
         expect(unit.inventory.findItem(originalMag.id)).toBe(originalMag);
         expect(unit.inventory.findItem(spareMag.id)).toBeUndefined();
         expect(unit.actionPoints).toBe(39);
+    });
+
+    it("swaps a chambered 40mm grenade back into inventory when loading another", () => {
+        const { unit } = createHarness(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: GRENADE_LAUNCHER_RECIPE.id }, { id: SMOKE_ROUND_RECIPE.id }]
+            })
+        );
+        const launcher = unit.itemInUse!;
+        const chambered = launcher.getSlotContents(SlotType.enum.ammo);
+        const smoke = unit.inventory.items[1];
+
+        expect(unit.loadItem(launcher.id, smoke.id)).toBe(true);
+        expect(launcher.findSlotContents(SlotType.enum.ammo)).toBe(smoke);
+        expect(unit.inventory.findItem(chambered.id)).toBe(chambered);
+        expect(unit.inventory.findItem(smoke.id)).toBeUndefined();
+        expect(unit.actionPoints).toBe(39);
+    });
+
+    it("swaps a chambered 40mm grenade with another of the same type", () => {
+        const { unit } = createHarness(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: GRENADE_LAUNCHER_RECIPE.id }, { id: GRENADE_ROUND_RECIPE.id }]
+            })
+        );
+        const launcher = unit.itemInUse!;
+        const chambered = launcher.getSlotContents(SlotType.enum.ammo);
+        const spare = unit.inventory.items[1];
+
+        expect(unit.loadItem(launcher.id, spare.id)).toBe(true);
+        expect(launcher.findSlotContents(SlotType.enum.ammo)).toBe(spare);
+        expect(unit.inventory.findItem(chambered.id)).toBe(chambered);
+        expect(unit.inventory.findItem(spare.id)).toBeUndefined();
     });
 
     it("loads leftover rounds from the ground and removes empty stacks", () => {

@@ -317,9 +317,21 @@ export class Item extends SceneObject {
     }
 
     /**
+     * Magazines and single-round chambers (e.g. M203) replace the whole slot item.
+     * Stackable round wells (magazines) top up quantity instead.
+     */
+    replacesAmmoAsWholeItem(ammo: Item): boolean {
+        if (ammo.type === ItemType.enum.magazine) {
+            return true;
+        }
+
+        return ammo.type === ItemType.enum.round && this.maxCapacity === 1 && ammo.quantity === 1;
+    }
+
+    /**
      * Attempts to load the given ammunition into the gun
      * @param ammo Item to use as ammunition.
-     * @returns The existing magazine (if applicable) or what remains in of the passed ammo.
+     * @returns The existing magazine/round (if applicable) or what remains of the passed ammo.
      */
     load(ammo: Item): Item | null {
         if (!this.canLoad()) {
@@ -338,48 +350,40 @@ export class Item extends SceneObject {
             );
         }
 
-        if (ammo.type === ItemType.enum.magazine) {
-            //
-            // Magazines
-            //
-            const existingMagazine = this.findSlotContents(SlotType.enum.ammo) ?? null;
-
+        if (this.replacesAmmoAsWholeItem(ammo)) {
+            const existing = this.findSlotContents(SlotType.enum.ammo) ?? null;
             this.setSlotContents(SlotType.enum.ammo, ammo);
-
-            return existingMagazine;
-        } else {
-            //
-            // Rounds
-            //
-            const { maxQuantity } = slotProps;
-
-            let itemsRounds = this.findSlotContents(SlotType.enum.ammo);
-            let spaceForRounds: number;
-
-            if (itemsRounds) {
-                if (itemsRounds.recipeId !== ammo.recipeId) {
-                    throw new Error(
-                        `Cannot load ${ammo.id} into ${this.id} as item already contains ${itemsRounds.quantity}x ${itemsRounds.recipeId}`
-                    );
-                }
-
-                spaceForRounds = maxQuantity - itemsRounds.quantity;
-            } else {
-                itemsRounds = this._itemManager.newItem(ammo.recipeId, { quantity: 0 });
-                this.setSlotContents(SlotType.enum.ammo, itemsRounds);
-                spaceForRounds = maxQuantity;
-            }
-            if (spaceForRounds <= 0) {
-                throw new Error(`${this.id} is already fully loaded`);
-            }
-
-            const roundsThatCanBeLoaded = Math.min(spaceForRounds, ammo.quantity);
-
-            itemsRounds.quantity += roundsThatCanBeLoaded;
-            ammo.quantity -= roundsThatCanBeLoaded;
-
-            return ammo.quantity > 0 ? ammo : null;
+            return existing;
         }
+
+        const { maxQuantity } = slotProps;
+
+        let itemsRounds = this.findSlotContents(SlotType.enum.ammo);
+        let spaceForRounds: number;
+
+        if (itemsRounds) {
+            if (itemsRounds.recipeId !== ammo.recipeId) {
+                throw new Error(
+                    `Cannot load ${ammo.id} into ${this.id} as item already contains ${itemsRounds.quantity}x ${itemsRounds.recipeId}`
+                );
+            }
+
+            spaceForRounds = maxQuantity - itemsRounds.quantity;
+        } else {
+            itemsRounds = this._itemManager.newItem(ammo.recipeId, { quantity: 0 });
+            this.setSlotContents(SlotType.enum.ammo, itemsRounds);
+            spaceForRounds = maxQuantity;
+        }
+        if (spaceForRounds <= 0) {
+            throw new Error(`${this.id} is already fully loaded`);
+        }
+
+        const roundsThatCanBeLoaded = Math.min(spaceForRounds, ammo.quantity);
+
+        itemsRounds.quantity += roundsThatCanBeLoaded;
+        ammo.quantity -= roundsThatCanBeLoaded;
+
+        return ammo.quantity > 0 ? ammo : null;
     }
 
     /**

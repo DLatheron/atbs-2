@@ -62,7 +62,7 @@ interface MenuState {
 }
 
 const panelSx = {
-    borderRadius: 2,
+    // borderRadius: 2,
     border: "1px black solid",
     backgroundColor: "beige",
     p: 1
@@ -175,7 +175,7 @@ function InventoryBoardFrame({
                     'ground ground'
                 `,
                 gridTemplateColumns: "auto 1fr",
-                gridTemplateRows: `auto 1fr auto`,
+                gridTemplateRows: `calc(204px + 8px + 8px + 1px + 1px) 1fr auto`,
                 gap: 1,
                 height: "100%",
                 minHeight: 0,
@@ -350,6 +350,7 @@ export function InventoryBoard({
                     sx={{
                         gridArea: "in-use",
                         ...panelSx,
+                        width: 180,
                         p: 1,
                         display: "flex",
                         flexDirection: "column",
@@ -373,7 +374,7 @@ export function InventoryBoard({
                                 width: ITEM_TILE_SIZE,
                                 height: ITEM_TILE_SIZE,
                                 flexShrink: 0,
-                                borderRadius: 1,
+                                // borderRadius: 1,
                                 border: "1px dashed #666",
                                 display: "flex",
                                 alignItems: "center",
@@ -387,7 +388,12 @@ export function InventoryBoard({
                     )}
                 </Box>
 
-                <Box sx={{ gridArea: "inspector", overflow: "hidden", height: "100%" }}>
+                <Box sx={{
+                    gridArea: "inspector",
+                    overflow: "hidden",
+                    ...panelSx,
+                    
+                }}>
                     <ItemInspector
                         item={selectedItem}
                         slotsInteractive={slotsInteractive}
@@ -400,20 +406,19 @@ export function InventoryBoard({
                 <Box
                     sx={{
                         gridArea: "inventory",
-                        ...panelSx,
                         display: "flex",
                         flexDirection: "column",
                         overflow: "hidden",
-                        p: 0
+                        ...panelSx,
                     }}
                 >
                     <Typography
                         variant="subtitle2"
-                        sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
+                        sx={{ textAlign: "center", p: 1,lineHeight: 1.2 }}
                     >
                         Inventory
                     </Typography>
-                    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1, pb: 1 }}>
+                    <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 0, m: "auto", pb: 1 }}>
                         <DndContext
                             sensors={sensors}
                             collisionDetection={closestCenter}
@@ -450,61 +455,58 @@ export function InventoryBoard({
                     </Box>
                 </Box>
 
-                <Box
-                    sx={{
-                        gridArea: "ground",
-                        ...panelSx,
-                        display: "flex",
-                        flexDirection: "column",
-                        overflow: "hidden",
-                        p: 0
-                    }}
-                >
-                    {mode === "shop" ? (
-                        <Typography
-                            variant="subtitle2"
-                            sx={{ textAlign: "center", color: "#666", p: 1 }}
-                        >
-                            Store
-                        </Typography>
-                    ) : (
-                        <>
+                {snapshot.groundItems.length > 0 && (
+                    <Box
+                        sx={{
+                            gridArea: "ground",
+                            ...panelSx,
+                            display: "flex",
+                            flexDirection: "column",
+                            overflow: "hidden",
+                            p: 0
+                        }}
+                    >
+                        {mode === "shop" ? (
                             <Typography
                                 variant="subtitle2"
-                                sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
+                                sx={{ textAlign: "center", color: "#666", p: 1 }}
                             >
-                                On ground
+                                Store
                             </Typography>
-                            <Box
-                                sx={{
-                                    flex: 1,
-                                    minHeight: 0,
-                                    display: "flex",
-                                    flexWrap: "nowrap",
-                                    gap: 1,
-                                    p: 1,
-                                    pb: 2,
-                                    overflow: "auto"
-                                }}
-                            >
-                                {snapshot.groundItems.map((item: InventoryItemView) => (
-                                    <ItemTile
-                                        key={item.id}
-                                        item={item}
-                                        selected={selectedItemId === item.id}
-                                        onClick={() => setSelectedItemId(item.id)}
-                                        onMenuClick={getMenuClickHandler(item, "ground")}
-                                    />
-                                ))}
-                                {snapshot.groundItems.length === 0 && (
-                                    <Typography variant="body2" sx={{ color: "#666" }}>
-                                        Nothing on the ground
-                                    </Typography>
-                                )}
-                            </Box>
-                        </>
-                    )}
-                </Box>
+                        ) : (
+                            <>
+                                <Typography
+                                    variant="subtitle2"
+                                    sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
+                                >
+                                    On ground
+                                </Typography>
+                                <Box
+                                    sx={{
+                                        flex: 1,
+                                        minHeight: 0,
+                                        display: "flex",
+                                        flexWrap: "nowrap",
+                                        gap: 1,
+                                        p: 1,
+                                        pb: 2,
+                                        overflow: "auto"
+                                    }}
+                                >
+                                    {snapshot.groundItems.map((item: InventoryItemView) => (
+                                        <ItemTile
+                                            key={item.id}
+                                            item={item}
+                                            selected={selectedItemId === item.id}
+                                            onClick={() => setSelectedItemId(item.id)}
+                                            onMenuClick={getMenuClickHandler(item, "ground")}
+                                        />
+                                    ))}
+                                </Box>
+                            </>
+                        )}
+                    </Box>
+                )}
 
                 <Menu
                     open={Boolean(menu) && menuRows.length > 0}
