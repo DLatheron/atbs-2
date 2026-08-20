@@ -169,6 +169,51 @@ describe("getItemMenu", () => {
         expect(rows[0]?.pendingCostText).toBe("Use Coffee — 12 AP");
     });
 
+    it("offers Load on a backpack magazine compatible with the in-use weapon", () => {
+        const snapshot = makeSnapshot({
+            items: [m4, spareMag],
+            inUseItemId: m4.id
+        });
+        const rows = getItemMenu({
+            snapshot,
+            item: spareMag,
+            location: "inventory",
+            actionScope: "inUse"
+        });
+
+        expect(rows.map((row) => row.id)).toEqual(["use", "loadInto"]);
+        expect(rows.find((row) => row.id === "loadInto")?.action).toEqual({
+            type: "load",
+            receiverId: m4.id,
+            ammoId: spareMag.id
+        });
+        expect(rows.find((row) => row.id === "loadInto")?.pendingCostText).toBe(
+            "Load M16x30 — 8 AP"
+        );
+    });
+
+    it("offers Load on a ground magazine compatible with the in-use weapon", () => {
+        const snapshot = makeSnapshot({
+            items: [m4],
+            inUseItemId: m4.id,
+            groundItems: [spareMag]
+        });
+        const rows = getItemMenu({
+            snapshot,
+            item: spareMag,
+            location: "ground",
+            actionScope: "inUse"
+        });
+
+        expect(rows.map((row) => row.id)).toEqual(["pickup", "pickupAndUse", "loadInto"]);
+        expect(rows.find((row) => row.id === "loadInto")?.action).toEqual({
+            type: "load",
+            receiverId: m4.id,
+            ammoId: spareMag.id
+        });
+        expect(rows.find((row) => row.id === "loadInto")?.cost).toBe(16);
+    });
+
     it("does not add unuse to Use cost when nothing is equipped", () => {
         const snapshot = makeSnapshot({ items: [coffee] });
         expect(getUseCost(snapshot)).toBe(8);

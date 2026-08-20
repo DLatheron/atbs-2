@@ -525,6 +525,30 @@ describe("Unit inventory", () => {
         expect(unit.inventory.findItem(spare.id)).toBeUndefined();
     });
 
+    it("loads one grenade from a stack into a chambered launcher and keeps the leftover", () => {
+        const { unit, itemManager } = createHarness(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: GRENADE_LAUNCHER_RECIPE.id }]
+            })
+        );
+        const launcher = unit.itemInUse!;
+        const chambered = launcher.getSlotContents(SlotType.enum.ammo);
+        const stack = itemManager.newItem(SMOKE_ROUND_RECIPE.id, { quantity: 2 });
+        unit.inventory.addItem(stack);
+
+        expect(unit.loadItem(launcher.id, stack.id)).toBe(true);
+
+        const loaded = launcher.getSlotContents(SlotType.enum.ammo);
+        expect(loaded.recipeId).toBe(SMOKE_ROUND_RECIPE.id);
+        expect(loaded.quantity).toBe(1);
+        expect(loaded).not.toBe(stack);
+        expect(unit.inventory.findItem(stack.id)).toBe(stack);
+        expect(stack.quantity).toBe(1);
+        expect(unit.inventory.findItem(chambered.id)?.recipeId).toBe(GRENADE_ROUND_RECIPE.id);
+        expect(unit.actionPoints).toBe(39);
+    });
+
     it("loads leftover rounds from the ground and removes empty stacks", () => {
         const { unit, tile, itemManager } = createHarness(
             InventoryRecipe.parse({

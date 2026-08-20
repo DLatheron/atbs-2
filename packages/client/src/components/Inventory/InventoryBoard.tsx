@@ -16,7 +16,16 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Box, Collapse, Menu, MenuItem, SxProps, Typography } from "@mui/material";
+import {
+    Box,
+    Collapse,
+    Menu,
+    MenuItem,
+    MenuList,
+    Popover,
+    SxProps,
+    Typography
+} from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import {
     useCallback,
@@ -49,7 +58,17 @@ import {
     getItemMenu,
     resolveInventoryDrag
 } from "./itemMenu";
-import { backgroundBannerAnchorSx, backgroundBannerSx, INVENTORY_EMPTY_TEXT, inventoryPanelSx, NO_ITEM_IN_USE_TEXT } from "./styles";
+import {
+    backgroundBannerAnchorSx,
+    backgroundBannerSx,
+    groundBackgroundSx,
+    groundSlideTimeInMs,
+    IN_USE_TITLE,
+    INVENTORY_EMPTY_TEXT,
+    inventoryPanelSx,
+    NO_ITEM_IN_USE_TEXT,
+    ON_GROUND_TITLE
+} from "./styles";
 
 export interface InventoryBoardProps {
     snapshot: InventorySnapshot;
@@ -339,6 +358,10 @@ export function InventoryBoard({
     const [selectedItemId, setSelectedItemId] = useState<ItemId | null>(snapshot.inUseItemId);
     const [menu, setMenu] = useState<MenuState | null>(null);
     const [subMenuAnchor, setSubMenuAnchor] = useState<HTMLElement | null>(null);
+    const [subMenuRows, setSubMenuRows] = useState<ItemMenuRow[]>([]);
+    const subMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const subMenuRowIdRef = useRef<string | null>(null);
+    const subMenuPaperRef = useRef<HTMLElement | null>(null);
     const [activeDragItem, setActiveDragItem] = useState<InventoryItemView | null>(null);
     const [activeDragSource, setActiveDragSource] = useState<InventoryDragSource | null>(null);
     const [legalOverId, setLegalOverId] = useState<string | null>(null);
@@ -420,13 +443,51 @@ export function InventoryBoard({
         });
     }, [menu, snapshot, actionScope]);
 
-    const loadSubmenu = menuRows.find((row) => row.id === "load")?.children ?? [];
+    const clearSubMenuCloseTimeout = useCallback(() => {
+        if (subMenuCloseTimeoutRef.current !== null) {
+            clearTimeout(subMenuCloseTimeoutRef.current);
+            subMenuCloseTimeoutRef.current = null;
+        }
+    }, []);
+
+    const openSubMenu = useCallback(
+        (anchor: HTMLElement, children: ItemMenuRow[], rowId: string) => {
+            clearSubMenuCloseTimeout();
+            // Avoid setState when this submenu is already open — re-rendering the parent
+            // Menu remounts the Load row, which fires leave/enter and flickers the submenu.
+            if (subMenuRowIdRef.current === rowId) {
+                setSubMenuAnchor((current) => (current === anchor ? current : anchor));
+                return;
+            }
+            subMenuRowIdRef.current = rowId;
+            setSubMenuAnchor(anchor);
+            setSubMenuRows(children);
+        },
+        [clearSubMenuCloseTimeout]
+    );
+
+    const closeSubMenu = useCallback(() => {
+        clearSubMenuCloseTimeout();
+        subMenuRowIdRef.current = null;
+        setSubMenuAnchor(null);
+        setSubMenuRows([]);
+    }, [clearSubMenuCloseTimeout]);
+
+    const scheduleCloseSubMenu = useCallback(() => {
+        clearSubMenuCloseTimeout();
+        subMenuCloseTimeoutRef.current = setTimeout(() => {
+            subMenuRowIdRef.current = null;
+            setSubMenuAnchor(null);
+            setSubMenuRows([]);
+            subMenuCloseTimeoutRef.current = null;
+        }, 200);
+    }, [clearSubMenuCloseTimeout]);
 
     const closeMenu = useCallback(() => {
         setMenu(null);
-        setSubMenuAnchor(null);
+        closeSubMenu();
         onPendingCostChange(null);
-    }, [onPendingCostChange]);
+    }, [closeSubMenu, onPendingCostChange]);
 
     const openMenu = useCallback(
         (
@@ -444,6 +505,8 @@ export function InventoryBoard({
                 setSelectedItemId(item.id);
             }
             setSubMenuAnchor(null);
+            setSubMenuRows([]);
+            subMenuRowIdRef.current = null;
             onPendingCostChange(null);
 
             const rows = getItemMenu({
@@ -531,6 +594,8 @@ export function InventoryBoard({
             setGroundDropPreviewItem(null);
             setMenu(null);
             setSubMenuAnchor(null);
+            setSubMenuRows([]);
+            subMenuRowIdRef.current = null;
             onPendingCostChange(null);
         },
         [onPendingCostChange]
@@ -693,14 +758,15 @@ export function InventoryBoard({
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
-                            gap: 1
+                            gap: 1,
+                            backgroundColor: "lightgray"
                         }}
                     >
                         <Typography
                             variant="subtitle2"
                             sx={{ textAlign: "center", lineHeight: 1.2 }}
                         >
-                            In use
+                            {IN_USE_TITLE}
                         </Typography>
                         {inUseItem ? (
                             <DraggableItemTile
@@ -724,10 +790,7 @@ export function InventoryBoard({
                                     ...backgroundBannerAnchorSx
                                 }}
                             >
-                                <Typography
-                                    variant="body2"
-                                    sx={backgroundBannerSx}
-                                >
+                                <Typography variant="body2" sx={backgroundBannerSx}>
                                     {NO_ITEM_IN_USE_TEXT}
                                 </Typography>
                             </Box>
@@ -738,14 +801,13 @@ export function InventoryBoard({
                         sx={{
                             gridArea: "inspector",
                             overflow: "hidden",
-                            ...inventoryPanelSx
+                            ...inventoryPanelSx,
+                            backgroundColor: "lightgray"
                         }}
                     >
                         <ItemInspector
                             item={inspectorItem}
-                            emptyText={
-                                inspectorFocus === "inUse" ? "" : "Select an item"
-                            }
+                            emptyText={inspectorFocus === "inUse" ? "" : "Select an item"}
                             slotsInteractive={slotsInteractive}
                             highlightedSlotId={
                                 legalOverId?.startsWith("slot:") ? legalOverId : null
@@ -775,7 +837,8 @@ export function InventoryBoard({
                                 minHeight: 0,
                                 overflowY: "auto",
                                 p: 0,
-                                m: 0
+                                m: 0,
+                                backgroundColor: "gray"
                             }}
                         >
                             <SortableContext
@@ -877,19 +940,19 @@ export function InventoryBoard({
                                 display: "flex",
                                 flexDirection: "column",
                                 overflow: "hidden",
-                                backgroundColor: "lightGreen",
-                                p: 0
+                                p: 0,
+                                ...groundBackgroundSx
                             }}
                         >
                             <Typography
                                 variant="subtitle2"
                                 sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
                             >
-                                On ground
+                                {ON_GROUND_TITLE}
                             </Typography>
                             <Collapse
                                 in={showGroundItemRow}
-                                timeout={300}
+                                timeout={groundSlideTimeInMs}
                                 onExited={() => setClosingGroundItem(null)}
                             >
                                 <Box
@@ -941,7 +1004,7 @@ export function InventoryBoard({
                         }}
                     >
                         {menuRows.map((row) => {
-                            const hasChildren = Boolean(row.children);
+                            const hasChildren = Boolean(row.children?.length);
 
                             return (
                                 <MenuItem
@@ -949,21 +1012,28 @@ export function InventoryBoard({
                                     disabled={row.disabled}
                                     onMouseEnter={(event) => {
                                         onPendingCostChange(row.pendingCostText);
-                                        if (hasChildren && !row.disabled) {
-                                            setSubMenuAnchor(event.currentTarget);
+                                        if (hasChildren && !row.disabled && row.children) {
+                                            openSubMenu(event.currentTarget, row.children, row.id);
                                         } else {
-                                            setSubMenuAnchor(null);
+                                            closeSubMenu();
                                         }
                                     }}
-                                    onMouseLeave={() => {
-                                        if (!hasChildren) {
+                                    onMouseLeave={(event) => {
+                                        if (hasChildren) {
+                                            const related = event.relatedTarget;
+                                            if (
+                                                related instanceof Node &&
+                                                subMenuPaperRef.current?.contains(related)
+                                            ) {
+                                                return;
+                                            }
+                                            scheduleCloseSubMenu();
+                                        } else {
                                             onPendingCostChange(null);
                                         }
                                     }}
-                                    onClick={(event) => {
+                                    onClick={() => {
                                         if (hasChildren) {
-                                            event.stopPropagation();
-                                            setSubMenuAnchor(event.currentTarget);
                                             return;
                                         }
                                         handleAction(row.action);
@@ -994,44 +1064,60 @@ export function InventoryBoard({
                         })}
                     </Menu>
 
-                    <Menu
+                    <Popover
+                        open={Boolean(subMenuAnchor) && subMenuRows.length > 0}
                         anchorEl={subMenuAnchor}
-                        open={Boolean(subMenuAnchor) && loadSubmenu.length > 0}
-                        onClose={() => setSubMenuAnchor(null)}
+                        onClose={closeSubMenu}
+                        disableRestoreFocus
+                        disableAutoFocus
+                        disableEnforceFocus
+                        disableScrollLock
+                        marginThreshold={0}
                         anchorOrigin={{ vertical: "top", horizontal: "right" }}
                         transformOrigin={{ vertical: "top", horizontal: "left" }}
                         slotProps={{
-                            list: { dense: true }
+                            root: {
+                                // Nested menu: don't capture pointer outside the paper.
+                                sx: { pointerEvents: "none" }
+                            },
+                            paper: {
+                                ref: subMenuPaperRef,
+                                sx: { pointerEvents: "auto" },
+                                onMouseEnter: clearSubMenuCloseTimeout,
+                                onMouseLeave: scheduleCloseSubMenu
+                            }
                         }}
                     >
-                        {loadSubmenu.map((row) => (
-                            <MenuItem
-                                key={row.id}
-                                disabled={row.disabled}
-                                onMouseEnter={() => onPendingCostChange(row.pendingCostText)}
-                                onMouseLeave={() => onPendingCostChange(null)}
-                                onClick={() => handleAction(row.action)}
-                            >
-                                <Box
-                                    sx={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        width: "100%",
-                                        gap: 1,
-                                        justifyContent: "space-between"
-                                    }}
+                        <MenuList dense>
+                            {subMenuRows.map((row) => (
+                                <MenuItem
+                                    key={row.id}
+                                    disabled={row.disabled}
+                                    onMouseEnter={() => onPendingCostChange(row.pendingCostText)}
+                                    onMouseLeave={() => onPendingCostChange(null)}
+                                    onClick={() => handleAction(row.action)}
                                 >
-                                    <Typography variant="caption">{row.label}</Typography>
-                                    <Typography
-                                        variant="caption"
-                                        sx={{ color: "#666", textAlign: "right" }}
+                                    <Box
+                                        sx={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            width: "100%",
+                                            gap: 1,
+                                            justifyContent: "space-between"
+                                        }}
                                     >
-                                        {row.cost} AP
-                                    </Typography>
-                                </Box>
-                            </MenuItem>
-                        ))}
-                    </Menu>
+                                        <Typography variant="caption">{row.label}</Typography>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{ color: "#666", textAlign: "right" }}
+                                        >
+                                            {row.cost} AP
+                                        </Typography>
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </MenuList>
+                    </Popover>
                 </InventoryBoardFrame>
                 <DragOverlay dropAnimation={null} style={{ pointerEvents: "none", opacity: 0.75 }}>
                     {activeDragItem ? (

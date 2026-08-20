@@ -6,7 +6,7 @@ import type { MouseEvent } from "react";
 import { DescriptionComponent } from "../Description";
 import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
 import { collectContentSlots, slotLabel, type ContentSlotRef } from "./itemMenu";
-import { backgroundBannerAnchorSx, backgroundBannerSx } from "./styles";
+import { backgroundBannerAnchorSx, backgroundBannerSx, CONTENTS_TITLE } from "./styles";
 
 interface ItemContentSlotsProps {
     item: InventoryItemView | null;
@@ -163,7 +163,7 @@ function ItemContentSlots({
             }}
         >
             <Typography variant="subtitle2" sx={{ textAlign: "center", lineHeight: 1.2 }}>
-                Contents
+                {CONTENTS_TITLE}
             </Typography>
             <Box
                 sx={{
@@ -220,13 +220,14 @@ function InspectorDetails({
             sx={{
                 columnGap: 1.5,
                 rowGap: 0.5,
+                overflow: "hidden",
                 ...sx
             }}
         >
             <Typography variant="h6" sx={{ gridArea: "name", lineHeight: 1.2 }}>
                 {item.name}
             </Typography>
-            <Box sx={{ gridArea: "description", minHeight: 0, overflow: "auto" }}>
+            <Box sx={{ gridArea: "description", minHeight: 0, pr: 1, overflow: "auto" }}>
                 <DescriptionComponent description={item.description} />
             </Box>
         </Stack>
@@ -249,7 +250,7 @@ export function ItemInspector({
                 gridTemplateColumns: "1fr auto",
                 gridTemplateAreas: "'details contents'",
                 height: "100%",
-                columnGap: 2,
+                columnGap: 1,
                 ...sx
             }}
         >

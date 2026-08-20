@@ -195,6 +195,64 @@ function buildUnloadRow(snapshot: InventorySnapshot, item: InventoryItemView): I
     };
 }
 
+/**
+ * Load this ammo/magazine into a compatible well on the in-use item (and nested guns).
+ */
+function buildLoadIntoInUseRow(
+    snapshot: InventorySnapshot,
+    ammo: InventoryItemView,
+    fromGround: boolean,
+    label = "Load"
+): ItemMenuRow | null {
+    const inUse = getInUseItem(snapshot);
+    if (!inUse || ammo.id === inUse.id) {
+        return null;
+    }
+
+    const receivers = collectAmmoSlots(inUse)
+        .map(({ owner }) => owner)
+        .filter((owner, index, all) => all.findIndex((entry) => entry.id === owner.id) === index)
+        .filter((owner) => canLoadIntoSlot(owner, ammo));
+
+    if (receivers.length === 0) {
+        return null;
+    }
+
+    const cost = fromGround ? snapshot.costs.loadFromGround : snapshot.costs.load;
+    const children: ItemMenuRow[] = receivers.map((receiver) => ({
+        id: `load-into-${receiver.id}`,
+        label: receiver.shortName,
+        cost,
+        disabled: unaffordable(snapshot, cost),
+        action: { type: "load", receiverId: receiver.id, ammoId: ammo.id },
+        pendingCostText: formatPendingCost("Load", ammo.shortName, cost)
+    }));
+
+    if (children.length === 1) {
+        const only = children[0]!;
+        return {
+            id: "loadInto",
+            label,
+            cost: only.cost,
+            disabled: only.disabled,
+            action: only.action,
+            pendingCostText: only.pendingCostText
+        };
+    }
+
+    const hasAffordableChild = children.some((child) => !child.disabled);
+
+    return {
+        id: "loadInto",
+        label,
+        cost,
+        disabled: !hasAffordableChild,
+        action: null,
+        pendingCostText: null,
+        children
+    };
+}
+
 function buildLoadUnloadRows(
     snapshot: InventorySnapshot,
     item: InventoryItemView,
@@ -268,6 +326,14 @@ export function getItemMenu({
                 rows.push(...buildLoadUnloadRows(snapshot, item, false));
             }
 
+            const loadIntoLabel = rows.some((entry) => entry.id === "load")
+                ? "Load into weapon"
+                : "Load";
+            const loadIntoInUse = buildLoadIntoInUseRow(snapshot, item, false, loadIntoLabel);
+            if (loadIntoInUse) {
+                rows.push(loadIntoInUse);
+            }
+
             return rows;
         }
 
@@ -294,7 +360,7 @@ export function getItemMenu({
         }
 
         case "ground": {
-            return [
+            const rows: ItemMenuRow[] = [
                 row(
                     "pickup",
                     "Pickup",
@@ -312,6 +378,13 @@ export function getItemMenu({
                     item.shortName
                 )
             ];
+
+            const loadIntoInUse = buildLoadIntoInUseRow(snapshot, item, true);
+            if (loadIntoInUse) {
+                rows.push(loadIntoInUse);
+            }
+
+            return rows;
         }
 
         case "slot": {

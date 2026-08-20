@@ -1539,11 +1539,21 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         if (receiver.replacesAmmoAsWholeItem(ammo)) {
             const previous = receiver.load(ammo);
-            if (fromGround) {
-                tile.removeItem(ammo);
-                ammo.location = null;
-            } else {
-                this.inventory.removeItem(ammo);
+            // Whole magazines / single rounds are moved into the chamber. Stacks of
+            // rounds only donate one round and remain in inventory/ground.
+            if (receiver.findSlotContents(SlotType.enum.ammo) === ammo) {
+                if (fromGround) {
+                    tile.removeItem(ammo);
+                    ammo.location = null;
+                } else {
+                    this.inventory.removeItem(ammo);
+                }
+            } else if (ammo.quantity <= 0) {
+                if (fromGround) {
+                    tile.removeItem(ammo);
+                } else {
+                    this.inventory.removeItem(ammo);
+                }
             }
             if (previous) {
                 previous.location = null;

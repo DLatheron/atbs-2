@@ -303,6 +303,23 @@ describe("Item", () => {
             expect(previous).toBe(chambered);
             expect(launcher.findSlotContents(SlotType.enum.ammo)).toBe(replacement);
         });
+
+        it("takes one round from a stack when swapping a single-capacity chamber", () => {
+            const launcher = itemManager.newItem(GRENADE_LAUNCHER_RECIPE.id);
+            const chambered = launcher.getSlotContents(SlotType.enum.ammo);
+            const stack = itemManager.newItem(SMOKE_ROUND_RECIPE.id, { quantity: 3 });
+
+            expect(launcher.replacesAmmoAsWholeItem(stack)).toBe(true);
+
+            const previous = launcher.load(stack);
+            const loaded = launcher.getSlotContents(SlotType.enum.ammo);
+
+            expect(previous).toBe(chambered);
+            expect(loaded).not.toBe(stack);
+            expect(loaded.recipeId).toBe(SMOKE_ROUND_RECIPE.id);
+            expect(loaded.quantity).toBe(1);
+            expect(stack.quantity).toBe(2);
+        });
     });
 
     describe("unload", () => {

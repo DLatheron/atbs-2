@@ -338,7 +338,9 @@ export class Item extends SceneObject {
             return true;
         }
 
-        return ammo.type === ItemType.enum.round && this.maxCapacity === 1 && ammo.quantity === 1;
+        // Capacity-1 chambers always swap the chambered item, even when taking
+        // one round from a larger inventory stack.
+        return ammo.type === ItemType.enum.round && this.maxCapacity === 1;
     }
 
     /**
@@ -365,7 +367,12 @@ export class Item extends SceneObject {
 
         if (this.replacesAmmoAsWholeItem(ammo)) {
             const existing = this.findSlotContents(SlotType.enum.ammo) ?? null;
-            this.setSlotContents(SlotType.enum.ammo, ammo);
+            let toChamber = ammo;
+            if (ammo.type === ItemType.enum.round && ammo.quantity > 1) {
+                toChamber = this._itemManager.newItem(ammo.recipeId, { quantity: 1 });
+                ammo.quantity -= 1;
+            }
+            this.setSlotContents(SlotType.enum.ammo, toChamber);
             return existing;
         }
 

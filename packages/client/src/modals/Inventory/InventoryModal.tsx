@@ -8,8 +8,9 @@ import {
     type InventoryMode
 } from "../../components/Inventory";
 import { getAttributeValue } from "../../helpers/formattingHelpers";
+import { ACTION_POINTS_TITLE, INVENTORY_MODEL_TITLE } from "../../components/Inventory/styles";
 
-const MODAL_BACKGROUND_COLOR = "#DCDCDC";
+const MODAL_BACKGROUND_COLOR = "darkgray";
 
 export interface InventoryModalProps {
     open: boolean;
@@ -77,12 +78,13 @@ export function InventoryModal({
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    bgcolor: MODAL_BACKGROUND_COLOR,
+                    backgroundColor: MODAL_BACKGROUND_COLOR,
                     border: "2px solid #000",
                     boxShadow: 24,
                     borderRadius: 4,
                     p: 1,
-                    outline: "none"
+                    outline: "none",
+                    gap: 1
                 }}
             >
                 <Box
@@ -95,11 +97,11 @@ export function InventoryModal({
                 >
                     <Typography
                         id="inventory-modal-title"
-                        variant="h6"
+                        variant="h5"
                         component="h2"
-                        sx={{ gridArea: "title" }}
+                        sx={{ gridArea: "title", fontWeight: "bold" }}
                     >
-                        Inventory
+                        {INVENTORY_MODEL_TITLE}
                     </Typography>
                     <Typography
                         variant="body2"
@@ -114,10 +116,10 @@ export function InventoryModal({
                     </Typography>
                     <Box
                         id="inventory-modal-description"
-                        sx={{ textAlign: "right", gridArea: "budget" }}
+                        sx={{ textAlign: "right", gridArea: "budget", mt: "auto" }}
                     >
-                        <Typography variant="h6" component="p">
-                            AP {getAttributeValue(snapshot.actionPoints)}
+                        <Typography variant="body1" component="p">
+                            {ACTION_POINTS_TITLE} {getAttributeValue(snapshot.actionPoints)}
                         </Typography>
                     </Box>
                 </Box>
