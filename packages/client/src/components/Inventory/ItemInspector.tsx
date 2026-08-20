@@ -6,7 +6,13 @@ import type { MouseEvent } from "react";
 import { DescriptionComponent } from "../Description";
 import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
 import { collectContentSlots, slotLabel, type ContentSlotRef } from "./itemMenu";
-import { backgroundBannerAnchorSx, backgroundBannerSx, CONTENTS_TITLE } from "./styles";
+import {
+    backgroundBannerAnchorSx,
+    backgroundBannerSx,
+    CONTENTS_TITLE,
+    cutoutTextSx,
+    INVENTORY_PANEL_BACKGROUND_COLOR
+} from "./styles";
 
 interface ItemContentSlotsProps {
     item: InventoryItemView | null;
@@ -104,10 +110,7 @@ function ContentSlotTile({
                         ...backgroundBannerAnchorSx
                     }}
                 >
-                    <Typography
-                        variant="caption"
-                        sx={backgroundBannerSx}
-                    >
+                    <Typography variant="caption" sx={backgroundBannerSx}>
                         {slotLabel(slot.slot)}
                     </Typography>
                 </Box>
@@ -162,7 +165,14 @@ function ItemContentSlots({
                 ...sx
             }}
         >
-            <Typography variant="subtitle2" sx={{ textAlign: "center", lineHeight: 1.2 }}>
+            <Typography
+                variant="subtitle2"
+                sx={{
+                    textAlign: "center",
+                    lineHeight: 1.2,
+                    ...cutoutTextSx(INVENTORY_PANEL_BACKGROUND_COLOR)
+                }}
+            >
                 {CONTENTS_TITLE}
             </Typography>
             <Box

@@ -8,7 +8,9 @@
             "text": "The Colt M4 Carbine is a short variant of the M16A2 Assault Rifle. It fires the same 5.56x45mm NATO round from the same magazines and can fire single-shot, three-round burst or fully automatic."
         },
         { "text": "The underslung M203 grenade launcher fires 40mm grenades." },
-        { "text": "The M203 grenade launcher can be used to clear rooms or engage targets at a distance." }
+        {
+            "text": "The M203 grenade launcher can be used to clear rooms or engage targets at a distance."
+        }
     ],
     "weight": 0,
     "renderable": {

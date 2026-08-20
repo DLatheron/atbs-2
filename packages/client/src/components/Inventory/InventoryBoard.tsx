@@ -61,12 +61,15 @@ import {
 import {
     backgroundBannerAnchorSx,
     backgroundBannerSx,
+    cutoutTextSx,
     groundBackgroundSx,
     groundSlideTimeInMs,
     IN_USE_TITLE,
     INVENTORY_EMPTY_TEXT,
+    INVENTORY_PANEL_BACKGROUND_COLOR,
     inventoryPanelSx,
     NO_ITEM_IN_USE_TEXT,
+    ON_GROUND_BACKGROUND_COLOR,
     ON_GROUND_TITLE
 } from "./styles";
 
@@ -764,7 +767,11 @@ export function InventoryBoard({
                     >
                         <Typography
                             variant="subtitle2"
-                            sx={{ textAlign: "center", lineHeight: 1.2 }}
+                            sx={{
+                                textAlign: "center",
+                                lineHeight: 1.2,
+                                ...cutoutTextSx(INVENTORY_PANEL_BACKGROUND_COLOR)
+                            }}
                         >
                             {IN_USE_TITLE}
                         </Typography>
@@ -946,7 +953,12 @@ export function InventoryBoard({
                         >
                             <Typography
                                 variant="subtitle2"
-                                sx={{ textAlign: "center", p: 1, flexShrink: 0 }}
+                                sx={{
+                                    textAlign: "center",
+                                    p: 1,
+                                    flexShrink: 0,
+                                    ...cutoutTextSx(ON_GROUND_BACKGROUND_COLOR)
+                                }}
                             >
                                 {ON_GROUND_TITLE}
                             </Typography>

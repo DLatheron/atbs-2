@@ -8,7 +8,13 @@ import {
     type InventoryMode
 } from "../../components/Inventory";
 import { getAttributeValue } from "../../helpers/formattingHelpers";
-import { ACTION_POINTS_TITLE, cutoutTextSx, INVENTORY_MODEL_TITLE, MODAL_BACKGROUND_COLOR, MODAL_BACKGROUND_COLOR_TRANSPARENT } from "../../components/Inventory/styles";
+import {
+    ACTION_POINTS_TITLE,
+    cutoutTextSx,
+    INVENTORY_MODEL_TITLE,
+    MODAL_BACKGROUND_COLOR,
+    MODAL_BACKGROUND_COLOR_TRANSPARENT
+} from "../../components/Inventory/styles";
 
 export interface InventoryModalProps {
     open: boolean;
@@ -101,7 +107,7 @@ export function InventoryModal({
                             gridArea: "title",
                             fontWeight: "bold",
                             my: "auto",
-                            ...cutoutTextSx
+                            ...cutoutTextSx(MODAL_BACKGROUND_COLOR_TRANSPARENT)
                         }}
                     >
                         {INVENTORY_MODEL_TITLE}
@@ -121,13 +127,22 @@ export function InventoryModal({
                         id="inventory-modal-budget-units"
                         sx={{ textAlign: "right", gridArea: "budget-units", my: "auto" }}
                     >
-                        <Typography variant="body2" component="span" sx={{ color: "white" }}>
+                        <Typography
+                            variant="body2"
+                            component="span"
+                            sx={{ ...cutoutTextSx(MODAL_BACKGROUND_COLOR_TRANSPARENT) }}
+                        >
                             {ACTION_POINTS_TITLE}&nbsp;&nbsp;
                         </Typography>
                     </Box>
                     <Box
                         id="inventory-modal-budget-value"
-                        sx={{ textAlign: "right", gridArea: "budget-value", my: "auto", ...cutoutTextSx }}
+                        sx={{
+                            textAlign: "right",
+                            gridArea: "budget-value",
+                            my: "auto",
+                            ...cutoutTextSx(MODAL_BACKGROUND_COLOR_TRANSPARENT)
+                        }}
                     >
                         <Typography variant="h5" component="span">
                             {getAttributeValue(snapshot.actionPoints)}

@@ -8,9 +8,11 @@ export const CONTENTS_TITLE = "Contents";
 export const NO_ITEM_IN_USE_TEXT = "None";
 export const INVENTORY_EMPTY_TEXT = "Empty";
 
+export const INVENTORY_PANEL_BACKGROUND_COLOR = "211, 211, 211";
+
 export const inventoryPanelSx = {
     border: "1px black solid",
-    backgroundColor: "Light Steel",
+    backgroundColor: `rgb(${INVENTORY_PANEL_BACKGROUND_COLOR})`,
     p: 1
 } as const;
 
@@ -33,20 +35,21 @@ export const backgroundBannerSx = {
     maskPosition: "2rem 3rem"
 } as const;
 
+export const ON_GROUND_BACKGROUND_COLOR = "144, 238, 144";
 export const groundBackgroundSx = {
-    backgroundColor: "lightGreen"
+    backgroundColor: `rgb(${ON_GROUND_BACKGROUND_COLOR})`
 } as const;
-
 export const groundSlideTimeInMs = 300;
 
 export const MODAL_BACKGROUND_COLOR = "rgb(169, 169, 169)";
 
-const MODAL_BACKGROUND_COLOR_TRANSPARENT = "rgba(169, 169, 169, 0.5)";
+export const MODAL_BACKGROUND_COLOR_TRANSPARENT = "169, 169, 169";
 const MODAL_TEXT_COLOR = "#222";
 
-export const cutoutTextSx = {
-    color: "transparent",
-    background: MODAL_TEXT_COLOR,
-    backgroundClip: "text",
-    textShadow: `0px 3px 3px ${MODAL_BACKGROUND_COLOR_TRANSPARENT}`
-}
+export const cutoutTextSx = (background: string) =>
+    ({
+        color: "transparent",
+        background: MODAL_TEXT_COLOR,
+        backgroundClip: "text",
+        textShadow: `0px 3px 3px rgba(${background}, 0.5)}`
+    }) as const;
