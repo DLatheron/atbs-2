@@ -467,6 +467,7 @@ describe("Unit inventory", () => {
 
         expect(unit.pickupItem(tokenToUse.id, true)).toBe(true);
         expect(unit.itemInUse?.id).toBe(tokenToUse.id);
+        expect(unit.inventory.items.map(({ id }) => id)).toEqual([token.id, tokenToUse.id]);
         expect(tile.items).toHaveLength(0);
         expect(unit.actionPoints).toBe(39);
     });
@@ -579,15 +580,16 @@ describe("Unit inventory", () => {
         const { unit } = createHarness(
             InventoryRecipe.parse({
                 inUse: 0,
-                items: [{ id: LOADED_GUN_RECIPE.id }]
+                items: [{ id: LOADED_GUN_RECIPE.id }, { id: TOKEN_RECIPE.id }]
             })
         );
         const gun = unit.itemInUse!;
         const mag = gun.getSlotContents(SlotType.enum.ammo);
+        const token = unit.inventory.items[1];
 
         expect(unit.unloadItem(gun.id)).toBe(true);
         expect(gun.findSlotContents(SlotType.enum.ammo)).toBeUndefined();
-        expect(unit.inventory.findItem(mag.id)).toBe(mag);
+        expect(unit.inventory.items.map(({ id }) => id)).toEqual([gun.id, token.id, mag.id]);
         expect(unit.actionPoints).toBe(39);
     });
 

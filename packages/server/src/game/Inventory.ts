@@ -49,7 +49,7 @@ export class Inventory {
         this._inUse = -1;
     }
 
-    addItem(item: Item, atIndex = 0): Item {
+    addItem(item: Item, atIndex = this._items.length): Item {
         if (this.findItem(item.id)) {
             throw new Error(`Item ${item.id} has already been added to the inventory`);
         }
@@ -66,7 +66,7 @@ export class Inventory {
         return item;
     }
 
-    addOrCollapseItem(item: Item, atIndex = 0): Item {
+    addOrCollapseItem(item: Item, atIndex = this._items.length): Item {
         if (!item.canCollapse) {
             return this.addItem(item, atIndex);
         }

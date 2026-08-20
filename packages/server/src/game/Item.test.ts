@@ -391,6 +391,36 @@ describe("Inventory", () => {
         expect(inventory.items.map(({ id }) => id)).toEqual([firstId, secondId, thirdId]);
         expect(inventory.itemInUse?.id).toBe(inUseId);
     });
+
+    it("appends new items unless an index is given", () => {
+        const itemManager = createItemManager();
+        const inventory = new Inventory(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: TOKEN_RECIPE.id }, { id: EMPTY_GUN_RECIPE.id }]
+            }),
+            itemManager
+        );
+        const mag = itemManager.newItem(MAG_30_RECIPE.id);
+        const extraToken = itemManager.newItem(TOKEN_RECIPE.id);
+
+        inventory.addItem(mag);
+
+        expect(inventory.items.map(({ recipeId }) => recipeId)).toEqual([
+            TOKEN_RECIPE.id,
+            EMPTY_GUN_RECIPE.id,
+            MAG_30_RECIPE.id
+        ]);
+
+        inventory.addItem(extraToken, 1);
+
+        expect(inventory.items.map(({ recipeId }) => recipeId)).toEqual([
+            TOKEN_RECIPE.id,
+            TOKEN_RECIPE.id,
+            EMPTY_GUN_RECIPE.id,
+            MAG_30_RECIPE.id
+        ]);
+    });
 });
 
 describe("TileRecipe.items", () => {

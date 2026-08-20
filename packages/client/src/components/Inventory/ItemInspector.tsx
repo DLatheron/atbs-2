@@ -7,13 +7,6 @@ import { DescriptionComponent } from "../Description";
 import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
 import { collectContentSlots, slotLabel, type ContentSlotRef } from "./itemMenu";
 
-const panelSx = {
-    // borderRadius: 2,
-    border: "1px black solid",
-    backgroundColor: "beige",
-    p: 1
-} as const;
-
 interface ItemContentSlotsProps {
     item: InventoryItemView | null;
     interactive?: boolean;
@@ -85,8 +78,7 @@ function ContentSlotTile({
                 width: ITEM_TILE_SIZE,
                 height: ITEM_TILE_SIZE,
                 flexShrink: 0,
-                outline: highlighted ? "2px solid #333" : "none",
-                outlineOffset: 2,
+                boxShadow: highlighted ? "inset 0 0 0 2px #333" : "none",
                 opacity: isDragging ? 0.4 : 1
             }}
         >
@@ -210,13 +202,7 @@ function InspectorDetails({
 }) {
     if (!item) {
         return (
-            <Stack
-                data-testid="inspector-details-none"
-                sx={{
-                    ...panelSx,
-                    ...sx
-                }}
-            >
+            <Stack data-testid="inspector-details-none" sx={{ m: "auto", ...sx }}>
                 <Typography variant="body2" sx={{ textAlign: "center", color: "#666" }}>
                     {emptyText}
                 </Typography>

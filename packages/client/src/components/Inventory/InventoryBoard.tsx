@@ -16,11 +16,12 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Box, Menu, MenuItem, SxProps, Typography } from "@mui/material";
+import { Box, Collapse, Menu, MenuItem, SxProps, Typography } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import {
     useCallback,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
@@ -49,6 +50,8 @@ import {
     resolveInventoryDrag
 } from "./itemMenu";
 
+export const BACKGROUND_COLOR = "Light Steel";
+
 export interface InventoryBoardProps {
     snapshot: InventorySnapshot;
     mode?: InventoryMode;
@@ -74,9 +77,9 @@ interface MenuState {
 }
 
 const panelSx = {
-    // borderRadius: 2,
+    borderRadius: 0,
     border: "1px black solid",
-    backgroundColor: "beige",
+    backgroundColor: BACKGROUND_COLOR,
     p: 1
 } as const;
 
@@ -131,6 +134,13 @@ const inventoryCollisionDetection: CollisionDetection = (args) => {
         }
     }
 
+    // Prefer ground when hit so layout shifts while the empty-ground preview
+    // expands do not flip the active target to the inventory zone above.
+    const ground = pointerHits.filter((collision) => String(collision.id) === "zone:ground");
+    if (ground.length > 0) {
+        return ground;
+    }
+
     const zones = pointerHits.filter((collision) => String(collision.id).startsWith("zone:"));
     if (zones.length > 0) {
         return zones;
@@ -177,8 +187,8 @@ function DroppableZone({
         <Box
             ref={setNodeRef}
             sx={{
-                outline: highlighted ? "2px solid #333" : "none",
-                outlineOffset: -2,
+                // Inset shadow avoids the “padding jump” look of toggling outline.
+                boxShadow: highlighted ? "inset 0 0 0 2px #333" : "none",
                 ...sx
             }}
         >
@@ -226,12 +236,14 @@ function SortableBackpackTile({
     item,
     selected,
     dragDisabled,
+    dropPreview = false,
     onClick,
     onMenuClick
 }: {
     item: InventoryItemView;
     selected: boolean;
     dragDisabled: boolean;
+    dropPreview?: boolean;
     onClick: () => void;
     onMenuClick?: (event: MouseEvent<HTMLElement>) => void;
 }) {
@@ -249,7 +261,7 @@ function SortableBackpackTile({
                 transform: CSS.Transform.toString(transform),
                 transition,
                 aspectRatio: 1,
-                opacity: isDragging ? 0.5 : 1,
+                opacity: isDragging || dropPreview ? 0.5 : 1,
                 zIndex: isDragging ? 1 : 0
             }}
         >
@@ -336,7 +348,34 @@ export function InventoryBoard({
     const [menu, setMenu] = useState<MenuState | null>(null);
     const [subMenuAnchor, setSubMenuAnchor] = useState<HTMLElement | null>(null);
     const [activeDragItem, setActiveDragItem] = useState<InventoryItemView | null>(null);
+    const [activeDragSource, setActiveDragSource] = useState<InventoryDragSource | null>(null);
     const [legalOverId, setLegalOverId] = useState<string | null>(null);
+    /** Ghost (and expand latch) for dropping onto an empty ground row. */
+    const [groundDropPreviewItem, setGroundDropPreviewItem] = useState<InventoryItemView | null>(
+        null
+    );
+    /** Keeps ground row height while Collapse animates closed after the last item leaves. */
+    const [closingGroundItem, setClosingGroundItem] = useState<InventoryItemView | null>(null);
+    const [groundClosingOpen, setGroundClosingOpen] = useState(false);
+    const previousGroundItemsRef = useRef(snapshot.groundItems);
+
+    if (snapshot.groundItems.length > 0) {
+        if (closingGroundItem !== null || groundClosingOpen) {
+            setClosingGroundItem(null);
+            setGroundClosingOpen(false);
+        }
+    } else if (
+        previousGroundItemsRef.current.length > 0 &&
+        closingGroundItem === null &&
+        groundDropPreviewItem === null
+    ) {
+        const removed = previousGroundItemsRef.current[0];
+        if (removed) {
+            setClosingGroundItem(removed);
+            setGroundClosingOpen(true);
+        }
+    }
+    previousGroundItemsRef.current = snapshot.groundItems;
 
     useEffect(() => {
         setItems(snapshot.items);
@@ -347,6 +386,23 @@ export function InventoryBoard({
             setSelectedItemId(snapshot.inUseItemId);
         }
     }, [snapshot, selectedItemId]);
+
+    useEffect(() => {
+        // Hand off from ghost to real ground tiles without collapsing.
+        if (snapshot.groundItems.length > 0 && groundDropPreviewItem) {
+            setGroundDropPreviewItem(null);
+        }
+    }, [snapshot.groundItems, groundDropPreviewItem]);
+
+    useLayoutEffect(() => {
+        if (!closingGroundItem || !groundClosingOpen) {
+            return;
+        }
+        const frame = requestAnimationFrame(() => {
+            setGroundClosingOpen(false);
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [closingGroundItem, groundClosingOpen]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -452,11 +508,18 @@ export function InventoryBoard({
         [disabled, onUse, onUnuse, onDrop, onPickup, onLoad, onUnload, closeMenu]
     );
 
-    const clearDragPreview = useCallback(() => {
-        setActiveDragItem(null);
-        setLegalOverId(null);
-        onPendingCostChange(null);
-    }, [onPendingCostChange]);
+    const clearDragPreview = useCallback(
+        (options?: { keepGroundPreview?: boolean }) => {
+            setActiveDragItem(null);
+            setActiveDragSource(null);
+            setLegalOverId(null);
+            if (!options?.keepGroundPreview) {
+                setGroundDropPreviewItem(null);
+            }
+            onPendingCostChange(null);
+        },
+        [onPendingCostChange]
+    );
 
     const resolveHover = useCallback(
         (source: InventoryDragSource | null, target: InventoryDragTarget | null) => {
@@ -472,6 +535,8 @@ export function InventoryBoard({
         (event: DragStartEvent) => {
             const source = dragSourceFromData(event.active.data.current);
             setActiveDragItem(source?.item ?? null);
+            setActiveDragSource(source);
+            setGroundDropPreviewItem(null);
             setMenu(null);
             setSubMenuAnchor(null);
             onPendingCostChange(null);
@@ -486,21 +551,51 @@ export function InventoryBoard({
                 event.over ? { id: event.over.id, data: event.over.data } : null
             );
             const result = resolveHover(source, target);
+            const movingToInventoryEnd =
+                source?.type === "inventory" &&
+                target?.type === "inventory" &&
+                !target.overItemId &&
+                items.findIndex((item: InventoryItemView) => item.id === source.item.id) !==
+                    items.length - 1;
+            const overId = event.over ? String(event.over.id) : null;
             onPendingCostChange(result?.pendingCostText ?? null);
-            setLegalOverId(result && event.over ? String(event.over.id) : null);
+            setLegalOverId(overId && (result || movingToInventoryEnd) ? overId : null);
+
+            // Latch the empty-ground expand open once entered. Layout reflow while
+            // the section grows briefly loses zone:ground; closing on that flicker
+            // fights the Collapse animation.
+            if (overId === "zone:ground" && result && source) {
+                setGroundDropPreviewItem(source.item);
+                setClosingGroundItem(null);
+                setGroundClosingOpen(false);
+            } else if (
+                overId &&
+                overId !== "zone:ground" &&
+                (result || movingToInventoryEnd) &&
+                target?.type !== "ground"
+            ) {
+                setGroundDropPreviewItem(null);
+            }
         },
-        [onPendingCostChange, resolveHover]
+        [items, onPendingCostChange, resolveHover]
     );
 
     const handleDragEnd = useCallback(
         (event: DragEndEvent) => {
             const { active, over } = event;
-            clearDragPreview();
+            const source = dragSourceFromData(active.data.current);
+            const target = over ? dragTargetFromOver({ id: over.id, data: over.data }) : null;
+            const dropResult = over && !disabled ? resolveHover(source, target) : null;
+            const keepGroundPreview =
+                dropResult?.action.type === "drop" &&
+                target?.type === "ground" &&
+                snapshot.groundItems.length === 0;
+
+            clearDragPreview({ keepGroundPreview });
             if (!over || disabled) {
                 return;
             }
 
-            const source = dragSourceFromData(active.data.current);
             const activeInventoryId = String(active.id).startsWith("inventory:")
                 ? String(active.id).slice("inventory:".length)
                 : null;
@@ -508,32 +603,29 @@ export function InventoryBoard({
                 ? String(over.id).slice("inventory:".length)
                 : null;
 
-            if (
-                source?.type === "inventory" &&
-                activeInventoryId &&
-                overInventoryId &&
-                activeInventoryId !== overInventoryId
-            ) {
-                const fromIndex = items.findIndex(
-                    (item: InventoryItemView) => item.id === activeInventoryId
-                );
-                const toIndex = items.findIndex(
-                    (item: InventoryItemView) => item.id === overInventoryId
-                );
-                if (fromIndex >= 0 && toIndex >= 0) {
-                    setItems(arrayMove(items, fromIndex, toIndex));
-                    onReorder(fromIndex, toIndex);
+            if (source?.type === "inventory" && activeInventoryId) {
+                const droppingOnInventoryItem = Boolean(overInventoryId);
+                const droppingOnInventoryZone = String(over.id) === "zone:inventory";
+                if (droppingOnInventoryItem || droppingOnInventoryZone) {
+                    const fromIndex = items.findIndex(
+                        (item: InventoryItemView) => item.id === activeInventoryId
+                    );
+                    const toIndex = droppingOnInventoryItem
+                        ? items.findIndex((item: InventoryItemView) => item.id === overInventoryId)
+                        : items.length - 1;
+                    if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+                        setItems(arrayMove(items, fromIndex, toIndex));
+                        onReorder(fromIndex, toIndex);
+                    }
+                    return;
                 }
+            }
+
+            if (!dropResult) {
                 return;
             }
 
-            const target = dragTargetFromOver({ id: over.id, data: over.data });
-            const result = resolveHover(source, target);
-            if (!result) {
-                return;
-            }
-
-            dispatchMenuAction(result.action, {
+            dispatchMenuAction(dropResult.action, {
                 onUse,
                 onUnuse,
                 onDrop,
@@ -548,6 +640,7 @@ export function InventoryBoard({
             items,
             onReorder,
             resolveHover,
+            snapshot.groundItems.length,
             onUse,
             onUnuse,
             onDrop,
@@ -559,14 +652,35 @@ export function InventoryBoard({
 
     const inUseMenuClick = inUseItem ? getMenuClickHandler(inUseItem, "inUse") : undefined;
 
+    const previewingInventoryDrop =
+        legalOverId != null &&
+        (legalOverId === "zone:inventory" || legalOverId.startsWith("inventory:")) &&
+        (activeDragSource?.type === "inUse" || activeDragSource?.type === "slot");
+    const inventoryInsertPreviewItem =
+        previewingInventoryDrop && activeDragSource?.type === "slot" ? activeDragItem : null;
+    const inventoryPutAwayPreviewItemId =
+        previewingInventoryDrop && activeDragSource?.type === "inUse"
+            ? activeDragSource.item.id
+            : null;
+    const groundDropPreview =
+        groundDropPreviewItem && snapshot.groundItems.length === 0 ? groundDropPreviewItem : null;
+    const groundClosingPreview =
+        !groundDropPreview && snapshot.groundItems.length === 0 ? closingGroundItem : null;
+    const groundGhost = groundDropPreview ?? groundClosingPreview;
+    const showGroundItemRow =
+        snapshot.groundItems.length > 0 ||
+        groundDropPreview != null ||
+        (closingGroundItem != null && groundClosingOpen);
+
     return (
         <InventoryTooltipDismissProvider>
             <DndContext
                 sensors={sensors}
                 collisionDetection={inventoryCollisionDetection}
+                autoScroll={false}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
-                onDragCancel={clearDragPreview}
+                onDragCancel={() => clearDragPreview()}
                 onDragEnd={handleDragEnd}
             >
                 <InventoryBoardFrame disabled={disabled} sx={sx}>
@@ -653,23 +767,17 @@ export function InventoryBoard({
                             display: "flex",
                             flexDirection: "column",
                             overflow: "hidden",
-                            ...panelSx
+                            ...panelSx,
+                            p: 0
                         }}
                     >
-                        <Typography
-                            variant="subtitle2"
-                            sx={{ textAlign: "center", p: 1, lineHeight: 1.2 }}
-                        >
-                            Inventory
-                        </Typography>
                         <Box
                             sx={{
                                 flex: 1,
                                 minHeight: 0,
-                                overflow: "auto",
-                                px: 0,
-                                m: "auto",
-                                pb: 1
+                                overflowY: "auto",
+                                p: 0,
+                                m: 0
                             }}
                         >
                             <SortableContext
@@ -678,13 +786,24 @@ export function InventoryBoard({
                                 )}
                                 strategy={rectSortingStrategy}
                             >
-                                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                                <Box
+                                    data-testid="inventory-items"
+                                    sx={{
+                                        display: "flex",
+                                        flexWrap: "wrap",
+                                        alignContent: "flex-start",
+                                        gap: 1,
+                                        p: 1,
+                                        height: "100%"
+                                    }}
+                                >
                                     {items.map((item: InventoryItemView) => (
                                         <SortableBackpackTile
                                             key={item.id}
                                             item={item}
                                             selected={selectedItemId === item.id}
                                             dragDisabled={disabled}
+                                            dropPreview={inventoryPutAwayPreviewItemId === item.id}
                                             onClick={() => setSelectedItemId(item.id)}
                                             onMenuClick={getMenuClickHandler(
                                                 item,
@@ -694,10 +813,37 @@ export function InventoryBoard({
                                             )}
                                         />
                                     ))}
-                                    {items.length === 0 && (
-                                        <Typography variant="body2" sx={{ color: "#666" }}>
-                                            Empty
-                                        </Typography>
+                                    {inventoryInsertPreviewItem && (
+                                        <Box
+                                            data-testid="inventory-drop-preview"
+                                            sx={{
+                                                opacity: 0.5,
+                                                aspectRatio: 1,
+                                                flexShrink: 0,
+                                                pointerEvents: "none"
+                                            }}
+                                        >
+                                            <ItemTile
+                                                item={inventoryInsertPreviewItem}
+                                                tooltip={false}
+                                            />
+                                        </Box>
+                                    )}
+                                    {items.length === 0 && !inventoryInsertPreviewItem && (
+                                        <Box
+                                            data-testid="inventory-empty"
+                                            sx={{
+                                                width: "100%",
+                                                height: "100%",
+                                                display: "flex",
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                            }}
+                                        >
+                                            <Typography variant="body2" sx={{ color: "#666" }}>
+                                                Empty
+                                            </Typography>
+                                        </Box>
                                     )}
                                 </Box>
                             </SortableContext>
@@ -726,13 +872,14 @@ export function InventoryBoard({
                         <DroppableZone
                             id="zone:ground"
                             target={{ type: "ground" }}
-                            highlighted={legalOverId === "zone:ground"}
+                            highlighted={legalOverId === "zone:ground" || groundDropPreview != null}
                             sx={{
                                 gridArea: "ground",
                                 ...panelSx,
                                 display: "flex",
                                 flexDirection: "column",
                                 overflow: "hidden",
+                                backgroundColor: "lightGreen",
                                 p: 0
                             }}
                         >
@@ -742,30 +889,46 @@ export function InventoryBoard({
                             >
                                 On ground
                             </Typography>
-                            <Box
-                                sx={{
-                                    flex: 1,
-                                    minHeight: 0,
-                                    display: "flex",
-                                    flexWrap: "nowrap",
-                                    gap: 1,
-                                    p: 1,
-                                    pb: 2,
-                                    overflow: "auto"
-                                }}
+                            <Collapse
+                                in={showGroundItemRow}
+                                timeout={300}
+                                onExited={() => setClosingGroundItem(null)}
                             >
-                                {snapshot.groundItems.map((item: InventoryItemView) => (
-                                    <DraggableItemTile
-                                        key={item.id}
-                                        id={`ground:${item.id}`}
-                                        source={{ type: "ground", item }}
-                                        item={item}
-                                        selected={selectedItemId === item.id}
-                                        onClick={() => setSelectedItemId(item.id)}
-                                        onMenuClick={getMenuClickHandler(item, "ground")}
-                                    />
-                                ))}
-                            </Box>
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        flexWrap: "nowrap",
+                                        gap: 1,
+                                        p: 1,
+                                        pb: 2,
+                                        overflow: "auto"
+                                    }}
+                                >
+                                    {snapshot.groundItems.map((item: InventoryItemView) => (
+                                        <DraggableItemTile
+                                            key={item.id}
+                                            id={`ground:${item.id}`}
+                                            source={{ type: "ground", item }}
+                                            item={item}
+                                            selected={selectedItemId === item.id}
+                                            onClick={() => setSelectedItemId(item.id)}
+                                            onMenuClick={getMenuClickHandler(item, "ground")}
+                                        />
+                                    ))}
+                                    {groundGhost && (
+                                        <Box
+                                            data-testid="ground-drop-preview"
+                                            sx={{
+                                                opacity: 0.5,
+                                                flexShrink: 0,
+                                                pointerEvents: "none"
+                                            }}
+                                        >
+                                            <ItemTile item={groundGhost} tooltip={false} />
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Collapse>
                         </DroppableZone>
                     )}
 

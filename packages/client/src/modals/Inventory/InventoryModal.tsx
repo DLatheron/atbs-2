@@ -9,6 +9,8 @@ import {
 } from "../../components/Inventory";
 import { getAttributeValue } from "../../helpers/formattingHelpers";
 
+const MODAL_BACKGROUND_COLOR = "#DCDCDC";
+
 export interface InventoryModalProps {
     open: boolean;
     snapshot: InventorySnapshot | null;
@@ -70,14 +72,12 @@ export function InventoryModal({
                 data-testid="inventory-modal-content"
                 sx={{
                     position: "relative",
-                    width: "960px",
-                    maxWidth: "1200px",
-                    height: "800px",
-                    maxHeight: "800px",
+                    width: "952px",
+                    height: "900px",
                     display: "flex",
                     flexDirection: "column",
                     overflow: "hidden",
-                    bgcolor: "background.paper",
+                    bgcolor: MODAL_BACKGROUND_COLOR,
                     border: "2px solid #000",
                     boxShadow: 24,
                     borderRadius: 4,

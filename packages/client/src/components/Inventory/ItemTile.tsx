@@ -159,7 +159,7 @@ export function ItemTile({
                 // borderRadius: 1,
                 aspectRatio: 1,
                 border: selected ? "2px solid #333" : "1px solid #000",
-                backgroundColor: "beige",
+                backgroundColor: "white",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -206,7 +206,7 @@ export function ItemTile({
                 <Box
                     sx={{
                         position: "absolute",
-                        bottom: 2,
+                        bottom: 4,
                         left: 2,
                         right: 2,
                         display: "flex",
