@@ -355,7 +355,7 @@ describe("Unit inventory", () => {
         expect(unit.canInventory).toBe(true);
     });
 
-    it("debits 8 AP to use a backpack item", () => {
+    it("debits 8 APts to use a backpack item", () => {
         const { unit } = createHarness(
             InventoryRecipe.parse({ inUse: null, items: [{ id: TOKEN_RECIPE.id }] })
         );
@@ -366,7 +366,7 @@ describe("Unit inventory", () => {
         expect(unit.actionPoints).toBe(39);
     });
 
-    it("debits 12 AP to switch the in-use item", () => {
+    it("debits 12 APts to switch the in-use item", () => {
         const { unit } = createHarness(
             InventoryRecipe.parse({
                 inUse: 0,
@@ -380,7 +380,7 @@ describe("Unit inventory", () => {
         expect(unit.actionPoints).toBe(35);
     });
 
-    it("does not mutate on insufficient AP", () => {
+    it("does not mutate on insufficient APts", () => {
         const { unit, messageRouter } = createHarness(
             InventoryRecipe.parse({ inUse: null, items: [{ id: TOKEN_RECIPE.id }] })
         );

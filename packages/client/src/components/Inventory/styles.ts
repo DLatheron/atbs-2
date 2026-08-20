@@ -38,3 +38,15 @@ export const groundBackgroundSx = {
 } as const;
 
 export const groundSlideTimeInMs = 300;
+
+export const MODAL_BACKGROUND_COLOR = "rgb(169, 169, 169)";
+
+const MODAL_BACKGROUND_COLOR_TRANSPARENT = "rgba(169, 169, 169, 0.5)";
+const MODAL_TEXT_COLOR = "#222";
+
+export const cutoutTextSx = {
+    color: "transparent",
+    background: MODAL_TEXT_COLOR,
+    backgroundClip: "text",
+    textShadow: `0px 3px 3px ${MODAL_BACKGROUND_COLOR_TRANSPARENT}`
+}

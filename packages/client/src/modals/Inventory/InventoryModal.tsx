@@ -8,9 +8,7 @@ import {
     type InventoryMode
 } from "../../components/Inventory";
 import { getAttributeValue } from "../../helpers/formattingHelpers";
-import { ACTION_POINTS_TITLE, INVENTORY_MODEL_TITLE } from "../../components/Inventory/styles";
-
-const MODAL_BACKGROUND_COLOR = "darkgray";
+import { ACTION_POINTS_TITLE, cutoutTextSx, INVENTORY_MODEL_TITLE, MODAL_BACKGROUND_COLOR, MODAL_BACKGROUND_COLOR_TRANSPARENT } from "../../components/Inventory/styles";
 
 export interface InventoryModalProps {
     open: boolean;
@@ -92,14 +90,19 @@ export function InventoryModal({
                     sx={{
                         display: "grid",
                         gridTemplateColumns: "auto 1fr auto",
-                        gridTemplateAreas: "'title action budget'"
+                        gridTemplateAreas: "'title action budget-units budget-value'"
                     }}
                 >
                     <Typography
                         id="inventory-modal-title"
                         variant="h5"
                         component="h2"
-                        sx={{ gridArea: "title", fontWeight: "bold" }}
+                        sx={{
+                            gridArea: "title",
+                            fontWeight: "bold",
+                            my: "auto",
+                            ...cutoutTextSx
+                        }}
                     >
                         {INVENTORY_MODEL_TITLE}
                     </Typography>
@@ -115,11 +118,19 @@ export function InventoryModal({
                         {pendingCost ?? ""}
                     </Typography>
                     <Box
-                        id="inventory-modal-description"
-                        sx={{ textAlign: "right", gridArea: "budget", mt: "auto" }}
+                        id="inventory-modal-budget-units"
+                        sx={{ textAlign: "right", gridArea: "budget-units", my: "auto" }}
                     >
-                        <Typography variant="body1" component="p">
-                            {ACTION_POINTS_TITLE} {getAttributeValue(snapshot.actionPoints)}
+                        <Typography variant="body2" component="span" sx={{ color: "white" }}>
+                            {ACTION_POINTS_TITLE}&nbsp;&nbsp;
+                        </Typography>
+                    </Box>
+                    <Box
+                        id="inventory-modal-budget-value"
+                        sx={{ textAlign: "right", gridArea: "budget-value", my: "auto", ...cutoutTextSx }}
+                    >
+                        <Typography variant="h5" component="span">
+                            {getAttributeValue(snapshot.actionPoints)}
                         </Typography>
                     </Box>
                 </Box>

@@ -111,7 +111,7 @@ export function isInUseTree(snapshot: InventorySnapshot, itemId: ItemId): boolea
 }
 
 export function formatPendingCost(label: string, name: string, cost: number): string {
-    return `${label} ${name} — ${cost} AP`;
+    return `${label} ${name} — ${cost} APts`;
 }
 
 /** Use costs unuse+use when something is already equipped (switch). */

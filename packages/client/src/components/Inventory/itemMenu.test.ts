@@ -166,7 +166,7 @@ describe("getItemMenu", () => {
         expect(rows.map((row) => row.id)).toEqual(["use"]);
         expect(rows[0]?.action).toEqual({ type: "use", itemId: coffee.id });
         expect(rows[0]?.cost).toBe(12);
-        expect(rows[0]?.pendingCostText).toBe("Use Coffee — 12 AP");
+        expect(rows[0]?.pendingCostText).toBe("Use Coffee — 12 APts");
     });
 
     it("offers Load on a backpack magazine compatible with the in-use weapon", () => {
@@ -188,7 +188,7 @@ describe("getItemMenu", () => {
             ammoId: spareMag.id
         });
         expect(rows.find((row) => row.id === "loadInto")?.pendingCostText).toBe(
-            "Load M16x30 — 8 AP"
+            "Load M16x30 — 8 APts"
         );
     });
 
@@ -288,7 +288,7 @@ describe("getItemMenu", () => {
             ammoId: "5.56mm-nato.round-9"
         });
         expect(rows[0]?.children?.[0]?.cost).toBe(16);
-        expect(rows[0]?.children?.[0]?.pendingCostText).toBe("Load 5.56 — 16 AP");
+        expect(rows[0]?.children?.[0]?.pendingCostText).toBe("Load 5.56 — 16 APts");
     });
 
     it("offers Load/Unload on the slot owner for a gun ammo well", () => {
@@ -446,7 +446,7 @@ describe("getItemMenu", () => {
             actionScope: "inUse"
         });
         expect(backpackRows[0]?.disabled).toBe(true);
-        expect(backpackRows[0]?.pendingCostText).toBe("Use Coffee — 8 AP");
+        expect(backpackRows[0]?.pendingCostText).toBe("Use Coffee — 8 APts");
     });
 
     it("disables Load when every compatible ammo is unaffordable", () => {
@@ -596,7 +596,7 @@ describe("resolveInventoryDrag", () => {
             })
         ).toEqual({
             action: { type: "use", itemId: coffee.id },
-            pendingCostText: "Use Coffee — 12 AP"
+            pendingCostText: "Use Coffee — 12 APts"
         });
     });
 
@@ -663,7 +663,7 @@ describe("resolveInventoryDrag", () => {
             })
         ).toEqual({
             action: { type: "unload", itemId: m4.id },
-            pendingCostText: "Unload M16x30 — 8 AP"
+            pendingCostText: "Unload M16x30 — 8 APts"
         });
         expect(
             resolveInventoryDrag({
@@ -674,7 +674,7 @@ describe("resolveInventoryDrag", () => {
             })
         ).toEqual({
             action: { type: "drop", itemId: magInPack.id },
-            pendingCostText: "Unload and drop M16x30 — 12 AP"
+            pendingCostText: "Unload and drop M16x30 — 12 APts"
         });
     });
 

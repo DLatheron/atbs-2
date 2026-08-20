@@ -1054,7 +1054,7 @@ export function InventoryBoard({
                                                 variant="caption"
                                                 sx={{ color: "#666", textAlign: "right" }}
                                             >
-                                                {row.cost} AP
+                                                {row.cost} APts
                                             </Typography>
                                         )}
                                         {hasChildren && <ChevronRightIcon fontSize="small" />}
@@ -1111,7 +1111,7 @@ export function InventoryBoard({
                                             variant="caption"
                                             sx={{ color: "#666", textAlign: "right" }}
                                         >
-                                            {row.cost} AP
+                                            {row.cost} APts
                                         </Typography>
                                     </Box>
                                 </MenuItem>

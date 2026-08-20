@@ -632,7 +632,7 @@ export function useActionPage() {
         return () => {
             world.unregisterAnchoredOverlay(World.ACTION_MENU_OVERLAY_ID);
         };
-        // Key off unit.id so location/AP updates do not re-trigger fade-in.
+        // Key off unit.id so location/APts updates do not re-trigger fade-in.
         // Same-unit tile tracking is handled by World.unit → updateAnchoredOverlayTile.
     }, [sidePanelMode, unit?.id, unitActionMode, world]);
 
