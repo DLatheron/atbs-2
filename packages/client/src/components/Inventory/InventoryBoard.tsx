@@ -49,8 +49,7 @@ import {
     getItemMenu,
     resolveInventoryDrag
 } from "./itemMenu";
-
-export const BACKGROUND_COLOR = "Light Steel";
+import { backgroundBannerAnchorSx, backgroundBannerSx, INVENTORY_EMPTY_TEXT, inventoryPanelSx, NO_ITEM_IN_USE_TEXT } from "./styles";
 
 export interface InventoryBoardProps {
     snapshot: InventorySnapshot;
@@ -75,13 +74,6 @@ interface MenuState {
     location: ItemMenuLocation;
     emptySlot: boolean;
 }
-
-const panelSx = {
-    borderRadius: 0,
-    border: "1px black solid",
-    backgroundColor: BACKGROUND_COLOR,
-    p: 1
-} as const;
 
 function dispatchMenuAction(
     action: ItemMenuAction,
@@ -655,9 +647,14 @@ export function InventoryBoard({
     const previewingInventoryDrop =
         legalOverId != null &&
         (legalOverId === "zone:inventory" || legalOverId.startsWith("inventory:")) &&
-        (activeDragSource?.type === "inUse" || activeDragSource?.type === "slot");
+        (activeDragSource?.type === "inUse" ||
+            activeDragSource?.type === "slot" ||
+            activeDragSource?.type === "ground");
     const inventoryInsertPreviewItem =
-        previewingInventoryDrop && activeDragSource?.type === "slot" ? activeDragItem : null;
+        previewingInventoryDrop &&
+        (activeDragSource?.type === "slot" || activeDragSource?.type === "ground")
+            ? activeDragItem
+            : null;
     const inventoryPutAwayPreviewItemId =
         previewingInventoryDrop && activeDragSource?.type === "inUse"
             ? activeDragSource.item.id
@@ -690,7 +687,7 @@ export function InventoryBoard({
                         highlighted={legalOverId === "zone:in-use"}
                         sx={{
                             gridArea: "in-use",
-                            ...panelSx,
+                            ...inventoryPanelSx,
                             width: 180,
                             p: 1,
                             display: "flex",
@@ -723,14 +720,15 @@ export function InventoryBoard({
                                     border: "1px dashed #666",
                                     display: "flex",
                                     alignItems: "center",
-                                    justifyContent: "center"
+                                    justifyContent: "center",
+                                    ...backgroundBannerAnchorSx
                                 }}
                             >
                                 <Typography
                                     variant="body2"
-                                    sx={{ color: "#666", textAlign: "center" }}
+                                    sx={backgroundBannerSx}
                                 >
-                                    None
+                                    {NO_ITEM_IN_USE_TEXT}
                                 </Typography>
                             </Box>
                         )}
@@ -740,13 +738,13 @@ export function InventoryBoard({
                         sx={{
                             gridArea: "inspector",
                             overflow: "hidden",
-                            ...panelSx
+                            ...inventoryPanelSx
                         }}
                     >
                         <ItemInspector
                             item={inspectorItem}
                             emptyText={
-                                inspectorFocus === "inUse" ? "No item in use" : "Select an item"
+                                inspectorFocus === "inUse" ? "" : "Select an item"
                             }
                             slotsInteractive={slotsInteractive}
                             highlightedSlotId={
@@ -767,7 +765,7 @@ export function InventoryBoard({
                             display: "flex",
                             flexDirection: "column",
                             overflow: "hidden",
-                            ...panelSx,
+                            ...inventoryPanelSx,
                             p: 0
                         }}
                     >
@@ -793,8 +791,7 @@ export function InventoryBoard({
                                         flexWrap: "wrap",
                                         alignContent: "flex-start",
                                         gap: 1,
-                                        p: 1,
-                                        height: "100%"
+                                        p: 1
                                     }}
                                 >
                                     {items.map((item: InventoryItemView) => (
@@ -838,10 +835,11 @@ export function InventoryBoard({
                                                 display: "flex",
                                                 justifyContent: "center",
                                                 alignItems: "center",
+                                                ...backgroundBannerAnchorSx
                                             }}
                                         >
-                                            <Typography variant="body2" sx={{ color: "#666" }}>
-                                                Empty
+                                            <Typography variant="body2" sx={backgroundBannerSx}>
+                                                {INVENTORY_EMPTY_TEXT}
                                             </Typography>
                                         </Box>
                                     )}
@@ -854,7 +852,7 @@ export function InventoryBoard({
                         <Box
                             sx={{
                                 gridArea: "ground",
-                                ...panelSx,
+                                ...inventoryPanelSx,
                                 display: "flex",
                                 flexDirection: "column",
                                 overflow: "hidden",
@@ -875,7 +873,7 @@ export function InventoryBoard({
                             highlighted={legalOverId === "zone:ground" || groundDropPreview != null}
                             sx={{
                                 gridArea: "ground",
-                                ...panelSx,
+                                ...inventoryPanelSx,
                                 display: "flex",
                                 flexDirection: "column",
                                 overflow: "hidden",

@@ -6,6 +6,7 @@ import type { MouseEvent } from "react";
 import { DescriptionComponent } from "../Description";
 import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
 import { collectContentSlots, slotLabel, type ContentSlotRef } from "./itemMenu";
+import { backgroundBannerAnchorSx, backgroundBannerSx } from "./styles";
 
 interface ItemContentSlotsProps {
     item: InventoryItemView | null;
@@ -97,13 +98,16 @@ function ContentSlotTile({
                         width: "100%",
                         height: "100%",
                         border: "1px dashed #666",
-                        backgroundColor: "beige",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center"
+                        justifyContent: "center",
+                        ...backgroundBannerAnchorSx
                     }}
                 >
-                    <Typography variant="caption" sx={{ color: "#666" }}>
+                    <Typography
+                        variant="caption"
+                        sx={backgroundBannerSx}
+                    >
                         {slotLabel(slot.slot)}
                     </Typography>
                 </Box>
