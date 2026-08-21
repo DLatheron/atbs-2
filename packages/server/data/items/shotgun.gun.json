@@ -1,0 +1,55 @@
+{
+    "id": "shotgun.gun",
+    "type": "gun",
+    "name": "Pump-Action Shotgun",
+    "shortName": "Shotgun",
+    "description": [
+        {
+            "text": "A generic pump-action shotgun with a pistol grip limits the overall accuracy of this weapon, but it is still devastating at short-range."
+        }
+    ],
+    "weight": 3.1,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "shotgun"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": [
+                "12-gauge-buckshot.round",
+                "12-gauge-flechette.round",
+                "12-gauge-slug.round"
+            ],
+            "maxQuantity": 6
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "12-gauge-buckshot.round",
+            "quantity": 6
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 55,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 42,
+                    "actionPoints": 13
+                }
+            }
+        }
+    },
+    "spreadAngle": 2
+}

@@ -66,6 +66,12 @@ export interface Impact {
  */
 export const DEFAULT_PROJECTILE_TRAVEL_VELOCITY = 600;
 
+/**
+ * Once impact speed falls below this, the round is spent — stops the crawl-through-
+ * walls case where life remains but velocity (and thus tracer timing) collapses.
+ */
+export const MIN_IMPACT_VELOCITY_MPS = 40;
+
 export interface ProjectileProps {
     game: Game;
     firingUnit: Unit;
@@ -193,6 +199,9 @@ export class Projectile implements IRayCast {
         if (this._syncAnimationToImpact) {
             this._velocity = value * config.projectileVisualVelocityScale;
         }
+        if (this._impactVelocity < MIN_IMPACT_VELOCITY_MPS) {
+            this.life = 0;
+        }
     }
 
     get penetration(): number {
@@ -212,7 +221,7 @@ export class Projectile implements IRayCast {
     }
 
     get isRayAlive(): boolean {
-        return this.penetration > 0;
+        return this.penetration > 0 && this.impactVelocity >= MIN_IMPACT_VELOCITY_MPS;
     }
 
     get segments(): PathSegment[] {

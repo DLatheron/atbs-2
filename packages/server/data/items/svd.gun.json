@@ -1,0 +1,48 @@
+{
+    "id": "svd.gun",
+    "type": "gun",
+    "name": "SVD 'Dragunov' Sniper Rifle",
+    "shortName": "SVD",
+    "description": [
+        {
+            "text": "A semi-automatic sniper rifle designed in 1963 by the USSR. A highly reliable squad-support weapon that has seen extensive use throughout the world."
+        }
+    ],
+    "weight": 4.3,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "svd"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "optical",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["svd.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "svd.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 95,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 60,
+                    "actionPoints": 13
+                }
+            }
+        }
+    }
+}

@@ -58,7 +58,7 @@ import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { Item } from "./Item.js";
-import { SlotType, slotType } from "./ItemRecipe.js";
+import { ItemRecipe, SlotType, slotType } from "./ItemRecipe.js";
 import type { Store } from "./Store.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
@@ -2155,6 +2155,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return true;
         }
 
+        for (const root of this.inventory.items) {
+            const owner = root.findOwnerOfContents(instanceId);
+            if (owner && !owner.canUnload()) {
+                throw new Error(`Cannot sell ammunition from ${owner.id}; it cannot be unloaded`);
+            }
+        }
+
         const nested = this.inventory.extractItemContent(instanceId);
         if (!nested) {
             throw new Error(`Item ${instanceId} is not in inventory of unit ${this.id}`);
@@ -2207,7 +2214,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         if (!item) {
             throw new Error(`Item ${itemId} is not in inventory of unit ${this.id}`);
         }
-        if (!item.canLoad()) {
+        if (!item.canUnload()) {
             throw new Error(`Item ${itemId} cannot be unloaded`);
         }
         if (!item.findSlotContents(SlotType.enum.ammo)) {
@@ -2328,6 +2335,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return {
             ...item.getItemSummary(this),
             type: item.type,
+            allowLoad: item.canLoad(),
+            allowUnload: item.canUnload(),
             slots
         };
     }
@@ -2534,16 +2543,18 @@ export class Unit extends SceneObject implements VisibilityViewer {
     createCorpseItem(): Item {
         const renderable = Unit._extractDeadRenderable(this._recipe.renderable);
 
-        return this.itemManager.newAdHocItem({
-            id: "corpse.item",
-            type: ItemType.enum.item,
-            name: `${this.name}'s corpse`,
-            shortName: "Corpse",
-            description: [{ text: `The lifeless body of ${this.name}.` }],
-            quantity: 1,
-            weight: this.weight,
-            renderable
-        });
+        return this.itemManager.newAdHocItem(
+            ItemRecipe.parse({
+                id: "corpse.item",
+                type: ItemType.enum.item,
+                name: `${this.name}'s corpse`,
+                shortName: "Corpse",
+                description: [{ text: `The lifeless body of ${this.name}.` }],
+                quantity: 1,
+                weight: this.weight,
+                renderable
+            })
+        );
     }
 
     private static _extractDeadChild(node: SceneChildNode | undefined): SceneChildNode {

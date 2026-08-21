@@ -1,0 +1,52 @@
+{
+    "id": "law.gun",
+    "type": "gun",
+    "name": "Light Anti-tank Weapon (LAW)",
+    "shortName": "LAW",
+    "description": [
+        {
+            "text": "A single-use, disposable Light Anti-tank Weapon (LAW). The man-portable, shoulder launched rocket is capable of destroying lightly-armoured vehicles and disabling heavily-armoured ones. Effective against buildings and fortifications too."
+        }
+    ],
+    "weight": 4.4,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "law"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "laser",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["law-rocket.round"],
+            "maxQuantity": 1
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "law-rocket.round",
+            "quantity": 1
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 90,
+                    "actionPoints": 30
+                },
+                "snapshot": {
+                    "accuracy": 40,
+                    "actionPoints": 18
+                }
+            }
+        }
+    },
+    "allowLoad": false,
+    "allowUnload": false
+}

@@ -32,6 +32,14 @@ export const SlotProps = z.object({
 });
 export type SlotProps = z.infer<typeof SlotProps>;
 
+/** Shared fields for recipes that can hold ammo / nested items. */
+const AmmoAccessFields = {
+    /** When false, load attempts are rejected (e.g. disposable LAW). Default true. */
+    allowLoad: z.boolean().optional().default(true),
+    /** When false, unload attempts are rejected. Default true. */
+    allowUnload: z.boolean().optional().default(true)
+};
+
 export const ProjectileRecipe = z.object({
     numProjectiles: z.number().positive().default(1),
     variability: z
@@ -88,6 +96,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         quantity: Quantity.min(1).max(1).optional().default(1),
         weight: Weight,
         renderable: SceneNode,
+        ...AmmoAccessFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional()
     }),
@@ -101,6 +110,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         sight: SightType.default(SightType.enum.iron),
+        ...AmmoAccessFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireSelector: FireSelector,
@@ -117,6 +127,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         quantity: Quantity.min(1).max(1).optional().default(1),
         weight: Weight,
         renderable: SceneNode,
+        ...AmmoAccessFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional()
     }),
@@ -130,6 +141,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         projectile: ProjectileRecipe,
+        ...AmmoAccessFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional()
     }),
@@ -142,6 +154,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         quantity: Quantity.min(1).max(1).optional().default(1),
         weight: Weight,
         renderable: SceneNode,
+        ...AmmoAccessFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         explosion: Explosion

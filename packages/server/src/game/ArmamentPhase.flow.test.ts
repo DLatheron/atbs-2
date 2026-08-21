@@ -200,23 +200,29 @@ describe("Armament phase", () => {
         const { game, armingSocket } = await startArmamentPhase();
         const state = armingSocket.lastReceived("server:armament:state").payload;
         const unitId = state.units[0].id;
-        const dearest = [...state.store.items].sort(
-            (left: StoreItemView, right: StoreItemView) => right.cost - left.cost
-        )[0];
 
-        for (let attempt = 0; attempt < 10; attempt++) {
-            send(game, armingClientId, {
-                type: "client:armament:buy",
-                payload: { unitId, itemId: dearest.itemId }
-            });
-        }
+        const armingSide = game.sides.find((side) => side.findStore() != null);
+        expect(armingSide?.findStore()).toBeDefined();
+
+        // Force the budget near the floor so the next purchase must be refused,
+        // independent of scenario budget / catalog stock.
+        const store = armingSide!.store;
+        const target = [...state.store.items]
+            .filter((entry: StoreItemView) => entry.cost > 0 && entry.item.quantity > 0)
+            .sort((left: StoreItemView, right: StoreItemView) => right.cost - left.cost)[0];
+        expect(target).toBeDefined();
+
+        (store as unknown as { _budget: number })._budget = store.threshold + target!.cost - 1;
+
+        send(game, armingClientId, {
+            type: "client:armament:buy",
+            payload: { unitId, itemId: target!.itemId }
+        });
         await settle();
 
         expect(armingSocket.received("server:error").length).toBeGreaterThan(0);
         expect(armingSocket.lastReceived("server:error").payload).toBe("INSUFFICIENT_BUDGET");
-        expect(
-            armingSocket.lastReceived("server:armament:update").payload.store.budget
-        ).toBeGreaterThanOrEqual(state.store.threshold);
+        expect(store.budget).toBeGreaterThanOrEqual(store.threshold);
     });
 
     it("leaves the armament phase once the arming side is done", async () => {

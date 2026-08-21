@@ -1,0 +1,77 @@
+{
+    "id": "m16.gun",
+    "type": "gun",
+    "name": "M16 Assault Rifle",
+    "shortName": "M16",
+    "description": [
+        {
+            "text": "The Colt M16A4 Assault Rifle. It fires the same 5.56x45mm NATO round from the same magazines and can fire single-shot, three-round burst or fully automatic."
+        }
+    ],
+    "weight": 3.4,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "m16"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["m16-30.magazine", "m16-20.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "m16-30.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 85,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 55,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "burst": {
+            "ammoUse": 3,
+            "rpm": 950,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 45,
+                    "actionPoints": 20
+                },
+                "snapshot": {
+                    "accuracy": 35,
+                    "actionPoints": 12
+                }
+            }
+        },
+        "auto": {
+            "rpm": 950,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 35,
+                    "actionPoints": 5,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 35,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}

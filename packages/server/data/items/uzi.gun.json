@@ -1,0 +1,63 @@
+{
+    "id": "uzi.gun",
+    "type": "gun",
+    "name": "Uzi Sub-Machine Gun",
+    "shortName": "Uzi",
+    "description": [
+        {
+            "text": "Developed by Israeli Military Industries (IMI) as a cheap and effective weapon for their Special Forces the Uzi has achieved considerable success. Although only firing a pistol cartridge, its single-handed operation and robustness have made it a valuable weapon."
+        }
+    ],
+    "weight": 3.5,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "uzi"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["uzi.magazine", "uzi-drum.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "uzi.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 60,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 40,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "auto": {
+            "rpm": 600,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 30,
+                    "actionPoints": 5,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 28,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}

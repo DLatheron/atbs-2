@@ -38,6 +38,8 @@ function makeItem(
         weight: 1,
         maxThrowRange: 0,
         uiImage: [{ imageId: "placeholder" }],
+        allowLoad: true,
+        allowUnload: true,
         slots: [],
         ...overrides
     };
@@ -360,10 +362,10 @@ describe("getItemMenu", () => {
             slots: [
                 {
                     slot: "ammo",
-                    compatibleIds: ["12-guage-buckshot.round"],
+                    compatibleIds: ["12-gauge-buckshot.round"],
                     maxQuantity: 8,
                     contents: makeItem({
-                        id: "12-guage-buckshot.round-1",
+                        id: "12-gauge-buckshot.round-1",
                         type: "round",
                         shortName: "Buck"
                     })

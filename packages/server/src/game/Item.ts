@@ -323,6 +323,12 @@ export class Item extends SceneObject {
         }
 
         for (const [slot, contents] of [...this._slots.entries()]) {
+            // Sealed weapons (e.g. LAW) keep their ammo even when that ammo is a
+            // store catalog item — it can only leave with the weapon itself.
+            if (slot === SlotType.enum.ammo && !this.canUnload()) {
+                continue;
+            }
+
             if (isStoreItem(contents.recipeId)) {
                 components.push(...contents.removeStoreComponents(isStoreItem, true));
                 this.emptySlot(slot);
@@ -365,6 +371,8 @@ export class Item extends SceneObject {
                 states: []
             }),
             type: this.type,
+            allowLoad: this.canLoad(),
+            allowUnload: this.canUnload(),
             slots
         };
     }
@@ -444,7 +452,11 @@ export class Item extends SceneObject {
     }
 
     canLoad(): boolean {
-        return this.hasSlotProps(SlotType.enum.ammo);
+        return this.hasSlotProps(SlotType.enum.ammo) && this._recipe.allowLoad;
+    }
+
+    canUnload(): boolean {
+        return this.hasSlotProps(SlotType.enum.ammo) && this._recipe.allowUnload;
     }
 
     /**
@@ -529,8 +541,8 @@ export class Item extends SceneObject {
      * @returns The unloaded ammo, if any.
      */
     unload(): Item | null {
-        if (!this.canLoad()) {
-            throw new Error(`Item ${this.id} cannot be loaded`);
+        if (!this.canUnload()) {
+            throw new Error(`Item ${this.id} cannot be unloaded`);
         }
 
         const ammo = this.findSlotContents(SlotType.enum.ammo);

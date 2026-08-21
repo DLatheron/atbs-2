@@ -1,0 +1,32 @@
+{
+    "id": "ak-47-drum.magazine",
+    "type": "magazine",
+    "name": "AK-47 75-Round Drum",
+    "shortName": "AKx75",
+    "description": [
+        {
+            "text": "Drum magazine holding 75 rounds of 7.62mm ammunition."
+        }
+    ],
+    "weight": 0.95,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "ak-47-drum"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["7.62mm.round"],
+            "maxQuantity": 75
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "7.62mm.round",
+            "quantity": 75
+        }
+    }
+}

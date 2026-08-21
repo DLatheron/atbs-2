@@ -1,0 +1,32 @@
+{
+    "id": "barrett.magazine",
+    "type": "magazine",
+    "name": "Barrett 10-Round Clip",
+    "shortName": "M82x10",
+    "description": [
+        {
+            "text": "Magazine holding 10 rounds of .50 calibre ammunition."
+        }
+    ],
+    "weight": 1.07,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "barrett-clip"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["50-calibre.round"],
+            "maxQuantity": 10
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "50-calibre.round",
+            "quantity": 10
+        }
+    }
+}

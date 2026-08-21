@@ -1,0 +1,32 @@
+{
+    "id": "svd.magazine",
+    "type": "magazine",
+    "name": "SVD 10-Round Clip",
+    "shortName": "SVDx10",
+    "description": [
+        {
+            "text": "Magazine holding 10 rounds of 7.62mm ammunition."
+        }
+    ],
+    "weight": 0.2,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "svd.magazine"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["7.62mm.round"],
+            "maxQuantity": 10
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "7.62mm.round",
+            "quantity": 10
+        }
+    }
+}

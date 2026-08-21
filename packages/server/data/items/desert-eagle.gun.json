@@ -1,0 +1,48 @@
+{
+    "id": "desert-eagle.gun",
+    "type": "gun",
+    "name": "IMI Desert Eagle",
+    "shortName": "Desert Eagle",
+    "description": [
+        {
+            "text": "The fearsome Desert Eagle was created by Israel Military Industries (IMI) and is now a much sought-after handgun. The .357 magnum variant is more manageable and has a higher capacity than its larger .44 brother."
+        }
+    ],
+    "weight": 1.77,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "desert-eagle"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["desert-eagle.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "desert-eagle.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 75,
+                    "actionPoints": 20
+                },
+                "snapshot": {
+                    "accuracy": 56,
+                    "actionPoints": 10
+                }
+            }
+        }
+    }
+}

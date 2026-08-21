@@ -807,6 +807,8 @@ export type InventorySlotType = z.infer<typeof InventorySlotType>;
 // Recursive types: written by hand to break the inference cycle.
 export type InventoryItemView = ItemSummary & {
     type: ItemType;
+    allowLoad: boolean;
+    allowUnload: boolean;
     slots: Array<{
         slot: InventorySlotType;
         compatibleIds: ItemId[];
@@ -817,6 +819,8 @@ export type InventoryItemView = ItemSummary & {
 
 export const InventoryItemView: z.ZodType<InventoryItemView> = ItemSummary.extend({
     type: ItemType,
+    allowLoad: z.boolean(),
+    allowUnload: z.boolean(),
     slots: z.array(
         z.object({
             slot: InventorySlotType,

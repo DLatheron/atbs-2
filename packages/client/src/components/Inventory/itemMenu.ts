@@ -142,7 +142,9 @@ export function formatPendingMoney(
 
 /** Shop prices are only worth showing when something is actually charged. */
 export function formatMoney(cost: number, currency: string = DEFAULT_CURRENCY): string {
-    return cost === 0 ? "Free" : `${currency}${cost.toFixed(0)}`;
+    return cost === 0
+        ? "Free"
+        : `${currency}${cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
 export function storeBatchQuantity(store: StoreSnapshot, itemId: ItemId): number {
@@ -231,7 +233,7 @@ function buildLoadRow(snapshot: InventorySnapshot, receiver: InventoryItemView):
 
 function buildUnloadRow(snapshot: InventorySnapshot, item: InventoryItemView): ItemMenuRow | null {
     const ammoSlot = getAmmoSlot(item);
-    if (!ammoSlot?.contents) {
+    if (!item.allowUnload || !ammoSlot?.contents) {
         return null;
     }
 
@@ -454,7 +456,7 @@ function getShopItemMenu({
         }
         case "slot": {
             const rows = buildShopLoadUnloadRows(snapshot, item, emptySlot, store);
-            if (!emptySlot) {
+            if (!emptySlot && item.allowUnload) {
                 const contents = getAmmoSlot(item)?.contents;
                 if (contents) {
                     rows.push(
@@ -532,7 +534,7 @@ function buildShopLoadUnloadRows(
         }
     ];
 
-    if (!emptySlot) {
+    if (!emptySlot && item.allowUnload) {
         const unload = getAmmoSlot(item)?.contents
             ? moneyRow(
                   "unload",
@@ -946,7 +948,7 @@ function canAfford(snapshot: InventorySnapshot, cost: number): boolean {
 }
 
 export function canLoadIntoSlot(owner: InventoryItemView, ammo: InventoryItemView): boolean {
-    if (owner.id === ammo.id) {
+    if (!owner.allowLoad || owner.id === ammo.id) {
         return false;
     }
 
@@ -1119,6 +1121,9 @@ export function resolveInventoryDrag({
             }
             switch (target.type) {
                 case "inventory": {
+                    if (!source.owner.allowUnload) {
+                        return null;
+                    }
                     const cost = snapshot.costs.unload;
                     if (!canAfford(snapshot, cost)) {
                         return null;
@@ -1129,6 +1134,9 @@ export function resolveInventoryDrag({
                     };
                 }
                 case "ground": {
+                    if (!source.owner.allowUnload) {
+                        return null;
+                    }
                     const cost = snapshot.costs.unload + snapshot.costs.drop;
                     if (!canAfford(snapshot, cost)) {
                         return null;
@@ -1235,6 +1243,9 @@ function resolveShopDrag({
         if (!item) {
             return null;
         }
+        if (source.type === "slot" && !source.owner.allowUnload) {
+            return null;
+        }
         return {
             action: { type: "sell", itemId: item.id, quantity: item.quantity },
             pendingCostText: formatPendingMoney("Sell", item.shortName, 0)
@@ -1242,6 +1253,9 @@ function resolveShopDrag({
     }
 
     if (source.type === "slot" && target.type === "inventory") {
+        if (!source.owner.allowUnload) {
+            return null;
+        }
         return {
             action: { type: "unload", itemId: source.owner.id },
             pendingCostText: formatPendingMoney("Unload", source.item.shortName, 0)

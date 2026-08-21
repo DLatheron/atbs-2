@@ -9,8 +9,9 @@ import {
     Typography
 } from "@mui/material";
 import { useState } from "react";
+import type { UnitSummary } from "@atbs/shared-data";
 import { useArmamentPage } from "./useArmamentPage";
-import { InventoryBoard } from "../../components/Inventory";
+import { formatMoney, InventoryBoard } from "../../components/Inventory";
 import {
     ACTION_BUTTON_BACKGROUND_COLOR,
     ARMAMENT_TITLE,
@@ -21,6 +22,7 @@ import {
 } from "../../components/Inventory/styles";
 import { UnitDetailsComponent } from "../../components/UnitDetails";
 import { AttributesComponent } from "../../components/Attributes";
+import { ImageComponent } from "../../components/Image";
 import {
     CONSTITUTION_LEVELS,
     FITNESS_LEVELS,
@@ -34,6 +36,34 @@ import {
 } from "../../helpers/formattingHelpers";
 
 const OVERSPENT_TEXT_COLOR = "#b71c1c";
+const UNIT_SELECT_IMAGE_SIZE = 32;
+
+function UnitSelectOption({ unit }: { unit: UnitSummary }) {
+    return (
+        <Stack direction="row" spacing={1} sx={{ minWidth: 0, py: 0.25, alignItems: "center" }}>
+            <Box
+                sx={{
+                    width: UNIT_SELECT_IMAGE_SIZE,
+                    height: UNIT_SELECT_IMAGE_SIZE,
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden"
+                }}
+            >
+                <ImageComponent
+                    images={unit.uiImage}
+                    width={UNIT_SELECT_IMAGE_SIZE}
+                    height={UNIT_SELECT_IMAGE_SIZE}
+                />
+            </Box>
+            <Typography component="span" noWrap>
+                {unit.name}
+            </Typography>
+        </Stack>
+    );
+}
 
 export interface ArmamentPageProps {
     visible: boolean;
@@ -99,7 +129,7 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                 }}
             >
                 <Typography
-                    variant="h5"
+                    variant="h4"
                     component="h2"
                     sx={{
                         fontWeight: "bold",
@@ -119,15 +149,15 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                     {error ?? pendingCost ?? ""}
                 </Typography>
                 <Typography
-                    variant="body2"
+                    variant="h6"
                     component="span"
                     sx={{ ...cutoutTextSx(MODAL_BACKGROUND_COLOR_TRANSPARENT) }}
                 >
-                    {BUDGET_TITLE}&nbsp;&nbsp;
+                    {BUDGET_TITLE}
                 </Typography>
                 <Typography
                     id="armament-budget-value"
-                    variant="h5"
+                    variant="h4"
                     component="span"
                     sx={{
                         textAlign: "right",
@@ -137,7 +167,7 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                         )
                     }}
                 >
-                    {`${store.currency}${budget.toFixed(0)}`}
+                    {`${formatMoney(budget, store.currency)}`}
                 </Typography>
             </Box>
 
@@ -153,11 +183,22 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                         label="Unit"
                         value={selectedUnitId ?? ""}
                         onChange={(event) => setSelectedUnitId(String(event.target.value))}
-                        sx={{ backgroundColor: MODAL_BACKGROUND_COLOR }}
+                        sx={{
+                            backgroundColor: MODAL_BACKGROUND_COLOR,
+                            "& .MuiSelect-select": {
+                                display: "flex",
+                                alignItems: "center",
+                                py: 0.75
+                            }
+                        }}
+                        renderValue={(unitId) => {
+                            const unit = units.find((entry) => entry.id === unitId);
+                            return unit ? <UnitSelectOption unit={unit} /> : null;
+                        }}
                     >
                         {units.map((unit) => (
                             <MenuItem key={unit.id} value={unit.id}>
-                                {unit.name}
+                                <UnitSelectOption unit={unit} />
                             </MenuItem>
                         ))}
                     </Select>
@@ -280,8 +321,7 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                     gridArea: "footer",
                     display: "flex",
                     justifyContent: "flex-end",
-                    alignItems: "center",
-                    px: 1
+                    alignItems: "center"
                 }}
             >
                 <Button
@@ -294,7 +334,7 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                     variant="contained"
                     disabled={overspent}
                     onClick={onEndArmamentPhase}
-                    sx={{ textTransform: "none", px: 2 }}
+                    sx={{ textTransform: "none", px: 4 }}
                 >
                     <Typography
                         variant="h5"

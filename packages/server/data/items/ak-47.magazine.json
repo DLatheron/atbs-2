@@ -1,0 +1,32 @@
+{
+    "id": "ak-47.magazine",
+    "type": "magazine",
+    "name": "AK-47 30-Round Magazine",
+    "shortName": "AKx30",
+    "description": [
+        {
+            "text": "Magazine holding 30 rounds of 7.62mm ammunition."
+        }
+    ],
+    "weight": 0.33,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "ak-47.magazine"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["7.62mm.round"],
+            "maxQuantity": 30
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "7.62mm.round",
+            "quantity": 30
+        }
+    }
+}
