@@ -3,8 +3,11 @@ import { LobbyState } from "./LobbyState.js";
 import {
     ClientMap,
     ClientSummary,
+    Description,
     ErrorType,
     FireModeItemSummary,
+    FireModeWeaponSummary,
+    InventorySnapshot,
     ItemSummary,
     OnTarget,
     ScenarioId,
@@ -123,7 +126,11 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:unit:selected:update"),
-        payload: zodDeepPartial(UnitSummary)
+        // Keep Description/ItemSummary intact; deep-partial unions strip `{ text }` to `{}`.
+        payload: zodDeepPartial(UnitSummary.omit({ description: true, itemInUse: true })).extend({
+            description: Description.optional(),
+            itemInUse: ItemSummary.nullable().optional()
+        })
     }),
     z.object({
         type: z.literal("server:unit:mode:fire"),
@@ -135,11 +142,20 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:unit:weapon:update"),
-        payload: zodDeepPartial(FireModeItemSummary)
+        payload: zodDeepPartial(
+            FireModeItemSummary.omit({ description: true, weapons: true })
+        ).extend({
+            description: Description.optional(),
+            weapons: z.array(FireModeWeaponSummary).optional()
+        })
     }),
     z.object({
         type: z.literal("server:unit:mode:throw"),
         payload: ItemSummary.nullable()
+    }),
+    z.object({
+        type: z.literal("server:unit:inventory"),
+        payload: InventorySnapshot
     }),
     z.object({
         type: z.literal("server:turn:start"),

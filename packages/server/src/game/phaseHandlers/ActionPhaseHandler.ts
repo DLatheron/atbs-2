@@ -1,7 +1,9 @@
-import { Phase } from "@atbs/shared-data";
+import { Phase, UnitId } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import { ClientMessageManager } from "../Game.js";
 import { TilePos, Vec2 } from "@atbs/maths";
+import type { Client } from "../Client.js";
+import type { Unit } from "../Unit.js";
 
 export class ActionPhaseHandler extends PhaseHandler {
     get phase(): Phase {
@@ -299,6 +301,88 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
             ),
 
+            messageManager.registerHandler("client:unit:inventory", (_ctx, { unitId }, from) => {
+                const unit = this._requireSelectedUnit(from, unitId);
+                this._sendInventorySnapshot(from, unit);
+            }),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:use",
+                (_ctx, { unitId, itemId }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.useItem(itemId)) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:unuse",
+                (_ctx, { unitId }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.unuseItem()) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:drop",
+                (_ctx, { unitId, itemId }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.dropItem(itemId)) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:pickup",
+                (_ctx, { unitId, itemId, use }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.pickupItem(itemId, use)) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:load",
+                (_ctx, { unitId, receiverId, ammoId }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.loadItem(receiverId, ammoId)) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:unload",
+                (_ctx, { unitId, itemId }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.unloadItem(itemId)) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:unit:inventory:reorder",
+                (_ctx, { unitId, fromIndex, toIndex }, from) => {
+                    const unit = this._requireSelectedUnit(from, unitId);
+                    if (unit.reorderInventory(fromIndex, toIndex)) {
+                        this._sendInventorySnapshot(from, unit);
+                    }
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
             messageManager.registerHandler(
                 "client:unit:prime",
                 ({ game }, { unitId, itemId, prime }, from) => {
@@ -325,5 +409,21 @@ export class ActionPhaseHandler extends PhaseHandler {
                 }
             )
         ];
+    }
+
+    private _requireSelectedUnit(from: Client, unitId: UnitId): Unit {
+        this.game.verifyFromPlayingClient(from);
+        const { selectedUnit } = this.game;
+        if (unitId !== selectedUnit?.id) {
+            throw new Error(`Unit ${unitId} is not selected`);
+        }
+        return selectedUnit;
+    }
+
+    private _sendInventorySnapshot(from: Client, unit: Unit): void {
+        from.sendMessage({
+            type: "server:unit:inventory",
+            payload: unit.toInventorySnapshot()
+        });
     }
 }

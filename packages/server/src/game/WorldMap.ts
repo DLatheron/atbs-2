@@ -54,16 +54,26 @@ export class WorldMap {
         this._tileSize = recipe.tileSize;
 
         this._tiles = recipe.tiles.map((tileRow, row) =>
-            tileRow.map(
-                (tileRecipe, col) =>
-                    new Tile(
-                        new TilePos(col, row),
-                        recipe.tileSize,
-                        tileRecipe,
-                        this._game.furnitureManager,
-                        this._game.visibilityManager
-                    )
-            )
+            tileRow.map((tileRecipe, col) => {
+                const location = new TilePos(col, row);
+                const tile = new Tile(
+                    location,
+                    recipe.tileSize,
+                    tileRecipe,
+                    this._game.furnitureManager,
+                    this._game.visibilityManager
+                );
+
+                tileRecipe.items?.forEach(({ id, overrides }) => {
+                    const item = this._game.itemManager.newItem(id, {
+                        ...overrides,
+                        location
+                    });
+                    tile.addItem(item);
+                });
+
+                return tile;
+            })
         );
     }
 

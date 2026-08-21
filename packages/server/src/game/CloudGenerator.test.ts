@@ -4,7 +4,13 @@ import { tmpdir } from "os";
 import path from "path";
 import { TilePos } from "@atbs/maths";
 import * as Maths from "@atbs/maths";
-import { AnimationRecipe, GasExplosion, RenderImage, RenderMode, SmokeExplosion } from "@atbs/shared-data";
+import {
+    AnimationRecipe,
+    GasExplosion,
+    RenderImage,
+    RenderMode,
+    SmokeExplosion
+} from "@atbs/shared-data";
 import { PNG } from "pngjs";
 import type { Game } from "./Game.js";
 import { AnimationRecipeManager } from "./AnimationRecipeManager.js";

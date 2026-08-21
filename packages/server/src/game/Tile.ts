@@ -11,7 +11,7 @@ import {
     TilePos,
     Vec2
 } from "@atbs/maths";
-import { SceneContext, UnitActionType } from "@atbs/shared-data";
+import { ItemId, SceneContext, UnitActionType } from "@atbs/shared-data";
 import z from "zod";
 import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
@@ -39,6 +39,7 @@ import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { Item } from "./Item.js";
+import { ItemOverrides } from "./ItemRecipe.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityRay } from "./VisibilityRay.js";
 import type { VisibilityManager } from "./VisibilityManager.js";
@@ -64,15 +65,15 @@ export const TileRecipe = z.object({
             orientation: z.enum(Orientation).optional(),
             state: FurnitureState.optional()
         })
+        .optional(),
+    items: z
+        .array(
+            z.object({
+                id: ItemId,
+                overrides: ItemOverrides.optional()
+            })
+        )
         .optional()
-    // items: z
-    //     .array(
-    //         z.object({
-    //             id: z.string(),
-    //             overrides: ItemRecipe.partial().optional()
-    //         })
-    //     )
-    //     .optional(),
     // units: z
     //     .array(
     //         z.object({

@@ -26,6 +26,7 @@ export interface UnitModePanelProps {
     disabled: boolean;
     unit: UnitSummary | null;
     unitActionMode: boolean;
+    inventoryOpen: boolean;
 
     nextUnit: () => void;
     onMove: (orientation: Orientation) => void;
@@ -33,6 +34,7 @@ export interface UnitModePanelProps {
     onEndMovement: () => void;
     onFireMode: () => void;
     onUnitActionMode: (selected: boolean) => void;
+    onOpenInventory: () => void;
 
     sx?: SxProps;
 }
@@ -42,12 +44,14 @@ export function UnitModePanel({
     disabled,
     unit,
     unitActionMode,
+    inventoryOpen,
     nextUnit,
     onMove,
     onRotateTo,
     onEndMovement,
     onFireMode,
     onUnitActionMode,
+    onOpenInventory,
     sx
 }: UnitModePanelProps) {
     const keyMap = useMemo(
@@ -58,25 +62,35 @@ export function UnitModePanel({
             KeyS: () => unit && onMove(Orientation.SOUTH),
             KeyF: () => onFireMode(),
             KeyN: () => nextUnit(),
-            // KeyI: () => onOpenInventory(),
+            KeyI: () => {
+                if (unit?.interactions.canInventory) {
+                    onOpenInventory();
+                }
+            },
             KeyU: () => onUnitActionMode(!unitActionMode),
-            Escape: () => onEndMovement()
+            Escape: () => {
+                if (!inventoryOpen) {
+                    onEndMovement();
+                }
+            }
         }),
         [
             unit,
             unitActionMode,
+            inventoryOpen,
             nextUnit,
             onMove,
             onRotateTo,
             onFireMode,
             onEndMovement,
-            onUnitActionMode
+            onUnitActionMode,
+            onOpenInventory
         ]
     );
 
     useKeyboard({
         keyMap,
-        disabled: !visible || disabled
+        disabled: !visible || disabled || inventoryOpen
     });
 
     if (!visible) {
@@ -247,6 +261,7 @@ export function UnitModePanel({
                             borderTopLeftRadius: 0,
                             borderBottomLeftRadius: 0
                         }}
+                        onClick={onOpenInventory}
                     >
                         <ImageComponent
                             images={[{ imageId: "inventory" }]}
