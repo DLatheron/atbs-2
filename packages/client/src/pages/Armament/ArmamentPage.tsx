@@ -17,6 +17,7 @@ import {
     ARMAMENT_TITLE,
     BUDGET_TITLE,
     cutoutTextSx,
+    INVENTORY_PANEL_BACKGROUND_COLOR,
     MODAL_BACKGROUND_COLOR,
     MODAL_BACKGROUND_COLOR_TRANSPARENT
 } from "../../components/Inventory/styles";
@@ -36,7 +37,7 @@ import {
 } from "../../helpers/formattingHelpers";
 
 const OVERSPENT_TEXT_COLOR = "#b71c1c";
-const UNIT_SELECT_IMAGE_SIZE = 32;
+const UNIT_SELECT_IMAGE_SIZE = 64;
 
 function UnitSelectOption({ unit }: { unit: UnitSummary }) {
     return (
@@ -205,9 +206,19 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                 </FormControl>
                 {selectedUnit && (
                     <>
-                        <UnitDetailsComponent unit={selectedUnit} />
+                        <UnitDetailsComponent
+                            unit={selectedUnit}
+                            noName
+                            noImages
+                            sx={{
+                                backgroundColor: `rgb(${INVENTORY_PANEL_BACKGROUND_COLOR})`
+                            }}
+                        />
                         <AttributesComponent
                             title="Attributes"
+                            sx={{
+                                backgroundColor: `rgb(${INVENTORY_PANEL_BACKGROUND_COLOR})`
+                            }}
                             attributes={[
                                 {
                                     id: "action-points",
