@@ -294,9 +294,7 @@ function row(
 
 /** Drop cost for an inventory item: cheaper when it is already in use. */
 export function getDropCost(snapshot: InventorySnapshot, itemId: ItemId): number {
-    return snapshot.inUseItemId === itemId
-        ? snapshot.costs.drop
-        : snapshot.costs.dropFromInventory;
+    return snapshot.inUseItemId === itemId ? snapshot.costs.drop : snapshot.costs.dropFromInventory;
 }
 
 export function getItemMenu({
