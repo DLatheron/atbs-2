@@ -1,4 +1,4 @@
-import type { InventoryItemView } from "@atbs/shared-data";
+import type { InventoryItemView, ItemId } from "@atbs/shared-data";
 import { Box, IconButton, Stack, SxProps, Typography } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -18,6 +18,8 @@ interface ItemContentSlotsProps {
     item: InventoryItemView | null;
     interactive?: boolean;
     highlightedSlotId?: string | null;
+    selectedItemId?: ItemId | null;
+    onSelectItem?: (itemId: ItemId) => void;
     getSlotMenuClick?: (
         owner: InventoryItemView,
         empty: boolean
@@ -31,6 +33,8 @@ export interface ItemInspectorProps {
     /** When true, slot tiles expose load/unload menus. Defaults to read-only. */
     slotsInteractive?: boolean;
     highlightedSlotId?: string | null;
+    selectedItemId?: ItemId | null;
+    onSelectItem?: (itemId: ItemId) => void;
     getSlotMenuClick?: (
         owner: InventoryItemView,
         empty: boolean
@@ -42,11 +46,15 @@ function ContentSlotTile({
     slotRef,
     interactive,
     highlighted,
+    selected,
+    onSelect,
     getSlotMenuClick
 }: {
     slotRef: ContentSlotRef;
     interactive: boolean;
     highlighted: boolean;
+    selected: boolean;
+    onSelect?: (itemId: ItemId) => void;
     getSlotMenuClick?: ItemContentSlotsProps["getSlotMenuClick"];
 }) {
     const { owner, slot } = slotRef;
@@ -92,9 +100,11 @@ function ContentSlotTile({
             {contents ? (
                 <ItemTile
                     item={contents}
+                    selected={selected}
                     draggable={interactive}
                     dragHandleAttributes={attributes}
                     dragHandleListeners={listeners}
+                    onClick={onSelect ? () => onSelect(contents.id) : undefined}
                     sx={{ width: "100%", height: "100%" }}
                 />
             ) : (
@@ -110,7 +120,13 @@ function ContentSlotTile({
                         ...backgroundBannerAnchorSx
                     }}
                 >
-                    <Typography variant="caption" sx={backgroundBannerSx}>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            ...backgroundBannerSx,
+                            ...cutoutTextSx(INVENTORY_PANEL_BACKGROUND_COLOR)
+                        }}
+                    >
                         {slotLabel(slot.slot)}
                     </Typography>
                 </Box>
@@ -146,6 +162,8 @@ function ItemContentSlots({
     item,
     interactive = false,
     highlightedSlotId = null,
+    selectedItemId = null,
+    onSelectItem,
     getSlotMenuClick,
     sx
 }: ItemContentSlotsProps) {
@@ -197,6 +215,8 @@ function ItemContentSlots({
                         highlighted={
                             highlightedSlotId === `slot:${slotRef.owner.id}:${slotRef.slot.slot}`
                         }
+                        selected={selectedItemId === slotRef.slot.contents?.id}
+                        onSelect={onSelectItem}
                         getSlotMenuClick={getSlotMenuClick}
                     />
                 ))}
@@ -249,6 +269,8 @@ export function ItemInspector({
     emptyText,
     slotsInteractive = false,
     highlightedSlotId = null,
+    selectedItemId = null,
+    onSelectItem,
     getSlotMenuClick,
     sx
 }: ItemInspectorProps) {
@@ -269,6 +291,8 @@ export function ItemInspector({
                 item={item}
                 interactive={slotsInteractive}
                 highlightedSlotId={highlightedSlotId}
+                selectedItemId={selectedItemId}
+                onSelectItem={onSelectItem}
                 getSlotMenuClick={getSlotMenuClick}
                 sx={{ gridArea: "contents", gap: 1 }}
             />

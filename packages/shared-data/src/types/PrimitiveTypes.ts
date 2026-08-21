@@ -750,6 +750,8 @@ export const InventoryCosts = z.object({
     use: z.int().nonnegative(),
     unuse: z.int().nonnegative(),
     drop: z.int().nonnegative(),
+    /** Drop an unequipped backpack item (higher than {@link drop}, lower than use+drop). */
+    dropFromInventory: z.int().nonnegative(),
     pickup: z.int().nonnegative(),
     pickupAndUse: z.int().nonnegative(),
     load: z.int().nonnegative(),

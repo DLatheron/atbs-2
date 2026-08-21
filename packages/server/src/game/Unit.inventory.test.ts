@@ -427,7 +427,7 @@ describe("Unit inventory", () => {
         expect(unit.itemInUse?.recipeId).toBe(TOKEN_RECIPE.id);
         expect(unit.inventory.findItem(backpackGun.id)).toBeUndefined();
         expect(tile.items.map(({ id }) => id)).toEqual([backpackGun.id]);
-        expect(unit.actionPoints).toBe(43);
+        expect(unit.actionPoints).toBe(39);
     });
 
     it("unloads a chambered item onto the ground when dropping it", () => {
@@ -653,6 +653,7 @@ describe("Unit inventory", () => {
             use: 8,
             unuse: 4,
             drop: 4,
+            dropFromInventory: 8,
             pickup: 12,
             pickupAndUse: 8,
             load: 8,

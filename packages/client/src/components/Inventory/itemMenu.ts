@@ -292,6 +292,13 @@ function row(
     };
 }
 
+/** Drop cost for an inventory item: cheaper when it is already in use. */
+export function getDropCost(snapshot: InventorySnapshot, itemId: ItemId): number {
+    return snapshot.inUseItemId === itemId
+        ? snapshot.costs.drop
+        : snapshot.costs.dropFromInventory;
+}
+
 export function getItemMenu({
     snapshot,
     item,
@@ -309,20 +316,18 @@ export function getItemMenu({
                     snapshot,
                     { type: "use", itemId: item.id },
                     item.shortName
+                ),
+                row(
+                    "drop",
+                    "Drop",
+                    getDropCost(snapshot, item.id),
+                    snapshot,
+                    { type: "drop", itemId: item.id },
+                    item.shortName
                 )
             ];
 
             if (actionScope === "all") {
-                rows.push(
-                    row(
-                        "drop",
-                        "Drop",
-                        snapshot.costs.drop,
-                        snapshot,
-                        { type: "drop", itemId: item.id },
-                        item.shortName
-                    )
-                );
                 rows.push(...buildLoadUnloadRows(snapshot, item, false));
             }
 
@@ -393,9 +398,126 @@ export function getItemMenu({
                 return [];
             }
 
-            return buildLoadUnloadRows(snapshot, item, emptySlot);
+            const rows = buildLoadUnloadRows(snapshot, item, emptySlot);
+            if (!emptySlot) {
+                const contents = getAmmoSlot(item)?.contents;
+                if (contents) {
+                    const cost = snapshot.costs.unload + snapshot.costs.drop;
+                    rows.push(
+                        row(
+                            "drop",
+                            "Drop",
+                            cost,
+                            snapshot,
+                            { type: "drop", itemId: contents.id },
+                            contents.shortName
+                        )
+                    );
+                }
+            }
+
+            return rows;
         }
     }
+}
+
+export interface ItemMenuTarget {
+    item: InventoryItemView;
+    location: ItemMenuLocation;
+    emptySlot: boolean;
+}
+
+/**
+ * Resolve which context-menu target applies to a selected item id
+ * (backpack, in-use, ground, or a filled content slot's owner).
+ */
+export function resolveItemMenuTarget(
+    snapshot: InventorySnapshot,
+    itemId: ItemId
+): ItemMenuTarget | null {
+    if (snapshot.inUseItemId === itemId) {
+        const item = getInUseItem(snapshot);
+        return item ? { item, location: "inUse", emptySlot: false } : null;
+    }
+
+    const backpack = snapshot.items.find((item: InventoryItemView) => item.id === itemId);
+    if (backpack) {
+        return { item: backpack, location: "inventory", emptySlot: false };
+    }
+
+    const ground = snapshot.groundItems.find((item: InventoryItemView) => item.id === itemId);
+    if (ground) {
+        return { item: ground, location: "ground", emptySlot: false };
+    }
+
+    for (const root of [...snapshot.items, ...snapshot.groundItems]) {
+        for (const { owner, slot } of collectContentSlots(root)) {
+            if (slot.contents?.id === itemId) {
+                return { item: owner, location: "slot", emptySlot: false };
+            }
+        }
+    }
+
+    return null;
+}
+
+/** Action-type preference order for each hotkey (first affordable menu match wins). */
+const HOTKEY_ACTION_TYPES: Record<string, Array<ItemMenuAction["type"] | "pickupAndUse">> = {
+    u: ["use", "unload", "pickupAndUse"],
+    d: ["drop"],
+    p: ["pickup", "unuse"],
+    l: ["load"]
+};
+
+function rowMatchesHotkeyType(
+    row: ItemMenuRow,
+    type: ItemMenuAction["type"] | "pickupAndUse"
+): boolean {
+    if (!row.action || row.disabled) {
+        return false;
+    }
+    if (type === "pickupAndUse") {
+        return row.action.type === "pickup" && row.action.use === true;
+    }
+    if (type === "pickup") {
+        return row.action.type === "pickup" && !row.action.use;
+    }
+    return row.action.type === type;
+}
+
+/**
+ * Pick a menu action for a pressed hotkey from the same rows the context menu would show.
+ * Parent rows with a single affordable child (e.g. Load) are included.
+ */
+export function findHotkeyAction(rows: ItemMenuRow[], key: string): ItemMenuAction | null {
+    const types = HOTKEY_ACTION_TYPES[key.toLowerCase()];
+    if (!types) {
+        return null;
+    }
+
+    const actionable: ItemMenuRow[] = [];
+    for (const row of rows) {
+        if (row.disabled) {
+            continue;
+        }
+        if (row.action) {
+            actionable.push(row);
+            continue;
+        }
+        const children = (row.children ?? []).filter((child) => !child.disabled && child.action);
+        if (children.length === 1) {
+            actionable.push(children[0]!);
+        }
+    }
+
+    for (const type of types) {
+        const match = actionable.find((row) => rowMatchesHotkeyType(row, type));
+        if (match?.action) {
+            return match.action;
+        }
+    }
+
+    return null;
 }
 
 /** Combo parents nest real items under these; they are walked, never shown as content tiles. */
@@ -585,7 +707,7 @@ export function resolveInventoryDrag({
                     };
                 }
                 case "ground": {
-                    const cost = snapshot.costs.drop;
+                    const cost = getDropCost(snapshot, source.item.id);
                     if (!canAfford(snapshot, cost)) {
                         return null;
                     }

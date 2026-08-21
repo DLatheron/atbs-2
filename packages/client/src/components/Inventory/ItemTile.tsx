@@ -16,6 +16,12 @@ import {
 } from "react";
 import { ImageComponent } from "../Image";
 import { collectAmmoCounts, formatAmmoCount } from "./itemMenu";
+import {
+    ITEM_SELECTION_BORDER_COLOR,
+    ITEM_SELECTION_BORDER_WIDTH,
+    ITEM_SELECTION_CHASE_DURATION_MS,
+    ITEM_SELECTION_DASH_ARRAY
+} from "./styles";
 
 /** Sized so an image plus up to three ammo counts fit on the square. */
 export const ITEM_TILE_SIZE = 180;
@@ -115,6 +121,52 @@ function stopTileChromePointer(event: SyntheticEvent) {
     event.stopPropagation();
 }
 
+function SelectionChaseBorder() {
+    const inset = ITEM_SELECTION_BORDER_WIDTH / 2;
+    const size = ITEM_TILE_SIZE - ITEM_SELECTION_BORDER_WIDTH;
+    const period = ITEM_SELECTION_DASH_ARRAY.split(/\s+/)
+        .map(Number)
+        .filter((n) => Number.isFinite(n))
+        .reduce((sum, n) => sum + n, 0);
+
+    return (
+        <Box
+            component="svg"
+            aria-hidden
+            viewBox={`0 0 ${ITEM_TILE_SIZE} ${ITEM_TILE_SIZE}`}
+            sx={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                pointerEvents: "none",
+                zIndex: 2,
+                overflow: "visible",
+                "@keyframes inventorySelectionChase": {
+                    to: {
+                        strokeDashoffset: -period
+                    }
+                },
+                "& > rect": {
+                    animation: `inventorySelectionChase ${ITEM_SELECTION_CHASE_DURATION_MS}ms linear infinite`
+                }
+            }}
+        >
+            <rect
+                x={inset}
+                y={inset}
+                width={size}
+                height={size}
+                fill="none"
+                stroke={ITEM_SELECTION_BORDER_COLOR}
+                strokeWidth={ITEM_SELECTION_BORDER_WIDTH}
+                strokeDasharray={ITEM_SELECTION_DASH_ARRAY}
+                strokeLinejoin="miter"
+            />
+        </Box>
+    );
+}
+
 export function ItemTile({
     item,
     selected = false,
@@ -158,7 +210,7 @@ export function ItemTile({
                 height: ITEM_TILE_SIZE,
                 // borderRadius: 1,
                 aspectRatio: 1,
-                border: selected ? "2px solid #333" : "1px solid #000",
+                border: "1px solid #000",
                 backgroundColor: "white",
                 display: "flex",
                 flexDirection: "column",
@@ -174,6 +226,7 @@ export function ItemTile({
                 ...sx
             }}
         >
+            {selected && <SelectionChaseBorder />}
             {onMenuClick && (
                 <IconButton
                     size="small"

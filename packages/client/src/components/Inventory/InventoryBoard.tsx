@@ -31,7 +31,6 @@ import {
     useCallback,
     useEffect,
     useLayoutEffect,
-    useMemo,
     useRef,
     useState,
     type MouseEvent,
@@ -53,10 +52,12 @@ import {
     type ItemMenuAction,
     type ItemMenuLocation,
     type ItemMenuRow,
+    findHotkeyAction,
     findItemInSnapshot,
     getInUseItem,
     getItemMenu,
-    resolveInventoryDrag
+    resolveInventoryDrag,
+    resolveItemMenuTarget
 } from "./itemMenu";
 import {
     backgroundBannerAnchorSx,
@@ -65,6 +66,7 @@ import {
     groundBackgroundSx,
     groundSlideTimeInMs,
     IN_USE_TITLE,
+    INVENTORY_BACKGROUND_COLOR,
     INVENTORY_EMPTY_TEXT,
     INVENTORY_PANEL_BACKGROUND_COLOR,
     inventoryPanelSx,
@@ -360,7 +362,10 @@ export function InventoryBoard({
     const [items, setItems] = useState<InventoryItemView[]>(snapshot.items);
     const [selectedItemId, setSelectedItemId] = useState<ItemId | null>(snapshot.inUseItemId);
     const [menu, setMenu] = useState<MenuState | null>(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [menuRows, setMenuRows] = useState<ItemMenuRow[]>([]);
     const [subMenuAnchor, setSubMenuAnchor] = useState<HTMLElement | null>(null);
+    const [subMenuOpen, setSubMenuOpen] = useState(false);
     const [subMenuRows, setSubMenuRows] = useState<ItemMenuRow[]>([]);
     const subMenuCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const subMenuRowIdRef = useRef<string | null>(null);
@@ -432,19 +437,6 @@ export function InventoryBoard({
     const selectedItem = selectedItemId ? findItemInSnapshot(snapshot, selectedItemId) : null;
     const inspectorItem = inspectorFocus === "inUse" ? inUseItem : selectedItem;
     const slotsInteractive = actionScope === "all" || inspectorItem?.id === snapshot.inUseItemId;
-    const menuRows: ItemMenuRow[] = useMemo(() => {
-        if (!menu) {
-            return [];
-        }
-
-        return getItemMenu({
-            snapshot,
-            item: menu.item,
-            location: menu.location,
-            actionScope,
-            emptySlot: menu.emptySlot
-        });
-    }, [menu, snapshot, actionScope]);
 
     const clearSubMenuCloseTimeout = useCallback(() => {
         if (subMenuCloseTimeoutRef.current !== null) {
@@ -458,36 +450,37 @@ export function InventoryBoard({
             clearSubMenuCloseTimeout();
             // Avoid setState when this submenu is already open — re-rendering the parent
             // Menu remounts the Load row, which fires leave/enter and flickers the submenu.
-            if (subMenuRowIdRef.current === rowId) {
+            if (subMenuRowIdRef.current === rowId && subMenuOpen) {
                 setSubMenuAnchor((current) => (current === anchor ? current : anchor));
                 return;
             }
             subMenuRowIdRef.current = rowId;
-            setSubMenuAnchor(anchor);
             setSubMenuRows(children);
+            setSubMenuAnchor(anchor);
+            setSubMenuOpen(true);
         },
-        [clearSubMenuCloseTimeout]
+        [clearSubMenuCloseTimeout, subMenuOpen]
     );
 
     const closeSubMenu = useCallback(() => {
         clearSubMenuCloseTimeout();
         subMenuRowIdRef.current = null;
-        setSubMenuAnchor(null);
-        setSubMenuRows([]);
+        // Keep anchor/rows until Popover exit so the fade-out does not collapse mid-animation.
+        setSubMenuOpen(false);
     }, [clearSubMenuCloseTimeout]);
 
     const scheduleCloseSubMenu = useCallback(() => {
         clearSubMenuCloseTimeout();
         subMenuCloseTimeoutRef.current = setTimeout(() => {
             subMenuRowIdRef.current = null;
-            setSubMenuAnchor(null);
-            setSubMenuRows([]);
+            setSubMenuOpen(false);
             subMenuCloseTimeoutRef.current = null;
         }, 200);
     }, [clearSubMenuCloseTimeout]);
 
     const closeMenu = useCallback(() => {
-        setMenu(null);
+        // Keep menu/rows until Menu exit so the fade-out does not collapse mid-animation.
+        setMenuOpen(false);
         closeSubMenu();
         onPendingCostChange(null);
     }, [closeSubMenu, onPendingCostChange]);
@@ -507,6 +500,7 @@ export function InventoryBoard({
             if (location !== "slot") {
                 setSelectedItemId(item.id);
             }
+            setSubMenuOpen(false);
             setSubMenuAnchor(null);
             setSubMenuRows([]);
             subMenuRowIdRef.current = null;
@@ -520,16 +514,20 @@ export function InventoryBoard({
                 emptySlot
             });
             if (rows.length === 0) {
+                setMenuOpen(false);
                 setMenu(null);
+                setMenuRows([]);
                 return;
             }
 
+            setMenuRows(rows);
             setMenu({
                 anchorEl: event.currentTarget,
                 item,
                 location,
                 emptySlot
             });
+            setMenuOpen(true);
         },
         [disabled, onPendingCostChange, snapshot, actionScope]
     );
@@ -566,6 +564,72 @@ export function InventoryBoard({
         [disabled, onUse, onUnuse, onDrop, onPickup, onLoad, onUnload, closeMenu]
     );
 
+    useEffect(() => {
+        if (disabled) {
+            return;
+        }
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.metaKey || event.ctrlKey || event.altKey) {
+                return;
+            }
+            if (menuOpen || subMenuOpen) {
+                return;
+            }
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                (target.isContentEditable ||
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.tagName === "SELECT")
+            ) {
+                return;
+            }
+            if (!selectedItemId) {
+                return;
+            }
+
+            const menuTarget = resolveItemMenuTarget(snapshot, selectedItemId);
+            if (!menuTarget) {
+                return;
+            }
+
+            const rows = getItemMenu({
+                snapshot,
+                item: menuTarget.item,
+                location: menuTarget.location,
+                actionScope,
+                emptySlot: menuTarget.emptySlot
+            });
+            const action = findHotkeyAction(rows, event.key);
+            if (!action) {
+                return;
+            }
+
+            event.preventDefault();
+            dispatchMenuAction(action, { onUse, onUnuse, onDrop, onPickup, onLoad, onUnload });
+            onPendingCostChange(null);
+        };
+
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [
+        disabled,
+        menuOpen,
+        subMenuOpen,
+        selectedItemId,
+        snapshot,
+        actionScope,
+        onUse,
+        onUnuse,
+        onDrop,
+        onPickup,
+        onLoad,
+        onUnload,
+        onPendingCostChange
+    ]);
+
     const clearDragPreview = useCallback(
         (options?: { keepGroundPreview?: boolean }) => {
             setActiveDragItem(null);
@@ -595,7 +659,10 @@ export function InventoryBoard({
             setActiveDragItem(source?.item ?? null);
             setActiveDragSource(source);
             setGroundDropPreviewItem(null);
+            setMenuOpen(false);
             setMenu(null);
+            setMenuRows([]);
+            setSubMenuOpen(false);
             setSubMenuAnchor(null);
             setSubMenuRows([]);
             subMenuRowIdRef.current = null;
@@ -797,7 +864,13 @@ export function InventoryBoard({
                                     ...backgroundBannerAnchorSx
                                 }}
                             >
-                                <Typography variant="body2" sx={backgroundBannerSx}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{
+                                        ...backgroundBannerSx,
+                                        ...cutoutTextSx(INVENTORY_PANEL_BACKGROUND_COLOR)
+                                    }}
+                                >
                                     {NO_ITEM_IN_USE_TEXT}
                                 </Typography>
                             </Box>
@@ -809,7 +882,8 @@ export function InventoryBoard({
                             gridArea: "inspector",
                             overflow: "hidden",
                             ...inventoryPanelSx,
-                            backgroundColor: "lightgray"
+                            backgroundColor: `rgb(${INVENTORY_PANEL_BACKGROUND_COLOR})`,
+                            ...backgroundBannerAnchorSx
                         }}
                     >
                         <ItemInspector
@@ -819,6 +893,8 @@ export function InventoryBoard({
                             highlightedSlotId={
                                 legalOverId?.startsWith("slot:") ? legalOverId : null
                             }
+                            selectedItemId={selectedItemId}
+                            onSelectItem={setSelectedItemId}
                             getSlotMenuClick={(owner, empty) =>
                                 getMenuClickHandler(owner, "slot", empty)
                             }
@@ -904,11 +980,16 @@ export function InventoryBoard({
                                                 height: "100%",
                                                 display: "flex",
                                                 justifyContent: "center",
-                                                alignItems: "center",
-                                                ...backgroundBannerAnchorSx
+                                                alignItems: "center"
                                             }}
                                         >
-                                            <Typography variant="body2" sx={backgroundBannerSx}>
+                                            <Typography
+                                                variant="body2"
+                                                sx={{
+                                                    ...backgroundBannerSx,
+                                                    ...cutoutTextSx(INVENTORY_BACKGROUND_COLOR)
+                                                }}
+                                            >
                                                 {INVENTORY_EMPTY_TEXT}
                                             </Typography>
                                         </Box>
@@ -1006,13 +1087,19 @@ export function InventoryBoard({
                     )}
 
                     <Menu
-                        open={Boolean(menu) && menuRows.length > 0}
+                        open={menuOpen}
                         onClose={closeMenu}
                         anchorEl={menu?.anchorEl}
                         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                         transformOrigin={{ vertical: "top", horizontal: "right" }}
                         slotProps={{
-                            list: { dense: true }
+                            list: { dense: true },
+                            transition: {
+                                onExited: () => {
+                                    setMenu(null);
+                                    setMenuRows([]);
+                                }
+                            }
                         }}
                     >
                         {menuRows.map((row) => {
@@ -1077,7 +1164,7 @@ export function InventoryBoard({
                     </Menu>
 
                     <Popover
-                        open={Boolean(subMenuAnchor) && subMenuRows.length > 0}
+                        open={subMenuOpen}
                         anchorEl={subMenuAnchor}
                         onClose={closeSubMenu}
                         disableRestoreFocus
@@ -1097,6 +1184,12 @@ export function InventoryBoard({
                                 sx: { pointerEvents: "auto" },
                                 onMouseEnter: clearSubMenuCloseTimeout,
                                 onMouseLeave: scheduleCloseSubMenu
+                            },
+                            transition: {
+                                onExited: () => {
+                                    setSubMenuAnchor(null);
+                                    setSubMenuRows([]);
+                                }
                             }
                         }}
                     >

@@ -90,6 +90,7 @@ const ROTATION_APT_COST = 1;
 const INVENTORY_USE_APT_COST = 8;
 const INVENTORY_UNUSE_APT_COST = 4;
 const INVENTORY_DROP_APT_COST = 4;
+const INVENTORY_DROP_FROM_INVENTORY_APT_COST = 8;
 const INVENTORY_PICKUP_APT_COST = 12;
 const INVENTORY_PICKUP_AND_USE_APT_COST = 8;
 const INVENTORY_LOAD_APT_COST = 8;
@@ -100,6 +101,7 @@ const INVENTORY_COSTS: InventoryCosts = {
     use: INVENTORY_USE_APT_COST,
     unuse: INVENTORY_UNUSE_APT_COST,
     drop: INVENTORY_DROP_APT_COST,
+    dropFromInventory: INVENTORY_DROP_FROM_INVENTORY_APT_COST,
     pickup: INVENTORY_PICKUP_APT_COST,
     pickupAndUse: INVENTORY_PICKUP_AND_USE_APT_COST,
     load: INVENTORY_LOAD_APT_COST,
@@ -1431,10 +1433,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
         const tile = this.map.getTile(this.mapLocation);
         const backpackItem = this.inventory.findItem(itemId);
         if (backpackItem) {
-            if (!this._hasSufficientActionPoints(INVENTORY_DROP_APT_COST)) {
+            const aptCost =
+                this.itemInUse?.id === itemId
+                    ? INVENTORY_DROP_APT_COST
+                    : INVENTORY_DROP_FROM_INVENTORY_APT_COST;
+            if (!this._hasSufficientActionPoints(aptCost)) {
                 return false;
             }
-            if (!this._useActionPoints(INVENTORY_DROP_APT_COST)) {
+            if (!this._useActionPoints(aptCost)) {
                 return false;
             }
 

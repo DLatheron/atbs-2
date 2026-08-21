@@ -5,17 +5,20 @@ import {
     collectAmmoSlots,
     collectContentSlots,
     findCompatibleAmmo,
+    findHotkeyAction,
     formatAmmoCount,
     getItemMenu,
     getUseCost,
     matchesCompatibleId,
-    resolveInventoryDrag
+    resolveInventoryDrag,
+    resolveItemMenuTarget
 } from "./itemMenu.js";
 
 const costs: InventoryCosts = {
     use: 8,
     unuse: 4,
     drop: 4,
+    dropFromInventory: 8,
     pickup: 12,
     pickupAndUse: 8,
     load: 8,
@@ -154,7 +157,7 @@ describe("matchesCompatibleId", () => {
 });
 
 describe("getItemMenu", () => {
-    it("offers only Use for a backpack item when actionScope is inUse", () => {
+    it("offers Use and Drop for a backpack item when actionScope is inUse", () => {
         const snapshot = makeSnapshot({ items: [m4, coffee], inUseItemId: m4.id });
         const rows = getItemMenu({
             snapshot,
@@ -163,10 +166,13 @@ describe("getItemMenu", () => {
             actionScope: "inUse"
         });
 
-        expect(rows.map((row) => row.id)).toEqual(["use"]);
+        expect(rows.map((row) => row.id)).toEqual(["use", "drop"]);
         expect(rows[0]?.action).toEqual({ type: "use", itemId: coffee.id });
         expect(rows[0]?.cost).toBe(12);
         expect(rows[0]?.pendingCostText).toBe("Use Coffee — 12 APts");
+        expect(rows[1]?.action).toEqual({ type: "drop", itemId: coffee.id });
+        expect(rows[1]?.cost).toBe(8);
+        expect(rows[1]?.pendingCostText).toBe("Drop Coffee — 8 APts");
     });
 
     it("offers Load on a backpack magazine compatible with the in-use weapon", () => {
@@ -181,7 +187,7 @@ describe("getItemMenu", () => {
             actionScope: "inUse"
         });
 
-        expect(rows.map((row) => row.id)).toEqual(["use", "loadInto"]);
+        expect(rows.map((row) => row.id)).toEqual(["use", "drop", "loadInto"]);
         expect(rows.find((row) => row.id === "loadInto")?.action).toEqual({
             type: "load",
             receiverId: m4.id,
@@ -281,7 +287,7 @@ describe("getItemMenu", () => {
             actionScope: "inUse"
         });
 
-        expect(rows.map((row) => row.id)).toEqual(["load", "unload"]);
+        expect(rows.map((row) => row.id)).toEqual(["load", "unload", "drop"]);
         expect(rows[0]?.children?.[0]?.action).toEqual({
             type: "load",
             receiverId: magInPack.id,
@@ -289,6 +295,11 @@ describe("getItemMenu", () => {
         });
         expect(rows[0]?.children?.[0]?.cost).toBe(16);
         expect(rows[0]?.children?.[0]?.pendingCostText).toBe("Load 5.56 — 16 APts");
+        expect(rows.find((row) => row.id === "drop")?.action).toEqual({
+            type: "drop",
+            itemId: "5.56mm-nato.round-1"
+        });
+        expect(rows.find((row) => row.id === "drop")?.cost).toBe(12);
     });
 
     it("offers Load/Unload on the slot owner for a gun ammo well", () => {
@@ -304,10 +315,14 @@ describe("getItemMenu", () => {
             emptySlot: false
         });
 
-        expect(rows.map((row) => row.id)).toEqual(["load", "unload"]);
+        expect(rows.map((row) => row.id)).toEqual(["load", "unload", "drop"]);
         expect(rows.find((row) => row.id === "unload")?.action).toEqual({
             type: "unload",
             itemId: m4.id
+        });
+        expect(rows.find((row) => row.id === "drop")?.action).toEqual({
+            type: "drop",
+            itemId: magInPack.id
         });
         expect(
             rows.find((row) => row.id === "load")?.children?.map((child) => child.action)
@@ -618,8 +633,11 @@ describe("resolveInventoryDrag", () => {
                 actionScope: "inUse",
                 source: { type: "inventory", item: spareMag },
                 target: { type: "ground" }
-            })?.action
-        ).toEqual({ type: "drop", itemId: spareMag.id });
+            })
+        ).toEqual({
+            action: { type: "drop", itemId: spareMag.id },
+            pendingCostText: "Drop M16x30 — 8 APts"
+        });
     });
 
     it("picks up a ground item, or picks up and uses it on the in-use zone", () => {
@@ -707,5 +725,95 @@ describe("resolveInventoryDrag", () => {
                 target: { type: "ground" }
             })
         ).toBeNull();
+    });
+});
+
+describe("resolveItemMenuTarget", () => {
+    it("resolves backpack, in-use, ground, and content-slot owners", () => {
+        const snapshot = makeSnapshot({
+            items: [m4, coffee],
+            inUseItemId: m4.id,
+            groundItems: [spareMag]
+        });
+
+        expect(resolveItemMenuTarget(snapshot, coffee.id)).toEqual({
+            item: coffee,
+            location: "inventory",
+            emptySlot: false
+        });
+        expect(resolveItemMenuTarget(snapshot, m4.id)).toEqual({
+            item: m4,
+            location: "inUse",
+            emptySlot: false
+        });
+        expect(resolveItemMenuTarget(snapshot, spareMag.id)).toEqual({
+            item: spareMag,
+            location: "ground",
+            emptySlot: false
+        });
+        expect(resolveItemMenuTarget(snapshot, magInPack.id)).toEqual({
+            item: m4,
+            location: "slot",
+            emptySlot: false
+        });
+    });
+});
+
+describe("findHotkeyAction", () => {
+    it("maps U/D/P to use, drop, and pickup for the matching menus", () => {
+        const inventoryRows = getItemMenu({
+            snapshot: makeSnapshot({ items: [coffee] }),
+            item: coffee,
+            location: "inventory",
+            actionScope: "all"
+        });
+        expect(findHotkeyAction(inventoryRows, "u")).toEqual({
+            type: "use",
+            itemId: coffee.id
+        });
+        expect(findHotkeyAction(inventoryRows, "d")).toEqual({
+            type: "drop",
+            itemId: coffee.id
+        });
+
+        const groundRows = getItemMenu({
+            snapshot: makeSnapshot({ items: [m4], inUseItemId: m4.id, groundItems: [coffee] }),
+            item: coffee,
+            location: "ground",
+            actionScope: "inUse"
+        });
+        expect(findHotkeyAction(groundRows, "p")).toEqual({
+            type: "pickup",
+            itemId: coffee.id
+        });
+        expect(findHotkeyAction(groundRows, "u")).toEqual({
+            type: "pickup",
+            itemId: coffee.id,
+            use: true
+        });
+    });
+
+    it("maps U to unload and D to drop for a filled content slot", () => {
+        const snapshot = makeSnapshot({ items: [m4, spareMag], inUseItemId: m4.id });
+        const rows = getItemMenu({
+            snapshot,
+            item: m4,
+            location: "slot",
+            actionScope: "inUse"
+        });
+
+        expect(findHotkeyAction(rows, "u")).toEqual({ type: "unload", itemId: m4.id });
+        expect(findHotkeyAction(rows, "d")).toEqual({ type: "drop", itemId: magInPack.id });
+    });
+
+    it("maps P to put away for the in-use item", () => {
+        const rows = getItemMenu({
+            snapshot: makeSnapshot({ items: [m4], inUseItemId: m4.id }),
+            item: m4,
+            location: "inUse",
+            actionScope: "inUse"
+        });
+
+        expect(findHotkeyAction(rows, "p")).toEqual({ type: "unuse" });
     });
 });
