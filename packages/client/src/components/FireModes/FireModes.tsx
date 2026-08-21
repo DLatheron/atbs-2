@@ -4,22 +4,23 @@ import {
     FireModeWeaponSummary,
     FireSelector,
     ItemId,
+    Prime,
     UnitSummary
 } from "@atbs/shared-data";
 import { Box, SxProps, Tab, Tabs, Typography } from "@mui/material";
 import { FireModeComponent } from "./FireMode.tsx/FireMode";
-import { useWorld } from "../../hooks";
 
 export interface FireModesComponentProps {
     unit: UnitSummary;
     unitWeapon: FireModeItemSummary;
     weaponIndex: number;
-    setWeaponIndex: (weaponIndex: number) => void;
     fireModeEx: FireModeEx;
-    setFireModeEx: (fireModeEx: FireModeEx) => void;
+    setFireModeEx: (fireModeEx: FireModeEx | null) => void;
     disabled: boolean;
 
+    onPrime: (prime: Prime) => void;
     onChangeFireSelector: (weaponId: ItemId, fireSelector: FireSelector) => void;
+    onChangeWeaponIndex: (weaponIndex: number) => void;
 
     sx?: SxProps;
 }
@@ -28,14 +29,14 @@ export function FireModesComponent({
     unit,
     unitWeapon,
     weaponIndex,
-    setWeaponIndex,
     fireModeEx,
     setFireModeEx,
     disabled,
+    onPrime,
     onChangeFireSelector,
+    onChangeWeaponIndex,
     sx
 }: FireModesComponentProps) {
-    const { world } = useWorld();
     const surroundProps = {
         borderRadius: 2,
         border: "1px black solid",
@@ -55,8 +56,7 @@ export function FireModesComponent({
                     <Tabs
                         value={weaponIndex}
                         onChange={(_event, newValue) => {
-                            setWeaponIndex(newValue);
-                            world.unitWeaponIndex = newValue;
+                            onChangeWeaponIndex(newValue);
                         }}
                         variant="fullWidth"
                         textColor="primary"
@@ -81,6 +81,7 @@ export function FireModesComponent({
                                         fireModeEx={fireModeEx}
                                         setFireModeEx={setFireModeEx}
                                         disabled={disabled}
+                                        onPrime={onPrime}
                                         onChangeFireSelector={onChangeFireSelector}
                                     />
                                 )
@@ -97,6 +98,7 @@ export function FireModesComponent({
                         fireModeEx={fireModeEx}
                         setFireModeEx={setFireModeEx}
                         disabled={disabled}
+                        onPrime={onPrime}
                         onChangeFireSelector={onChangeFireSelector}
                     />
                 </Box>

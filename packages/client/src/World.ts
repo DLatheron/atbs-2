@@ -17,6 +17,10 @@ import {
     TimedTileUpdate,
     Tracer,
     HitSpark,
+    TimedPlayAnimation,
+    TimedAnimatableObject,
+    TimedAnimatableObjectRemoval,
+    TimedVisibilityUpdate,
     UnitSummary,
     VisibilityViewerSummary
 } from "@atbs/shared-data";
@@ -64,6 +68,13 @@ import { HitSparkParticles } from "./HitSparkParticles.js";
 export type FireCallback = (details: FireDetails) => void;
 export type ThrowCallback = (details: ThrowDetails) => void;
 
+type DeferredTileAnimation = {
+    imageId: string;
+    canvasPos: Vec2;
+    sizeScale: number;
+    tileSize: number;
+};
+
 export interface RenderPluginUpdateProps {
     time: number;
     frameDelta: number;
@@ -94,7 +105,6 @@ export class World {
     private _mapMode: MapMode;
     private _unit: UnitSummary | null;
     private _unitWeapon: FireModeItemSummary | null;
-    private _unitWeaponIndex: number;
     private _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
     private _mouseCursor: CSSProperties["cursor"];
@@ -105,7 +115,7 @@ export class World {
 
     private _fireCallback: FireCallback;
     private _throwCallback: ThrowCallback;
-    private _fireModeEx: FireModeEx;
+    private _throwing: boolean;
     private _frameTime: number;
     private _renderPlugins: RenderPlugin[];
     private _drawSights: boolean;
@@ -133,7 +143,6 @@ export class World {
         this._map = null;
         this._unit = null;
         this._unitWeapon = null;
-        this._unitWeaponIndex = 0;
 
         this._mapMode = MapMode.enum["map-mode"];
         this._mapModeHandler = new MapModeHandler(this);
@@ -155,7 +164,7 @@ export class World {
         this._throwCallback = () => {
             throw new Error("World:throwCallback function not set");
         };
-        this._fireModeEx = FireModeEx.enum.aimed;
+        this._throwing = false;
         this._frameTime = 0;
         this._renderPlugins = [];
         this._drawSights = false;
@@ -268,18 +277,10 @@ export class World {
 
     set unitWeapon(value: FireModeItemSummary | null) {
         this._unitWeapon = value;
-
-        if (this.unitWeaponIndex > (this._unitWeapon?.weapons.length ?? 0)) {
-            this._unitWeaponIndex = 0;
-        }
     }
 
     get unitWeaponIndex(): number {
-        return this._unitWeaponIndex;
-    }
-
-    set unitWeaponIndex(value: number) {
-        this._unitWeaponIndex = value;
+        return this._unitWeapon?.weaponIndex ?? 0;
     }
 
     get camera(): Camera2d {
@@ -401,17 +402,25 @@ export class World {
         return this.weapon.fireSelector;
     }
 
-    get fireModeEx(): FireModeEx {
-        return this._fireModeEx;
+    get throwing(): boolean {
+        return this._throwing;
     }
 
-    set fireModeEx(value: FireModeEx) {
-        this._fireModeEx = value;
+    set throwing(value: boolean) {
+        this._throwing = value;
+    }
+
+    get fireModeEx(): FireModeEx {
+        if (this._throwing) {
+            return FireModeEx.enum.throw;
+        }
+
+        return this.unitWeapon.fireModeEx;
     }
 
     get fireMode(): FireMode {
         const fireModeEx = this.fireModeEx;
-        if (fireModeEx === FireModeEx.enum.throw || fireModeEx === FireModeEx.enum.none) {
+        if (fireModeEx === FireModeEx.enum.throw) {
             throw new Error("Cannot get fireMode because the fireModeEx is throw");
         }
 
@@ -470,7 +479,13 @@ export class World {
         deaths: DeathAnimation[],
         hitSparks: HitSpark[],
         onMapUpdated: () => void,
-        completeCallback: () => void
+        completeCallback: () => void,
+        animations: TimedPlayAnimation[] = [],
+        extras: {
+            animObjects?: TimedAnimatableObject[];
+            animObjectRemovals?: TimedAnimatableObjectRemoval[];
+            visibilityUpdates?: TimedVisibilityUpdate[];
+        } = {}
     ): Promise<void> {
         this._drawSights = false;
 
@@ -482,7 +497,25 @@ export class World {
         const tracerTimer = new Timer();
         const hitSparkParticles = new HitSparkParticles();
         const spawnedSparkIndices = new Set<number>();
+        const startedAnimationIndices = new Set<number>();
         let traceFinished = false;
+
+        const animObjects = extras.animObjects ?? [];
+        const animObjectRemovals = extras.animObjectRemovals ?? [];
+        const visibilityUpdates = extras.visibilityUpdates ?? [];
+        const startedAnimObjectIndices = new Set<number>();
+        const appliedAnimObjectRemovalIndices = new Set<number>();
+        const appliedVisibilityIndices = new Set<number>();
+
+        const timelineEndMs = Math.max(
+            0,
+            ...hitSparks.map((spark) => spark.timeMs),
+            ...animations.map((animation) => animation.startTimeMs),
+            ...tileUpdates.map((update) => update.timeMs),
+            ...animObjects.map((animObject) => animObject.startTimeMs),
+            ...animObjectRemovals.map((removal) => removal.startTimeMs),
+            ...visibilityUpdates.map((update) => update.timeMs)
+        );
 
         const appliedUpdateIndices = new Set<number>();
 
@@ -543,12 +576,18 @@ export class World {
         // below: preloadTraceImages already fetched the fresh bytes, so refreshing
         // again here would refetch mid-playback and reintroduce the gap.
         const finish = () => {
+            spawnDueAnimObjects(Number.POSITIVE_INFINITY);
+            spawnDueAnimations(Number.POSITIVE_INFINITY);
+            applyDueAnimObjectRemovals(Number.POSITIVE_INFINITY);
+
             for (let index = 0; index < tileUpdates.length; index++) {
                 if (!appliedUpdateIndices.has(index)) {
                     applyTimedTileUpdate(world.map, tileUpdates[index]);
                     appliedUpdateIndices.add(index);
                 }
             }
+
+            applyDueVisibilityUpdates(Number.POSITIVE_INFINITY);
 
             if (appliedUpdateIndices.size > 0) {
                 onMapUpdated();
@@ -655,9 +694,66 @@ export class World {
                         spark.pos,
                         spark.colour,
                         spark.direction,
-                        spark.count
+                        spark.count,
+                        spark.kind ?? "spark"
                     );
                     spawnedSparkIndices.add(index);
+                }
+            }
+        };
+
+        const spawnDueAnimations = (elapsedMs: number) => {
+            for (let index = 0; index < animations.length; index++) {
+                if (startedAnimationIndices.has(index)) {
+                    continue;
+                }
+
+                if (animations[index].startTimeMs <= elapsedMs) {
+                    world.animationController.newAnimation(animations[index].playAnimation);
+                    startedAnimationIndices.add(index);
+                }
+            }
+        };
+
+        const spawnDueAnimObjects = (elapsedMs: number) => {
+            for (let index = 0; index < animObjects.length; index++) {
+                if (startedAnimObjectIndices.has(index)) {
+                    continue;
+                }
+
+                if (animObjects[index].startTimeMs <= elapsedMs) {
+                    world.animationController.newAnimatableObject(animObjects[index].recipe);
+                    startedAnimObjectIndices.add(index);
+                }
+            }
+        };
+
+        const applyDueAnimObjectRemovals = (elapsedMs: number) => {
+            for (let index = 0; index < animObjectRemovals.length; index++) {
+                if (appliedAnimObjectRemovalIndices.has(index)) {
+                    continue;
+                }
+
+                if (animObjectRemovals[index].startTimeMs <= elapsedMs) {
+                    world.animationController.removeAnimatableObject(
+                        animObjectRemovals[index].instanceId
+                    );
+                    world.animationController.removeAnimation(animObjectRemovals[index].instanceId);
+                    appliedAnimObjectRemovalIndices.add(index);
+                }
+            }
+        };
+
+        const applyDueVisibilityUpdates = (elapsedMs: number) => {
+            for (let index = 0; index < visibilityUpdates.length; index++) {
+                if (appliedVisibilityIndices.has(index)) {
+                    continue;
+                }
+
+                if (visibilityUpdates[index].timeMs <= elapsedMs) {
+                    world.visibleTiles = new Set(visibilityUpdates[index].visibility.tiles);
+                    world.visibilityViewers = visibilityUpdates[index].visibility.viewers;
+                    appliedVisibilityIndices.add(index);
                 }
             }
         };
@@ -684,6 +780,9 @@ export class World {
                 const elapsedMs = Math.max(time, 0);
 
                 spawnDueHitSparks(elapsedMs);
+                spawnDueAnimObjects(elapsedMs);
+                spawnDueAnimations(elapsedMs);
+                applyDueAnimObjectRemovals(elapsedMs);
 
                 // Kick off the next death once the (unpaused) clock reaches its
                 // start time. Only one death is active at a time; the paused
@@ -697,6 +796,7 @@ export class World {
                 // the death begins; while paused `elapsedMs` no longer advances,
                 // so no later updates leak through.
                 applyDueTileUpdates(elapsedMs);
+                applyDueVisibilityUpdates(elapsedMs);
 
                 return false;
             },
@@ -723,7 +823,19 @@ export class World {
                     }
                 }
 
-                if (allComplete && !traceFinished) {
+                // Keep the clock running until every timed event has started
+                // (smoke puffs, shockwaves, tile swaps). Otherwise a finished
+                // grenade tracer would dump remaining puffs in one frame.
+                if (time < timelineEndMs) {
+                    allComplete = false;
+                }
+
+                if (
+                    allComplete &&
+                    startedAnimationIndices.size >= animations.length &&
+                    startedAnimObjectIndices.size >= animObjects.length &&
+                    !traceFinished
+                ) {
                     finish();
                     traceFinished = true;
                 }
@@ -978,7 +1090,14 @@ export class World {
             this.renderMode === RenderMode.enum.MAP_MODE ? "#ffffffff" : "#001000ff";
         offscreenContexts[0].fillRect(0, 0, width, height);
 
-        this.renderTerrainAndFurniture(offscreenContexts[0], tileSize, scale, offset);
+        const seenDeferredAnimations: DeferredTileAnimation[] = [];
+        this.renderTerrainAndFurniture(
+            offscreenContexts[0],
+            tileSize,
+            scale,
+            offset,
+            seenDeferredAnimations
+        );
 
         // TODO: Render tracers...
         const renderProps: RenderPluginRenderProps = {
@@ -998,9 +1117,14 @@ export class World {
 
         this.renderSight(renderProps.context, time);
 
+        // Tile-anchored animations after the full map (and overlays) so later
+        // tiles cannot clip them — the same layering as worldPos VFX (shockwave).
+        this._drawDeferredAnimations(offscreenContexts[0], seenDeferredAnimations);
         this._animationController.render({
             camera: this.camera,
-            context: renderProps.context
+            context: renderProps.context,
+            shouldRenderWorldPos: (worldPos) =>
+                this.visibleTiles.has(this.worldToTile(worldPos).toString())
         });
 
         //
@@ -1014,7 +1138,15 @@ export class World {
         offscreenContexts[1].fillRect(0, 0, width, height);
         offscreenContexts[1].globalCompositeOperation = "source-atop";
 
-        this.renderTerrainAndFurniture(offscreenContexts[1], tileSize, scale, offset);
+        const unseenDeferredAnimations: DeferredTileAnimation[] = [];
+        this.renderTerrainAndFurniture(
+            offscreenContexts[1],
+            tileSize,
+            scale,
+            offset,
+            unseenDeferredAnimations
+        );
+        this._drawDeferredAnimations(offscreenContexts[1], unseenDeferredAnimations);
 
         context.globalCompositeOperation = "source-over";
         context.drawImage(offscreenCanvases[1], 0, 0);
@@ -1209,7 +1341,8 @@ export class World {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         tileSize: number,
         scale: Vec2,
-        offset: Vec2
+        offset: Vec2,
+        deferredAnimations: DeferredTileAnimation[] = []
     ) {
         this.iterateViewportTiles((renderList, tilePos, worldPos) => {
             this.drawRenderList({
@@ -1219,9 +1352,25 @@ export class World {
                 tilePos,
                 tileSize,
                 scale,
-                offset
+                offset,
+                deferredAnimations
             });
         });
+    }
+
+    private _drawDeferredAnimations(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        deferredAnimations: DeferredTileAnimation[]
+    ) {
+        for (const { imageId, canvasPos, sizeScale, tileSize } of deferredAnimations) {
+            this._animationController.renderAnimation(
+                context,
+                imageId,
+                canvasPos,
+                sizeScale,
+                tileSize
+            );
+        }
     }
 
     drawRenderList({
@@ -1231,7 +1380,8 @@ export class World {
         tilePos,
         tileSize,
         scale,
-        offset
+        offset,
+        deferredAnimations
     }: {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
@@ -1240,6 +1390,7 @@ export class World {
         tileSize: number;
         scale: Vec2;
         offset: Vec2;
+        deferredAnimations?: DeferredTileAnimation[];
     }): void {
         renderList.forEach(
             ({
@@ -1249,13 +1400,28 @@ export class World {
                 visibilityFilter = false
             }) => {
                 if (imageId.startsWith("anim-")) {
+                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                        return;
+                    }
+
                     const halfTile = (tileSize * scale.x) / 2;
-                    this._animationController.renderAnimation(
-                        context,
+                    const anim = {
                         imageId,
-                        canvasPos.add({ x: halfTile, y: halfTile }),
-                        scale.x
-                    );
+                        canvasPos: canvasPos.add({ x: halfTile, y: halfTile }),
+                        sizeScale: scale.x,
+                        tileSize
+                    };
+                    if (deferredAnimations) {
+                        deferredAnimations.push(anim);
+                    } else {
+                        this._animationController.renderAnimation(
+                            context,
+                            anim.imageId,
+                            anim.canvasPos,
+                            anim.sizeScale,
+                            anim.tileSize
+                        );
+                    }
                 } else {
                     this.imageCache.requestImage(imageId);
                     if (!this.imageCache.isLoaded(imageId)) {

@@ -21,8 +21,10 @@ describe("Animation", () => {
             scale: 0,
             opacity: 0,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
-            frame: 0
+            frame: 0,
+            translation: { x: 50, y: 50 }
         });
     });
 
@@ -34,8 +36,10 @@ describe("Animation", () => {
             scale: 100,
             opacity: 1,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
-            frame: 0
+            frame: 0,
+            translation: { x: 50, y: 50 }
         });
     });
 
@@ -47,8 +51,10 @@ describe("Animation", () => {
             scale: 0,
             opacity: 0,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
-            frame: 0
+            frame: 0,
+            translation: { x: 50, y: 50 }
         });
     });
 
@@ -60,8 +66,10 @@ describe("Animation", () => {
             scale: 100,
             opacity: 1,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
-            frame: 0
+            frame: 0,
+            translation: { x: 50, y: 50 }
         });
     });
 
@@ -73,8 +81,31 @@ describe("Animation", () => {
             scale: 50,
             opacity: 0.5,
             rotation: 0,
+            orbitRadius: 0,
             orientation: 0,
-            frame: 0
+            frame: 0,
+            translation: { x: 50, y: 50 }
         });
+    });
+
+    it("should interpolate sub-tile translation from the left edge to the centre", () => {
+        const recipe: AnimationRecipe = {
+            ...Smoke,
+            stateDef: {
+                ...Smoke.stateDef,
+                translation: [
+                    { x: 0, y: 50 },
+                    [{ type: "linear", startOffset: 0, duration: 1000, toValue: { x: 50, y: 50 } }]
+                ]
+            }
+        };
+        const animation = new Animation({ instanceId: "smoke.vfx", offset: 0, recipe });
+        animation.startTime = 0;
+        animation.update(0);
+        expect(animation.state.translation).toEqual({ x: 0, y: 50 });
+        animation.update(500);
+        expect(animation.state.translation).toEqual({ x: 25, y: 50 });
+        animation.update(1000);
+        expect(animation.state.translation).toEqual({ x: 50, y: 50 });
     });
 });

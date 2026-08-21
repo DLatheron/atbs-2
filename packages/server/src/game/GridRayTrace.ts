@@ -3,6 +3,7 @@ import type { Material } from "./Material.js";
 import type { Furniture } from "./Furniture.js";
 import type { Unit } from "./Unit.js";
 import type { Tile } from "./Tile.js";
+import type { Vfx } from "./Vfx.js";
 
 const EPSILON = 1e-9;
 
@@ -18,7 +19,7 @@ export interface GridRayTraceHitResult {
     material?: Material;
     /** Set when the ray leaves a material volume (exit point). */
     exitedMaterial?: Material;
-    owner?: Furniture | Unit;
+    owner?: Furniture | Unit | Vfx;
     imageId?: string;
     layerIndex?: number;
     orientation?: Orientation;

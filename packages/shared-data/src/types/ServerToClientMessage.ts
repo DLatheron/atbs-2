@@ -20,12 +20,21 @@ import {
     WaitingFor,
     TileUpdate,
     VisibilityUpdate,
-    UnitId
+    TimedVisibilityUpdate,
+    UnitId,
+    InstanceId
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
-import { AnimatableObjectRecipe, DeathAnimation, PlayAnimation } from "./AnimationTypes.js";
+import {
+    AnimatableObjectRecipe,
+    DeathAnimation,
+    PlayAnimation,
+    TimedAnimatableObject,
+    TimedAnimatableObjectRemoval,
+    TimedPlayAnimation
+} from "./AnimationTypes.js";
 import { UnitSummary } from "./UnitSummary.js";
 
 export const ServerToClientMessage = z.discriminatedUnion("type", [
@@ -202,7 +211,11 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             isOnTarget: OnTarget,
             tileUpdates: z.array(TimedTileUpdate).optional().default([]),
             deaths: z.array(DeathAnimation).optional().default([]),
-            hitSparks: z.array(HitSpark).optional().default([])
+            hitSparks: z.array(HitSpark).optional().default([]),
+            animations: z.array(TimedPlayAnimation).optional().default([]),
+            animObjects: z.array(TimedAnimatableObject).optional().default([]),
+            animObjectRemovals: z.array(TimedAnimatableObjectRemoval).optional().default([]),
+            visibilityUpdates: z.array(TimedVisibilityUpdate).optional().default([])
         })
     }),
     z.object({
@@ -220,6 +233,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:anim:objects:create"),
         payload: z.array(AnimatableObjectRecipe)
+    }),
+    z.object({
+        type: z.literal("server:anim:objects:remove"),
+        payload: z.array(InstanceId)
     }),
     z.object({
         type: z.literal("server:opportunity:fire"),

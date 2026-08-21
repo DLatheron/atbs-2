@@ -1,5 +1,5 @@
 import { IVec2, Orientation } from "@atbs/maths";
-import { AnimationRecipe, DeathAnimation, SceneLeafNode } from "@atbs/shared-data";
+import { AnimationRecipe, DeathAnimation, PlayAnimation, SceneLeafNode } from "@atbs/shared-data";
 
 export const DEATH_DURATION_MS = 2500;
 
@@ -90,6 +90,116 @@ export function buildUnitDeathAnimation(deathRecord: UnitDeathRecord): DeathAnim
         durationMs: DEATH_DURATION_MS,
         holdMs: DEATH_HOLD_MS
     };
+}
+
+export const DISORIENTATION_POINTS_PER_STAR = 20;
+export const DISORIENTATION_ORBIT_MS = 7500;
+export const DISORIENTATION_FADE_MS = 500;
+export const DISORIENTATION_STAR_SIZE = 28;
+export const DISORIENTATION_ORBIT_RADIUS_FACTOR = 0.8;
+export const DISORIENTATION_ORBIT_IMAGE_ID = "disorientation-shadow";
+
+/**
+ * Number of orbiting 💫 glyphs for a disorientation value. Any disoriented unit
+ * shows at least one star; 18 → 1, 86 → 4, 100 → 5.
+ */
+export function disorientationStarCount(disorientation: number): number {
+    if (disorientation <= 0) {
+        return 0;
+    }
+
+    return Math.max(1, Math.round(disorientation / DISORIENTATION_POINTS_PER_STAR));
+}
+
+export function unitDisorientAnimId(unitId: string, index: number): string {
+    return `anim-disorient-${unitId}-${index}`;
+}
+
+export interface DisorientationPlayAnimationsOptions {
+    unitId: string;
+    starCount: number;
+    tileSize: number;
+    fade?: boolean;
+}
+
+export function buildDisorientationPlayAnimations({
+    unitId,
+    starCount,
+    tileSize,
+    fade = false
+}: DisorientationPlayAnimationsOptions): PlayAnimation[] {
+    if (starCount <= 0) {
+        return [];
+    }
+
+    const fadeRotationDelta = 360 * (DISORIENTATION_FADE_MS / DISORIENTATION_ORBIT_MS);
+    const orbitRadius = (tileSize / 2) * DISORIENTATION_ORBIT_RADIUS_FACTOR;
+
+    return Array.from({ length: starCount }, (_unused, index) => {
+        const startDeg = (360 / starCount) * index;
+        const instanceId = unitDisorientAnimId(unitId, index);
+
+        return {
+            instanceId,
+            offset: 0,
+            recipe: fade
+                ? {
+                      id: "disorientation-orbit-fade",
+                      stateDef: {
+                          scale: DISORIENTATION_STAR_SIZE,
+                          orbitRadius,
+                          opacity: [
+                              1,
+                              [
+                                  {
+                                      type: "linear" as const,
+                                      startOffset: 0,
+                                      duration: DISORIENTATION_FADE_MS,
+                                      toValue: 0
+                                  }
+                              ]
+                          ],
+                          rotation: [
+                              startDeg,
+                              [
+                                  {
+                                      type: "linear" as const,
+                                      startOffset: 0,
+                                      duration: DISORIENTATION_FADE_MS,
+                                      toValue: startDeg + fadeRotationDelta
+                                  }
+                              ]
+                          ],
+                          renderable: {
+                              default: [{ imageId: DISORIENTATION_ORBIT_IMAGE_ID }]
+                          }
+                      }
+                  }
+                : {
+                      id: "disorientation-orbit",
+                      flags: { loop: true },
+                      stateDef: {
+                          scale: DISORIENTATION_STAR_SIZE,
+                          orbitRadius,
+                          opacity: 1,
+                          rotation: [
+                              startDeg,
+                              [
+                                  {
+                                      type: "linear" as const,
+                                      startOffset: 0,
+                                      duration: DISORIENTATION_ORBIT_MS,
+                                      toValue: startDeg + 360
+                                  }
+                              ]
+                          ],
+                          renderable: {
+                              default: [{ imageId: DISORIENTATION_ORBIT_IMAGE_ID }]
+                          }
+                      }
+                  }
+        };
+    });
 }
 
 // TODO: Move this into a VfxDefinitions file...

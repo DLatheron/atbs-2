@@ -10,6 +10,7 @@ import {
     PathSegment
 } from "@atbs/maths";
 import { RenderMode } from "./RenderMode.js";
+import { VfxId } from "./VfxTypes.js";
 
 export const MILLISECONDS_IN_A_MINUTE = 60000;
 
@@ -334,14 +335,11 @@ const damageType = ["default", "disorientation"] as const;
 export const DamageType = z.enum(damageType);
 export type DamageType = z.infer<typeof DamageType>;
 
-export const DamageMap = z
-    .partialRecord(UnitType.or(z.literal("default")), z.number().nonnegative())
-    .and(
-        z.object({
-            type: DamageType.default(DamageType.enum.default),
-            default: z.number().nonnegative()
-        })
-    );
+export const DamageMap = z.object({
+    type: DamageType.default(DamageType.enum.default),
+    default: z.number().nonnegative(),
+    human: z.number().nonnegative().optional()
+});
 export type DamageMap = z.infer<typeof DamageMap>;
 
 const itemType = ["item", "gun", "magazine", "round", "grenade"] as const;
@@ -368,13 +366,14 @@ const fireMode = ["aimed", "snapshot"] as const;
 export const FireMode = z.enum(fireMode);
 export type FireMode = z.infer<typeof FireMode>;
 
-const fireModeEx = ["none", ...fireMode, "throw"] as const;
+const fireModeEx = [...fireMode, "throw"] as const;
 export const FireModeEx = z.enum(fireModeEx);
 export type FireModeEx = z.infer<typeof FireModeEx>;
 
 export const FireModeDetail = z.object({
     accuracy: z.number().min(0).max(100),
-    actionPoints: z.int().positive()
+    actionPoints: z.int().positive(),
+    available: z.boolean().optional().default(true)
 });
 export type FireModeDetail = z.infer<typeof FireModeDetail>;
 
@@ -464,6 +463,23 @@ export function getRpm(fireModes: FireModes, fireSelector: FireSelector): number
     }
 
     throw new Error(`${fireSelector} not supported by ${fireModes}`);
+}
+
+export function getFireModeDetails(
+    fireModes: FireModes,
+    fireSelector: FireSelector
+): FireModeDetails | FireModeExtendedDetails {
+    if (fireSelector === FireSelector.enum.single && fireSelector in fireModes) {
+        return fireModes[FireSelector.enum.single].fireModeDetails;
+    } else if (fireSelector === FireSelector.enum.burst && fireSelector in fireModes) {
+        return fireModes[FireSelector.enum.burst].fireModeDetails;
+    } else if (fireSelector === FireSelector.enum.auto && fireSelector in fireModes) {
+        return fireModes[FireSelector.enum.auto].fireModeDetails;
+    }
+
+    throw new Error(
+        `Failed to get fire mode details for ${fireSelector} from ${JSON.stringify(fireModes)}`
+    );
 }
 
 export function getAccuracy(
@@ -630,32 +646,80 @@ export const Actions = z.union([
 ]);
 export type Actions = z.infer<typeof Actions>;
 
+export const FragmentExplosionVisual = z.object({
+    intensity: JitteredValue,
+    velocity: JitteredValue,
+    length: JitteredValue.describe("Trail length in pixels"),
+    rangeFallOff: JitteredValue
+});
+export type FragmentExplosionVisual = z.infer<typeof FragmentExplosionVisual>;
+
 export const FragmentExplosion = z.object({
     type: z.literal(ExplosionType.enum.fragment),
     maxRange: JitteredValue,
     numFragments: JitteredValue,
+    penetration: z.number().nonnegative().default(0),
+    visual: FragmentExplosionVisual,
+    /** Per-fragment aim jitter in degrees (same convention as gun spreadAngle). */
+    angleJitter: z.number().nonnegative().default(5),
+    variability: z
+        .object({
+            min: z.number().positive().max(2).default(1),
+            max: z.number().positive().max(2).default(1)
+        })
+        .refine((data) => data.min <= data.max, {
+            message: "Variability 'max' must be greater than or equal to 'min'"
+        })
+        .optional(),
     damage: DamageMap
-    // TODO: Other properties...
 });
 export type FragmentExplosion = z.infer<typeof FragmentExplosion>;
 
+const CloudExplosionFields = {
+    particles: z.array(JitteredValue).min(1),
+    /** Turns each puff remains after it appears. */
+    lifetime: JitteredValue.default({ min: 2, max: 4 }),
+    vfxId: VfxId.optional(),
+    materials: z.array(MaterialId).optional(),
+    /** Hit-point damage for a full turn of exposure (scaled by AP spent / max AP). */
+    damage: DamageMap.optional(),
+    /** Disorientation for a full turn of exposure (scaled the same way as damage). */
+    disorientation: z.number().nonnegative().optional()
+};
+
 export const SmokeExplosion = z.object({
-    type: z.literal(ExplosionType.enum.gas),
-    particles: z.array(JitteredValue)
-    // TODO: Other properties.
+    type: z.literal(ExplosionType.enum.smoke),
+    ...CloudExplosionFields
 });
 export type SmokeExplosion = z.infer<typeof SmokeExplosion>;
 
 export const GasExplosion = z.object({
-    type: z.literal(ExplosionType.enum.smoke),
-    particles: z.array(JitteredValue)
-    // TODO: Other properties.
+    type: z.literal(ExplosionType.enum.gas),
+    ...CloudExplosionFields
 });
 export type GasExplosion = z.infer<typeof GasExplosion>;
 
+export type CloudExplosion = SmokeExplosion | GasExplosion;
+
 export const ShockwaveExplosion = z.object({
-    type: z.literal(ExplosionType.enum.shockwave)
-    // TODO: Other properties.
+    type: z.literal(ExplosionType.enum.shockwave),
+    maxRange: JitteredValue,
+    numFragments: JitteredValue,
+    penetration: z.number().nonnegative().default(0),
+    visual: FragmentExplosionVisual,
+    /** Per-ray aim jitter in degrees (same convention as gun spreadAngle). */
+    angleJitter: z.number().nonnegative().default(5),
+    variability: z
+        .object({
+            min: z.number().positive().max(2).default(1),
+            max: z.number().positive().max(2).default(1)
+        })
+        .refine((data) => data.min <= data.max, {
+            message: "Variability 'max' must be greater than or equal to 'min'"
+        })
+        .optional(),
+    damage: DamageMap,
+    animationId: z.string().nonempty().default("shockwave.animation")
 });
 export type ShockwaveExplosion = z.infer<typeof ShockwaveExplosion>;
 
@@ -667,6 +731,13 @@ export const Explosion = z.discriminatedUnion("type", [
 ]);
 export type Explosion = z.infer<typeof Explosion>;
 
+export function isCloudExplosion(explosion: Explosion): explosion is CloudExplosion {
+    return explosion.type === ExplosionType.enum.smoke || explosion.type === ExplosionType.enum.gas;
+}
+
+export const Prime = z.literal("safe").or(z.literal("immediate").or(z.number().nonnegative()));
+export type Prime = z.infer<typeof Prime>;
+
 export const ItemSummary = z.object({
     id: ItemId,
     name: z.string(),
@@ -674,6 +745,7 @@ export const ItemSummary = z.object({
     description: Description,
     quantity: Quantity,
     weight: Weight,
+    primed: Prime.optional(),
     maxThrowRange: z.number().nonnegative(),
     uiImage: RenderList
 });
@@ -697,6 +769,12 @@ export const VisibilityUpdate = z.object({
 });
 export type VisibilityUpdate = z.infer<typeof VisibilityUpdate>;
 
+export const TimedVisibilityUpdate = z.object({
+    timeMs: z.number().nonnegative(),
+    visibility: VisibilityUpdate
+});
+export type TimedVisibilityUpdate = z.infer<typeof TimedVisibilityUpdate>;
+
 export const FireModeWeaponSummary = z.object({
     id: ItemId,
     name: z.string(),
@@ -714,7 +792,9 @@ export const FireModeWeaponSummary = z.object({
 export type FireModeWeaponSummary = z.infer<typeof FireModeWeaponSummary>;
 
 export const FireModeItemSummary = ItemSummary.extend({
-    weapons: z.array(FireModeWeaponSummary)
+    weapons: z.array(FireModeWeaponSummary),
+    fireModeEx: FireModeEx,
+    weaponIndex: z.int().nonnegative()
 });
 export type FireModeItemSummary = z.infer<typeof FireModeItemSummary>;
 
@@ -817,12 +897,16 @@ export const Tracer = z.object({
 });
 export type Tracer = z.infer<typeof Tracer>;
 
+export const HitSparkKind = z.enum(["spark", "disorientation"]);
+export type HitSparkKind = z.infer<typeof HitSparkKind>;
+
 export const HitSpark = z.object({
     pos: IVec2,
     timeMs: z.number().nonnegative(),
     colour: IColour,
     direction: IVec2,
-    count: z.number().int().positive()
+    count: z.number().int().positive(),
+    kind: HitSparkKind.default("spark")
 });
 export type HitSpark = z.infer<typeof HitSpark>;
 

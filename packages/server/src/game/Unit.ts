@@ -14,6 +14,7 @@ import {
     getRpm,
     InterestMask,
     OnTarget,
+    PlayAnimation,
     RenderList,
     RenderMode,
     SceneChildNode,
@@ -32,7 +33,10 @@ import {
     UnitType,
     VisualType,
     UnitActionGrid,
-    UnitActionType
+    UnitActionType,
+    Prime,
+    TimedAnimatableObject,
+    TimedAnimatableObjectRemoval
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -59,11 +63,22 @@ import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
 import { FurnitureDamageSystem } from "./FurnitureDamageSystem.js";
-import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
+import {
+    buildDisorientationPlayAnimations,
+    buildUnitDeathAnimation,
+    DISORIENTATION_FADE_MS,
+    disorientationStarCount,
+    unitDisorientAnimId
+} from "../AnimationDefinitions.js";
+import {
+    collectDeferredDisorientationVisuals,
+    consumeExplodedItem,
+    detonateExplosion,
+    type ExplosionDetonationResult
+} from "./ExplosionSystem.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger, unsafeEntries } from "@atbs/misc";
-import { IMPENETRABLE } from "./Obstruction.js";
 import { Material } from "./Material.js";
 import { MaterialManager } from "./MaterialManager.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
@@ -111,6 +126,9 @@ const INVENTORY_COSTS: InventoryCosts = {
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
+
+const PRIME_APT_COST = 4;
+const MAKE_SAFE_APT_COST = 8;
 
 const DEFAULT_MOVEMENT_APT_COST_MAP: Record<Orientation, number> = {
     [Orientation.NORTH]: STRAIGHT_MOVEMENT_APT_COST,
@@ -207,8 +225,16 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     private _location: TilePos | null;
     private _orientation: Orientation;
+    private _fireMode: FireMode;
+
+    private static _disorientationVisualDeferDepth = 0;
 
     private _disorientation: number;
+    private _disorientationFadeStarCount: number | null;
+    private _disorientationFadeTimer: ReturnType<typeof setTimeout> | null;
+    private _syncedDisorientationStarCount: number;
+    private _deferredDisorientationHitTimeMs: number | undefined;
+    private _cloudHpRemainder: number;
 
     private _canSee: Unit[];
     private _overtaking: Overtaking | null;
@@ -242,6 +268,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
             : (overrides.orientation ?? Orientation.CENTER);
         this._side = additionalData.side;
         this._disorientation = 0;
+        this._disorientationFadeStarCount = null;
+        this._disorientationFadeTimer = null;
+        this._syncedDisorientationStarCount = 0;
+        this._deferredDisorientationHitTimeMs = undefined;
+        this._cloudHpRemainder = 0;
         this._materials = recipe.collision.materials.map((materialId) =>
             MaterialManager.GetSingleton().getMaterial(materialId)
         );
@@ -250,6 +281,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this._canSee = [];
         this._overtaking = null;
         this._unitActionGrid = {};
+        this._fireMode = FireMode.enum.aimed;
     }
 
     get game(): Game {
@@ -306,6 +338,29 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     get itemInUse(): Item | null {
         return this.inventory.itemInUse;
+    }
+
+    get fireMode(): FireMode {
+        return this._fireMode;
+    }
+
+    set fireMode(value: FireMode) {
+        this._fireMode = value;
+    }
+
+    setWeaponIndex(weaponIndex: number): void {
+        const item = this.itemInUse;
+        if (!item) {
+            throw new Error(`Unit ${this.id} is not using an item`);
+        }
+
+        const weaponCount = item.type === ItemType.enum.gun ? 1 : item.getWeapons().length;
+        const maxIndex = Math.max(weaponCount - 1, 0);
+        if (weaponIndex > maxIndex) {
+            throw new Error(`Weapon index ${weaponIndex} is out of range for item ${item.id}`);
+        }
+
+        this.inventory.weaponIndex = weaponIndex;
     }
 
     get location(): TilePos | null {
@@ -375,8 +430,71 @@ export class Unit extends SceneObject implements VisibilityViewer {
     set disorientation(value: number) {
         value = clamp(value, 0, MAX_DISORIENTATION);
 
-        console.info("Setting disorientation to", value);
+        if (value === this._disorientation) {
+            return;
+        }
+
+        this.logger.debug("Setting disorientation to", value);
         this._disorientation = value;
+        if (!Unit.disorientationVisualsDeferred) {
+            this._syncDisorientationVisual();
+        }
+    }
+
+    static beginDeferredDisorientationVisuals(): void {
+        Unit._disorientationVisualDeferDepth++;
+    }
+
+    static endDeferredDisorientationVisuals(): void {
+        Unit._disorientationVisualDeferDepth = Math.max(
+            0,
+            Unit._disorientationVisualDeferDepth - 1
+        );
+    }
+
+    static get disorientationVisualsDeferred(): boolean {
+        return Unit._disorientationVisualDeferDepth > 0;
+    }
+
+    noteDeferredDisorientationHit(timeMs: number): void {
+        if (
+            this._deferredDisorientationHitTimeMs === undefined ||
+            timeMs < this._deferredDisorientationHitTimeMs
+        ) {
+            this._deferredDisorientationHitTimeMs = timeMs;
+        }
+    }
+
+    takeDeferredDisorientationVisual(): {
+        timeMs: number;
+        playAnimations: PlayAnimation[];
+    } | null {
+        const timeMs = this._deferredDisorientationHitTimeMs;
+        this._deferredDisorientationHitTimeMs = undefined;
+        if (timeMs === undefined) {
+            return null;
+        }
+
+        const newCount = disorientationStarCount(this.disorientation);
+        if (newCount === this._syncedDisorientationStarCount) {
+            return null;
+        }
+
+        this._clearDisorientationFade();
+        this._syncedDisorientationStarCount = newCount;
+        if (newCount <= 0) {
+            return null;
+        }
+
+        return {
+            timeMs,
+            playAnimations: buildDisorientationPlayAnimations({
+                unitId: this.id,
+                starCount: newCount,
+                tileSize: this._game?.map?.tileSize ?? 100,
+                fade: false
+            })
+        };
     }
 
     get isAlive(): boolean {
@@ -576,7 +694,100 @@ export class Unit extends SceneObject implements VisibilityViewer {
             visibilityFilter: true
         };
 
-        return super.getRenderList(unitContext);
+        const renderList = super.getRenderList(unitContext);
+
+        if (context.renderMode === RenderMode.enum.UI_MODE) {
+            return renderList;
+        }
+
+        const starCount = this._visualDisorientationStarCount;
+        for (let index = 0; index < starCount; index++) {
+            renderList.push({ imageId: unitDisorientAnimId(this.id, index) });
+        }
+
+        return renderList;
+    }
+
+    private get _visualDisorientationStarCount(): number {
+        return this._disorientationFadeStarCount ?? disorientationStarCount(this._disorientation);
+    }
+
+    private _clearDisorientationFade(): void {
+        if (this._disorientationFadeTimer) {
+            clearTimeout(this._disorientationFadeTimer);
+            this._disorientationFadeTimer = null;
+        }
+        this._disorientationFadeStarCount = null;
+    }
+
+    private _syncDisorientationVisual(): void {
+        const newCount = disorientationStarCount(this._disorientation);
+        const previousVisual =
+            this._disorientationFadeStarCount ?? this._syncedDisorientationStarCount;
+
+        if (newCount > 0) {
+            this._clearDisorientationFade();
+            if (newCount === this._syncedDisorientationStarCount) {
+                return;
+            }
+
+            this._syncedDisorientationStarCount = newCount;
+            this._broadcastDisorientationAnimations(false);
+            this._broadcastDisorientationTileUpdate();
+            return;
+        }
+
+        if (previousVisual === 0) {
+            return;
+        }
+
+        if (this._disorientationFadeStarCount !== null) {
+            return;
+        }
+
+        this._disorientationFadeStarCount = previousVisual;
+        this._syncedDisorientationStarCount = 0;
+        this._broadcastDisorientationAnimations(true);
+
+        this._disorientationFadeTimer = setTimeout(() => {
+            this._disorientationFadeStarCount = null;
+            this._disorientationFadeTimer = null;
+            this._broadcastDisorientationTileUpdate();
+        }, DISORIENTATION_FADE_MS);
+        this._disorientationFadeTimer.unref?.();
+    }
+
+    private _broadcastDisorientationAnimations(fade: boolean): void {
+        const starCount = fade
+            ? this._disorientationFadeStarCount
+            : disorientationStarCount(this._disorientation);
+        if (!starCount) {
+            return;
+        }
+
+        const tileSize = this.game.map.tileSize;
+        const payload = buildDisorientationPlayAnimations({
+            unitId: this.id,
+            starCount,
+            tileSize,
+            fade
+        });
+
+        this.game.broadcastMessage({ type: "server:animations:play", payload });
+    }
+
+    private _broadcastDisorientationTileUpdate(): void {
+        if (!this._location) {
+            return;
+        }
+
+        this.messageRouter.sendIfVisible(
+            {
+                type: "server:map:update",
+                payload: [this.map.getTile(this.mapLocation).generateTileUpdate()]
+            },
+            this.mapLocation
+        );
     }
 
     private _hasSufficientActionPoints(aptCost: number): boolean {
@@ -610,16 +821,93 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     payload: {
                         attributes: {
                             actionPoints: { value: this._attributes.actionPoints.value }
-                        }
+                        },
+                        actions: this.getActions()
                     }
                 },
                 this.side.id
             );
+
+            if (this.itemInUse) {
+                this.messageRouter.send(
+                    {
+                        type: "server:unit:weapon:update",
+                        payload: this.itemInUse.getFireModeItemSummary(this)
+                    },
+                    this.side.id
+                );
+            }
         }
 
-        // return this._inflictOngoingDamage(game, aptCost, eventList);
+        return this._applyCloudExposure(aptCost);
+    }
+
+    /**
+     * Respirators are not implemented yet. When they exist, a unit wearing one
+     * should ignore gas damage and disorientation.
+     */
+    private _ignoresGas(): boolean {
+        return false;
+    }
+
+    /**
+     * Apply gas HP / disorientation scaled so recipe `damage` is a full-turn dose
+     * (`damage * aptCost / maxAP`).
+     */
+    private _applyCloudExposure(aptCost: number): boolean {
+        if (this._ignoresGas() || !this.isAlive || aptCost <= 0) {
+            return true;
+        }
+
+        const tile = this.map.getTile(this.mapLocation);
+        const hpPerFullTurn = tile.getVfxHpDamage(this.type);
+        const disorientationPerFullTurn = tile.getVfxDisorientation(this.type);
+        if (hpPerFullTurn <= 0 && disorientationPerFullTurn <= 0) {
+            return true;
+        }
+
+        const scale = aptCost / this.maxActionPoints;
+        const hpRaw = hpPerFullTurn * scale + this._cloudHpRemainder;
+        const hpApplied = Math.floor(hpRaw);
+        this._cloudHpRemainder = hpRaw - hpApplied;
+
+        if (hpApplied > 0) {
+            this.constitution -= hpApplied;
+        }
+        if (disorientationPerFullTurn > 0) {
+            this.disorientation += disorientationPerFullTurn * scale;
+        }
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:selected:update",
+                payload: {
+                    disorientation: this.disorientation,
+                    attributes: {
+                        constitution: this._attributes.constitution
+                    }
+                }
+            },
+            this.side.id
+        );
+
+        if (this.isDead) {
+            this._refreshVisibility();
+            this._broadcastVisibleTiles();
+            this.messageRouter.send({
+                type: "server:map:update",
+                payload: [this.map.getTile(this.mapLocation).generateTileUpdate()]
+            });
+            return false;
+        }
 
         return true;
+    }
+
+    endTurn() {
+        if (this.isAlive && this.actionPoints > 0) {
+            this._applyCloudExposure(this.actionPoints);
+        }
     }
 
     private _verifyDirectional(): void | never {
@@ -858,8 +1146,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return;
         }
 
-        const movementObstruction = dstTile.getMovementObstruction(this.type);
-        if (movementObstruction === IMPENETRABLE || movementObstruction > 10) {
+        if (dstTile.blocksMovement(this.type)) {
             this.messageRouter.send(
                 { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MOVE_THERE },
                 this.side.id
@@ -1136,6 +1423,63 @@ export class Unit extends SceneObject implements VisibilityViewer {
             const onTarget = centerProjectile.passesNear(toWorldPos, 1);
             this.logger.dir({ onTarget });
 
+            const pendingExplosions = projectiles.flatMap((projectile) => {
+                const { explosion } = projectile.projectileRecipe;
+                const { impact } = projectile;
+                if (!explosion || !impact) {
+                    return [];
+                }
+                return [{ explosion, origin: impact.pos.clone(), timeOffsetMs: impact.time }];
+            });
+
+            const tracers = projectiles.map((projectile) => projectile.getTracer());
+            const flightDisorientation = collectDeferredDisorientationVisuals(this.game);
+            let combinedTileUpdates = [...tileUpdates, ...flightDisorientation.tileUpdates].sort(
+                (a, b) => a.timeMs - b.timeMs
+            );
+            let combinedDeaths = deaths;
+            let combinedHitSparks = hitSparks;
+            let combinedAnimations = [...flightDisorientation.animations];
+            let combinedAnimObjects: TimedAnimatableObject[] = [];
+            let combinedAnimObjectRemovals: TimedAnimatableObjectRemoval[] = [];
+            let combinedVisibilityBySide: ExplosionDetonationResult["visibilityUpdatesBySide"];
+
+            for (const pending of pendingExplosions) {
+                const explosionResult = detonateExplosion({
+                    game: this.game,
+                    origin: pending.origin,
+                    explosion: pending.explosion,
+                    firingUnit: this,
+                    firingWeapon: weapon,
+                    timeOffsetMs: pending.timeOffsetMs,
+                    debugGraphics: showDebugGraphics ? debugGraphics : undefined
+                });
+                tracers.push(...explosionResult.tracers);
+                combinedTileUpdates = [...combinedTileUpdates, ...explosionResult.tileUpdates].sort(
+                    (a, b) => a.timeMs - b.timeMs
+                );
+                combinedDeaths = [...combinedDeaths, ...explosionResult.deaths];
+                combinedHitSparks = [...combinedHitSparks, ...explosionResult.hitSparks];
+                combinedAnimations = [...combinedAnimations, ...explosionResult.animations];
+                combinedAnimObjects = [
+                    ...combinedAnimObjects,
+                    ...(explosionResult.animObjects ?? [])
+                ];
+                combinedAnimObjectRemovals = [
+                    ...combinedAnimObjectRemovals,
+                    ...(explosionResult.animObjectRemovals ?? [])
+                ];
+                if (explosionResult.visibilityUpdatesBySide) {
+                    combinedVisibilityBySide = combinedVisibilityBySide ?? new Map();
+                    for (const [sideId, updates] of explosionResult.visibilityUpdatesBySide) {
+                        combinedVisibilityBySide.set(sideId, [
+                            ...(combinedVisibilityBySide.get(sideId) ?? []),
+                            ...updates
+                        ]);
+                    }
+                }
+            }
+
             if (showDebugGraphics && debugGraphics) {
                 this.messageRouter.send({
                     type: "server:debug:graphics",
@@ -1143,26 +1487,46 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 });
             }
 
-            // TODO: Move the projectiles forward in time...
-            // TODO: Psuedo tracers - how do we determine visibility?
-            this.messageRouter.send([
-                {
+            const isOnTarget = onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget;
+            const basePayload = {
+                tracers,
+                isOnTarget,
+                tileUpdates: combinedTileUpdates,
+                deaths: combinedDeaths,
+                hitSparks: combinedHitSparks,
+                animations: combinedAnimations,
+                animObjects: combinedAnimObjects,
+                animObjectRemovals: combinedAnimObjectRemovals
+            };
+
+            if (combinedVisibilityBySide && combinedVisibilityBySide.size > 0) {
+                for (const side of this.game.sides) {
+                    this.messageRouter.send(
+                        {
+                            type: "server:fire:trace",
+                            payload: {
+                                ...basePayload,
+                                visibilityUpdates: combinedVisibilityBySide.get(side.id) ?? []
+                            }
+                        },
+                        side.id
+                    );
+                }
+            } else {
+                this.messageRouter.send({
                     type: "server:fire:trace",
                     payload: {
-                        tracers: projectiles.map((projectile) => projectile.getTracer()),
-                        isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                        tileUpdates,
-                        deaths,
-                        hitSparks
+                        ...basePayload,
+                        visibilityUpdates: []
                     }
-                }
-            ]);
+                });
+            }
 
             // A death can remove a viewer/blocker and open up sightlines, so
             // recompute visibility and push each side its updated visible tiles.
             // Queued after the trace, this applies once playback of the death has
             // finished on the observing client.
-            if (deaths.length > 0) {
+            if (combinedDeaths.length > 0 || (combinedVisibilityBySide?.size ?? 0) > 0) {
                 this._refreshVisibility();
                 this._broadcastVisibleTiles();
             }
@@ -1303,7 +1667,6 @@ export class Unit extends SceneObject implements VisibilityViewer {
             roundDamageCache,
             furnitureDamageSystem,
             (projectile, tile, samplePos, sample, timeMs) => {
-                // TODO: Work out what to do with the item when it hits a surface.
                 furnitureDamageSystem.onMaterialPixel(projectile, tile, samplePos, sample, timeMs);
             }
         );
@@ -1328,49 +1691,126 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
 
+        const flightDisorientation = collectDeferredDisorientationVisuals(this.game);
+        tileUpdates.push(...flightDisorientation.tileUpdates);
+
         const { pos: finalWorldPos, time: finalTime } = projectile.finalPostionAndTime;
 
-        // Work out which tile the item landed in.
-        const landingTilePos = map.worldToTile(finalWorldPos);
-        console.info({ landingTile: landingTilePos });
+        // ProcessProjectiles commits each hit into `segments` before stop/ricochet.
+        // Thrown items with bounce=1 ricochet and often continue full maxRange — frequently
+        // back off the map — so finalWorldPos is a bad landing focus after a wall spark.
+        // When the last committed hit sits on a movement-blocking tile, drop in front of
+        // that surface using the inbound leg (previous segment → hit).
+        const segments = projectile.segments;
+        const lastSegPos = new Vec2(segments.at(-1)!.pos);
+        const lastHitTile = map.sampleTile(map.worldToTile(lastSegPos));
+        const dropInFrontOfHit = segments.length >= 2 && !!lastHitTile?.blocksMovement(this.type);
 
-        const landingTile = map.getTile(landingTilePos);
+        const landingFocusWorldPos = dropInFrontOfHit ? lastSegPos : finalWorldPos;
+        const approachFromWorldPos = dropInFrontOfHit
+            ? new Vec2(segments.at(-2)!.pos)
+            : segments.length >= 2 && lastSegPos.isEqual(finalWorldPos)
+              ? new Vec2(segments.at(-2)!.pos)
+              : lastSegPos;
+        const landingTime = dropInFrontOfHit ? segments.at(-1)!.time : finalTime;
 
-        itemToThrow.location = landingTilePos;
-        landingTile.addItem(itemToThrow);
+        const landingTile = map.resolveNonObstructedLandingTile(
+            landingFocusWorldPos,
+            approachFromWorldPos,
+            this.type,
+            this.mapLocation
+        );
+        const landingTilePos = landingTile.location;
+
         this.inventory.removeItem(itemToThrow);
 
-        // Update the unit's tile, because they are no longer holding the item.
-        tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(finalTime));
+        const explodeOnLanding = itemToThrow.primed === "immediate" && itemToThrow.willExplode;
 
-        // Update the landing tile, because the item is now on the ground.
-        tileUpdates.push(landingTile.generateTimedTileUpdate(finalTime));
+        let explosionResult: ExplosionDetonationResult | null = null;
+
+        if (explodeOnLanding) {
+            const explosion = itemToThrow.getExplosion;
+
+            const { tileUpdates: consumeUpdates } = consumeExplodedItem(
+                this.game,
+                itemToThrow,
+                this,
+                landingTime
+            );
+            tileUpdates.push(...consumeUpdates);
+
+            // Update the unit's tile, because they are no longer holding the item.
+            tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
+
+            explosionResult = detonateExplosion({
+                game: this.game,
+                origin: map.tileCenterToWorld(landingTilePos),
+                explosion,
+                firingUnit: this,
+                firingWeapon: itemToThrow,
+                timeOffsetMs: landingTime,
+                debugGraphics: showDebugGraphics ? debugGraphics : undefined
+            });
+            tileUpdates.push(...explosionResult.tileUpdates);
+            deaths.push(...explosionResult.deaths);
+            hitSparks.push(...explosionResult.hitSparks);
+        } else {
+            itemToThrow.location = landingTilePos;
+            landingTile.addItem(itemToThrow);
+
+            // Update the unit's tile, because they are no longer holding the item.
+            tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
+
+            // Update the landing tile, because the item is now on the ground.
+            tileUpdates.push(landingTile.generateTimedTileUpdate(landingTime));
+        }
+
+        tileUpdates.sort((a, b) => a.timeMs - b.timeMs);
 
         this.updateAvailableActions();
 
-        // TODO: Move the projectiles forward in time...
-        // TODO: Psuedo tracers - how do we determine visibility?
-        this.messageRouter.send([
-            {
+        const tracers = [projectile.getTracer(), ...(explosionResult?.tracers ?? [])];
+        const isOnTarget = onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget;
+        const basePayload = {
+            tracers,
+            isOnTarget,
+            tileUpdates,
+            deaths,
+            hitSparks,
+            animations: [
+                ...flightDisorientation.animations,
+                ...(explosionResult?.animations ?? [])
+            ],
+            animObjects: explosionResult?.animObjects ?? [],
+            animObjectRemovals: explosionResult?.animObjectRemovals ?? []
+        };
+        const visibilityBySide = explosionResult?.visibilityUpdatesBySide;
+
+        if (visibilityBySide && visibilityBySide.size > 0) {
+            for (const side of this.game.sides) {
+                this.messageRouter.send(
+                    {
+                        type: "server:fire:trace",
+                        payload: {
+                            ...basePayload,
+                            visibilityUpdates: visibilityBySide.get(side.id) ?? []
+                        }
+                    },
+                    side.id
+                );
+            }
+        } else {
+            this.messageRouter.send({
                 type: "server:fire:trace",
                 payload: {
-                    tracers: [projectile.getTracer()],
-                    isOnTarget: onTarget ? OnTarget.enum.onTarget : OnTarget.enum.offTarget,
-                    tileUpdates,
-                    deaths,
-                    hitSparks
+                    ...basePayload,
+                    visibilityUpdates: []
                 }
-            }
-        ]);
-
-        // A death can remove a viewer/blocker and open up sightlines, so
-        // recompute visibility and push each side its updated visible tiles.
-        // Queued after the trace, this applies once playback of the death has
-        // finished on the observing client.
-        if (deaths.length > 0) {
-            this._refreshVisibility();
-            this._broadcastVisibleTiles();
+            });
         }
+
+        this._refreshVisibility();
+        this._broadcastVisibleTiles();
 
         this.messageRouter.send(
             {
@@ -1771,6 +2211,70 @@ export class Unit extends SceneObject implements VisibilityViewer {
         );
 
         this._broadcastVisibleTiles();
+    }
+
+    makeSafe(): void {
+        const { itemInUse: itemToMakeSafe } = this;
+        if (!itemToMakeSafe) {
+            throw new Error("No item in use - but one was expected");
+        }
+
+        if (!itemToMakeSafe.isPrimable) {
+            throw new Error(`Item ${itemToMakeSafe.id} is not primable`);
+        }
+
+        if (!this._hasSufficientActionPoints(MAKE_SAFE_APT_COST)) {
+            return;
+        }
+
+        if (!this._useActionPoints(MAKE_SAFE_APT_COST)) {
+            return;
+        }
+
+        itemToMakeSafe.primed = "safe";
+        this.game.primeManager.unregisterPrimedItem(itemToMakeSafe);
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:weapon:update",
+                payload: itemToMakeSafe.getFireModeItemSummary(this)
+            },
+            this.side.id
+        );
+    }
+
+    prime(prime: Prime): void {
+        if (prime === "safe") {
+            throw new Error("Cannot prime an item to safe");
+        }
+
+        const { itemInUse: itemToPrime } = this;
+        if (!itemToPrime) {
+            throw new Error("No item in use - but one was expected");
+        }
+
+        if (!itemToPrime.isPrimable) {
+            throw new Error(`Item ${itemToPrime.id} is not primable`);
+        }
+
+        if (!this._hasSufficientActionPoints(PRIME_APT_COST)) {
+            return;
+        }
+
+        if (!this._useActionPoints(PRIME_APT_COST)) {
+            return;
+        }
+
+        itemToPrime.primed = prime;
+        this.game.primeManager.registerPrimedItem(itemToPrime, this);
+
+        this.messageRouter.send(
+            {
+                type: "server:unit:weapon:update",
+                payload: itemToPrime.getFireModeItemSummary(this)
+            },
+            this.side.id
+        );
     }
 
     get disorientationScaler() {

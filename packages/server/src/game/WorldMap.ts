@@ -14,7 +14,7 @@ import {
 } from "@atbs/maths";
 import { PartialRecord } from "@atbs/misc";
 import { Unit } from "./Unit.js";
-import { GridRayTraceResult, traceGridRay } from "./GridRayTrace.js";
+import { GridRayTraceResult, traceGridRay, walkGridCells } from "./GridRayTrace.js";
 import { Material } from "./Material.js";
 import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
@@ -185,6 +185,42 @@ export class WorldMap {
             return undefined;
         }
         return this._tiles[tilePos.row][tilePos.col];
+    }
+
+    /**
+     * Resolve a landing tile for a thrown item. If the impact tile blocks movement,
+     * walk back along the final approach segment and return the last clear tile,
+     * falling back to `fallbackTilePos` when none is found.
+     */
+    resolveNonObstructedLandingTile(
+        finalWorldPos: Vec2,
+        approachFromWorldPos: Vec2,
+        unitType: string,
+        fallbackTilePos: TilePos
+    ): Tile {
+        const candidatePos = this.worldToTile(finalWorldPos);
+        const candidate = this.sampleTile(candidatePos);
+        if (candidate && !candidate.blocksMovement(unitType)) {
+            return candidate;
+        }
+
+        let lastClear: Tile | undefined;
+        for (const cellWalk of walkGridCells(approachFromWorldPos, finalWorldPos, {
+            aabb: this.worldBounds,
+            gridScale: this.tileSize
+        })) {
+            if ("outOfBounds" in cellWalk) {
+                break;
+            }
+
+            const tilePos = this.worldToTile(this.worldBounds.topLeft.add(cellWalk.cellOrigin));
+            const tile = this.sampleTile(tilePos);
+            if (tile && !tile.blocksMovement(unitType)) {
+                lastClear = tile;
+            }
+        }
+
+        return lastClear ?? this.getTile(fallbackTilePos);
     }
 
     tileTopLeft(tilePos: TilePos) {

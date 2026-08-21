@@ -33,6 +33,9 @@
         "explosion": {
             "type": "gas",
             "particles": [12, 8, 4],
+            "lifetime": { "min": 2, "max": 4 },
+            "vfxId": "gas.vfx",
+            "materials": ["gas.material"],
             "damage": { "default": 10 }
         }
     },

@@ -1,5 +1,6 @@
 import {
     clamp,
+    clipPathAfterLeavingWorld,
     Colour,
     DebugGraphic,
     DebugGraphicType,
@@ -11,7 +12,7 @@ import {
 } from "@atbs/maths";
 import { Game } from "./Game.js";
 import { Item } from "./Item.js";
-import { isUnit, type Unit } from "./Unit.js";
+import { isUnit, Unit } from "./Unit.js";
 import { ProjectileRecipe } from "./ItemRecipe.js";
 import { WorldMap } from "./WorldMap.js";
 import { DamageType, HitSpark, Tracer, UnitType } from "@atbs/shared-data";
@@ -306,12 +307,6 @@ export class Projectile implements IRayCast {
 
     getTracer(): Tracer {
         const path = this._buildCompletePath();
-        const lastSegment = path[path.length - 1];
-
-        Projectile.Logger.info(`Commit end segment ${lastSegment.time}:${lastSegment.pos}`);
-        this.commitSegmentTo(lastSegment.time, new Vec2(lastSegment.pos));
-
-        const { velocity } = this;
         const {
             headColour,
             headRadiusInPixels,
@@ -319,6 +314,17 @@ export class Projectile implements IRayCast {
             trailLengthInPixels,
             rangeFalloffPower
         } = this._props.projectileRecipe.visual;
+        const clippedPath = clipPathAfterLeavingWorld(
+            path,
+            this.map.worldBounds,
+            trailLengthInPixels
+        );
+        const lastSegment = clippedPath[clippedPath.length - 1];
+
+        Projectile.Logger.info(`Commit end segment ${lastSegment.time}:${lastSegment.pos}`);
+        this.commitSegmentTo(lastSegment.time, new Vec2(lastSegment.pos));
+
+        const { velocity } = this;
         const trailLengthInMs = (trailLengthInPixels / velocity) * 1000;
         const maxRangeInMs = (this.maxRange / velocity) * 1000;
 
@@ -405,6 +411,35 @@ export class Projectile implements IRayCast {
             timeMs: number
         ) => void
     ): HitSpark[] {
+        Unit.beginDeferredDisorientationVisuals();
+        try {
+            return Projectile._processProjectiles(
+                projectiles,
+                map,
+                debugGraphics,
+                damageCache,
+                furnitureDamageSystem,
+                onMaterialPixel
+            );
+        } finally {
+            Unit.endDeferredDisorientationVisuals();
+        }
+    }
+
+    private static _processProjectiles(
+        projectiles: Projectile[],
+        map: WorldMap,
+        debugGraphics?: DebugGraphic[],
+        damageCache?: DamageCacheManager,
+        furnitureDamageSystem?: FurnitureDamageSystem,
+        onMaterialPixel?: (
+            projectile: Projectile,
+            tile: Tile,
+            samplePos: Vec2,
+            sample: CollisionSample,
+            timeMs: number
+        ) => void
+    ): HitSpark[] {
         const imageManager = ImageManager.GetSingleton();
         const hitSparks: HitSpark[] = [];
 
@@ -454,16 +489,31 @@ export class Projectile implements IRayCast {
                 Projectile.Logger.info(`Commit material entry segment ${atTime}:${pos}`);
                 projectile.commitSegmentTo(atTime, pos);
 
-                let constitutionDamage = 0;
+                let sparkDamageAmount = 0;
+                let emitHitSpark = true;
+                const damagePreview = isUnit(owner)
+                    ? projectile.calcDamage(owner.type)
+                    : projectile.calcDamage("default");
+                const isDisorientation = damagePreview.type === DamageType.enum.disorientation;
 
                 if (isFurniture(owner)) {
                     Projectile.Logger.info("Collided with furniture!", owner.id);
                     furnitureDamageSystem?.onMaterialEntry(projectile, event, atTime);
+                    // Disorientation affects units only — no sparks/💫 on furniture.
+                    if (isDisorientation) {
+                        emitHitSpark = false;
+                    }
                 } else if (isUnit(owner)) {
                     Projectile.Logger.info("Collided with unit!", owner.id);
                     const previousConstitution = owner.constitution;
+                    const previousDisorientation = owner.disorientation;
                     const died = owner.inflictDamage(pos, projectile);
-                    constitutionDamage = previousConstitution - owner.constitution;
+                    if (isDisorientation) {
+                        sparkDamageAmount = owner.disorientation - previousDisorientation;
+                        owner.noteDeferredDisorientationHit(atTime);
+                    } else {
+                        sparkDamageAmount = previousConstitution - owner.constitution;
+                    }
                     if (died) {
                         furnitureDamageSystem?.onUnitDeath(
                             map.getTile(owner.mapLocation),
@@ -472,19 +522,33 @@ export class Projectile implements IRayCast {
                             projectile.roundIndex
                         );
                     }
+                } else if (isDisorientation) {
+                    // Unknown owner with disorientation damage — skip VFX.
+                    emitHitSpark = false;
                 }
 
-                hitSparks.push({
-                    pos,
-                    timeMs: atTime,
-                    colour: resolveHitSparkColour(material, owner),
-                    direction: projectile.directionVector.normalise(),
-                    count: clamp(
-                        Math.ceil(constitutionDamage),
-                        MIN_HIT_SPARK_COUNT,
-                        MAX_HIT_SPARK_COUNT
-                    )
-                });
+                if (emitHitSpark) {
+                    hitSparks.push({
+                        pos,
+                        timeMs: atTime,
+                        colour: resolveHitSparkColour(material, owner),
+                        direction: projectile.directionVector.normalise(),
+                        count: clamp(
+                            Math.ceil(sparkDamageAmount),
+                            MIN_HIT_SPARK_COUNT,
+                            MAX_HIT_SPARK_COUNT
+                        ),
+                        kind: isDisorientation ? "disorientation" : "spark"
+                    });
+                }
+
+                // Explosive rounds (e.g. 40mm HE) stop on the first solid hit —
+                // no penetrate / ricochet — so the explosion can bloom at impact.
+                if (projectile.projectileRecipe.explosion) {
+                    projectile.life = 0;
+                    projectile.impact = { pos, time: atTime };
+                    continue;
+                }
 
                 const entryOutcome = PenetrationSystem.resolveMaterialEntry(
                     map,

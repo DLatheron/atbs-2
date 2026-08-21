@@ -1,0 +1,6 @@
+{
+    "id": "gas.vfx",
+    "animationRecipeIds": ["gas-appear.animation", "gas-maintain.animation"],
+    "disappearAnimationId": "gas-disappear.animation",
+    "collisionImageId": "gas"
+}

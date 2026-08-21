@@ -1,4 +1,6 @@
 {
     "id": "smoke.vfx",
-    "animationRecipeIds": ["smoke-appear.animation", "smoke-maintain.animation"]
+    "animationRecipeIds": ["smoke-appear.animation", "smoke-maintain.animation"],
+    "disappearAnimationId": "smoke-disappear.animation",
+    "collisionImageId": "smoke15"
 }

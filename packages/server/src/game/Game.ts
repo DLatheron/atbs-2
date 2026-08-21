@@ -37,6 +37,9 @@ import { DebugGraphic } from "@atbs/maths";
 import { VfxRecipeManager } from "./VfxRecipeManager.js";
 import { VfxManager } from "./VfxManager.js";
 import { OpportunityFireManager } from "./OpportunityFireManager.js";
+import { PrimeManager } from "./PrimeManager.js";
+import { CloudManager } from "./CloudManager.js";
+import { broadcastExplosionTrace } from "./ExplosionSystem.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -79,6 +82,8 @@ export class Game {
     private readonly _vfxRecipeManager: VfxRecipeManager;
     private readonly _vfxManager: VfxManager;
     private readonly _opportunityFireManager: OpportunityFireManager;
+    private readonly _primeManager: PrimeManager;
+    private readonly _cloudManager: CloudManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -114,6 +119,8 @@ export class Game {
         this._vfxRecipeManager = vfxRecipeManager;
         this._vfxManager = new VfxManager(this);
         this._opportunityFireManager = new OpportunityFireManager(this);
+        this._primeManager = new PrimeManager(this);
+        this._cloudManager = new CloudManager();
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -341,6 +348,14 @@ export class Game {
 
     get opportunityFireManager(): OpportunityFireManager {
         return this._opportunityFireManager;
+    }
+
+    get primeManager(): PrimeManager {
+        return this._primeManager;
+    }
+
+    get cloudManager(): CloudManager {
+        return this._cloudManager;
     }
 
     set scenario(value: Scenario | null) {
@@ -724,6 +739,11 @@ export class Game {
         this.messageRouter.pauseMessageSending(this.oppositionSideIds);
         this.messageRouter.resumeMessageSending(this.turnsSideId);
 
+        const cloudResult = this.cloudManager.tickSide(this.turnsSideId);
+        if (cloudResult) {
+            broadcastExplosionTrace(this, cloudResult);
+        }
+
         // Final visibility sync (covers empty queues / actions that don't broadcast)
         // then re-enable the playing side's UI.
         this.messageRouter.send(
@@ -745,10 +765,17 @@ export class Game {
         this.turnsSide.units.forEach((unit) => unit.startTurn());
     }
 
+    endSide(): void {
+        this.turnsSide.units.forEach((unit) => unit.endTurn());
+    }
+
     endTurn(): void {
         const { turn } = this;
 
         this.logger.info(`Ending turn: ${turn}`);
+
+        this.endSide();
+        this.primeManager.endTurn();
 
         const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
         if (!playingClient) {
@@ -765,6 +792,7 @@ export class Game {
             return true;
         }
 
+        this.endSide();
         this._playState.sides.shift();
 
         this.logger.info(`Side '${this.turnsSide.name}' to play`);
