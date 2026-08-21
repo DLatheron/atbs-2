@@ -4,6 +4,8 @@ import { Unit, UnitOverrides } from "./Unit.js";
 import { UnitRecipeManager } from "./UnitRecipeManager.js";
 import type { Game } from "./Game.js";
 import { VisibilityPoi } from "./VisibilityPoi.js";
+import { InventoryRecipe } from "./Inventory.js";
+import { Store, StoreRecipe } from "./Store.js";
 
 export const SideRecipe = z.object({
     id: SideId,
@@ -22,7 +24,9 @@ export const SideRecipe = z.object({
                 type: z.literal("fixed")
             }),
             z.object({
-                type: z.literal("manual")
+                type: z.literal("manual"),
+                store: StoreRecipe,
+                startingInventory: z.record(UnitId, InventoryRecipe).optional()
             })
         ]),
         deployment: z.discriminatedUnion("type", [
@@ -43,6 +47,7 @@ export class Side {
     private readonly _units: Unit[];
     private readonly _unitMap: Map<UnitId, Unit>;
     private _victoryPoints: number;
+    private readonly _store: Store | null;
 
     constructor(recipe: Readonly<SideRecipe>, game: Game) {
         this._recipe = recipe;
@@ -63,6 +68,17 @@ export class Side {
             this._units.push(unit);
             this._unitMap.set(unit.id, unit);
         });
+
+        const { armament } = this._recipe.phases;
+        if (armament.type === "manual") {
+            this._store = new Store(armament.store, game.itemManager);
+            for (const unit of this._units) {
+                const starting = armament.startingInventory?.[unit.id];
+                unit.resetInventory(starting ?? { inUse: null, items: [] });
+            }
+        } else {
+            this._store = null;
+        }
     }
 
     get id(): SideId {
@@ -87,6 +103,17 @@ export class Side {
 
     get needsArmamentPhase(): boolean {
         return this._recipe.phases.armament.type === "manual";
+    }
+
+    get store(): Store {
+        if (!this._store) {
+            throw new Error(`Side ${this.id} does not have a store`);
+        }
+        return this._store;
+    }
+
+    findStore(): Store | null {
+        return this._store;
     }
 
     get needsDeploymentPhase(): boolean {

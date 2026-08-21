@@ -670,4 +670,35 @@ describe("Unit inventory", () => {
         expect(snapshot.groundItems.map(({ id }) => id)).toEqual([groundToken.id]);
         expect(snapshot.groundItems[0].type).toBe("item");
     });
+
+    it("starts empty after resetInventory and reports no burden", () => {
+        const { unit } = createHarness(
+            InventoryRecipe.parse({ inUse: 0, items: [{ id: EMPTY_GUN_RECIPE.id }] })
+        );
+        expect(unit.inventory.items.length).toBe(1);
+
+        unit.resetInventory({ inUse: null, items: [] });
+        expect(unit.inventory.items).toHaveLength(0);
+        expect(unit.inventoryWeight).toBe(0);
+        expect(unit.burden).toBe(0);
+
+        unit.actionPoints = 10;
+        unit.startTurn();
+        expect(unit.actionPoints).toBe(unit.maxActionPoints);
+    });
+
+    it("reduces starting AP by burden when inventory is overweight", () => {
+        const { unit, itemManager } = createHarness(
+            InventoryRecipe.parse({ inUse: null, items: [] })
+        );
+        for (let index = 0; index < 12; index += 1) {
+            unit.inventory.addItem(itemManager.newItem(EMPTY_GUN_RECIPE.id));
+        }
+
+        expect(unit.inventoryWeight).toBeGreaterThan(unit.strength / 2);
+        expect(unit.burden).toBeGreaterThan(0);
+
+        unit.startTurn();
+        expect(unit.actionPoints).toBe(unit.maxActionPoints - unit.burden);
+    });
 });

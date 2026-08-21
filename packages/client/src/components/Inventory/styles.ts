@@ -1,8 +1,11 @@
 export const INVENTORY_MODEL_TITLE = "Inventory";
+export const ARMAMENT_TITLE = "Armament";
 export const ACTION_POINTS_TITLE = "Action Points:";
+export const BUDGET_TITLE = "Budget:";
 
 export const IN_USE_TITLE = "In Use";
 export const ON_GROUND_TITLE = "On Ground";
+export const STORE_TITLE = "Store";
 export const CONTENTS_TITLE = "Contents";
 
 export const NO_ITEM_IN_USE_TEXT = "None";
@@ -48,6 +51,9 @@ export const MODAL_BACKGROUND_COLOR = "rgb(169, 169, 169)";
 export const MODAL_BACKGROUND_COLOR_TRANSPARENT = "169, 169, 169";
 const MODAL_TEXT_COLOR = "#222";
 
+/** Blue plate behind cutout lettering on call-to-action buttons, e.g. "End Armament". */
+export const ACTION_BUTTON_BACKGROUND_COLOR = "25, 118, 210";
+
 /** Chasing selection outline on item tiles — tweak colour / dash here. */
 export const ITEM_SELECTION_BORDER_COLOR = "#1e90ff";
 export const ITEM_SELECTION_BORDER_WIDTH = 3;
@@ -55,11 +61,11 @@ export const ITEM_SELECTION_BORDER_WIDTH = 3;
 export const ITEM_SELECTION_DASH_ARRAY = "90 90";
 export const ITEM_SELECTION_CHASE_DURATION_MS = 2000;
 
-export const cutoutTextSx = (background: string) =>
+export const cutoutTextSx = (background: string, textColor: string = MODAL_TEXT_COLOR) =>
     ({
         userSelect: "none",
         color: "transparent",
-        background: MODAL_TEXT_COLOR,
+        background: textColor,
         backgroundClip: "text",
         textShadow: `0px 3px 3px rgba(${background}, 0.5)}`
     }) as const;

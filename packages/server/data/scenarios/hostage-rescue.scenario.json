@@ -26,10 +26,176 @@
                 }
             ],
             "oppositionSideIds": ["terrorists"],
-            "units": [],
+            "units": [
+                {
+                    "id": "captain-smith.unit",
+                    "overrides": { "location": { "col": 8, "row": 9 }, "orientation": 3 }
+                },
+                {
+                    "id": "corporal-barry.unit",
+                    "overrides": { "location": { "col": 18, "row": 10 }, "orientation": 6 }
+                }
+            ],
             "phases": {
                 "armament": {
-                    "type": "fixed"
+                    "type": "manual",
+                    "store": {
+                        "budget": 1000,
+                        "threshold": -1000,
+                        "currency": "$",
+                        "categories": [
+                            { "name": "All", "categories": null },
+                            { "name": "Guns", "categories": ["Guns"] },
+                            { "name": "- Sniper Rifles", "categories": ["Snipers"] },
+                            { "name": "- Assault Rifles", "categories": ["ARs"] },
+                            { "name": "- Submachine Guns", "categories": ["SMGs"] },
+                            { "name": "- Shotguns", "categories": ["Shotguns"] },
+                            { "name": "- Pistol", "categories": ["Pistols"] },
+                            { "name": "Magazines", "categories": ["Magazines"] },
+                            { "name": "Rounds", "categories": ["Rounds"] },
+                            { "name": "Ammunition", "categories": ["Magazines", "Rounds"] },
+                            { "name": "Grenades", "categories": ["Grenades"] },
+                            { "name": "Explosives", "categories": ["Explosives"] },
+                            { "name": "Other Items", "categories": ["Other"] }
+                        ],
+                        "items": [
+                            {
+                                "itemId": "m4+m203.gun",
+                                "quantity": 10,
+                                "baseCost": 1200,
+                                "batchSize": 1,
+                                "categories": ["Guns", "ARs"]
+                            },
+                            {
+                                "itemId": "m9.gun",
+                                "baseCost": 500,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Pistols"]
+                            },
+                            {
+                                "itemId": "spas-12.gun",
+                                "baseCost": 1200,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Shotguns"]
+                            },
+                            {
+                                "itemId": "frag.grenade",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "itemId": "smoke.grenade",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "itemId": "stun.grenade",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "itemId": "gas.grenade",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "itemId": "coffee-token.item",
+                                "baseCost": 1,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "front-door-key.item",
+                                "baseCost": 0,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "12-gauge-buckshot.round",
+                                "quantity": 100,
+                                "baseCost": 6,
+                                "batchSize": 10,
+                                "categories": ["Shotguns", "Rounds"]
+                            },
+                            {
+                                "itemId": "12-gauge-flechette.round",
+                                "quantity": 50,
+                                "baseCost": 12,
+                                "batchSize": 10,
+                                "categories": ["Shotguns", "Rounds"]
+                            },
+                            {
+                                "itemId": "40mm-he.round",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["ARs", "Rounds"]
+                            },
+                            {
+                                "itemId": "40mm-stun.round",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["ARs", "Rounds"]
+                            },
+                            {
+                                "itemId": "40mm-smoke.round",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["ARs", "Rounds"]
+                            },
+                            {
+                                "itemId": "40mm-gas.round",
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["ARs", "Rounds"]
+                            },
+                            {
+                                "itemId": "m16-30.magazine",
+                                "quantity": 10,
+                                "baseCost": 20,
+                                "batchSize": 1,
+                                "categories": ["ARs", "Magazines"]
+                            },
+                            {
+                                "itemId": "m9-15.magazine",
+                                "quantity": 10,
+                                "baseCost": 12,
+                                "batchSize": 1,
+                                "categories": ["Pistols", "Magazines"]
+                            },
+                            {
+                                "itemId": "m9-30.magazine",
+                                "quantity": 10,
+                                "baseCost": 30,
+                                "batchSize": 1,
+                                "categories": ["Pistols", "Magazines"]
+                            },
+                            {
+                                "itemId": "5.56mm-nato.round",
+                                "quantity": 1000,
+                                "baseCost": 5,
+                                "batchSize": 30,
+                                "categories": ["ARs", "Rounds"]
+                            },
+                            {
+                                "itemId": "9mm-parabellum.round",
+                                "quantity": 1000,
+                                "baseCost": 2,
+                                "batchSize": 30,
+                                "categories": ["Pistols", "Rounds"]
+                            },
+                            {
+                                "itemId": "9mm-hollow-point.round",
+                                "quantity": 1000,
+                                "baseCost": 3,
+                                "batchSize": 30,
+                                "categories": ["Pistols", "Rounds"]
+                            }
+                        ]
+                    }
                 },
                 "deployment": {
                     "type": "fixed"
@@ -42,8 +208,13 @@
             "description": [
                 { "text": "A rag, tag group of terrorists led by the evil Häns Gruber", "pb": 2 }
             ],
-            "oppositionSideIds": ["rescue-tem"],
-            "units": [],
+            "oppositionSideIds": ["rescue-team"],
+            "units": [
+                {
+                    "id": "hans-gruber.unit",
+                    "overrides": { "location": { "col": 11, "row": 10 }, "orientation": 2 }
+                }
+            ],
             "phases": {
                 "armament": {
                     "type": "fixed"

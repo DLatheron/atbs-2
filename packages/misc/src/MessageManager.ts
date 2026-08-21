@@ -61,37 +61,41 @@ export class MessageManager<
         return this._messageHandlers.get(type);
     }
 
-    private getMessageHandlerEntries(
-        type: MESSAGE["type"]
-    ): HandlerEntry<CONTEXT, MESSAGE, FROM>[] | never {
-        const messageHandler = this.findMessageHandlerEntries(type);
-        if (!messageHandler) {
-            throw new Error(`No message handler(s) registered for ${type}`);
-        }
-        return messageHandler;
-    }
-
     private async processNextMessage() {
         let entry: { message: MESSAGE; from: FROM } | undefined;
 
         this._processingMessages = true;
-        while ((entry = this._received.shift())) {
-            const { message, from } = entry;
+        try {
+            while ((entry = this._received.shift())) {
+                const { message, from } = entry;
 
-            const { type } = message;
-            const messageHandlerEntries = this.getMessageHandlerEntries(type);
-
-            console.info("+++ Processing message", message.type, message.payload);
-            for (const { handler } of messageHandlerEntries) {
-                try {
-                    await handler(this._context, message.payload, from);
-                } catch (error) {
-                    console.error("Error processing message", message.type, message.payload, error);
+                const { type } = message;
+                // An unhandled type must not abort the loop: that would strand every
+                // message queued behind it.
+                const messageHandlerEntries = this.findMessageHandlerEntries(type) ?? [];
+                if (messageHandlerEntries.length === 0) {
+                    console.warn("No message handler(s) registered for", type);
+                    continue;
                 }
+
+                console.info("+++ Processing message", message.type, message.payload);
+                for (const { handler } of messageHandlerEntries) {
+                    try {
+                        await handler(this._context, message.payload, from);
+                    } catch (error) {
+                        console.error(
+                            "Error processing message",
+                            message.type,
+                            message.payload,
+                            error
+                        );
+                    }
+                }
+                console.info("--- Processed message", message.type, message.payload);
             }
-            console.info("--- Processed message", message.type, message.payload);
+        } finally {
+            this._processingMessages = false;
         }
-        this._processingMessages = false;
     }
 
     /**

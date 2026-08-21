@@ -294,6 +294,7 @@ export type WaitingFor = z.infer<typeof WaitingFor>;
 const errorType = [
     "INSUFFICIENT_ACTION_POINTS",
     "INSUFFICIENT_AMMO",
+    "INSUFFICIENT_BUDGET",
     "UNABLE_TO_MOVE_THERE"
 ] as const;
 
@@ -743,7 +744,7 @@ export const ItemSummary = z.object({
     name: z.string(),
     shortName: z.string(),
     description: Description,
-    quantity: Quantity,
+    quantity: z.int().nonnegative(),
     weight: Weight,
     primed: Prime.optional(),
     maxThrowRange: z.number().nonnegative(),
@@ -849,6 +850,33 @@ export const InventorySnapshot = z.object({
     groundItems: z.array(InventoryItemView)
 });
 export type InventorySnapshot = z.infer<typeof InventorySnapshot>;
+
+export const StoreCategory = z.object({
+    name: z.string(),
+    categories: z.array(z.string()).nullable()
+});
+export type StoreCategory = z.infer<typeof StoreCategory>;
+
+export const StoreItemView = z.object({
+    itemId: ItemId,
+    item: InventoryItemView,
+    batchSize: z.number().int().positive(),
+    cost: z.number().nonnegative(),
+    categories: z.array(z.string())
+});
+export type StoreItemView = z.infer<typeof StoreItemView>;
+
+/** Scenarios may trade in credits, roubles, etc.; "$" is just the fallback. */
+export const DEFAULT_CURRENCY = "$";
+
+export const StoreSnapshot = z.object({
+    budget: z.number(),
+    threshold: z.number().max(0),
+    currency: z.string().default(DEFAULT_CURRENCY),
+    categories: z.array(StoreCategory),
+    items: z.array(StoreItemView)
+});
+export type StoreSnapshot = z.infer<typeof StoreSnapshot>;
 
 export const FireDetails = z.object({
     unitId: UnitId,

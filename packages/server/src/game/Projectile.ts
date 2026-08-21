@@ -59,7 +59,11 @@ export interface Impact {
     time: number;
 }
 
-/** Travel speed shared by fired rounds for consistent projectile animation timing. */
+/**
+ * Baseline travel speed (world-units / second) used for thrown items and similar
+ * non-ballistic projectiles. The configured `projectileVisualVelocityScale` is
+ * applied on top of this when building animation timing.
+ */
 export const DEFAULT_PROJECTILE_TRAVEL_VELOCITY = 600;
 
 export interface ProjectileProps {
@@ -110,11 +114,13 @@ export class Projectile implements IRayCast {
         this._maxRange = props.projectileRecipe.maxRange * variability;
         this._dstPos = this.srcPos.add(props.directionVector.scale(this._maxRange));
         this._directionVector = props.directionVector;
-        this._velocity = props.projectileRecipe.velocity * variability;
         this._syncAnimationToImpact = props.projectileRecipe.impactVelocity == null;
         this._impactVelocity =
             (props.projectileRecipe.impactVelocity ?? props.projectileRecipe.velocity) *
             variability;
+        // Visual travel only — scale does not affect penetration / impactVelocity.
+        this._velocity =
+            props.projectileRecipe.velocity * variability * config.projectileVisualVelocityScale;
         this._penetration = PenetrationSystem.calcInitialEnergy(this);
         this._segments = [
             {
@@ -185,7 +191,7 @@ export class Projectile implements IRayCast {
     retainImpactVelocity(value: number): void {
         this._impactVelocity = value;
         if (this._syncAnimationToImpact) {
-            this._velocity = value;
+            this._velocity = value * config.projectileVisualVelocityScale;
         }
     }
 
@@ -267,7 +273,9 @@ export class Projectile implements IRayCast {
     }
 
     get projectileEffectiveness(): number {
-        return clamp(this.velocity / this.projectileRecipe.velocity, 0, 1);
+        const baseImpactVelocity =
+            this.projectileRecipe.impactVelocity ?? this.projectileRecipe.velocity;
+        return clamp(this.impactVelocity / baseImpactVelocity, 0, 1);
     }
 
     changeDirection(newDirection: Vec2) {

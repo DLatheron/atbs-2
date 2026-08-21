@@ -22,7 +22,8 @@ import {
     VisibilityUpdate,
     TimedVisibilityUpdate,
     UnitId,
-    InstanceId
+    InstanceId,
+    StoreSnapshot
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
@@ -156,6 +157,23 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:unit:inventory"),
         payload: InventorySnapshot
+    }),
+    z.object({
+        type: z.literal("server:armament:state"),
+        payload: z.object({
+            units: z.array(UnitSummary),
+            store: StoreSnapshot,
+            inventories: z.array(InventorySnapshot)
+        })
+    }),
+    z.object({
+        type: z.literal("server:armament:update"),
+        payload: z.object({
+            unitId: UnitId,
+            inventory: InventorySnapshot,
+            store: StoreSnapshot,
+            unit: UnitSummary
+        })
     }),
     z.object({
         type: z.literal("server:turn:start"),

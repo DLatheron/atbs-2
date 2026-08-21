@@ -112,6 +112,22 @@ describe("MessageManager", () => {
         expect(processNextMessage).toHaveBeenCalledTimes(1);
     });
 
+    it("should keep processing the queue when a message has no registered handler", async () => {
+        const { resolve, promise } = makeResolver();
+
+        const handler = vi.fn(async () => resolve());
+        messageManager.registerHandler("message", handler);
+
+        messageManager.enqueueMessage({ type: "unhandled", payload: 1 }, from);
+        messageManager.enqueueMessage({ type: "message", payload: 2 }, from);
+
+        await promise;
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(context, 2, from);
+        expect(messageManager).toHaveLength(0);
+    });
+
     it("should after processing messages and emptying the queue, new messages should start the processing loop again", async () => {
         const { resolve: resolve0, promise: promise0 } = makeResolver();
         const { resolve: resolve1, promise: promise1 } = makeResolver();

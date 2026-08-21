@@ -152,4 +152,45 @@ export class Inventory {
             this._inUse = this._items.findIndex(({ id }) => previousInUseItemId === id);
         }
     }
+
+    findItemInTree(itemId: ItemId): Item | undefined {
+        for (const item of this._items) {
+            const found = item.findByItemId(itemId);
+            if (found) {
+                return found;
+            }
+        }
+    }
+
+    extractItemContent(itemId: ItemId): Item | undefined {
+        const topLevel = this.findItem(itemId);
+        if (topLevel) {
+            return this.removeItem(topLevel);
+        }
+
+        for (const root of this._items) {
+            const owner = root.findOwnerOfContents(itemId);
+            if (!owner) {
+                continue;
+            }
+            for (const [slot, contents] of owner.slotEntries) {
+                if (contents.id === itemId) {
+                    owner.emptySlot(slot);
+                    return contents;
+                }
+            }
+        }
+    }
+
+    replaceFromRecipe(recipe: InventoryRecipe) {
+        this._items = [];
+        this._itemsMap.clear();
+        this._inUse = recipe.inUse !== null ? recipe.inUse : -1;
+        this._weaponIndex = 0;
+
+        recipe.items.forEach(({ id, overrides }) => {
+            const item = this._itemManager.newItem(id, overrides);
+            this.addItem(item, this._items.length);
+        });
+    }
 }

@@ -57,6 +57,59 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.null()
     }),
     z.object({
+        type: z.literal("client:armament:buy"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId,
+            use: z.boolean().optional(),
+            insertionPoint: z.int().nonnegative().optional()
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:sell"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId,
+            quantity: z.int().positive()
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:load"),
+        payload: z.object({
+            unitId: UnitId,
+            receiverId: ItemId,
+            ammoId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:unload"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:use"),
+        payload: z.object({
+            unitId: UnitId,
+            itemId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:unuse"),
+        payload: z.object({
+            unitId: UnitId
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:reorder"),
+        payload: z.object({
+            unitId: UnitId,
+            fromIndex: z.int().nonnegative(),
+            toIndex: z.int().nonnegative()
+        })
+    }),
+    z.object({
         type: z.literal("client:deployment:end"),
         payload: z.null()
     }),
