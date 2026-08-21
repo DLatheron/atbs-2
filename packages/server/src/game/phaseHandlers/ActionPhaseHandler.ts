@@ -380,6 +380,9 @@ export class ActionPhaseHandler extends PhaseHandler {
                         this._sendInventorySnapshot(from, unit);
                     }
                     from.sendMessage({ type: "server:ui:disabled", payload: false });
+                }
+            ),
+
             messageManager.registerHandler(
                 "client:unit:prime",
                 ({ game }, { unitId, itemId, prime }, from) => {
