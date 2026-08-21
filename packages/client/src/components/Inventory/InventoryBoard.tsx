@@ -49,12 +49,9 @@ import {
     type ReactNode
 } from "react";
 import { ItemInspector } from "./ItemInspector";
-import {
-    ITEM_TILE_SIZE,
-    InventoryTooltipDismissProvider,
-    ItemTile,
-    useDismissInventoryTooltips
-} from "./ItemTile";
+import { InventoryTooltipDismissProvider } from "./InventoryTooltipDismissProvider";
+import { useDismissInventoryTooltips } from "./inventoryTooltipDismissContext";
+import { ItemTile } from "./ItemTile";
 import {
     type InventoryActionScope,
     type InventoryDragSource,
@@ -83,6 +80,7 @@ import {
     INVENTORY_EMPTY_TEXT,
     INVENTORY_PANEL_BACKGROUND_COLOR,
     inventoryPanelSx,
+    ITEM_TILE_SIZE,
     NO_ITEM_IN_USE_TEXT,
     ON_GROUND_BACKGROUND_COLOR,
     ON_GROUND_TITLE,

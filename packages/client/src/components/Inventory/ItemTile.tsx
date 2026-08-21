@@ -3,12 +3,8 @@ import { Box, IconButton, SxProps, Tooltip, Typography } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import {
-    createContext,
     useCallback,
-    useContext,
     useEffect,
-    useMemo,
-    useRef,
     useState,
     type MouseEvent,
     type ReactNode,
@@ -16,48 +12,16 @@ import {
 } from "react";
 import { ImageComponent } from "../Image";
 import { collectAmmoCounts, describeItemContents, formatAmmoCount, formatMoney } from "./itemMenu";
+import { useInventoryTooltipDismissApi } from "./inventoryTooltipDismissContext";
 import {
     ITEM_SELECTION_BORDER_COLOR,
     ITEM_SELECTION_BORDER_WIDTH,
     ITEM_SELECTION_CHASE_DURATION_MS,
-    ITEM_SELECTION_DASH_ARRAY
+    ITEM_SELECTION_DASH_ARRAY,
+    ITEM_TILE_SIZE
 } from "./styles";
 
-/** Sized so an image plus up to three ammo counts fit on the square. */
-export const ITEM_TILE_SIZE = 180;
 const MAX_AMMO_COUNTS = 3;
-
-interface TooltipDismissApi {
-    subscribe: (listener: () => void) => () => void;
-    dismiss: () => void;
-}
-
-const TooltipDismissContext = createContext<TooltipDismissApi | null>(null);
-
-export function InventoryTooltipDismissProvider({ children }: { children: ReactNode }) {
-    const listenersRef = useRef(new Set<() => void>());
-    const api = useMemo<TooltipDismissApi>(
-        () => ({
-            subscribe: (listener) => {
-                listenersRef.current.add(listener);
-                return () => {
-                    listenersRef.current.delete(listener);
-                };
-            },
-            dismiss: () => {
-                listenersRef.current.forEach((listener) => listener());
-            }
-        }),
-        []
-    );
-
-    return <TooltipDismissContext.Provider value={api}>{children}</TooltipDismissContext.Provider>;
-}
-
-export function useDismissInventoryTooltips(): () => void {
-    const api = useContext(TooltipDismissContext);
-    return api?.dismiss ?? (() => undefined);
-}
 
 export interface ItemTileProps {
     item: InventoryItemView;
@@ -191,7 +155,7 @@ export function ItemTile({
     const ammoCounts = collectAmmoCounts(item).slice(0, MAX_AMMO_COUNTS);
     const tooltipBody = flattenDescription(item.description);
     const contentLines = describeItemContents(item);
-    const dismissApi = useContext(TooltipDismissContext);
+    const dismissApi = useInventoryTooltipDismissApi();
     const [tooltipOpen, setTooltipOpen] = useState(false);
 
     useEffect(() => {

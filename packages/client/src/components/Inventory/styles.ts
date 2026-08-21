@@ -13,6 +13,9 @@ export const INVENTORY_EMPTY_TEXT = "Empty";
 
 export const INVENTORY_PANEL_BACKGROUND_COLOR = "211, 211, 211";
 
+/** Sized so an image plus up to three ammo counts fit on the square. */
+export const ITEM_TILE_SIZE = 180;
+
 export const INVENTORY_BACKGROUND_COLOR = "128, 128, 128";
 
 export const inventoryPanelSx = {
