@@ -1,0 +1,40 @@
+{
+    "id": "m9.gun",
+    "type": "gun",
+    "name": "Beretta M9",
+    "shortName": "M9",
+    "description": [
+        {
+            "text": "The Beretta 92FS semi-automatic pistol used by the United States Armed Forces since 1985."
+        }
+    ],
+    "weight": 0.97,
+    "renderable": {
+        "default": [{ "imageId": "m9" }],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["m9-15.magazine", "m9-30.magazine"]
+        }
+    },
+    "slots": { "ammo": { "id": "m9-15.magazine" } },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 13
+                }
+            }
+        }
+    }
+}

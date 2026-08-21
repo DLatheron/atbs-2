@@ -1,0 +1,19 @@
+{
+    "id": "m9-30.magazine",
+    "type": "magazine",
+    "name": "M9 30 Round Magazine",
+    "shortName": "M9x30",
+    "description": [{ "text": "A 30-round magazine for the Beretta M9 pistol." }],
+    "weight": 0.112,
+    "renderable": {
+        "default": [{ "imageId": "m9-30" }],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["9mm-parabellum.round", "9mm-hollow-point.round"],
+            "maxQuantity": 30
+        }
+    },
+    "slots": { "ammo": { "id": "9mm-parabellum.round", "quantity": 30 } }
+}
