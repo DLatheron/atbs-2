@@ -15,6 +15,6 @@
         "lifetime": { "min": 2, "max": 4 },
         "vfxId": "gas.vfx",
         "materials": ["gas.material"],
-        "damage": { "default": 10 }
+        "damage": { "default": 20 }
     }
 }

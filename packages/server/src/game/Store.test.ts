@@ -15,6 +15,13 @@ const STORE_RECIPE = StoreRecipe.parse({
     categories: [{ name: "All", categories: null }],
     items: [
         {
+            itemId: "m4.gun",
+            quantity: 10,
+            baseCost: 700,
+            batchSize: 1,
+            categories: ["Guns"]
+        },
+        {
             itemId: "m4+m203.gun",
             quantity: 5,
             baseCost: 1200,
@@ -78,6 +85,27 @@ describe("Store", () => {
     function createStore() {
         return new Store(STORE_RECIPE, itemManager);
     }
+
+    it("keeps the nested M4 when that gun is also sold separately, and preloads its magazine", () => {
+        const store = createStore();
+        const gun = store.buyItem("m4+m203.gun", 1);
+        expect(gun).not.toBe(ErrorType.enum.INSUFFICIENT_BUDGET);
+        if (typeof gun === "string") {
+            throw new Error("expected item");
+        }
+
+        const m4 = gun.findSlotContents("0");
+        expect(m4?.recipeId).toBe("m4.gun");
+        const mag = m4?.findSlotContents("ammo");
+        expect(mag?.recipeId).toBe("m16-30.magazine");
+
+        const m203 = gun.findSlotContents("1");
+        expect(m203?.recipeId).toBe("m203.gun");
+        expect(m203?.findSlotContents("ammo")).toBeDefined();
+
+        // Nested M4 must not inflate the standalone M4 stock when the combo is built.
+        expect(store.getItem("m4.gun").item.quantity).toBe(10);
+    });
 
     it("charges loaded cost and refunds component baseCosts when selling the stripped gun", () => {
         const store = createStore();

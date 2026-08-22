@@ -310,8 +310,9 @@ export class Item extends SceneObject {
 
     /**
      * Collect this item (optional) and nested store-catalog components, clearing
-     * store-item slots. Non-catalog nested items (e.g. M4 inside M4+M203) stay in
-     * place but have their catalog contents stripped.
+     * store-item ammo slots. Structural nested items (e.g. M4 inside M4+M203)
+     * stay in place even when that recipe is also sold separately — only their
+     * catalog ammo is stripped.
      */
     removeStoreComponents(
         isStoreItem: (recipeId: ItemId) => boolean,
@@ -329,7 +330,9 @@ export class Item extends SceneObject {
                 continue;
             }
 
-            if (isStoreItem(contents.recipeId)) {
+            // Only ammo-slot catalog items are extracted (magazines/rounds).
+            // Nested guns in slots "0"/"1" remain part of the assembly.
+            if (slot === SlotType.enum.ammo && isStoreItem(contents.recipeId)) {
                 components.push(...contents.removeStoreComponents(isStoreItem, true));
                 this.emptySlot(slot);
             } else {

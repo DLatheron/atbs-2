@@ -9,6 +9,7 @@ import {
 import z from "zod";
 import { Item } from "./Item.js";
 import { ItemManager } from "./ItemManager.js";
+import { SlotType } from "./ItemRecipe.js";
 
 export const StoreRecipe = z.object({
     budget: z.number().min(0),
@@ -186,10 +187,29 @@ export class Store {
             total += this.componentCost(item.recipeId, item.quantity);
         }
 
-        for (const [, contents] of item.slotEntries) {
-            total += this._loadedCost(contents, false);
+        for (const [slot, contents] of item.slotEntries) {
+            // Nested assembly parts (e.g. M4 in M4+M203) are covered by the
+            // parent baseCost even when those guns are also sold separately.
+            if (slot !== SlotType.enum.ammo && this.isStoreItem(contents.recipeId)) {
+                total += this._nestedLoadoutCost(contents);
+            } else {
+                total += this._loadedCost(contents, false);
+            }
         }
 
+        return total;
+    }
+
+    /** Cost of ammo/loadout under a structural nested item, excluding the item itself. */
+    private _nestedLoadoutCost(item: Item): number {
+        let total = 0;
+        for (const [slot, contents] of item.slotEntries) {
+            if (slot !== SlotType.enum.ammo && this.isStoreItem(contents.recipeId)) {
+                total += this._nestedLoadoutCost(contents);
+            } else {
+                total += this._loadedCost(contents, false);
+            }
+        }
         return total;
     }
 

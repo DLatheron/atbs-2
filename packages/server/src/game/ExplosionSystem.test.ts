@@ -642,6 +642,51 @@ describe("HE impact explosion", () => {
         expect(result.tracers.length).toBe(6);
         expect(result.tracers[0].segments[0].time).toBeGreaterThanOrEqual(projectile.impact!.time);
     });
+
+    it("uses end-of-flight as the detonation point when no solid is hit (M203 open ground)", () => {
+        const map = createMap(game, tileSize, [[openTile(), openTile(), openTile()]]);
+        const unit = createMockUnit(game, itemManager, new TilePos(0, 0));
+        const heRound = itemManager.newItem("test.he.round");
+        const srcPos = map.tileCenterToWorld(new TilePos(0, 0));
+        const aimPos = map.tileCenterToWorld(new TilePos(2, 0));
+        const travelDistance = aimPos.sub(srcPos).length;
+
+        const projectile = new Projectile({
+            game,
+            firingUnit: unit,
+            firingWeapon: heRound,
+            projectileIndex: 0,
+            roundIndex: 0,
+            srcPos,
+            directionVector: new Vec2(1, 0),
+            projectileRecipe: {
+                ...heRound.projectileRecipe,
+                maxRange: travelDistance
+            }
+        });
+
+        Projectile.ProcessProjectiles([projectile], map, undefined, damageCache);
+
+        // No wall/unit collision — same as aiming an M203 at open ground.
+        expect(projectile.impact).toBeUndefined();
+
+        const { pos, time } = projectile.finalPostionAndTime;
+        expect(map.worldToTile(pos)).toEqual(new TilePos(2, 0));
+        expect(time).toBeGreaterThan(0);
+
+        const explosion = projectile.projectileRecipe.explosion!;
+        const result = detonateExplosion({
+            game,
+            origin: pos.clone(),
+            explosion,
+            firingUnit: unit,
+            firingWeapon: heRound,
+            timeOffsetMs: time
+        });
+
+        expect(result.tracers.length).toBe(6);
+        expect(result.tracers[0].segments[0].time).toBeGreaterThanOrEqual(time);
+    });
 });
 
 describe("primed grenade detonation", () => {

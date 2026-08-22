@@ -935,6 +935,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
         if (this.isAlive && this.actionPoints > 0) {
             this._applyCloudExposure(this.actionPoints);
         }
+
+        if (this.disorientated) {
+            // Reduce the amount of disorientation based on the number of action points remaining...
+            this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
+        }        
     }
 
     private _verifyDirectional(): void | never {
@@ -945,11 +950,6 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     startTurn() {
         this.logger.info("Starting turn");
-
-        if (this.disorientated) {
-            // Reduce the amount of disorientation based on the number of action points remaining...
-            this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
-        }
 
         if (this.isAlive) {
             this._attributes.actionPoints.value = this.projectedStartActionPoints;
@@ -1450,11 +1450,15 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             const pendingExplosions = projectiles.flatMap((projectile) => {
                 const { explosion } = projectile.projectileRecipe;
-                const { impact } = projectile;
-                if (!explosion || !impact) {
+                if (!explosion) {
                     return [];
                 }
-                return [{ explosion, origin: impact.pos.clone(), timeOffsetMs: impact.time }];
+                // Match legacy ATBS (`impactPos || targetPos`): bloom at a solid
+                // hit when there is one, otherwise at the end of the flight path
+                // so indirect fire (e.g. M203 gas/smoke onto open ground) still
+                // detonates at the aimed landing point.
+                const { pos, time } = projectile.finalPostionAndTime;
+                return [{ explosion, origin: pos.clone(), timeOffsetMs: time }];
             });
 
             const tracers = projectiles.map((projectile) => projectile.getTracer());
@@ -2524,11 +2528,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
-        return clamp(Math.floor(baseAccuracy * this.disorientationScaler * 0.5), 0, 100);
+        return clamp(Math.floor(baseAccuracy * this.disorientationScaler), 0, 100);
     }
 
     calcThrowAccuracy(baseAccuracy: number): number {
-        return clamp(Math.floor(baseAccuracy * this.disorientationScaler * 0.5), 0, 100);
+        return clamp(Math.floor(baseAccuracy * this.disorientationScaler), 0, 100);
     }
 
     calcThrowMaxRange(item: Item) {

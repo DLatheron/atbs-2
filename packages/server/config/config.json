@@ -1,7 +1,7 @@
 {
     "highlanderGameMode": true,
-    "infiniteActionPoints": true,
-    "infiniteAmmunition": true,
+    "infiniteActionPoints": false,
+    "infiniteAmmunition": false,
     "showProjectileDebugGraphics": false,
     "showVisibilityDebugGraphics": false,
     "showFragmentExplosionTracers": true,
