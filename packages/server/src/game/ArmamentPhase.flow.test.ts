@@ -128,7 +128,7 @@ describe("Armament phase", () => {
 
     /**
      * Connecting two clients auto-starts the test scenario (see `LobbyPhaseHandler`),
-     * which puts the goodies side into the manual armament phase.
+     * which puts both manual arming sides into the armament phase.
      */
     async function startArmamentPhase() {
         game = new Game(
@@ -158,21 +158,31 @@ describe("Armament phase", () => {
         );
     }
 
-    it("sends the arming side a store and every unit's inventory when the phase starts", async () => {
+    it("sends each manual arming side a store and every unit's inventory when the phase starts", async () => {
         const { armingSocket, waitingSocket } = await startArmamentPhase();
 
         expect(armingSocket.lastReceived("server:phase").payload.phase).toBe(Phase.enum.armament);
+        expect(waitingSocket.lastReceived("server:phase").payload.phase).toBe(Phase.enum.armament);
 
-        const { units, store, inventories } =
-            armingSocket.lastReceived("server:armament:state").payload;
+        const goodiesState = armingSocket.lastReceived("server:armament:state").payload;
+        const baddiesState = waitingSocket.lastReceived("server:armament:state").payload;
 
-        expect(units.length).toBeGreaterThan(0);
-        expect(store.items.length).toBeGreaterThan(0);
-        expect(inventories.map(({ unitId }) => unitId)).toEqual(units.map(({ id }) => id));
-        expect(units[0]).toMatchObject({ inventoryWeight: expect.any(Number) });
+        expect(goodiesState.units.length).toBeGreaterThan(0);
+        expect(goodiesState.store.items.length).toBeGreaterThan(0);
+        expect(goodiesState.inventories.map(({ unitId }) => unitId)).toEqual(
+            goodiesState.units.map(({ id }) => id)
+        );
+        expect(goodiesState.units[0]).toMatchObject({ inventoryWeight: expect.any(Number) });
 
-        expect(waitingSocket.received("server:armament:state")).toHaveLength(0);
-        expect(waitingSocket.lastReceived("server:wait").payload?.phase).toBe(Phase.enum.armament);
+        expect(baddiesState.units.length).toBeGreaterThan(0);
+        expect(baddiesState.store.items.length).toBeGreaterThan(0);
+        expect(baddiesState.inventories.map(({ unitId }) => unitId)).toEqual(
+            baddiesState.units.map(({ id }) => id)
+        );
+
+        // Both sides are still arming — neither client should be in the wait queue yet.
+        expect(armingSocket.lastReceived("server:wait").payload).toBeNull();
+        expect(waitingSocket.lastReceived("server:wait").payload).toBeNull();
     });
 
     it("buys an item into the selected unit's inventory and charges the budget", async () => {
@@ -225,10 +235,15 @@ describe("Armament phase", () => {
         expect(store.budget).toBeGreaterThanOrEqual(store.threshold);
     });
 
-    it("leaves the armament phase once the arming side is done", async () => {
+    it("leaves the armament phase once every arming side is done", async () => {
         const { game, armingSocket, waitingSocket } = await startArmamentPhase();
 
         send(game, armingClientId, { type: "client:armament:end", payload: null });
+        await settle();
+
+        expect(game.phase).toBe(Phase.enum.armament);
+
+        send(game, waitingClientId, { type: "client:armament:end", payload: null });
         await settle();
 
         expect(game.phase).not.toBe(Phase.enum.armament);

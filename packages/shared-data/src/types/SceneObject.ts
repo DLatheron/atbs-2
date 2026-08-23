@@ -1,5 +1,11 @@
 import { Orientation, rotateOrientation } from "@atbs/maths";
-import { ImageId, isRenderImage, RenderImage, RenderList } from "./PrimitiveTypes.js";
+import {
+    ImageId,
+    isRenderImage,
+    RenderImage,
+    RenderList,
+    VisibilityFilter
+} from "./PrimitiveTypes.js";
 import { RenderMode } from "./RenderMode.js";
 import z from "zod";
 
@@ -91,7 +97,7 @@ export interface SceneContext {
     opacity?: number;
     frame?: number;
     states: string[];
-    visibilityFilter?: boolean;
+    visibilityFilter?: VisibilityFilter[];
 }
 
 export class SceneObject {
@@ -180,7 +186,7 @@ export class SceneObject {
                         context.applyOrientation ?? Orientation.NORTH
                     );
                     const opacity = (originalOpacity ?? 1) * (context.opacity ?? 1);
-                    const visibilityFilter = context.visibilityFilter ?? false;
+                    const visibilityFilter = context.visibilityFilter;
 
                     return {
                         imageId,

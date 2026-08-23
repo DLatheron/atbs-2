@@ -155,11 +155,15 @@ export const Attribute = z.object({
 });
 export type Attribute = z.infer<typeof Attribute>;
 
+const visibilityFilter = ["visible", "deployment"] as const;
+export const VisibilityFilter = z.enum(visibilityFilter);
+export type VisibilityFilter = z.infer<typeof VisibilityFilter>;
+
 export const RenderImage = z.object({
     imageId: ImageId,
     orientation: z.enum(Orientation).optional(), // Assume NORTH.
     opacity: z.number().optional(), // Assume 1.
-    visibilityFilter: z.boolean().optional() // Assume true (always draw).
+    visibilityFilter: z.array(VisibilityFilter).optional()
 });
 export type RenderImage = z.infer<typeof RenderImage>;
 

@@ -293,7 +293,7 @@
                                 "baseCost": 90,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
-                            },                            
+                            },
                             {
                                 "itemId": "50-calibre.round",
                                 "quantity": 40,
@@ -728,7 +728,8 @@
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
-                            }                        ]
+                            }
+                        ]
                     }
                 },
                 "deployment": {

@@ -22,7 +22,8 @@ import {
     TimedAnimatableObjectRemoval,
     TimedVisibilityUpdate,
     UnitSummary,
-    VisibilityViewerSummary
+    VisibilityViewerSummary,
+    VisibilityFilter
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
 import { CanvasLoopProps } from "./components/CanvasLoop";
@@ -1393,14 +1394,12 @@ export class World {
         deferredAnimations?: DeferredTileAnimation[];
     }): void {
         renderList.forEach(
-            ({
-                imageId,
-                orientation = Orientation.NORTH,
-                opacity = 1,
-                visibilityFilter = false
-            }) => {
+            ({ imageId, orientation = Orientation.NORTH, opacity = 1, visibilityFilter }) => {
                 if (imageId.startsWith("anim-")) {
-                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                    if (
+                        visibilityFilter?.includes(VisibilityFilter.enum.visible) &&
+                        !this.visibleTiles.has(tilePos.toString())
+                    ) {
                         return;
                     }
 
@@ -1428,7 +1427,10 @@ export class World {
                         return;
                     }
 
-                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                    if (
+                        visibilityFilter?.includes(VisibilityFilter.enum.visible) &&
+                        !this.visibleTiles.has(tilePos.toString())
+                    ) {
                         return;
                     }
 

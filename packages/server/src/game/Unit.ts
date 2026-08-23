@@ -36,7 +36,8 @@ import {
     UnitActionType,
     Prime,
     TimedAnimatableObject,
-    TimedAnimatableObjectRemoval
+    TimedAnimatableObjectRemoval,
+    VisibilityFilter
 } from "@atbs/shared-data";
 import z from "zod";
 import {
@@ -718,7 +719,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             ...context,
             states: [this.isAlive ? "alive" : "dead", this.itemInUse ? "item-in-use" : "default"],
             orientation: this.orientation,
-            visibilityFilter: true
+            visibilityFilter: [VisibilityFilter.enum.visible]
         };
 
         const renderList = super.getRenderList(unitContext);
@@ -939,7 +940,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         if (this.disorientated) {
             // Reduce the amount of disorientation based on the number of action points remaining...
             this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
-        }        
+        }
     }
 
     private _verifyDirectional(): void | never {

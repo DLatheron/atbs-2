@@ -20,7 +20,8 @@ import {
     SceneContext,
     Prime,
     FireModeEx,
-    FireModeDetail
+    FireModeDetail,
+    VisibilityFilter
 } from "@atbs/shared-data";
 import { clamp, degreesToRadians, TilePos, Vec2 } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
@@ -559,7 +560,11 @@ export class Item extends SceneObject {
     }
 
     getRenderList(context: SceneContext): RenderList {
-        const unitContext = { ...context, states: [], visibilityFilter: true };
+        const unitContext = {
+            ...context,
+            states: [],
+            visibilityFilter: [VisibilityFilter.enum.visible]
+        };
 
         return super.getRenderList(unitContext);
     }
