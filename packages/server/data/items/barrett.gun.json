@@ -1,0 +1,51 @@
+{
+    "id": "barrett.gun",
+    "type": "gun",
+    "name": "Barrett M82A1 Sniper Rifle",
+    "shortName": "M82A1",
+    "description": [
+        {
+            "text": "Actually designated as an anti-materiel rifle, it has found fame as an anti-personnel weapon."
+        },
+        {
+            "text": "Chambered for the devastating .50 BMG round a target is unlikely to survive even a glancing blow and body armour may as well not be worn."
+        }
+    ],
+    "weight": 13.5,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "barrett"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "optical",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["barrett.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "barrett.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 98,
+                    "actionPoints": 35
+                },
+                "snapshot": {
+                    "accuracy": 70,
+                    "actionPoints": 20
+                }
+            }
+        }
+    }
+}

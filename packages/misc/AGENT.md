@@ -32,7 +32,8 @@ Tests: `MessageManager.test.ts`.
 
 ## Do
 
-- Register handlers **before** messages of that type can arrive (`getMessageHandlerEntries` throws otherwise).
+- Register handlers **before** messages of that type can arrive; a message with no registered handler is warned about and dropped.
+- On the client, register page handlers on mount rather than when the page becomes visible: phase messages and their follow-up payloads arrive in the same batch, before React has re-rendered.
 - On the client, use the existing module-level singleton — do not create a second instance per page without coordinating.
 - Use `Logger` with a system name; server levels come from `config.logLevels`.
 

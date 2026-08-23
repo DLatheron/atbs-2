@@ -1,0 +1,19 @@
+{
+    "id": "m9-15.magazine",
+    "type": "magazine",
+    "name": "M9 15 Round Magazine",
+    "shortName": "M9x15",
+    "description": [{ "text": "A 15-round magazine for the Beretta M9 pistol." }],
+    "weight": 0.055,
+    "renderable": {
+        "default": [{ "imageId": "m9-15" }],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["9mm-parabellum.round", "9mm-hollow-point.round"],
+            "maxQuantity": 15
+        }
+    },
+    "slots": { "ammo": { "id": "9mm-parabellum.round", "quantity": 15 } }
+}

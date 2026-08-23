@@ -1,0 +1,48 @@
+{
+    "id": "fn-hi-power.gun",
+    "type": "gun",
+    "name": "FN Hi-Power Pistol",
+    "shortName": "FN Hi-Power",
+    "description": [
+        {
+            "text": "FN Hi-Power 9mm semi-automatic pistol."
+        }
+    ],
+    "weight": 1.4,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "fn-hi-power"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["hi-power.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "hi-power.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 20
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 10
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,32 @@
+{
+    "id": "m1911-15.magazine",
+    "type": "magazine",
+    "name": "Colt 1911 15-Round Magazine",
+    "shortName": "1911x15",
+    "description": [
+        {
+            "text": "Magazine holding 15 rounds of .45 ACP ammunition."
+        }
+    ],
+    "weight": 0.18,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "m1911-15"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["45-acp.round", "45-hollow-point.round"],
+            "maxQuantity": 15
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "45-acp.round",
+            "quantity": 15
+        }
+    }
+}

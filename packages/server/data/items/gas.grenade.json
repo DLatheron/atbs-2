@@ -1,0 +1,20 @@
+{
+    "id": "gas.grenade",
+    "type": "grenade",
+    "name": "Gas Grenade",
+    "description": [{ "text": "GAS GAS GAS!" }],
+    "quantity": 1,
+    "weight": 0.4,
+    "renderable": {
+        "default": [{ "imageId": "gas-grenade" }],
+        "FIRE_MODE": []
+    },
+    "explosion": {
+        "type": "gas",
+        "particles": [12, 8, 4],
+        "lifetime": { "min": 2, "max": 4 },
+        "vfxId": "gas.vfx",
+        "materials": ["gas.material"],
+        "damage": { "default": 20 }
+    }
+}

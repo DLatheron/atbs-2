@@ -1,0 +1,48 @@
+{
+    "id": "m1911.gun",
+    "type": "gun",
+    "name": "Colt M1911",
+    "shortName": "M1911",
+    "description": [
+        {
+            "text": "The Colt M1911 was the mainstay sidearm of the United States Armed Forces for over 70 years."
+        }
+    ],
+    "weight": 1,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "m1911"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["m1911-7.magazine", "m1911-15.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "m1911-7.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 54,
+                    "actionPoints": 20
+                },
+                "snapshot": {
+                    "accuracy": 38,
+                    "actionPoints": 10
+                }
+            }
+        }
+    }
+}

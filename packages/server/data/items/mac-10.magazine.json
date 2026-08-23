@@ -1,0 +1,32 @@
+{
+    "id": "mac-10.magazine",
+    "type": "magazine",
+    "name": "Ingram MAC-10 30-Round Clip",
+    "shortName": "MACx30",
+    "description": [
+        {
+            "text": "Magazine holding 30 rounds of .45 ACP ammunition."
+        }
+    ],
+    "weight": 0.15,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "mac-10.magazine"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["45-acp.round", "45-hollow-point.round"],
+            "maxQuantity": 30
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "45-acp.round",
+            "quantity": 30
+        }
+    }
+}

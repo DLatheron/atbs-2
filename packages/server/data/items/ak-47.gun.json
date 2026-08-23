@@ -1,0 +1,63 @@
+{
+    "id": "ak-47.gun",
+    "type": "gun",
+    "name": "AK-47 'Kalashnikova' Assault Rifle",
+    "shortName": "AK-47",
+    "description": [
+        {
+            "text": "The legendary Kalashnikova is the most widely used rifle in the world. It is easy to make and so has been copied countless times, reliable and lethal."
+        }
+    ],
+    "weight": 3.8,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "ak-47"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["ak-47.magazine", "ak-47-drum.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "ak-47.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 50,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "auto": {
+            "rpm": 600,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 25,
+                    "actionPoints": 5,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 25,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}

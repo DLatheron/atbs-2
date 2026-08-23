@@ -4,14 +4,15 @@ import MenuIcon from "@mui/icons-material/Menu";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { MouseEvent } from "react";
 import { DescriptionComponent } from "../Description";
-import { ITEM_TILE_SIZE, ItemTile } from "./ItemTile";
+import { ItemTile } from "./ItemTile";
 import { collectContentSlots, slotLabel, type ContentSlotRef } from "./itemMenu";
 import {
     backgroundBannerAnchorSx,
     backgroundBannerSx,
     CONTENTS_TITLE,
     cutoutTextSx,
-    INVENTORY_PANEL_BACKGROUND_COLOR
+    INVENTORY_PANEL_BACKGROUND_COLOR,
+    ITEM_TILE_SIZE
 } from "./styles";
 
 interface ItemContentSlotsProps {

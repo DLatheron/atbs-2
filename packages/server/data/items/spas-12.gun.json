@@ -17,7 +17,11 @@
     "fireType": "direct",
     "slotProps": {
         "ammo": {
-            "compatibleIds": ["12-gauge-buckshot.round"],
+            "compatibleIds": [
+                "12-gauge-buckshot.round",
+                "12-gauge-flechette.round",
+                "12-gauge-slug.round"
+            ],
             "maxQuantity": 7
         }
     },

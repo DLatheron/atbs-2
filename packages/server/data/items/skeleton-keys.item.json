@@ -1,0 +1,19 @@
+{
+    "id": "skeleton-keys.item",
+    "type": "item",
+    "name": "Set of Skeleton Keys",
+    "description": [
+        {
+            "text": "A set of skeleton keys to open any door."
+        }
+    ],
+    "weight": 0.5,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "skeleton-keys"
+            }
+        ],
+        "fire-mode": []
+    }
+}

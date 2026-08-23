@@ -1,0 +1,32 @@
+{
+    "id": "mp5-30.magazine",
+    "type": "magazine",
+    "name": "H&K MP5 30-Round Clip",
+    "shortName": "MP5x30",
+    "description": [
+        {
+            "text": "Magazine holding 30 rounds of 9mm ammunition."
+        }
+    ],
+    "weight": 0.15,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "mp5-30"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["9mm-parabellum.round", "9mm-hollow-point.round"],
+            "maxQuantity": 30
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "9mm-parabellum.round",
+            "quantity": 30
+        }
+    }
+}

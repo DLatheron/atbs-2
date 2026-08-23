@@ -1,0 +1,32 @@
+{
+    "id": "desert-eagle.magazine",
+    "type": "magazine",
+    "name": "Desert Eagle .357 Magnum 9-Round Magazine",
+    "shortName": "DEx9",
+    "description": [
+        {
+            "text": "Magazine holding 9 rounds of .357 Magnum ammunition."
+        }
+    ],
+    "weight": 0.1,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "desert-eagle-clip"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["357-magnum.round"],
+            "maxQuantity": 9
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "357-magnum.round",
+            "quantity": 9
+        }
+    }
+}

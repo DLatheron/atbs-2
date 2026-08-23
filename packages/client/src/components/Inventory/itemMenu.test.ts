@@ -4,6 +4,7 @@ import {
     collectAmmoCounts,
     collectAmmoSlots,
     collectContentSlots,
+    describeItemContents,
     findCompatibleAmmo,
     findHotkeyAction,
     formatAmmoCount,
@@ -37,6 +38,8 @@ function makeItem(
         weight: 1,
         maxThrowRange: 0,
         uiImage: [{ imageId: "placeholder" }],
+        allowLoad: true,
+        allowUnload: true,
         slots: [],
         ...overrides
     };
@@ -359,10 +362,10 @@ describe("getItemMenu", () => {
             slots: [
                 {
                     slot: "ammo",
-                    compatibleIds: ["12-guage-buckshot.round"],
+                    compatibleIds: ["12-gauge-buckshot.round"],
                     maxQuantity: 8,
                     contents: makeItem({
-                        id: "12-guage-buckshot.round-1",
+                        id: "12-gauge-buckshot.round-1",
                         type: "round",
                         shortName: "Buck"
                     })
@@ -508,6 +511,37 @@ describe("collectAmmoCounts", () => {
 
     it("returns no counts for items without ammo slots", () => {
         expect(collectAmmoCounts(coffee)).toEqual([]);
+    });
+});
+
+describe("describeItemContents", () => {
+    it("says what a magazine is loaded with", () => {
+        expect(describeItemContents(magInPack)).toEqual([{ depth: 0, text: "Ammo: 5.56 ×30/30" }]);
+    });
+
+    it("says an empty well is empty", () => {
+        expect(describeItemContents(spareMag)).toEqual([{ depth: 0, text: "Ammo: empty" }]);
+    });
+
+    it("descends from a gun through its magazine to the rounds", () => {
+        expect(describeItemContents(m4)).toEqual([
+            { depth: 0, text: "Ammo: M16x30" },
+            { depth: 1, text: "Ammo: 5.56 ×30/30" }
+        ]);
+    });
+
+    it("names the nested guns of a combo item instead of labelling slots", () => {
+        expect(describeItemContents(combo)).toEqual([
+            { depth: 0, text: "M4" },
+            { depth: 1, text: "Ammo: M16x30" },
+            { depth: 2, text: "Ammo: 5.56 ×30/30" },
+            { depth: 0, text: "M203" },
+            { depth: 1, text: "Ammo: 40mm HE" }
+        ]);
+    });
+
+    it("returns nothing for an item without slots", () => {
+        expect(describeItemContents(coffee)).toEqual([]);
     });
 });
 

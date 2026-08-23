@@ -1,0 +1,32 @@
+{
+    "id": "mp5-15.magazine",
+    "type": "magazine",
+    "name": "H&K MP5 15-Round Clip",
+    "shortName": "MP5x15",
+    "description": [
+        {
+            "text": "Magazine holding 15 rounds of 9mm ammunition."
+        }
+    ],
+    "weight": 0.097,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "mp5-15"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["9mm-parabellum.round", "9mm-hollow-point.round"],
+            "maxQuantity": 15
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "9mm-parabellum.round",
+            "quantity": 15
+        }
+    }
+}

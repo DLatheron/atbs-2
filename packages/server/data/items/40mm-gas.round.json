@@ -19,7 +19,7 @@
             "trailLengthInPixels": 20,
             "rangeFalloffPower": 10
         },
-        "damage": { "default": 1 },
+        "damage": { "default": 20 },
 
         "mass": 0.19,
         "velocity": 84,

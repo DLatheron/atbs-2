@@ -1,0 +1,53 @@
+{
+    "id": "12-gauge-slug.round",
+    "type": "round",
+    "name": "Solid Rifled-Slugs",
+    "shortName": "12 Gauge Slug",
+    "description": [
+        {
+            "text": "12-gauge solid rifled slugs comprised of a solid lead core and increased propellant they are capable of cracking the engine block of a car and cause devastating damage to soft targets."
+        }
+    ],
+    "weight": 0.03,
+    "projectile": {
+        "maxRange": 2500,
+        "perturbation": 100,
+        "visual": {
+            "headColour": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 1
+            },
+            "headRadiusInPixels": 2,
+            "trailColour": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 1
+            },
+            "trailLengthInPixels": 40,
+            "rangeFalloffPower": 10
+        },
+        "damage": {
+            "human": 55,
+            "default": 45
+        },
+        "mass": 0.028,
+        "velocity": 480,
+        "diameter": 18.5,
+        "hardness": 0.5,
+        "shape": 0.3,
+        "stability": 0.5,
+        "bounce": 0.1,
+        "integrity": 0.6
+    },
+    "renderable": {
+        "default": [
+            {
+                "imageId": "12-gauge-slug"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

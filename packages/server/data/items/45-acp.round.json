@@ -1,0 +1,53 @@
+{
+    "id": "45-acp.round",
+    "type": "round",
+    "name": ".45 ACP Round",
+    "shortName": ".45 ACP",
+    "description": [
+        {
+            "text": "Standard .45 ACP cartridge."
+        }
+    ],
+    "weight": 0.019,
+    "projectile": {
+        "maxRange": 3500,
+        "perturbation": 100,
+        "visual": {
+            "headColour": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 1
+            },
+            "headRadiusInPixels": 2,
+            "trailColour": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 1
+            },
+            "trailLengthInPixels": 40,
+            "rangeFalloffPower": 12
+        },
+        "damage": {
+            "human": 15,
+            "default": 15
+        },
+        "mass": 0.015,
+        "velocity": 260,
+        "diameter": 11.43,
+        "hardness": 0.7,
+        "shape": 0.2,
+        "stability": 0.8,
+        "bounce": 0.4,
+        "integrity": 0.8
+    },
+    "renderable": {
+        "default": [
+            {
+                "imageId": "45-acp"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

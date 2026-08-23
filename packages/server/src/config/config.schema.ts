@@ -12,6 +12,11 @@ const Config = z
         showVisibilityDebugGraphics: z.boolean().optional().default(false),
         showFragmentExplosionTracers: z.boolean().optional().default(true),
         showShockwaveExplosionTracers: z.boolean().optional().default(false),
+        /**
+         * Multiplier applied only to projectile travel speed used for tracer /
+         * animation timing. Penetration and impact physics are unaffected.
+         */
+        projectileVisualVelocityScale: z.number().positive().optional().default(3),
         cleanupDamageCacheOnGameDestroy: z.boolean().optional().default(true),
         logLevels: z
             .object({

@@ -1,0 +1,43 @@
+{
+    "id": "12-gauge-flechette.round",
+    "type": "round",
+    "name": "12 Gauge Flechette Shells",
+    "shortName": "12 Gauge Flechette",
+    "description": [
+        {
+            "text": "12-gauge flechette shells that trades the number of projectiles for increased penetration power."
+        }
+    ],
+    "weight": 0.047,
+    "projectile": {
+        "numProjectiles": 10,
+        "variability": { "min": 0.95, "max": 1.05 },
+        "maxRange": 3000,
+        "perturbation": 0,
+        "visual": {
+            "headColour": { "r": 255, "g": 255, "b": 255, "a": 1 },
+            "headRadiusInPixels": 1,
+            "trailColour": { "r": 255, "g": 255, "b": 255, "a": 1 },
+            "trailLengthInPixels": 100,
+            "rangeFalloffPower": 10
+        },
+
+        "mass": 0.002,
+        "velocity": 640,
+        "diameter": 1.5,
+        "hardness": 1,
+        "shape": 1,
+        "stability": 0.7,
+        "bounce": 0.3,
+        "integrity": 0.8,
+
+        "damage": {
+            "human": 8,
+            "default": 3
+        }
+    },
+    "renderable": {
+        "default": [{ "imageId": "12-gauge-flechette" }],
+        "FIRE_MODE": []
+    }
+}

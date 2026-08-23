@@ -1,63 +1,27 @@
-import type { Description, InventoryItemView } from "@atbs/shared-data";
+import { DEFAULT_CURRENCY, type Description, type InventoryItemView } from "@atbs/shared-data";
 import { Box, IconButton, SxProps, Tooltip, Typography } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import type { DraggableAttributes, DraggableSyntheticListeners } from "@dnd-kit/core";
 import {
-    createContext,
     useCallback,
-    useContext,
     useEffect,
-    useMemo,
-    useRef,
     useState,
     type MouseEvent,
     type ReactNode,
     type SyntheticEvent
 } from "react";
 import { ImageComponent } from "../Image";
-import { collectAmmoCounts, formatAmmoCount } from "./itemMenu";
+import { collectAmmoCounts, describeItemContents, formatAmmoCount, formatMoney } from "./itemMenu";
+import { useInventoryTooltipDismissApi } from "./inventoryTooltipDismissContext";
 import {
     ITEM_SELECTION_BORDER_COLOR,
     ITEM_SELECTION_BORDER_WIDTH,
     ITEM_SELECTION_CHASE_DURATION_MS,
-    ITEM_SELECTION_DASH_ARRAY
+    ITEM_SELECTION_DASH_ARRAY,
+    ITEM_TILE_SIZE
 } from "./styles";
 
-/** Sized so an image plus up to three ammo counts fit on the square. */
-export const ITEM_TILE_SIZE = 180;
 const MAX_AMMO_COUNTS = 3;
-
-interface TooltipDismissApi {
-    subscribe: (listener: () => void) => () => void;
-    dismiss: () => void;
-}
-
-const TooltipDismissContext = createContext<TooltipDismissApi | null>(null);
-
-export function InventoryTooltipDismissProvider({ children }: { children: ReactNode }) {
-    const listenersRef = useRef(new Set<() => void>());
-    const api = useMemo<TooltipDismissApi>(
-        () => ({
-            subscribe: (listener) => {
-                listenersRef.current.add(listener);
-                return () => {
-                    listenersRef.current.delete(listener);
-                };
-            },
-            dismiss: () => {
-                listenersRef.current.forEach((listener) => listener());
-            }
-        }),
-        []
-    );
-
-    return <TooltipDismissContext.Provider value={api}>{children}</TooltipDismissContext.Provider>;
-}
-
-export function useDismissInventoryTooltips(): () => void {
-    const api = useContext(TooltipDismissContext);
-    return api?.dismiss ?? (() => undefined);
-}
 
 export interface ItemTileProps {
     item: InventoryItemView;
@@ -70,6 +34,12 @@ export interface ItemTileProps {
     onMenuClick?: (event: MouseEvent<HTMLElement>) => void;
     /** When false, the tile has no hover tooltip. Defaults to true. */
     tooltip?: boolean;
+    /** Shop price for one purchase, shown in the tooltip. */
+    cost?: number;
+    /** How many units one purchase yields, when more than one. */
+    batchSize?: number;
+    /** Currency symbol the owning store trades in. */
+    currency?: string;
     sx?: SxProps;
 }
 
@@ -105,7 +75,7 @@ function TileBadge({ children, sx }: { children: ReactNode; sx?: SxProps }) {
                 // borderRadius: 0.5,
                 bgcolor: "rgba(0, 0, 0, 0.7)",
                 color: "white",
-                fontSize: "0.7rem",
+                fontSize: "0.8rem",
                 lineHeight: 1.2,
                 textAlign: "center",
                 pointerEvents: "none",
@@ -177,11 +147,15 @@ export function ItemTile({
     onClick,
     onMenuClick,
     tooltip = true,
+    cost,
+    batchSize = 1,
+    currency = DEFAULT_CURRENCY,
     sx
 }: ItemTileProps) {
     const ammoCounts = collectAmmoCounts(item).slice(0, MAX_AMMO_COUNTS);
     const tooltipBody = flattenDescription(item.description);
-    const dismissApi = useContext(TooltipDismissContext);
+    const contentLines = describeItemContents(item);
+    const dismissApi = useInventoryTooltipDismissApi();
     const [tooltipOpen, setTooltipOpen] = useState(false);
 
     useEffect(() => {
@@ -254,7 +228,7 @@ export function ItemTile({
                 </IconButton>
             )}
             <ImageComponent images={item.uiImage} width={100} height={100} disabled={disabled} />
-            {item.quantity > 1 && <TileBadge sx={{ top: 2, left: 2 }}>{item.quantity}</TileBadge>}
+            {item.quantity > 1 && <TileBadge sx={{ top: 2, left: 2 }}>x{item.quantity}</TileBadge>}
             {ammoCounts.length > 0 && (
                 <Box
                     sx={{
@@ -302,10 +276,30 @@ export function ItemTile({
             title={
                 <Box>
                     <Typography variant="subtitle2">{item.name}</Typography>
+                    {cost !== undefined && (
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                            {batchSize > 1
+                                ? `${batchSize} for ${formatMoney(cost, currency)}`
+                                : formatMoney(cost, currency)}
+                        </Typography>
+                    )}
                     {tooltipBody && (
                         <Typography variant="body2" sx={{ mt: 0.5 }}>
                             {tooltipBody}
                         </Typography>
+                    )}
+                    {contentLines.length > 0 && (
+                        <Box sx={{ mt: 0.5 }}>
+                            {contentLines.map((line, index) => (
+                                <Typography
+                                    key={index}
+                                    variant="body2"
+                                    sx={{ pl: line.depth, lineHeight: 1.4 }}
+                                >
+                                    {line.text}
+                                </Typography>
+                            ))}
+                        </Box>
                     )}
                 </Box>
             }

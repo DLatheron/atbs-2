@@ -177,6 +177,24 @@ const GRENADE_LAUNCHER_RECIPE = ItemRecipe.parse({
     slots: { ammo: { id: "40mm-he.round", quantity: 1 } }
 });
 
+const DISPOSABLE_LAUNCHER_RECIPE = ItemRecipe.parse({
+    id: "law.gun",
+    type: "gun",
+    name: "LAW",
+    description: [{ text: "Disposable launcher" }],
+    weight: 4.4,
+    renderable: { default: [] },
+    fireSelector: "single",
+    fireType: "direct",
+    fireModes: SINGLE_FIRE_MODES,
+    allowLoad: false,
+    allowUnload: false,
+    slotProps: {
+        ammo: { compatibleIds: ["40mm-he.round"], maxQuantity: 1 }
+    },
+    slots: { ammo: { id: "40mm-he.round", quantity: 1 } }
+});
+
 const PARTIAL_MAG_RECIPE = ItemRecipe.parse({
     id: "m16-30-partial.magazine",
     type: "magazine",
@@ -204,7 +222,8 @@ function createItemManager(): ItemManager {
         PARTIAL_MAG_RECIPE,
         GRENADE_ROUND_RECIPE,
         SMOKE_ROUND_RECIPE,
-        GRENADE_LAUNCHER_RECIPE
+        GRENADE_LAUNCHER_RECIPE,
+        DISPOSABLE_LAUNCHER_RECIPE
     ]) {
         recipes.addRecipe(recipe);
     }
@@ -335,6 +354,34 @@ describe("Item", () => {
 
             expect(gun.unload()).toBe(mag);
             expect(gun.findSlotContents(SlotType.enum.ammo)).toBeUndefined();
+        });
+
+        it("rejects load and unload when the recipe disables them", () => {
+            const law = itemManager.newItem(DISPOSABLE_LAUNCHER_RECIPE.id);
+            const spare = itemManager.newItem(GRENADE_ROUND_RECIPE.id);
+
+            expect(law.canLoad()).toBe(false);
+            expect(law.canUnload()).toBe(false);
+            expect(law.toInventoryItemView().allowLoad).toBe(false);
+            expect(law.toInventoryItemView().allowUnload).toBe(false);
+            expect(() => law.load(spare)).toThrow(/cannot be loaded/);
+            expect(() => law.unload()).toThrow(/cannot be unloaded/);
+            expect(law.findSlotContents(SlotType.enum.ammo)?.recipeId).toBe("40mm-he.round");
+        });
+
+        it("keeps sealed ammo when stripping store components for a sale", () => {
+            const law = itemManager.newItem(DISPOSABLE_LAUNCHER_RECIPE.id);
+            const rocket = law.getSlotContents(SlotType.enum.ammo);
+
+            const sold = law.removeStoreComponents(
+                (recipeId) =>
+                    recipeId === DISPOSABLE_LAUNCHER_RECIPE.id ||
+                    recipeId === GRENADE_ROUND_RECIPE.id,
+                true
+            );
+
+            expect(sold.map((item) => item.recipeId)).toEqual([DISPOSABLE_LAUNCHER_RECIPE.id]);
+            expect(law.findSlotContents(SlotType.enum.ammo)).toBe(rocket);
         });
     });
 

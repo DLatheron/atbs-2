@@ -1,0 +1,77 @@
+{
+    "id": "mp5a2.gun",
+    "type": "gun",
+    "name": "H&K MP5A2",
+    "shortName": "MP5A2",
+    "description": [
+        {
+            "text": "Heckler & Koch MP5A2"
+        }
+    ],
+    "weight": 2.54,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "mp5a2"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["mp5-30.magazine", "mp5-15.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "mp5-30.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 56,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "burst": {
+            "ammoUse": 3,
+            "rpm": 800,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 46,
+                    "actionPoints": 20
+                },
+                "snapshot": {
+                    "accuracy": 36,
+                    "actionPoints": 12
+                }
+            }
+        },
+        "auto": {
+            "rpm": 800,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 34,
+                    "actionPoints": 5,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 32,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}

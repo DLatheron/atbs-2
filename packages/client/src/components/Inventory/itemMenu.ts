@@ -1,11 +1,14 @@
+import { DEFAULT_CURRENCY } from "@atbs/shared-data";
 import type {
     InventoryItemView,
     InventorySnapshot,
     InventorySlotType,
-    ItemId
+    ItemId,
+    StoreItemView,
+    StoreSnapshot
 } from "@atbs/shared-data";
 
-export type ItemMenuLocation = "inUse" | "inventory" | "ground" | "slot";
+export type ItemMenuLocation = "inUse" | "inventory" | "ground" | "slot" | "store";
 export type InventoryActionScope = "inUse" | "all";
 export type InventoryMode = "action" | "shop";
 /** What the inspector panel shows. `"inUse"` stays on the equipped item; `"selected"` follows clicks. */
@@ -17,7 +20,9 @@ export type ItemMenuAction =
     | { type: "drop"; itemId: ItemId }
     | { type: "pickup"; itemId: ItemId; use?: boolean }
     | { type: "load"; receiverId: ItemId; ammoId: ItemId }
-    | { type: "unload"; itemId: ItemId };
+    | { type: "unload"; itemId: ItemId }
+    | { type: "buy"; itemId: ItemId; use?: boolean }
+    | { type: "sell"; itemId: ItemId; quantity: number };
 
 export interface ItemMenuRow {
     id: string;
@@ -39,6 +44,8 @@ export interface GetItemMenuArgs {
      * Only Load is offered.
      */
     emptySlot?: boolean;
+    mode?: InventoryMode;
+    store?: StoreSnapshot | null;
 }
 
 /**
@@ -72,7 +79,8 @@ export function findItemInTree(item: InventoryItemView, id: ItemId): InventoryIt
 
 export function findItemInSnapshot(
     snapshot: InventorySnapshot,
-    id: ItemId
+    id: ItemId,
+    store?: StoreSnapshot | null
 ): InventoryItemView | null {
     for (const item of snapshot.items) {
         const found = findItemInTree(item, id);
@@ -85,6 +93,15 @@ export function findItemInSnapshot(
         const found = findItemInTree(item, id);
         if (found) {
             return found;
+        }
+    }
+
+    if (store) {
+        for (const storeItem of store.items) {
+            const found = findItemInTree(storeItem.item, id);
+            if (found) {
+                return found;
+            }
         }
     }
 
@@ -112,6 +129,43 @@ export function isInUseTree(snapshot: InventorySnapshot, itemId: ItemId): boolea
 
 export function formatPendingCost(label: string, name: string, cost: number): string {
     return `${label} ${name} — ${cost} APts`;
+}
+
+export function formatPendingMoney(
+    label: string,
+    name: string,
+    cost: number,
+    currency: string = DEFAULT_CURRENCY
+): string {
+    return cost === 0 ? `${label} ${name}` : `${label} ${name} — ${formatMoney(cost, currency)}`;
+}
+
+/** Shop prices are only worth showing when something is actually charged. */
+export function formatMoney(cost: number, currency: string = DEFAULT_CURRENCY): string {
+    return cost === 0
+        ? "Free"
+        : `${currency}${cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+}
+
+export function storeBatchQuantity(store: StoreSnapshot, itemId: ItemId): number {
+    const storeItem = store.items.find((entry: StoreItemView) => entry.itemId === itemId);
+    if (!storeItem) {
+        return 0;
+    }
+    return Math.min(storeItem.batchSize, storeItem.item.quantity);
+}
+
+export function storeBatchCost(store: StoreSnapshot, itemId: ItemId): number {
+    const storeItem = store.items.find((entry: StoreItemView) => entry.itemId === itemId);
+    if (!storeItem) {
+        return 0;
+    }
+    const quantity = storeBatchQuantity(store, itemId);
+    return (storeItem.cost * quantity) / storeItem.batchSize;
+}
+
+export function canAffordStore(store: StoreSnapshot, cost: number): boolean {
+    return store.budget - cost >= store.threshold;
 }
 
 /** Use costs unuse+use when something is already equipped (switch). */
@@ -179,7 +233,7 @@ function buildLoadRow(snapshot: InventorySnapshot, receiver: InventoryItemView):
 
 function buildUnloadRow(snapshot: InventorySnapshot, item: InventoryItemView): ItemMenuRow | null {
     const ammoSlot = getAmmoSlot(item);
-    if (!ammoSlot?.contents) {
+    if (!item.allowUnload || !ammoSlot?.contents) {
         return null;
     }
 
@@ -297,13 +351,221 @@ export function getDropCost(snapshot: InventorySnapshot, itemId: ItemId): number
     return snapshot.inUseItemId === itemId ? snapshot.costs.drop : snapshot.costs.dropFromInventory;
 }
 
+function moneyRow(
+    id: string,
+    label: string,
+    cost: number,
+    store: StoreSnapshot,
+    action: ItemMenuAction,
+    name: string,
+    disabled = false
+): ItemMenuRow {
+    return {
+        id,
+        label,
+        cost,
+        disabled: disabled || !canAffordStore(store, cost),
+        action,
+        pendingCostText: formatPendingMoney(label, name, cost, store.currency)
+    };
+}
+
+export function findStoreItemId(store: StoreSnapshot, item: InventoryItemView): ItemId | null {
+    return store.items.find((entry: StoreItemView) => entry.item.id === item.id)?.itemId ?? null;
+}
+
+function getShopItemMenu({
+    snapshot,
+    item,
+    location,
+    emptySlot,
+    store
+}: {
+    snapshot: InventorySnapshot;
+    item: InventoryItemView;
+    location: ItemMenuLocation;
+    emptySlot: boolean;
+    store: StoreSnapshot | null;
+}): ItemMenuRow[] {
+    if (!store) {
+        return [];
+    }
+
+    switch (location) {
+        case "store": {
+            const itemId = findStoreItemId(store, item);
+            if (!itemId) {
+                return [];
+            }
+            const cost = storeBatchCost(store, itemId);
+            const soldOut = storeBatchQuantity(store, itemId) <= 0;
+            const rows: ItemMenuRow[] = [
+                moneyRow(
+                    "buy",
+                    "Buy",
+                    cost,
+                    store,
+                    { type: "buy", itemId },
+                    item.shortName,
+                    soldOut
+                )
+            ];
+            if (item.type === "gun" || item.type === "item" || item.type === "grenade") {
+                rows.push(
+                    moneyRow(
+                        "buyAndUse",
+                        "Buy and use",
+                        cost,
+                        store,
+                        { type: "buy", itemId, use: true },
+                        item.shortName,
+                        soldOut
+                    )
+                );
+            }
+            return rows;
+        }
+        case "inventory": {
+            const rows: ItemMenuRow[] = [
+                moneyRow("use", "Use", 0, store, { type: "use", itemId: item.id }, item.shortName),
+                moneyRow(
+                    "sell",
+                    "Sell",
+                    0,
+                    store,
+                    { type: "sell", itemId: item.id, quantity: item.quantity },
+                    item.shortName
+                ),
+                ...buildShopLoadUnloadRows(snapshot, item, false, store)
+            ];
+            return rows;
+        }
+        case "inUse": {
+            return [
+                moneyRow("unuse", "Put away", 0, store, { type: "unuse" }, item.shortName),
+                moneyRow(
+                    "sell",
+                    "Sell",
+                    0,
+                    store,
+                    { type: "sell", itemId: item.id, quantity: item.quantity },
+                    item.shortName
+                ),
+                ...buildShopLoadUnloadRows(snapshot, item, false, store)
+            ];
+        }
+        case "slot": {
+            const rows = buildShopLoadUnloadRows(snapshot, item, emptySlot, store);
+            if (!emptySlot && item.allowUnload) {
+                const contents = getAmmoSlot(item)?.contents;
+                if (contents) {
+                    rows.push(
+                        moneyRow(
+                            "sell",
+                            "Sell",
+                            0,
+                            store,
+                            { type: "sell", itemId: contents.id, quantity: contents.quantity },
+                            contents.shortName
+                        )
+                    );
+                }
+            }
+            return rows;
+        }
+        case "ground":
+            return [];
+    }
+}
+
+function buildShopLoadUnloadRows(
+    snapshot: InventorySnapshot,
+    item: InventoryItemView,
+    emptySlot: boolean,
+    store: StoreSnapshot
+): ItemMenuRow[] {
+    const ammoSlot = getAmmoSlot(item);
+    if (!ammoSlot) {
+        return [];
+    }
+
+    const inventoryAmmo = findCompatibleAmmo(snapshot, item);
+    const storeAmmo = store.items.filter(
+        (entry: StoreItemView) =>
+            entry.item.quantity > 0 &&
+            ammoSlot.compatibleIds.some((compatibleId: ItemId) =>
+                matchesCompatibleId(entry.itemId, compatibleId)
+            )
+    );
+
+    const children: ItemMenuRow[] = [
+        ...inventoryAmmo.map(({ item: ammo }) =>
+            moneyRow(
+                `load-${ammo.id}`,
+                ammo.shortName,
+                0,
+                store,
+                { type: "load", receiverId: item.id, ammoId: ammo.id },
+                ammo.shortName
+            )
+        ),
+        ...storeAmmo.map((entry: StoreItemView) => {
+            const cost = storeBatchCost(store, entry.itemId);
+            return moneyRow(
+                `load-store-${entry.itemId}`,
+                `${entry.item.shortName} (store)`,
+                cost,
+                store,
+                { type: "load", receiverId: item.id, ammoId: entry.itemId },
+                entry.item.shortName
+            );
+        })
+    ];
+
+    const rows: ItemMenuRow[] = [
+        {
+            id: "load",
+            label: "Load",
+            cost: 0,
+            disabled: children.length === 0,
+            action: null,
+            pendingCostText: null,
+            children
+        }
+    ];
+
+    if (!emptySlot && item.allowUnload) {
+        const unload = getAmmoSlot(item)?.contents
+            ? moneyRow(
+                  "unload",
+                  "Unload",
+                  0,
+                  store,
+                  { type: "unload", itemId: item.id },
+                  item.shortName
+              )
+            : null;
+        if (unload) {
+            rows.push(unload);
+        }
+    }
+
+    return rows;
+}
+
 export function getItemMenu({
     snapshot,
     item,
     location,
     actionScope,
-    emptySlot = false
+    emptySlot = false,
+    mode = "action",
+    store = null
 }: GetItemMenuArgs): ItemMenuRow[] {
+    if (mode === "shop") {
+        return getShopItemMenu({ snapshot, item, location, emptySlot, store });
+    }
+
     switch (location) {
         case "inventory": {
             const rows: ItemMenuRow[] = [
@@ -416,6 +678,9 @@ export function getItemMenu({
 
             return rows;
         }
+
+        case "store":
+            return [];
     }
 }
 
@@ -431,7 +696,8 @@ export interface ItemMenuTarget {
  */
 export function resolveItemMenuTarget(
     snapshot: InventorySnapshot,
-    itemId: ItemId
+    itemId: ItemId,
+    store?: StoreSnapshot | null
 ): ItemMenuTarget | null {
     if (snapshot.inUseItemId === itemId) {
         const item = getInUseItem(snapshot);
@@ -446,6 +712,13 @@ export function resolveItemMenuTarget(
     const ground = snapshot.groundItems.find((item: InventoryItemView) => item.id === itemId);
     if (ground) {
         return { item: ground, location: "ground", emptySlot: false };
+    }
+
+    if (store) {
+        const storeItem = store.items.find((entry: StoreItemView) => entry.item.id === itemId);
+        if (storeItem) {
+            return { item: storeItem.item, location: "store", emptySlot: false };
+        }
     }
 
     for (const root of [...snapshot.items, ...snapshot.groundItems]) {
@@ -612,17 +885,58 @@ export function collectAmmoCounts(item: InventoryItemView): AmmoCount[] {
     return collectAmmoSlots(item).map(({ slot }) => ammoCountFromSlot(slot));
 }
 
+/** One line of an item's loaded contents; `depth` is the nesting level for indentation. */
+export interface ItemContentLine {
+    depth: number;
+    text: string;
+}
+
+/**
+ * Describe what an item is loaded with, all the way down: a gun lists its magazine,
+ * the magazine lists its rounds. Nested combo guns (M4+M203) are named rather than
+ * labelled as "Slot 0" / "Slot 1".
+ */
+export function describeItemContents(item: InventoryItemView, depth = 0): ItemContentLine[] {
+    const lines: ItemContentLine[] = [];
+
+    for (const slot of item.slots) {
+        const { contents } = slot;
+
+        if (isNestedItemSlot(slot.slot)) {
+            if (contents) {
+                lines.push({ depth, text: contents.name });
+                lines.push(...describeItemContents(contents, depth + 1));
+            }
+            continue;
+        }
+
+        const label = slotLabel(slot.slot);
+        if (!contents) {
+            lines.push({ depth, text: `${label}: empty` });
+            continue;
+        }
+
+        const quantity = contents.quantity > 1 ? ` ×${contents.quantity}/${slot.maxQuantity}` : "";
+        lines.push({ depth, text: `${label}: ${contents.name}${quantity}` });
+        lines.push(...describeItemContents(contents, depth + 1));
+    }
+
+    return lines;
+}
+
 export type InventoryDragSource =
     | { type: "inventory"; item: InventoryItemView }
     | { type: "inUse"; item: InventoryItemView }
     | { type: "ground"; item: InventoryItemView }
-    | { type: "slot"; owner: InventoryItemView; item: InventoryItemView };
+    | { type: "slot"; owner: InventoryItemView; item: InventoryItemView }
+    | { type: "store"; item: InventoryItemView; itemId: ItemId };
 
 export type InventoryDragTarget =
     | { type: "inUse" }
     | { type: "inventory"; overItemId?: ItemId }
     | { type: "ground" }
-    | { type: "slot"; owner: InventoryItemView };
+    | { type: "slot"; owner: InventoryItemView }
+    | { type: "store" };
 
 export interface InventoryDragResult {
     action: ItemMenuAction;
@@ -634,7 +948,7 @@ function canAfford(snapshot: InventorySnapshot, cost: number): boolean {
 }
 
 export function canLoadIntoSlot(owner: InventoryItemView, ammo: InventoryItemView): boolean {
-    if (owner.id === ammo.id) {
+    if (!owner.allowLoad || owner.id === ammo.id) {
         return false;
     }
 
@@ -681,13 +995,19 @@ export function resolveInventoryDrag({
     snapshot,
     actionScope,
     source,
-    target
+    target,
+    store = null
 }: {
     snapshot: InventorySnapshot;
     actionScope: InventoryActionScope;
     source: InventoryDragSource;
     target: InventoryDragTarget;
+    store?: StoreSnapshot | null;
 }): InventoryDragResult | null {
+    if (store && (source.type === "store" || target.type === "store")) {
+        return resolveShopDrag({ snapshot, source, target, store });
+    }
+
     switch (source.type) {
         case "inventory": {
             switch (target.type) {
@@ -801,6 +1121,9 @@ export function resolveInventoryDrag({
             }
             switch (target.type) {
                 case "inventory": {
+                    if (!source.owner.allowUnload) {
+                        return null;
+                    }
                     const cost = snapshot.costs.unload;
                     if (!canAfford(snapshot, cost)) {
                         return null;
@@ -811,6 +1134,9 @@ export function resolveInventoryDrag({
                     };
                 }
                 case "ground": {
+                    if (!source.owner.allowUnload) {
+                        return null;
+                    }
                     const cost = snapshot.costs.unload + snapshot.costs.drop;
                     if (!canAfford(snapshot, cost)) {
                         return null;
@@ -826,9 +1152,141 @@ export function resolveInventoryDrag({
                 }
                 case "inUse":
                 case "slot":
+                case "store":
                     return null;
             }
+            return null;
         }
+        case "store":
+            return null;
+    }
+
+    return null;
+}
+
+function resolveShopDrag({
+    snapshot,
+    source,
+    target,
+    store
+}: {
+    snapshot: InventorySnapshot;
+    source: InventoryDragSource;
+    target: InventoryDragTarget;
+    store: StoreSnapshot;
+}): InventoryDragResult | null {
+    if (source.type === "store") {
+        const cost = storeBatchCost(store, source.itemId);
+        const soldOut = storeBatchQuantity(store, source.itemId) <= 0;
+        if (soldOut || !canAffordStore(store, cost)) {
+            return null;
+        }
+
+        switch (target.type) {
+            case "inventory":
+                return {
+                    action: { type: "buy", itemId: source.itemId },
+                    pendingCostText: formatPendingMoney(
+                        "Buy",
+                        source.item.shortName,
+                        cost,
+                        store.currency
+                    )
+                };
+            case "inUse":
+                return {
+                    action: { type: "buy", itemId: source.itemId, use: true },
+                    pendingCostText: formatPendingMoney(
+                        "Buy and use",
+                        source.item.shortName,
+                        cost,
+                        store.currency
+                    )
+                };
+            case "slot":
+                if (
+                    !target.owner.slots.some((slot: InventoryItemView["slots"][number]) =>
+                        slot.compatibleIds.some(
+                            (compatibleId: ItemId) =>
+                                compatibleId === source.itemId ||
+                                matchesCompatibleId(source.item.id, compatibleId)
+                        )
+                    )
+                ) {
+                    return null;
+                }
+                return {
+                    action: {
+                        type: "load",
+                        receiverId: target.owner.id,
+                        ammoId: source.itemId
+                    },
+                    pendingCostText: formatPendingMoney(
+                        "Buy and load",
+                        source.item.shortName,
+                        cost,
+                        store.currency
+                    )
+                };
+            default:
+                return null;
+        }
+    }
+
+    if (target.type === "store") {
+        const item =
+            source.type === "slot"
+                ? source.item
+                : source.type === "inventory" || source.type === "inUse"
+                  ? source.item
+                  : null;
+        if (!item) {
+            return null;
+        }
+        if (source.type === "slot" && !source.owner.allowUnload) {
+            return null;
+        }
+        return {
+            action: { type: "sell", itemId: item.id, quantity: item.quantity },
+            pendingCostText: formatPendingMoney("Sell", item.shortName, 0)
+        };
+    }
+
+    if (source.type === "slot" && target.type === "inventory") {
+        if (!source.owner.allowUnload) {
+            return null;
+        }
+        return {
+            action: { type: "unload", itemId: source.owner.id },
+            pendingCostText: formatPendingMoney("Unload", source.item.shortName, 0)
+        };
+    }
+
+    if (source.type === "inventory" && target.type === "inUse") {
+        if (source.item.id === snapshot.inUseItemId) {
+            return null;
+        }
+        return {
+            action: { type: "use", itemId: source.item.id },
+            pendingCostText: formatPendingMoney("Use", source.item.shortName, 0)
+        };
+    }
+
+    if (source.type === "inUse" && target.type === "inventory") {
+        return {
+            action: { type: "unuse" },
+            pendingCostText: formatPendingMoney("Put away", source.item.shortName, 0)
+        };
+    }
+
+    if ((source.type === "inventory" || source.type === "inUse") && target.type === "slot") {
+        if (!canLoadIntoSlot(target.owner, source.item)) {
+            return null;
+        }
+        return {
+            action: { type: "load", receiverId: target.owner.id, ammoId: source.item.id },
+            pendingCostText: formatPendingMoney("Load", source.item.shortName, 0)
+        };
     }
 
     return null;

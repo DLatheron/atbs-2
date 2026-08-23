@@ -1,0 +1,32 @@
+{
+    "id": "uzi-drum.magazine",
+    "type": "magazine",
+    "name": "Uzi 100-Round Drum",
+    "shortName": "Uzix100",
+    "description": [
+        {
+            "text": "Drum magazine holding 100 rounds of 9mm ammunition."
+        }
+    ],
+    "weight": 0.389,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "uzi-drum"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["9mm-parabellum.round", "9mm-hollow-point.round"],
+            "maxQuantity": 100
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "9mm-parabellum.round",
+            "quantity": 100
+        }
+    }
+}

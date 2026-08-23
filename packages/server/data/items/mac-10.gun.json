@@ -1,0 +1,63 @@
+{
+    "id": "mac-10.gun",
+    "type": "gun",
+    "name": "Ingram MAC-10 Sub-Machine Gun",
+    "shortName": "MAC-10",
+    "description": [
+        {
+            "text": "The Military Armament Corporation Model 10 (MAC-10) was developed by Gordon Ingram in 1964. Well-known for its prodigious rate of fire and wild inaccuracy on full-auto it has become a feared weapon."
+        }
+    ],
+    "weight": 3.2,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "mac-10"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["mac-10.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "mac-10.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 40,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 30,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "auto": {
+            "rpm": 1090,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 20,
+                    "actionPoints": 5,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 18,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}

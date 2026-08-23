@@ -1,4 +1,12 @@
-import type { InventoryItemView, InventorySnapshot, ItemId } from "@atbs/shared-data";
+import { DEFAULT_CURRENCY } from "@atbs/shared-data";
+import type {
+    InventoryItemView,
+    InventorySnapshot,
+    ItemId,
+    StoreCategory,
+    StoreItemView,
+    StoreSnapshot
+} from "@atbs/shared-data";
 import {
     DndContext,
     DragEndEvent,
@@ -24,7 +32,11 @@ import {
     MenuList,
     Popover,
     SxProps,
-    Typography
+    TextField,
+    Typography,
+    Select,
+    FormControl,
+    InputLabel
 } from "@mui/material";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import {
@@ -37,12 +49,9 @@ import {
     type ReactNode
 } from "react";
 import { ItemInspector } from "./ItemInspector";
-import {
-    ITEM_TILE_SIZE,
-    InventoryTooltipDismissProvider,
-    ItemTile,
-    useDismissInventoryTooltips
-} from "./ItemTile";
+import { InventoryTooltipDismissProvider } from "./InventoryTooltipDismissProvider";
+import { useDismissInventoryTooltips } from "./inventoryTooltipDismissContext";
+import { ItemTile } from "./ItemTile";
 import {
     type InventoryActionScope,
     type InventoryDragSource,
@@ -54,6 +63,7 @@ import {
     type ItemMenuRow,
     findHotkeyAction,
     findItemInSnapshot,
+    formatMoney,
     getInUseItem,
     getItemMenu,
     resolveInventoryDrag,
@@ -70,9 +80,11 @@ import {
     INVENTORY_EMPTY_TEXT,
     INVENTORY_PANEL_BACKGROUND_COLOR,
     inventoryPanelSx,
+    ITEM_TILE_SIZE,
     NO_ITEM_IN_USE_TEXT,
     ON_GROUND_BACKGROUND_COLOR,
-    ON_GROUND_TITLE
+    ON_GROUND_TITLE,
+    STORE_TITLE
 } from "./styles";
 
 export interface InventoryBoardProps {
@@ -81,6 +93,7 @@ export interface InventoryBoardProps {
     actionScope?: InventoryActionScope;
     inspectorFocus?: InventoryInspectorFocus;
     disabled?: boolean;
+    store?: StoreSnapshot | null;
     onUse: (itemId: ItemId) => void;
     onUnuse: () => void;
     onDrop: (itemId: ItemId) => void;
@@ -88,6 +101,8 @@ export interface InventoryBoardProps {
     onLoad: (receiverId: ItemId, ammoId: ItemId) => void;
     onUnload: (itemId: ItemId) => void;
     onReorder: (fromIndex: number, toIndex: number) => void;
+    onBuy?: (itemId: ItemId, use?: boolean) => void;
+    onSell?: (itemId: ItemId, quantity: number) => void;
     onPendingCostChange: (text: string | null) => void;
     sx?: SxProps;
 }
@@ -103,7 +118,7 @@ function dispatchMenuAction(
     action: ItemMenuAction,
     callbacks: Pick<
         InventoryBoardProps,
-        "onUse" | "onUnuse" | "onDrop" | "onPickup" | "onLoad" | "onUnload"
+        "onUse" | "onUnuse" | "onDrop" | "onPickup" | "onLoad" | "onUnload" | "onBuy" | "onSell"
     >
 ) {
     switch (action.type) {
@@ -125,7 +140,21 @@ function dispatchMenuAction(
         case "unload":
             callbacks.onUnload(action.itemId);
             break;
+        case "buy":
+            callbacks.onBuy?.(action.itemId, action.use);
+            break;
+        case "sell":
+            callbacks.onSell?.(action.itemId, action.quantity);
+            break;
     }
+}
+
+/** Shop actions that cost nothing read better with no price at all. */
+function menuCostText(cost: number, mode: InventoryMode, currency: string): string {
+    if (mode !== "shop") {
+        return `${cost} APts`;
+    }
+    return cost === 0 ? "" : formatMoney(cost, currency);
 }
 
 const inventoryCollisionDetection: CollisionDetection = (args) => {
@@ -148,6 +177,11 @@ const inventoryCollisionDetection: CollisionDetection = (args) => {
         if (sortables.length > 0) {
             return sortables;
         }
+    }
+
+    const storeZone = pointerHits.filter((collision) => String(collision.id) === "zone:store");
+    if (storeZone.length > 0) {
+        return storeZone;
     }
 
     // Prefer ground when hit so layout shifts while the empty-ground preview
@@ -218,6 +252,10 @@ function DraggableItemTile({
     source,
     item,
     selected,
+    cost,
+    batchSize,
+    currency,
+    disabled = false,
     onClick,
     onMenuClick
 }: {
@@ -225,12 +263,17 @@ function DraggableItemTile({
     source: InventoryDragSource;
     item: InventoryItemView;
     selected: boolean;
+    cost?: number;
+    batchSize?: number;
+    currency?: string;
+    disabled?: boolean;
     onClick: () => void;
     onMenuClick?: (event: MouseEvent<HTMLElement>) => void;
 }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id,
-        data: { source }
+        data: { source },
+        disabled
     });
 
     return (
@@ -238,7 +281,11 @@ function DraggableItemTile({
             <ItemTile
                 item={item}
                 selected={selected}
-                draggable
+                disabled={disabled}
+                draggable={!disabled}
+                cost={cost}
+                batchSize={batchSize}
+                currency={currency}
                 dragHandleAttributes={attributes}
                 dragHandleListeners={listeners}
                 onClick={onClick}
@@ -296,10 +343,12 @@ function SortableBackpackTile({
 
 function InventoryBoardFrame({
     disabled,
+    shop,
     sx,
     children
 }: {
     disabled: boolean;
+    shop: boolean;
     sx?: SxProps;
     children: ReactNode;
 }) {
@@ -329,7 +378,9 @@ function InventoryBoardFrame({
                     'ground ground'
                 `,
                 gridTemplateColumns: "auto 1fr",
-                gridTemplateRows: `calc(204px + 8px + 8px + 1px + 1px) 1fr auto`,
+                gridTemplateRows: shop
+                    ? `calc(204px + 8px + 8px + 1px + 1px) minmax(120px, 1fr) minmax(220px, 1.4fr)`
+                    : `calc(204px + 8px + 8px + 1px + 1px) 1fr auto`,
                 gap: 1,
                 height: "100%",
                 minHeight: 0,
@@ -349,6 +400,7 @@ export function InventoryBoard({
     actionScope = "inUse",
     inspectorFocus = "inUse",
     disabled = false,
+    store = null,
     onUse,
     onUnuse,
     onDrop,
@@ -356,11 +408,16 @@ export function InventoryBoard({
     onLoad,
     onUnload,
     onReorder,
+    onBuy,
+    onSell,
     onPendingCostChange,
     sx
 }: InventoryBoardProps) {
+    const currency = store?.currency ?? DEFAULT_CURRENCY;
     const [items, setItems] = useState<InventoryItemView[]>(snapshot.items);
     const [selectedItemId, setSelectedItemId] = useState<ItemId | null>(snapshot.inUseItemId);
+    const [storeCategory, setStoreCategory] = useState("All");
+    const [storeSearch, setStoreSearch] = useState("");
     const [menu, setMenu] = useState<MenuState | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [menuRows, setMenuRows] = useState<ItemMenuRow[]>([]);
@@ -405,10 +462,17 @@ export function InventoryBoard({
     }, [snapshot.items]);
 
     useEffect(() => {
-        if (selectedItemId && !findItemInSnapshot(snapshot, selectedItemId)) {
+        if (!selectedItemId) {
+            return;
+        }
+
+        const soldOut = (store?.items ?? []).some(
+            (entry: StoreItemView) => entry.item.id === selectedItemId && entry.item.quantity <= 0
+        );
+        if (soldOut || !findItemInSnapshot(snapshot, selectedItemId, store)) {
             setSelectedItemId(snapshot.inUseItemId);
         }
-    }, [snapshot, selectedItemId]);
+    }, [snapshot, selectedItemId, store]);
 
     useEffect(() => {
         // Hand off from ghost to real ground tiles without collapsing.
@@ -434,7 +498,9 @@ export function InventoryBoard({
     );
 
     const inUseItem = getInUseItem(snapshot);
-    const selectedItem = selectedItemId ? findItemInSnapshot(snapshot, selectedItemId) : null;
+    const selectedItem = selectedItemId
+        ? findItemInSnapshot(snapshot, selectedItemId, store)
+        : null;
     const inspectorItem = inspectorFocus === "inUse" ? inUseItem : selectedItem;
     const slotsInteractive = actionScope === "all" || inspectorItem?.id === snapshot.inUseItemId;
 
@@ -511,7 +577,9 @@ export function InventoryBoard({
                 item,
                 location,
                 actionScope,
-                emptySlot
+                emptySlot,
+                mode,
+                store
             });
             if (rows.length === 0) {
                 setMenuOpen(false);
@@ -529,7 +597,7 @@ export function InventoryBoard({
             });
             setMenuOpen(true);
         },
-        [disabled, onPendingCostChange, snapshot, actionScope]
+        [disabled, onPendingCostChange, snapshot, actionScope, mode, store]
     );
 
     const getMenuClickHandler = useCallback(
@@ -539,7 +607,9 @@ export function InventoryBoard({
                 item,
                 location,
                 actionScope,
-                emptySlot
+                emptySlot,
+                mode,
+                store
             });
             if (rows.length === 0) {
                 return undefined;
@@ -549,7 +619,7 @@ export function InventoryBoard({
                 openMenu(item, location, event, emptySlot);
             };
         },
-        [snapshot, actionScope, openMenu]
+        [snapshot, actionScope, openMenu, mode, store]
     );
 
     const handleAction = useCallback(
@@ -558,10 +628,19 @@ export function InventoryBoard({
                 return;
             }
 
-            dispatchMenuAction(action, { onUse, onUnuse, onDrop, onPickup, onLoad, onUnload });
+            dispatchMenuAction(action, {
+                onUse,
+                onUnuse,
+                onDrop,
+                onPickup,
+                onLoad,
+                onUnload,
+                onBuy,
+                onSell
+            });
             closeMenu();
         },
-        [disabled, onUse, onUnuse, onDrop, onPickup, onLoad, onUnload, closeMenu]
+        [disabled, onUse, onUnuse, onDrop, onPickup, onLoad, onUnload, onBuy, onSell, closeMenu]
     );
 
     useEffect(() => {
@@ -590,7 +669,7 @@ export function InventoryBoard({
                 return;
             }
 
-            const menuTarget = resolveItemMenuTarget(snapshot, selectedItemId);
+            const menuTarget = resolveItemMenuTarget(snapshot, selectedItemId, store);
             if (!menuTarget) {
                 return;
             }
@@ -600,7 +679,9 @@ export function InventoryBoard({
                 item: menuTarget.item,
                 location: menuTarget.location,
                 actionScope,
-                emptySlot: menuTarget.emptySlot
+                emptySlot: menuTarget.emptySlot,
+                mode,
+                store
             });
             const action = findHotkeyAction(rows, event.key);
             if (!action) {
@@ -608,7 +689,16 @@ export function InventoryBoard({
             }
 
             event.preventDefault();
-            dispatchMenuAction(action, { onUse, onUnuse, onDrop, onPickup, onLoad, onUnload });
+            dispatchMenuAction(action, {
+                onUse,
+                onUnuse,
+                onDrop,
+                onPickup,
+                onLoad,
+                onUnload,
+                onBuy,
+                onSell
+            });
             onPendingCostChange(null);
         };
 
@@ -627,7 +717,11 @@ export function InventoryBoard({
         onPickup,
         onLoad,
         onUnload,
-        onPendingCostChange
+        onBuy,
+        onSell,
+        onPendingCostChange,
+        mode,
+        store
     ]);
 
     const clearDragPreview = useCallback(
@@ -648,9 +742,9 @@ export function InventoryBoard({
             if (!source || !target) {
                 return null;
             }
-            return resolveInventoryDrag({ snapshot, actionScope, source, target });
+            return resolveInventoryDrag({ snapshot, actionScope, source, target, store });
         },
-        [snapshot, actionScope]
+        [snapshot, actionScope, store]
     );
 
     const handleDragStart = useCallback(
@@ -758,7 +852,9 @@ export function InventoryBoard({
                 onDrop,
                 onPickup,
                 onLoad,
-                onUnload
+                onUnload,
+                onBuy,
+                onSell
             });
         },
         [
@@ -773,7 +869,9 @@ export function InventoryBoard({
             onDrop,
             onPickup,
             onLoad,
-            onUnload
+            onUnload,
+            onBuy,
+            onSell
         ]
     );
 
@@ -815,7 +913,7 @@ export function InventoryBoard({
                 onDragCancel={() => clearDragPreview()}
                 onDragEnd={handleDragEnd}
             >
-                <InventoryBoardFrame disabled={disabled} sx={sx}>
+                <InventoryBoardFrame disabled={disabled} shop={mode === "shop"} sx={sx}>
                     <DroppableZone
                         id="zone:in-use"
                         target={{ type: "inUse" }}
@@ -921,7 +1019,8 @@ export function InventoryBoard({
                                 overflowY: "auto",
                                 p: 0,
                                 m: 0,
-                                backgroundColor: "gray"
+                                backgroundColor: "gray",
+                                ...backgroundBannerAnchorSx
                             }}
                         >
                             <SortableContext
@@ -972,35 +1071,28 @@ export function InventoryBoard({
                                             />
                                         </Box>
                                     )}
-                                    {items.length === 0 && !inventoryInsertPreviewItem && (
-                                        <Box
-                                            data-testid="inventory-empty"
-                                            sx={{
-                                                width: "100%",
-                                                height: "100%",
-                                                display: "flex",
-                                                justifyContent: "center",
-                                                alignItems: "center"
-                                            }}
-                                        >
-                                            <Typography
-                                                variant="body2"
-                                                sx={{
-                                                    ...backgroundBannerSx,
-                                                    ...cutoutTextSx(INVENTORY_BACKGROUND_COLOR)
-                                                }}
-                                            >
-                                                {INVENTORY_EMPTY_TEXT}
-                                            </Typography>
-                                        </Box>
-                                    )}
                                 </Box>
                             </SortableContext>
+                            {items.length === 0 && !inventoryInsertPreviewItem && (
+                                <Typography
+                                    data-testid="inventory-empty"
+                                    variant="body2"
+                                    sx={{
+                                        ...backgroundBannerSx,
+                                        ...cutoutTextSx(INVENTORY_BACKGROUND_COLOR)
+                                    }}
+                                >
+                                    {INVENTORY_EMPTY_TEXT}
+                                </Typography>
+                            )}
                         </Box>
                     </DroppableZone>
 
                     {mode === "shop" ? (
-                        <Box
+                        <DroppableZone
+                            id="zone:store"
+                            target={{ type: "store" }}
+                            highlighted={legalOverId === "zone:store"}
                             sx={{
                                 gridArea: "ground",
                                 ...inventoryPanelSx,
@@ -1010,13 +1102,122 @@ export function InventoryBoard({
                                 p: 0
                             }}
                         >
-                            <Typography
-                                variant="subtitle2"
-                                sx={{ textAlign: "center", color: "#666", p: 1 }}
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    gap: 1,
+                                    p: 1,
+                                    // Leaves room for the floating "Category" label above the select.
+                                    pt: 2,
+                                    alignItems: "center",
+                                    flexShrink: 0
+                                }}
                             >
-                                Store
-                            </Typography>
-                        </Box>
+                                <Typography variant="subtitle2" sx={{ flexShrink: 0 }}>
+                                    {STORE_TITLE}
+                                </Typography>
+                                <FormControl size="small" sx={{ minWidth: 160 }}>
+                                    <InputLabel id="store-category-label">Category</InputLabel>
+                                    <Select
+                                        labelId="store-category-label"
+                                        label="Category"
+                                        value={storeCategory}
+                                        onChange={(event) =>
+                                            setStoreCategory(String(event.target.value))
+                                        }
+                                    >
+                                        {(store?.categories ?? []).map(
+                                            (category: StoreCategory) => (
+                                                <MenuItem key={category.name} value={category.name}>
+                                                    {category.name}
+                                                </MenuItem>
+                                            )
+                                        )}
+                                    </Select>
+                                </FormControl>
+                                <TextField
+                                    size="small"
+                                    placeholder="Search"
+                                    value={storeSearch}
+                                    onChange={(event) => setStoreSearch(event.target.value)}
+                                    sx={{ flex: 1 }}
+                                />
+                            </Box>
+                            <Box
+                                data-testid="store-items"
+                                sx={{
+                                    flex: 1,
+                                    minHeight: 0,
+                                    overflowY: "auto",
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    alignContent: "flex-start",
+                                    gap: 1,
+                                    p: 1
+                                }}
+                            >
+                                {(store?.items ?? [])
+                                    .filter((entry: StoreItemView) => {
+                                        const category = store?.categories.find(
+                                            (item: StoreCategory) => item.name === storeCategory
+                                        );
+                                        const matchesCategory =
+                                            !category?.categories ||
+                                            category.categories.some((tag: string) =>
+                                                entry.categories.includes(tag)
+                                            );
+                                        const query = storeSearch.trim().toLowerCase();
+                                        const matchesSearch =
+                                            !query ||
+                                            entry.item.name.toLowerCase().includes(query) ||
+                                            entry.item.shortName.toLowerCase().includes(query);
+                                        return matchesCategory && matchesSearch;
+                                    })
+                                    .map((entry: StoreItemView) => {
+                                        const soldOut = entry.item.quantity <= 0;
+
+                                        return (
+                                            <Box key={entry.item.id} sx={{ position: "relative" }}>
+                                                <DraggableItemTile
+                                                    id={`store:${entry.itemId}`}
+                                                    source={{
+                                                        type: "store",
+                                                        item: entry.item,
+                                                        itemId: entry.itemId
+                                                    }}
+                                                    item={entry.item}
+                                                    selected={selectedItemId === entry.item.id}
+                                                    cost={entry.cost}
+                                                    batchSize={entry.batchSize}
+                                                    currency={currency}
+                                                    disabled={soldOut}
+                                                    onClick={() => setSelectedItemId(entry.item.id)}
+                                                    onMenuClick={getMenuClickHandler(
+                                                        entry.item,
+                                                        "store"
+                                                    )}
+                                                />
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{
+                                                        display: "block",
+                                                        textAlign: "center",
+                                                        fontWeight: "bold",
+                                                        color: soldOut ? "#666" : "inherit",
+                                                        mt: 0.5
+                                                    }}
+                                                >
+                                                    {soldOut
+                                                        ? "Sold out"
+                                                        : entry.batchSize > 1
+                                                          ? `${Math.min(entry.batchSize, entry.item.quantity)} for ${formatMoney(entry.cost, currency)}`
+                                                          : formatMoney(entry.cost, currency)}
+                                                </Typography>
+                                            </Box>
+                                        );
+                                    })}
+                            </Box>
+                        </DroppableZone>
                     ) : (
                         <DroppableZone
                             id="zone:ground"
@@ -1153,7 +1354,7 @@ export function InventoryBoard({
                                                 variant="caption"
                                                 sx={{ color: "#666", textAlign: "right" }}
                                             >
-                                                {row.cost} APts
+                                                {menuCostText(row.cost, mode, currency)}
                                             </Typography>
                                         )}
                                         {hasChildren && <ChevronRightIcon fontSize="small" />}
@@ -1216,7 +1417,7 @@ export function InventoryBoard({
                                             variant="caption"
                                             sx={{ color: "#666", textAlign: "right" }}
                                         >
-                                            {row.cost} APts
+                                            {menuCostText(row.cost, mode, currency)}
                                         </Typography>
                                     </Box>
                                 </MenuItem>

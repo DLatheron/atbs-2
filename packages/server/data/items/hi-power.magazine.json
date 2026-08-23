@@ -1,0 +1,32 @@
+{
+    "id": "hi-power.magazine",
+    "type": "magazine",
+    "name": "FN Hi-Power 14-Round Magazine",
+    "shortName": "HPx14",
+    "description": [
+        {
+            "text": "Magazine holding 14 rounds of 9mm ammunition."
+        }
+    ],
+    "weight": 0.4,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "hi-power"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["9mm-parabellum.round", "9mm-hollow-point.round"],
+            "maxQuantity": 14
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "9mm-parabellum.round",
+            "quantity": 14
+        }
+    }
+}

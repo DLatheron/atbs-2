@@ -6,6 +6,7 @@ import {
     FireSelector,
     InstanceId,
     FireModeItemSummary,
+    InventoryItemView,
     ItemId,
     ItemSummary,
     ItemType,
@@ -24,13 +25,21 @@ import {
 import { clamp, degreesToRadians, TilePos, Vec2 } from "@atbs/maths";
 import { ItemManager } from "./ItemManager.js";
 import { unsafeEntries } from "@atbs/misc";
-import { SlotProps, ItemOverrides, ItemRecipe, SlotType, ProjectileRecipe } from "./ItemRecipe.js";
+import {
+    SlotProps,
+    ItemOverrides,
+    ItemRecipe,
+    SlotType,
+    ProjectileRecipe,
+    slotType
+} from "./ItemRecipe.js";
 import type { Unit } from "./Unit.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { config } from "../config/config.schema.js";
 
 export interface ItemAdditionalData {
     instanceIndex: number;
+    skipDefaultSlots?: boolean;
 }
 
 export class Item extends SceneObject {
@@ -63,7 +72,7 @@ export class Item extends SceneObject {
 
         this._slots = new Map<SlotType, Item>();
         const { slots } = recipe;
-        if (slots) {
+        if (slots && !additionalData.skipDefaultSlots) {
             for (const [slotType, { id, quantity }] of unsafeEntries(slots)) {
                 const slotItem = itemManager.newItem(id, { quantity });
 
@@ -268,6 +277,109 @@ export class Item extends SceneObject {
         return this.type === ItemType.enum.grenade;
     }
 
+    get slotEntries(): Array<[SlotType, Item]> {
+        return Array.from(this._slots.entries());
+    }
+
+    /**
+     * Clone this item and its current slot tree with new instance ids.
+     * Recipe default slots are not applied.
+     */
+    cloneConfigured(quantity: number = this.quantity): Item {
+        const clone = this._itemManager.newEmptyItem(this.recipeId, { quantity });
+        if (this._fireSelector && clone._fireSelector) {
+            clone._fireSelector = this._fireSelector;
+        }
+        for (const [slot, contents] of this._slots) {
+            clone.setSlotContents(slot, contents.cloneConfigured(contents.quantity));
+        }
+        return clone;
+    }
+
+    takeQuantity(quantity: number): Item {
+        if (quantity < 1 || quantity > this.quantity) {
+            throw new Error(
+                `Cannot take ${quantity} of ${this.id}; only ${this.quantity} available`
+            );
+        }
+
+        const taken = this.cloneConfigured(quantity);
+        this.quantity -= quantity;
+        return taken;
+    }
+
+    /**
+     * Collect this item (optional) and nested store-catalog components, clearing
+     * store-item ammo slots. Structural nested items (e.g. M4 inside M4+M203)
+     * stay in place even when that recipe is also sold separately — only their
+     * catalog ammo is stripped.
+     */
+    removeStoreComponents(
+        isStoreItem: (recipeId: ItemId) => boolean,
+        includeSelf: boolean
+    ): Item[] {
+        const components: Item[] = [];
+        if (includeSelf) {
+            components.push(this);
+        }
+
+        for (const [slot, contents] of [...this._slots.entries()]) {
+            // Sealed weapons (e.g. LAW) keep their ammo even when that ammo is a
+            // store catalog item — it can only leave with the weapon itself.
+            if (slot === SlotType.enum.ammo && !this.canUnload()) {
+                continue;
+            }
+
+            // Only ammo-slot catalog items are extracted (magazines/rounds).
+            // Nested guns in slots "0"/"1" remain part of the assembly.
+            if (slot === SlotType.enum.ammo && isStoreItem(contents.recipeId)) {
+                components.push(...contents.removeStoreComponents(isStoreItem, true));
+                this.emptySlot(slot);
+            } else {
+                components.push(...contents.removeStoreComponents(isStoreItem, false));
+            }
+        }
+
+        return components;
+    }
+
+    toInventoryItemView(maxThrowRange = 0): InventoryItemView {
+        const slots: InventoryItemView["slots"] = [];
+        for (const slot of slotType) {
+            const slotProps = this.findSlotProps(slot);
+            if (!slotProps) {
+                continue;
+            }
+
+            const contents = this.findSlotContents(slot);
+            slots.push({
+                slot,
+                compatibleIds: slotProps.compatibleIds,
+                maxQuantity: slotProps.maxQuantity,
+                contents: contents ? contents.toInventoryItemView(maxThrowRange) : null
+            });
+        }
+
+        return {
+            id: this.id,
+            name: this.name,
+            shortName: this.shortName,
+            description: this.description,
+            quantity: this.quantity,
+            weight: this.weight,
+            primed: this.isPrimable ? (this.primed ?? "safe") : undefined,
+            maxThrowRange,
+            uiImage: this.getRenderList({
+                renderMode: RenderMode.enum.UI_MODE,
+                states: []
+            }),
+            type: this.type,
+            allowLoad: this.canLoad(),
+            allowUnload: this.canUnload(),
+            slots
+        };
+    }
+
     hasSlot(slot: SlotType): boolean {
         return !!this.findSlotContents(slot);
     }
@@ -343,7 +455,11 @@ export class Item extends SceneObject {
     }
 
     canLoad(): boolean {
-        return this.hasSlotProps(SlotType.enum.ammo);
+        return this.hasSlotProps(SlotType.enum.ammo) && this._recipe.allowLoad;
+    }
+
+    canUnload(): boolean {
+        return this.hasSlotProps(SlotType.enum.ammo) && this._recipe.allowUnload;
     }
 
     /**
@@ -428,8 +544,8 @@ export class Item extends SceneObject {
      * @returns The unloaded ammo, if any.
      */
     unload(): Item | null {
-        if (!this.canLoad()) {
-            throw new Error(`Item ${this.id} cannot be loaded`);
+        if (!this.canUnload()) {
+            throw new Error(`Item ${this.id} cannot be unloaded`);
         }
 
         const ammo = this.findSlotContents(SlotType.enum.ammo);

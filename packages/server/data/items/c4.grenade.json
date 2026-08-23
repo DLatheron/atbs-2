@@ -1,0 +1,56 @@
+{
+    "id": "c4.grenade",
+    "type": "grenade",
+    "name": "C4 Explosives",
+    "description": [
+        {
+            "text": "Several bricks of high-explosive bound together and controlled by a user-programmable timer."
+        }
+    ],
+    "quantity": 1,
+    "weight": 4.5,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "c4"
+            }
+        ],
+        "fire-mode": []
+    },
+    "explosion": {
+        "type": "fragment",
+        "maxRange": {
+            "min": 400,
+            "max": 600
+        },
+        "numFragments": 400,
+        "penetration": 30,
+        "angleJitter": 8,
+        "variability": {
+            "min": 0.85,
+            "max": 1.15
+        },
+        "visual": {
+            "intensity": {
+                "min": 0.8,
+                "max": 1
+            },
+            "velocity": {
+                "min": 250,
+                "max": 450
+            },
+            "length": {
+                "min": 15,
+                "max": 40
+            },
+            "rangeFallOff": {
+                "min": 5,
+                "max": 20
+            }
+        },
+        "damage": {
+            "default": 50,
+            "human": 60
+        }
+    }
+}

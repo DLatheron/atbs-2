@@ -1,0 +1,77 @@
+{
+    "id": "mp5sd.gun",
+    "type": "gun",
+    "name": "H&K MP5SD6",
+    "shortName": "MP5SD",
+    "description": [
+        {
+            "text": "Heckler & Koch MP5SD6"
+        }
+    ],
+    "weight": 2.93,
+    "renderable": {
+        "default": [
+            {
+                "imageId": "mp5sd"
+            }
+        ],
+        "FIRE_MODE": []
+    },
+    "sight": "iron",
+    "fireType": "direct",
+    "slotProps": {
+        "ammo": {
+            "compatibleIds": ["mp5-30.magazine", "mp5-15.magazine"]
+        }
+    },
+    "slots": {
+        "ammo": {
+            "id": "mp5-30.magazine"
+        }
+    },
+    "fireSelector": "single",
+    "fireModes": {
+        "single": {
+            "ammoUse": 1,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 70,
+                    "actionPoints": 25
+                },
+                "snapshot": {
+                    "accuracy": 56,
+                    "actionPoints": 13
+                }
+            }
+        },
+        "burst": {
+            "ammoUse": 3,
+            "rpm": 800,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 46,
+                    "actionPoints": 20
+                },
+                "snapshot": {
+                    "accuracy": 36,
+                    "actionPoints": 12
+                }
+            }
+        },
+        "auto": {
+            "rpm": 800,
+            "fireModeDetails": {
+                "aimed": {
+                    "accuracy": 34,
+                    "actionPoints": 5,
+                    "actionPointsPerRound": 5
+                },
+                "snapshot": {
+                    "accuracy": 32,
+                    "actionPoints": 6,
+                    "actionPointsPerRound": 6
+                }
+            }
+        }
+    }
+}

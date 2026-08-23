@@ -31,6 +31,23 @@ export class ItemManager {
         return item;
     }
 
+    /** Construct an item without filling recipe default slots (for configured clones). */
+    newEmptyItem(itemId: ItemId, overrides?: ItemOverrides): Item {
+        const recipe = this._itemRecipeManager.getRecipe(itemId);
+        const instanceIndex = this._getInstanceIndex(itemId);
+
+        const item = new Item(
+            recipe,
+            overrides ?? {},
+            { instanceIndex, skipDefaultSlots: true },
+            this
+        );
+
+        this._itemMap.set(item.id, item);
+
+        return item;
+    }
+
     /**
      * Creates an item from an in-memory recipe (e.g. a unit corpse) without
      * requiring a registered recipe id in {@link ItemRecipeManager}.

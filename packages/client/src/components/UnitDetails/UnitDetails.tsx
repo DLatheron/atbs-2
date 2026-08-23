@@ -14,6 +14,7 @@ export interface UnitDetailsComponentProps {
         uiImage: RenderList;
         description: Description;
     };
+    noName?: boolean;
     noImages?: boolean;
     noDescription?: boolean;
     sx?: SxProps;
@@ -22,6 +23,7 @@ export interface UnitDetailsComponentProps {
 export function UnitDetailsComponent({
     unit,
     item,
+    noName = false,
     noImages = false,
     noDescription = false,
     sx
@@ -38,9 +40,11 @@ export function UnitDetailsComponent({
                 ...sx
             }}
         >
-            <Typography variant="h5" sx={{ textAlign: "center", m: "auto" }}>
-                {unit.name}
-            </Typography>
+            {!noName && (
+                <Typography variant="h5" sx={{ textAlign: "center", m: "auto" }}>
+                    {unit.name}
+                </Typography>
+            )}
             {!noImages && <ImageComponent images={unit.uiImage} />}
             {!noDescription && (
                 <Stack spacing={1}>

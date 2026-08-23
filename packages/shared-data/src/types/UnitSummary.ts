@@ -42,6 +42,8 @@ export const UnitSummary = z.object({
     }),
     itemInUse: ItemSummary.nullable(),
     actions: Actions,
-    unitActionGrid: UnitActionGrid
+    unitActionGrid: UnitActionGrid,
+    inventoryWeight: z.number().nonnegative(),
+    burden: z.int().nonnegative()
 });
 export type UnitSummary = z.infer<typeof UnitSummary>;

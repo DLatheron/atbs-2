@@ -58,7 +58,8 @@ import type { Game } from "./Game.js";
 import { MessageRouter } from "./MessageRouter.js";
 import { Inventory, InventoryRecipe } from "./Inventory.js";
 import { Item } from "./Item.js";
-import { SlotType, slotType } from "./ItemRecipe.js";
+import { ItemRecipe, SlotType, slotType } from "./ItemRecipe.js";
+import type { Store } from "./Store.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { assert } from "node:console";
 import { Projectile, DEFAULT_PROJECTILE_TRAVEL_VELOCITY } from "./Projectile.js";
@@ -123,6 +124,20 @@ const INVENTORY_COSTS: InventoryCosts = {
     loadFromGround: INVENTORY_LOAD_APT_COST + INVENTORY_LOAD_FROM_GROUND_EXTRA_APT_COST,
     unload: INVENTORY_UNLOAD_APT_COST
 };
+
+const ARMING_INVENTORY_COSTS: InventoryCosts = {
+    use: 0,
+    unuse: 0,
+    drop: 0,
+    dropFromInventory: 0,
+    pickup: 0,
+    pickupAndUse: 0,
+    load: 0,
+    loadFromGround: 0,
+    unload: 0
+};
+
+const UNBURDENED_KG_PER_STRENGTH = 0.5;
 
 const STRAIGHT_MOVEMENT_APT_COST = 2;
 const DIAGONAL_MOVEMENT_APT_COST = 3;
@@ -506,8 +521,20 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     get weight(): number {
-        // TODO: Add in the weight of inventory?
-        return this._recipe.attributes.weight;
+        return this._recipe.attributes.weight + this.inventoryWeight;
+    }
+
+    get inventoryWeight(): number {
+        return this.inventory.items.reduce((total, item) => total + item.weight, 0);
+    }
+
+    get burden(): number {
+        const unburdenedKg = this.strength * UNBURDENED_KG_PER_STRENGTH;
+        return Math.max(0, Math.floor(this.inventoryWeight - unburdenedKg));
+    }
+
+    get projectedStartActionPoints(): number {
+        return Math.max(0, this.maxActionPoints - this.burden);
     }
 
     get maxActionPoints(): number {
@@ -908,6 +935,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
         if (this.isAlive && this.actionPoints > 0) {
             this._applyCloudExposure(this.actionPoints);
         }
+
+        if (this.disorientated) {
+            // Reduce the amount of disorientation based on the number of action points remaining...
+            this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
+        }        
     }
 
     private _verifyDirectional(): void | never {
@@ -919,15 +951,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
     startTurn() {
         this.logger.info("Starting turn");
 
-        if (this.disorientated) {
-            // Reduce the amount of disorientation based on the number of action points remaining...
-            this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
-        }
-
         if (this.isAlive) {
-            // TODO: Restore action points based on burden and wounds.
-            // this._instance.attributes.actionPoints.max - (this._instance.attributes.burden * ACTION_POINT_LOSS_PER_BURDEN) - (this._instance.attributes.wounds * ACTION_POINT_LOSS_PER_WOUND)
-            this._attributes.actionPoints.value = this.maxActionPoints;
+            this._attributes.actionPoints.value = this.projectedStartActionPoints;
         }
     }
 
@@ -1425,11 +1450,15 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             const pendingExplosions = projectiles.flatMap((projectile) => {
                 const { explosion } = projectile.projectileRecipe;
-                const { impact } = projectile;
-                if (!explosion || !impact) {
+                if (!explosion) {
                     return [];
                 }
-                return [{ explosion, origin: impact.pos.clone(), timeOffsetMs: impact.time }];
+                // Match legacy ATBS (`impactPos || targetPos`): bloom at a solid
+                // hit when there is one, otherwise at the end of the flight path
+                // so indirect fire (e.g. M203 gas/smoke onto open ground) still
+                // detonates at the aimed landing point.
+                const { pos, time } = projectile.finalPostionAndTime;
+                return [{ explosion, origin: pos.clone(), timeOffsetMs: time }];
             });
 
             const tracers = projectiles.map((projectile) => projectile.getTracer());
@@ -2069,6 +2098,212 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return true;
     }
 
+    armingUseItem(itemId: ItemId): boolean {
+        this.inventory.selectItem(this.inventory.getItem(itemId));
+        return true;
+    }
+
+    armingUnuseItem(): boolean {
+        this.inventory.deselectItem();
+        return true;
+    }
+
+    armingBuyItem(
+        store: Store,
+        itemId: ItemId,
+        options: { use?: boolean; insertionPoint?: number } = {}
+    ): true | ErrorType {
+        const storeItem = store.findItem(itemId);
+        if (!storeItem) {
+            throw new Error(`Store does not have item ${itemId}`);
+        }
+
+        let quantity = Math.min(storeItem.batchSize, storeItem.item.quantity);
+        if (quantity <= 0) {
+            throw new Error(`Store does not have any ${itemId}`);
+        }
+
+        const purchaseCost = (storeItem.cost * quantity) / storeItem.batchSize;
+        if (store.budget - purchaseCost < store.threshold) {
+            if (quantity > 1) {
+                const unitCost = storeItem.cost / storeItem.batchSize;
+                const affordQuantity = Math.floor((store.budget - store.threshold) / unitCost);
+                if (affordQuantity < 1) {
+                    return ErrorType.enum.INSUFFICIENT_BUDGET;
+                }
+                quantity = affordQuantity;
+            } else {
+                return ErrorType.enum.INSUFFICIENT_BUDGET;
+            }
+        }
+
+        const bought = store.buyItem(itemId, quantity);
+        if (!(bought instanceof Item)) {
+            return bought;
+        }
+
+        this.inventory.addItem(bought, options.insertionPoint);
+        if (options.use) {
+            this.inventory.selectItem(bought);
+        }
+        return true;
+    }
+
+    armingSellItem(store: Store, instanceId: ItemId, quantity: number): boolean {
+        const topLevel = this.inventory.findItem(instanceId);
+        if (topLevel) {
+            const removed = store.sellItem(topLevel, quantity);
+            if (removed) {
+                this.inventory.removeItem(removed);
+            }
+            return true;
+        }
+
+        for (const root of this.inventory.items) {
+            const owner = root.findOwnerOfContents(instanceId);
+            if (owner && !owner.canUnload()) {
+                throw new Error(`Cannot sell ammunition from ${owner.id}; it cannot be unloaded`);
+            }
+        }
+
+        const nested = this.inventory.extractItemContent(instanceId);
+        if (!nested) {
+            throw new Error(`Item ${instanceId} is not in inventory of unit ${this.id}`);
+        }
+
+        const removed = store.sellItem(nested, quantity);
+        if (!removed) {
+            this.inventory.addOrCollapseItem(nested);
+        }
+        return true;
+    }
+
+    armingLoadItem(store: Store, receiverId: ItemId, ammoId: ItemId): boolean {
+        const receiver = this.inventory.findItemInTree(receiverId);
+        if (!receiver) {
+            throw new Error(`Receiver ${receiverId} is not in inventory of unit ${this.id}`);
+        }
+        if (!receiver.canLoad()) {
+            throw new Error(`Item ${receiverId} cannot be loaded`);
+        }
+
+        const ammo = this._findOrBuyAmmo(store, ammoId, this._quantityNeededToLoad(receiver));
+        if (!ammo) {
+            return false;
+        }
+
+        const fromInventory = this.inventory.findItem(ammo.id);
+        if (receiver.replacesAmmoAsWholeItem(ammo)) {
+            const previous = receiver.load(ammo);
+            if (receiver.findSlotContents(SlotType.enum.ammo) === ammo && fromInventory) {
+                this.inventory.removeItem(ammo);
+            } else if (ammo.quantity <= 0 && fromInventory) {
+                this.inventory.removeItem(ammo);
+            }
+            if (previous) {
+                this.inventory.addOrCollapseItem(previous);
+            }
+        } else {
+            const leftover = receiver.load(ammo);
+            if (!leftover && fromInventory) {
+                this.inventory.removeItem(ammo);
+            }
+        }
+
+        return true;
+    }
+
+    armingUnloadItem(itemId: ItemId): boolean {
+        const item = this.inventory.findItemInTree(itemId);
+        if (!item) {
+            throw new Error(`Item ${itemId} is not in inventory of unit ${this.id}`);
+        }
+        if (!item.canUnload()) {
+            throw new Error(`Item ${itemId} cannot be unloaded`);
+        }
+        if (!item.findSlotContents(SlotType.enum.ammo)) {
+            throw new Error(`Item ${itemId} has nothing to unload`);
+        }
+
+        const unloaded = item.unload();
+        if (unloaded) {
+            this.inventory.addOrCollapseItem(unloaded);
+        }
+        return true;
+    }
+
+    private _quantityNeededToLoad(receiver: Item): number {
+        if (!receiver.canLoad()) {
+            return 1;
+        }
+        const slotProps = receiver.getSlotProps(SlotType.enum.ammo);
+        const current = receiver.findSlotContents(SlotType.enum.ammo);
+        if (!current) {
+            return slotProps.maxQuantity;
+        }
+        if (current.type === ItemType.enum.magazine) {
+            const nested = current.findSlotContents(SlotType.enum.ammo);
+            return Math.max(1, current.maxCapacity - (nested?.quantity ?? 0));
+        }
+        return Math.max(1, slotProps.maxQuantity - current.quantity);
+    }
+
+    private _findOrBuyAmmo(
+        store: Store,
+        ammoInstanceIdOrId: ItemId,
+        quantityNeeded: number
+    ): Item | undefined {
+        const inventoryAmmo =
+            this.inventory.findItem(ammoInstanceIdOrId) ??
+            this.inventory.findItemInTree(ammoInstanceIdOrId);
+        if (inventoryAmmo) {
+            if (!this.inventory.findItem(inventoryAmmo.id)) {
+                this.inventory.extractItemContent(inventoryAmmo.id);
+            }
+            return inventoryAmmo;
+        }
+
+        const storeItem = store.findItem(ammoInstanceIdOrId);
+        if (!storeItem) {
+            return undefined;
+        }
+
+        const unitCost = storeItem.cost / storeItem.batchSize;
+        const affordable = Math.floor((store.budget - store.threshold) / unitCost);
+        const couldBuyQuantity = Math.min(
+            quantityNeeded,
+            storeItem.item.quantity,
+            Number.isFinite(affordable) ? affordable : storeItem.item.quantity
+        );
+        if (couldBuyQuantity < 1) {
+            return undefined;
+        }
+
+        const bought = store.buyItem(storeItem.item.recipeId, couldBuyQuantity);
+        if (!(bought instanceof Item)) {
+            return undefined;
+        }
+        return bought;
+    }
+
+    resetInventory(recipe: InventoryRecipe) {
+        this.inventory.replaceFromRecipe(recipe);
+    }
+
+    toArmamentInventorySnapshot(): InventorySnapshot {
+        return {
+            unitId: this.id,
+            actionPoints: {
+                max: this.maxActionPoints,
+                value: this.projectedStartActionPoints
+            },
+            costs: ARMING_INVENTORY_COSTS,
+            inUseItemId: this.itemInUse?.id ?? null,
+            items: this.inventory.items.map((item) => this._toInventoryItemView(item)),
+            groundItems: []
+        };
+    }
+
     toInventorySnapshot(): InventorySnapshot {
         const groundItems = this.map
             .getTile(this.mapLocation)
@@ -2104,6 +2339,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return {
             ...item.getItemSummary(this),
             type: item.type,
+            allowLoad: item.canLoad(),
+            allowUnload: item.canUnload(),
             slots
         };
     }
@@ -2291,11 +2528,11 @@ export class Unit extends SceneObject implements VisibilityViewer {
     }
 
     calcWeaponAccuracy(baseAccuracy: number): number {
-        return clamp(Math.floor(baseAccuracy * this.disorientationScaler * 0.5), 0, 100);
+        return clamp(Math.floor(baseAccuracy * this.disorientationScaler), 0, 100);
     }
 
     calcThrowAccuracy(baseAccuracy: number): number {
-        return clamp(Math.floor(baseAccuracy * this.disorientationScaler * 0.5), 0, 100);
+        return clamp(Math.floor(baseAccuracy * this.disorientationScaler), 0, 100);
     }
 
     calcThrowMaxRange(item: Item) {
@@ -2310,16 +2547,18 @@ export class Unit extends SceneObject implements VisibilityViewer {
     createCorpseItem(): Item {
         const renderable = Unit._extractDeadRenderable(this._recipe.renderable);
 
-        return this.itemManager.newAdHocItem({
-            id: "corpse.item",
-            type: ItemType.enum.item,
-            name: `${this.name}'s corpse`,
-            shortName: "Corpse",
-            description: [{ text: `The lifeless body of ${this.name}.` }],
-            quantity: 1,
-            weight: this.weight,
-            renderable
-        });
+        return this.itemManager.newAdHocItem(
+            ItemRecipe.parse({
+                id: "corpse.item",
+                type: ItemType.enum.item,
+                name: `${this.name}'s corpse`,
+                shortName: "Corpse",
+                description: [{ text: `The lifeless body of ${this.name}.` }],
+                quantity: 1,
+                weight: this.weight,
+                renderable
+            })
+        );
     }
 
     private static _extractDeadChild(node: SceneChildNode | undefined): SceneChildNode {
@@ -2408,7 +2647,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
             },
             itemInUse: this.itemInUse?.getItemSummary(this) ?? null,
             actions: this.getActions(),
-            unitActionGrid: this._unitActionGrid
+            unitActionGrid: this._unitActionGrid,
+            inventoryWeight: this.inventoryWeight,
+            burden: this.burden
         };
     }
 
