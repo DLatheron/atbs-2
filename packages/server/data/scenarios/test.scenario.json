@@ -59,7 +59,7 @@
             ],
             "phases": {
                 "armament": {
-                    "type": "manual",
+                    "type": "fixed",
                     "store": {
                         "budget": 20000,
                         "threshold": -1000,
@@ -403,7 +403,34 @@
                     }
                 },
                 "deployment": {
-                    "type": "fixed"
+                    "type": "manual",
+                    "marker": "deploy-1",
+                    "zones": [
+                        {
+                            "minUnits": 1,
+                            "maxUnits": 1,
+                            "tiles": [
+                                [
+                                    { "col": 6, "row": 6 },
+                                    { "width": 2, "height": 2 }
+                                ]
+                            ],
+                            "orientation": 4
+                        },
+                        {
+                            "tiles": [[{ "col": 10, "row": 10 }]],
+                            "orientation": 2
+                        },
+                        {
+                            "tiles": [
+                                [
+                                    { "col": 2, "row": 2 },
+                                    { "width": 1, "height": 4 }
+                                ]
+                            ],
+                            "orientation": 0
+                        }
+                    ]
                 }
             }
         },
@@ -431,7 +458,7 @@
             ],
             "phases": {
                 "armament": {
-                    "type": "manual",
+                    "type": "fixed",
                     "store": {
                         "budget": 20000,
                         "threshold": -1000,

@@ -3,9 +3,17 @@ import z from "zod";
 import { Unit, UnitOverrides } from "./Unit.js";
 import { UnitRecipeManager } from "./UnitRecipeManager.js";
 import type { Game } from "./Game.js";
-import { VisibilityPoi } from "./VisibilityPoi.js";
 import { InventoryRecipe } from "./Inventory.js";
 import { Store, StoreRecipe } from "./Store.js";
+import { ITilePos, Orientation, TilePos } from "@atbs/maths";
+import { ShuffleArray } from "../../../maths/src/Misc.js";
+import { VisibilityPoi } from "./VisibilityPoi.js";
+
+export const WidthHeight = z.object({
+    width: z.number().int().positive(),
+    height: z.number().int().positive()
+});
+export type WidthHeight = z.infer<typeof WidthHeight>;
 
 export const SideRecipe = z.object({
     id: SideId,
@@ -21,25 +29,76 @@ export const SideRecipe = z.object({
     phases: z.object({
         armament: z.discriminatedUnion("type", [
             z.object({
-                type: z.literal("fixed")
+                type: z.literal("fixed").describe("The type of armament phase.")
             }),
             z.object({
-                type: z.literal("manual"),
+                type: z.literal("manual").describe("The type of deployment phase."),
                 store: StoreRecipe,
-                startingInventory: z.record(UnitId, InventoryRecipe).optional()
+                startingInventory: z
+                    .record(UnitId, InventoryRecipe)
+                    .optional()
+                    .describe("The starting inventory for each unit.")
             })
         ]),
         deployment: z.discriminatedUnion("type", [
             z.object({
-                type: z.literal("fixed")
+                type: z.literal("fixed").describe("The type of deployment phase.")
             }),
-            z.object({
-                type: z.literal("manual")
-            })
+            z
+                .object({
+                    type: z.literal("manual").describe("The type of deployment phase."),
+                    marker: z
+                        .string()
+                        .nonempty()
+                        .describe("The marker that will be used to deploy the side."),
+                    zones: z.array(
+                        z
+                            .object({
+                                minUnits: z
+                                    .number()
+                                    .int()
+                                    .nonnegative()
+                                    .optional()
+                                    .describe(
+                                        "The minimum number of units that can be deployed to the zone."
+                                    ),
+                                maxUnits: z
+                                    .number()
+                                    .int()
+                                    .nonnegative()
+                                    .optional()
+                                    .describe(
+                                        "The maximum number of units that can be deployed to the zone."
+                                    ),
+                                tiles: z
+                                    .array(
+                                        z.tuple([
+                                            ITilePos,
+                                            WidthHeight.optional().default({ width: 1, height: 1 })
+                                        ])
+                                    )
+                                    .describe("The tiles that the zone covers."),
+                                orientation: z
+                                    .enum(Orientation)
+                                    .describe("The orientation of the zone.")
+                            })
+                            .describe("A zone that the side can deploy to.")
+                    )
+                })
+                .describe("A zone that the side can deploy to.")
         ])
     })
 });
 export type SideRecipe = z.infer<typeof SideRecipe>;
+
+interface DeploymentZone {
+    id: string;
+    minUnits: number | undefined;
+    maxUnits: number | undefined;
+    orientation: Orientation;
+    tiles: Set<ITilePos>;
+    units: Set<UnitId>;
+}
 
 export class Side {
     private readonly _recipe: Readonly<SideRecipe>;
@@ -48,6 +107,9 @@ export class Side {
     private readonly _unitMap: Map<UnitId, Unit>;
     private _victoryPoints: number;
     private readonly _store: Store | null;
+
+    private _deployableUnitsMap: Map<UnitId, { zone: DeploymentZone; location: TilePos } | null>;
+    private _deploymentZones: DeploymentZone[];
 
     constructor(recipe: Readonly<SideRecipe>, game: Game) {
         this._recipe = recipe;
@@ -79,6 +141,15 @@ export class Side {
         } else {
             this._store = null;
         }
+
+        this._deployableUnitsMap = new Map<
+            UnitId,
+            { zone: DeploymentZone; location: TilePos } | null
+        >();
+        for (const unit of this._units) {
+            this._deployableUnitsMap.set(unit.id, null);
+        }
+        this._deploymentZones = this._buildDeploymentZones() ?? [];
     }
 
     get id(): SideId {
@@ -132,6 +203,13 @@ export class Side {
         return this._units.every((unit) => unit.isDead);
     }
 
+    get deploymentMarker(): string {
+        if (this._recipe.phases.deployment.type === "fixed") {
+            throw new Error(`Side ${this.id} has no deployment marker`);
+        }
+        return this._recipe.phases.deployment.marker;
+    }
+
     canSee(poi: VisibilityPoi): boolean {
         return this._game.visibilityManager.isPoiVisibleForMasks(poi, [this.id]);
     }
@@ -154,5 +232,155 @@ export class Side {
             name: this.name,
             victoryPoints: this.victoryPoints
         };
+    }
+
+    private _buildDeploymentZones(): DeploymentZone[] | undefined {
+        if (this._recipe.phases.deployment.type === "fixed") {
+            return;
+        }
+
+        const deploymentZones: DeploymentZone[] = [];
+
+        for (const zone of this._recipe.phases.deployment.zones) {
+            const calculatedZone: DeploymentZone = {
+                id: `zone-${deploymentZones.length}`,
+                minUnits: zone.minUnits,
+                maxUnits: zone.maxUnits,
+                tiles: new Set<ITilePos>(),
+                units: new Set<UnitId>(),
+                orientation: zone.orientation
+            };
+
+            for (const [pos, size] of zone.tiles) {
+                for (let col = pos.col; col < pos.col + size.width; col++) {
+                    for (let row = pos.row; row < pos.row + size.height; row++) {
+                        calculatedZone.tiles.add({ col, row });
+                    }
+                }
+            }
+
+            deploymentZones.push(calculatedZone);
+        }
+
+        // Need to put them into
+
+        // We now have a list of all the tiles that we can use for deployment.
+        return deploymentZones;
+    }
+
+    getDeploymentZone(location: TilePos): DeploymentZone | undefined {
+        return this._deploymentZones?.find((zone) => zone.tiles.has(location));
+    }
+
+    getDeploymentMarker(tilePos: ITilePos): string | undefined {
+        if (this._recipe.phases.deployment.type === "fixed") {
+            return;
+        }
+
+        for (const zone of this._deploymentZones) {
+            if (zone.tiles.has(tilePos)) {
+                return this.deploymentMarker;
+            }
+        }
+
+        return;
+    }
+
+    deployUnit(unitId: UnitId, location: TilePos): void {
+        const unit = this.getUnit(unitId);
+        if (unit.location) {
+            throw new Error(`Unit ${unitId} is already deployed at ${unit.location}`);
+        }
+
+        const deploymentZone = this.getDeploymentZone(location);
+        if (!deploymentZone) {
+            throw new Error(`Location ${location} is not a valid deployment zone`);
+        }
+
+        if (deploymentZone.maxUnits && deploymentZone.maxUnits <= deploymentZone.units.size) {
+            throw new Error(
+                `Zone ${deploymentZone.id} cannot have more than ${deploymentZone.maxUnits} units`
+            );
+        }
+
+        // Store the unit's deployment details.
+        this._deployableUnitsMap.set(unitId, { zone: deploymentZone, location });
+
+        // Update the zone's details (add unit, remove tile).
+        deploymentZone.units.add(unitId);
+        deploymentZone.tiles.delete(location);
+
+        // Update the unit's location and orientation.
+        unit.location = location;
+        unit.orientation = deploymentZone.orientation;
+    }
+
+    undeployUnit(unitId: UnitId): void {
+        const unit = this.getUnit(unitId);
+        if (!unit.location) {
+            throw new Error(`Unit ${unitId} is not deployed`);
+        }
+
+        const deployment = this._deployableUnitsMap.get(unitId);
+        if (!deployment) {
+            throw new Error(`Unit ${unitId} is not deployed`);
+        }
+
+        // Clear the unit's deployment details.
+        this._deployableUnitsMap.set(unitId, null);
+
+        // Update the zone's details (remove unit, add tile).
+        deployment.zone.units.delete(unitId);
+        deployment.zone.tiles.add(deployment.location);
+
+        // Update the unit's location and orientation.
+        unit.location = null;
+        unit.orientation = Orientation.SOUTH;
+    }
+
+    randomDeployment(unitId: UnitId): TilePos {
+        const unit = this.getUnit(unitId);
+        if (unit.location) {
+            throw new Error(`Unit ${unitId} is already deployed`);
+        }
+
+        // Build a list of all the deployment zones that the unit can be deployed to.
+        const deploymentZones = this._deploymentZones.filter(
+            (zone) => zone.units.size < (zone.maxUnits ?? Infinity) && zone.tiles.size > 0
+        );
+        if (deploymentZones?.length === 0) {
+            throw new Error(`No deployment zones available`);
+        }
+
+        // Build a list of all the tiles that the unit can be deployed to.
+        const tilePositions = Array.from(deploymentZones.flatMap((zone) => Array.from(zone.tiles)));
+        if (tilePositions.length === 0) {
+            throw new Error(`No deployment tiles available`);
+        }
+
+        // Shuffle the list of tiles.
+        const randomTilePosition = ShuffleArray(tilePositions);
+
+        // Randomly select a tile to deploy the unit to.
+        const tilePosition = randomTilePosition[Math.floor(Math.random() * tilePositions.length)];
+        if (!tilePosition) {
+            throw new Error(`No deployment tiles available`);
+        }
+
+        const tilePos = new TilePos(tilePosition);
+
+        this.deployUnit(unitId, tilePos);
+
+        return tilePos;
+    }
+
+    randomDeployAll(): void {
+        for (const unit of this._units) {
+            if (unit.location) {
+                continue;
+            }
+
+            this.randomDeployment(unit.id);
+        }
     }
 }
