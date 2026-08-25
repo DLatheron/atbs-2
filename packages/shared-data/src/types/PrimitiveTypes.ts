@@ -962,3 +962,41 @@ export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;
 
 export const InterestMask = z.union([z.literal("items"), z.literal("vfx"), z.string()]);
 export type InterestMask = z.infer<typeof InterestMask>;
+
+export const DeploymentZoneSummaryWire = z.array(
+    z.object({
+        id: z.string().describe("The ID of the deployment zone"),
+        minUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The minimum number of units that must be deployed to this zone"),
+        maxUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The maximum number of units that can be deployed to this zone"),
+        disabled: z.boolean().describe("Whether the deployment zone is disabled"),
+        tiles: z.array(ITilePos).describe("Tile position encoded as a string")
+    })
+);
+export type DeploymentZoneSummaryWire = z.infer<typeof DeploymentZoneSummaryWire>;
+
+export const DeploymentZoneSummary = z.array(
+    z.object({
+        id: z.string().describe("The ID of the deployment zone"),
+        minUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The minimum number of units that must be deployed to this zone"),
+        maxUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The maximum number of units that can be deployed to this zone"),
+        disabled: z.boolean().describe("Whether the deployment zone is disabled"),
+        tiles: z.set(z.string()).describe("Tile position encoded as a string")
+    })
+);
+export type DeploymentZoneSummary = z.infer<typeof DeploymentZoneSummary>;

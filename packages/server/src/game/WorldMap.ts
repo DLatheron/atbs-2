@@ -237,7 +237,7 @@ export class WorldMap {
         );
     }
 
-    renderClientMap(): ClientMap {
+    renderGameMap(): ClientMap {
         const mapModeTiles = this._tiles.map((rowOfTiles) =>
             rowOfTiles.map((tile) =>
                 tile.getRenderList({
@@ -265,6 +265,49 @@ export class WorldMap {
             }
         };
     }
+
+    renderDeploymentMap(): ClientMap {
+        const mapModeTiles = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) =>
+                tile.getRenderList({
+                    renderMode: RenderMode.enum.MAP_MODE,
+                    states: []
+                })
+            )
+        );
+
+        return {
+            width: this.width,
+            height: this.height,
+            tileSize: this.tileSize,
+            tilesByRenderMode: {
+                [RenderMode.enum.MAP_MODE]: mapModeTiles,
+                [RenderMode.enum.FIRE_MODE]: []
+            }
+        };
+    }
+
+    // renderDeploymentMap(getMarkerRenderList: (tilePos: ITilePos) => RenderList): ClientMap {
+    //     const mapModeTiles = this._tiles.map((rowOfTiles, row) =>
+    //         rowOfTiles.map((tile, col) => [
+    //             ...tile.getRenderList({
+    //                 renderMode: RenderMode.enum.MAP_MODE,
+    //                 states: []
+    //             }),
+    //             ...getMarkerRenderList({ col, row })
+    //         ])
+    //     );
+
+    //     return {
+    //         width: this.width,
+    //         height: this.height,
+    //         tileSize: this.tileSize,
+    //         tilesByRenderMode: {
+    //             [RenderMode.enum.MAP_MODE]: mapModeTiles,
+    //             [RenderMode.enum.FIRE_MODE]: []
+    //         }
+    //     };
+    // }
 
     addUnit(unit: Unit) {
         if (!unit.location) {

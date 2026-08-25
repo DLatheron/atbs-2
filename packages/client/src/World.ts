@@ -23,11 +23,12 @@ import {
     TimedVisibilityUpdate,
     UnitSummary,
     VisibilityViewerSummary,
-    VisibilityFilter
+    VisibilityFilter,
+    DeploymentZoneSummary
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
 import { CanvasLoopProps } from "./components/CanvasLoop";
-import { ITilePos, TilePos } from "../../maths/dist/TilePos";
+import { ITilePos, TilePos, toTilePosString } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
 import {
@@ -132,6 +133,9 @@ export class World {
         { getElement: () => HTMLElement | null; tilePos: TilePos }
     >();
 
+    private _deploymentMarkers: DeploymentZoneSummary | null;
+    private _deploymentMarker: string;
+
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
 
@@ -177,6 +181,8 @@ export class World {
         this._actionMenuRef = undefined;
         this._actionMenuTilePos = undefined;
         this._anchoredOverlays = new Map();
+        this._deploymentMarkers = null;
+        this._deploymentMarker = "";
     }
 
     static readonly ACTION_MENU_OVERLAY_ID = "action-menu";
@@ -472,6 +478,30 @@ export class World {
 
     get animationController(): AnimationController {
         return this._animationController;
+    }
+
+    get hasDeploymentMarkers(): boolean {
+        return !!this._deploymentMarkers;
+    }
+
+    set deploymentMarker(value: string) {
+        this._deploymentMarker = value;
+    }
+
+    get deploymentMarker(): string {
+        return this._deploymentMarker;
+    }
+
+    set deploymentMarkers(value: DeploymentZoneSummary | null) {
+        this._deploymentMarkers = value;
+    }
+
+    get deploymentMarkers(): DeploymentZoneSummary {
+        if (!this._deploymentMarkers) {
+            throw new Error("Deployment markers should not be null");
+        }
+
+        return this._deploymentMarkers;
     }
 
     async setTracers(
@@ -1053,7 +1083,41 @@ export class World {
         }
     }
 
-    renderWorld(canvasLoopProps: CanvasLoopProps) {
+    renderDeploymentPhase(canvasLoopProps: CanvasLoopProps) {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const { canvas, context } = canvasLoopProps;
+        const { time, frameDelta } = this._timer.tick();
+        const { width, height } = canvas;
+
+        canvas.style.cursor = this.mouseCursor ?? this.defaultMouseCursor ?? "default";
+
+        this.camera.viewportDimensions = new Vec2(width, height);
+
+        this.update({ time, frameDelta });
+
+        const { tileSize } = this.map;
+        const zoom = this.camera.zoom;
+        const scale = new Vec2(zoom, zoom);
+        const offset = new Vec2((tileSize * zoom) / 2, (tileSize * zoom) / 2);
+
+        context.clearRect(0, 0, width, height);
+
+        this.renderTerrainAndFurniture(context, tileSize, scale, offset, []);
+
+        if (this.hasDeploymentMarkers) {
+            this.renderDeploymentMarkers(context, tileSize, scale, offset, this.deploymentMarkers);
+        }
+
+        if (this._renderStarted) {
+            this._renderStarted();
+            this._renderStarted = null;
+        }
+    }
+
+    renderActionPhase(canvasLoopProps: CanvasLoopProps) {
         if (!this.hasMap) {
             return;
         }
@@ -1356,6 +1420,39 @@ export class World {
                 offset,
                 deferredAnimations
             });
+        });
+    }
+
+    renderDeploymentMarkers(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        tileSize: number,
+        scale: Vec2,
+        offset: Vec2,
+        deploymentMarkers: DeploymentZoneSummary
+    ) {
+        const getDeploymentZone = (tilePosString: string) => {
+            return deploymentMarkers.find((marker) => marker.tiles.has(tilePosString));
+        };
+
+        this.iterateViewportTiles((_renderList, tilePos, worldPos) => {
+            const tilePosString = toTilePosString(tilePos);
+            const deploymentZone = getDeploymentZone(tilePosString);
+            if (deploymentZone) {
+                this.drawRenderList({
+                    context,
+                    canvasPos: this.camera.worldToCanvas(worldPos),
+                    renderList: [
+                        {
+                            imageId: this.deploymentMarker,
+                            opacity: deploymentZone.disabled ? 0.5 : 1
+                        }
+                    ],
+                    tilePos,
+                    tileSize,
+                    scale,
+                    offset
+                });
+            }
         });
     }
 

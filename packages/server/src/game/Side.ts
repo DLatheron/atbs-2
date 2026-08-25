@@ -1,11 +1,18 @@
-import { Description, SideId, SideSummary, UnitId } from "@atbs/shared-data";
+import {
+    DeploymentZoneSummaryWire,
+    Description,
+    RenderList,
+    SideId,
+    SideSummary,
+    UnitId
+} from "@atbs/shared-data";
 import z from "zod";
 import { Unit, UnitOverrides } from "./Unit.js";
 import { UnitRecipeManager } from "./UnitRecipeManager.js";
 import type { Game } from "./Game.js";
 import { InventoryRecipe } from "./Inventory.js";
 import { Store, StoreRecipe } from "./Store.js";
-import { ITilePos, Orientation, TilePos } from "@atbs/maths";
+import { fromTilePosString, ITilePos, Orientation, TilePos, toTilePosString } from "@atbs/maths";
 import { ShuffleArray } from "../../../maths/src/Misc.js";
 import { VisibilityPoi } from "./VisibilityPoi.js";
 
@@ -96,7 +103,7 @@ interface DeploymentZone {
     minUnits: number | undefined;
     maxUnits: number | undefined;
     orientation: Orientation;
-    tiles: Set<ITilePos>;
+    tiles: Set<string>;
     units: Set<UnitId>;
 }
 
@@ -246,7 +253,7 @@ export class Side {
                 id: `zone-${deploymentZones.length}`,
                 minUnits: zone.minUnits,
                 maxUnits: zone.maxUnits,
-                tiles: new Set<ITilePos>(),
+                tiles: new Set<string>(),
                 units: new Set<UnitId>(),
                 orientation: zone.orientation
             };
@@ -254,7 +261,7 @@ export class Side {
             for (const [pos, size] of zone.tiles) {
                 for (let col = pos.col; col < pos.col + size.width; col++) {
                     for (let row = pos.row; row < pos.row + size.height; row++) {
-                        calculatedZone.tiles.add({ col, row });
+                        calculatedZone.tiles.add(toTilePosString({ col, row }));
                     }
                 }
             }
@@ -268,8 +275,8 @@ export class Side {
         return deploymentZones;
     }
 
-    getDeploymentZone(location: TilePos): DeploymentZone | undefined {
-        return this._deploymentZones?.find((zone) => zone.tiles.has(location));
+    getDeploymentZone(location: ITilePos): DeploymentZone | undefined {
+        return this._deploymentZones?.find((zone) => zone.tiles.has(toTilePosString(location)));
     }
 
     getDeploymentMarker(tilePos: ITilePos): string | undefined {
@@ -278,7 +285,7 @@ export class Side {
         }
 
         for (const zone of this._deploymentZones) {
-            if (zone.tiles.has(tilePos)) {
+            if (zone.tiles.has(toTilePosString(tilePos))) {
                 return this.deploymentMarker;
             }
         }
@@ -308,7 +315,7 @@ export class Side {
 
         // Update the zone's details (add unit, remove tile).
         deploymentZone.units.add(unitId);
-        deploymentZone.tiles.delete(location);
+        deploymentZone.tiles.delete(toTilePosString(location));
 
         // Update the unit's location and orientation.
         unit.location = location;
@@ -331,7 +338,7 @@ export class Side {
 
         // Update the zone's details (remove unit, add tile).
         deployment.zone.units.delete(unitId);
-        deployment.zone.tiles.add(deployment.location);
+        deployment.zone.tiles.add(toTilePosString(deployment.location));
 
         // Update the unit's location and orientation.
         unit.location = null;
@@ -367,7 +374,7 @@ export class Side {
             throw new Error(`No deployment tiles available`);
         }
 
-        const tilePos = new TilePos(tilePosition);
+        const tilePos = new TilePos(fromTilePosString(tilePosition));
 
         this.deployUnit(unitId, tilePos);
 
@@ -382,5 +389,26 @@ export class Side {
 
             this.randomDeployment(unit.id);
         }
+    }
+
+    getMarkerRenderList(tilePos: ITilePos): RenderList {
+        const zone = this.getDeploymentZone(tilePos);
+        if (!zone) {
+            return [];
+        }
+
+        const disabled = zone.units.size >= (zone.maxUnits ?? Infinity);
+
+        return [{ imageId: this.deploymentMarker, opacity: disabled ? 0.5 : 1 }];
+    }
+
+    toDeploymentZoneSummary(): DeploymentZoneSummaryWire {
+        return this._deploymentZones.map((zone) => ({
+            id: zone.id,
+            minUnits: zone.minUnits,
+            maxUnits: zone.maxUnits,
+            disabled: zone.units.size >= (zone.maxUnits ?? Infinity),
+            tiles: Array.from(zone.tiles.values()).map((tile) => fromTilePosString(tile))
+        }));
     }
 }

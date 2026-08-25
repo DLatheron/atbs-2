@@ -23,7 +23,8 @@ import {
     TimedVisibilityUpdate,
     UnitId,
     InstanceId,
-    StoreSnapshot
+    StoreSnapshot,
+    DeploymentZoneSummaryWire
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
@@ -276,6 +277,19 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:opportunity:fire:end"),
         payload: z.null()
+    }),
+    z.object({
+        type: z.literal("server:deployment:side:start"),
+        payload: z.object({
+            side: SideSummary
+        })
+    }),
+    z.object({
+        type: z.literal("server:deployment:markers"),
+        payload: z.object({
+            marker: z.string(),
+            deploymentZones: DeploymentZoneSummaryWire
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

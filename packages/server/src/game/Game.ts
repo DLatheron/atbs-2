@@ -624,7 +624,7 @@ export class Game {
         this.messageRouter.broadcast(
             {
                 type: "server:map",
-                payload: this.map.renderClientMap()
+                payload: this.map.renderGameMap()
             },
             [],
             true

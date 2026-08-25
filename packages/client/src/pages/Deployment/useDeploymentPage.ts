@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerMessageManager, useWorld } from "../../hooks";
-import { ClientMap, SideSummary } from "@atbs/shared-data";
+import { ClientMap, DeploymentZoneSummaryWire, SideSummary } from "@atbs/shared-data";
+import { ITilePos, toTilePosString } from "@atbs/maths";
 
 export function useDeploymentPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
     const { world } = useWorld();
     const [map, setMap] = useState<ClientMap | null>(null);
-    const [side /*, setSide*/] = useState<SideSummary | null>(null);
+    const [side, setSide] = useState<SideSummary | null>(null);
     const [disabled /*, setDisabled*/] = useState<boolean>(false);
 
     useEffect(() => {
@@ -18,6 +19,29 @@ export function useDeploymentPage() {
 
                 world.map = payload;
                 setMap(payload);
+            }),
+
+            messageManager.registerHandler("server:deployment:side:start", (_context, payload) => {
+                console.info("$$$ Received deployment side start message $$$", payload);
+
+                setSide(payload.side);
+            }),
+
+            messageManager.registerHandler("server:deployment:markers", (_context, payload) => {
+                console.info("$$$ Received deployment markers message $$$", payload);
+
+                world.deploymentMarker = payload.marker;
+                world.deploymentMarkers = payload.deploymentZones.map(
+                    (deploymentZone: DeploymentZoneSummaryWire[0]) => ({
+                        id: deploymentZone.id,
+                        minUnits: deploymentZone.minUnits,
+                        maxUnits: deploymentZone.maxUnits,
+                        disabled: deploymentZone.disabled,
+                        tiles: new Set(
+                            deploymentZone.tiles.map((tile: ITilePos) => toTilePosString(tile))
+                        )
+                    })
+                );
             })
         ];
 

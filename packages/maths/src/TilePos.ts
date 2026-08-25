@@ -16,6 +16,15 @@ export function isITilePos(arg: unknown): arg is ITilePos {
     );
 }
 
+export function toTilePosString(tilePos: ITilePos): string {
+    return `${tilePos.col},${tilePos.row}`;
+}
+
+export function fromTilePosString(tilePosString: string): ITilePos {
+    const [col, row] = tilePosString.split(",").map((v) => parseInt(v.trim(), 10));
+    return { col, row };
+}
+
 export class TilePos
     extends Z.class({
         col: z.number(), // x.

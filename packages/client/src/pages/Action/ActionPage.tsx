@@ -63,7 +63,10 @@ export function ActionPage({ visible }: ActionPageProps) {
 
     const { world } = useWorld();
 
-    const renderMap = useCallback((props: CanvasLoopProps) => world.renderWorld(props), [world]);
+    const renderMap = useCallback(
+        (props: CanvasLoopProps) => world.renderActionPhase(props),
+        [world]
+    );
 
     const onMouseEnter = useCallback(
         (event: React.MouseEvent) => world?.onMouseEnter(event),

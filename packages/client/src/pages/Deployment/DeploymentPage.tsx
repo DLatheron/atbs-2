@@ -15,7 +15,10 @@ export function DeploymentPage({ visible }: DeploymentPageProps) {
     const { side, disabled, onEndDeploymentPhase } = useDeploymentPage();
 
     const { world } = useWorld();
-    const renderMap = useCallback((props: CanvasLoopProps) => world.renderWorld(props), [world]);
+    const renderMap = useCallback(
+        (props: CanvasLoopProps) => world.renderDeploymentPhase(props),
+        [world]
+    );
 
     const onMouseEnter = useCallback(
         (event: React.MouseEvent) => world?.onMouseEnter(event),

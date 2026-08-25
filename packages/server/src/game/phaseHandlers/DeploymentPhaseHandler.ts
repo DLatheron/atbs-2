@@ -57,6 +57,29 @@ export class DeploymentPhaseHandler extends PhaseHandler {
 
         for (const client of this.game.clients) {
             const { sideId } = client;
+            if (!sideId) {
+                throw new Error("Client does not have a set side ID");
+            }
+
+            const side = this.game.getSide(sideId);
+
+            if (sideId && this.game.getSide(sideId).needsDeploymentPhase) {
+                client.sendMessage({
+                    type: "server:map",
+                    payload: this.game.map.renderDeploymentMap()
+                });
+                client.sendMessage({
+                    type: "server:deployment:markers",
+                    payload: {
+                        marker: side.deploymentMarker,
+                        deploymentZones: side.toDeploymentZoneSummary()
+                    }
+                });
+                client.sendMessage({
+                    type: "server:deployment:side:start",
+                    payload: { side: side.toSummary() }
+                });
+            }
 
             if (sideId && this._waitingSideIds.includes(sideId)) {
                 client.sendMessage({ type: "server:wait", payload: waitingFor });
