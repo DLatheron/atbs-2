@@ -1,7 +1,13 @@
-import { Button, Container, Typography } from "@mui/material";
+import { Container, Typography } from "@mui/material";
 import { useDeploymentPage } from "./useDeploymentPage";
 import { useWorld } from "../../hooks";
-import { CanvasLoopProps, MapComponent, SidePanel, TitleBarComponent } from "../../components";
+import {
+    CanvasLoopProps,
+    DeploymentModePanel,
+    MapComponent,
+    SidePanel,
+    TitleBarComponent
+} from "../../components";
 import { useCallback } from "react";
 
 export interface DeploymentPageProps {
@@ -12,7 +18,8 @@ export function DeploymentPage({ visible }: DeploymentPageProps) {
     const statusBarHeight = 60;
     const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
 
-    const { side, disabled, onEndDeploymentPhase } = useDeploymentPage();
+    const { side, disabled, units, unitDeployment, canEndDeployment, onEndDeploymentPhase } =
+        useDeploymentPage();
 
     const { world } = useWorld();
     const renderMap = useCallback(
@@ -107,29 +114,16 @@ export function DeploymentPage({ visible }: DeploymentPageProps) {
             <SidePanel
                 sx={{ gridArea: "panel", height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}
             >
-                <Button
-                    id="end-deployment"
-                    title="End Deployment"
-                    variant="contained"
-                    onClick={onEndDeploymentPhase}
-                >
-                    End Deployment
-                </Button>
+                <DeploymentModePanel
+                    visible
+                    disabled={disabled}
+                    units={units}
+                    unitDeployment={unitDeployment}
+                    canEndDeployment={canEndDeployment}
+                    onEndDeployment={onEndDeploymentPhase}
+                    sx={{ height: `calc(100vh - ${statusBarHeightAndPadding}px)` }}                    
+                />
             </SidePanel>
         </Container>
     );
-
-    // return (
-    //     <Container>
-    //         <p>Deployment Phase</p>
-    //         <Button
-    //             id="end-deployment"
-    //             title="End Deployment"
-    //             variant="contained"
-    //             onClick={onEndDeploymentPhase}
-    //         >
-    //             End Deployment
-    //         </Button>
-    //     </Container>
-    // );
 }

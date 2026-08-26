@@ -281,14 +281,18 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:deployment:side:start"),
         payload: z.object({
-            side: SideSummary
+            side: SideSummary,
+            units: z.array(UnitSummary)
         })
     }),
     z.object({
         type: z.literal("server:deployment:markers"),
         payload: z.object({
             marker: z.string(),
-            deploymentZones: DeploymentZoneSummaryWire
+            deploymentZones: DeploymentZoneSummaryWire,
+            units: z
+                .record(UnitId, ITilePos.nullable())
+                .describe("Where each unit is deployed (or not if null)")
         })
     })
 ]);

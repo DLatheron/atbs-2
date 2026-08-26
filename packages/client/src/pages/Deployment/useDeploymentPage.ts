@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerMessageManager, useWorld } from "../../hooks";
-import { ClientMap, DeploymentZoneSummaryWire, SideSummary } from "@atbs/shared-data";
+import {
+    ClientMap,
+    DeploymentZoneSummaryWire,
+    SideSummary,
+    UnitId,
+    UnitSummary
+} from "@atbs/shared-data";
 import { ITilePos, toTilePosString } from "@atbs/maths";
 
 export function useDeploymentPage() {
@@ -8,7 +14,10 @@ export function useDeploymentPage() {
     const { world } = useWorld();
     const [map, setMap] = useState<ClientMap | null>(null);
     const [side, setSide] = useState<SideSummary | null>(null);
+    const [units, setUnits] = useState<UnitSummary[]>([]);
+    const [unitDeployment, setUnitDeployment] = useState<Record<UnitId, ITilePos | null>>({});
     const [disabled /*, setDisabled*/] = useState<boolean>(false);
+    const [canEndDeployment /*, setCanEndDeployment*/] = useState<boolean>(true);
 
     useEffect(() => {
         console.info("Mounting DeploymentPage Message Handlers");
@@ -25,6 +34,7 @@ export function useDeploymentPage() {
                 console.info("$$$ Received deployment side start message $$$", payload);
 
                 setSide(payload.side);
+                setUnits(payload.units);
             }),
 
             messageManager.registerHandler("server:deployment:markers", (_context, payload) => {
@@ -42,6 +52,7 @@ export function useDeploymentPage() {
                         )
                     })
                 );
+                setUnitDeployment(payload.units);
             })
         ];
 
@@ -61,7 +72,10 @@ export function useDeploymentPage() {
     return {
         map,
         side,
+        units,
+        unitDeployment,
         disabled,
+        canEndDeployment,
         onEndDeploymentPhase
     };
 }

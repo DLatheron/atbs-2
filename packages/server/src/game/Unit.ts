@@ -2618,7 +2618,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             id: this.id,
             name: this.name,
             description: this.description,
-            location: this.mapLocation,
+            location: this.location,
             isDirectional: this.isDirectional,
             orientation: this.orientation,
             disorientation: this.disorientation,

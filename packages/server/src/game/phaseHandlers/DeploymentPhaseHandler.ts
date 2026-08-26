@@ -1,6 +1,7 @@
-import { Phase, SideId, WaitingFor } from "@atbs/shared-data";
+import { Phase, SideId, UnitId, WaitingFor } from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager, Game } from "../Game.js";
+import { ITilePos } from "@atbs/maths";
 
 export class DeploymentPhaseHandler extends PhaseHandler {
     private readonly _deployingSideIds: SideId[];
@@ -22,6 +23,10 @@ export class DeploymentPhaseHandler extends PhaseHandler {
 
         for (const side of game.sides) {
             if (side.needsDeploymentPhase) {
+                side.units.forEach((unit) => {
+                    unit.location = null;
+                });
+
                 this._deployingSideIds.push(side.id);
             } else {
                 this._waitingSideIds.push(side.id);
@@ -72,12 +77,22 @@ export class DeploymentPhaseHandler extends PhaseHandler {
                     type: "server:deployment:markers",
                     payload: {
                         marker: side.deploymentMarker,
-                        deploymentZones: side.toDeploymentZoneSummary()
+                        deploymentZones: side.toDeploymentZoneSummary(),
+                        units: side.units.reduce(
+                            (acc, unit) => {
+                                acc[unit.id] = unit.location;
+                                return acc;
+                            },
+                            {} as Record<UnitId, ITilePos | null>
+                        )
                     }
                 });
                 client.sendMessage({
                     type: "server:deployment:side:start",
-                    payload: { side: side.toSummary() }
+                    payload: {
+                        side: side.toSummary(),
+                        units: side.units.map((unit) => unit.toSummary())
+                    }
                 });
             }
 
