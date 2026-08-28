@@ -15,7 +15,7 @@ export const UnitSummary = z.object({
     id: UnitId,
     name: z.string().nonempty(),
     description: Description,
-    location: ITilePos,
+    location: ITilePos.nullable(),
     orientation: z.enum(Orientation),
     disorientation: z.int().nonnegative(),
     viewAngleInDegrees: z.int().positive(),

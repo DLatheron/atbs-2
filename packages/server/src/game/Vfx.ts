@@ -8,7 +8,8 @@ import {
     RenderList,
     SceneContext,
     SceneObject,
-    VfxId
+    VfxId,
+    VisibilityFilter
 } from "@atbs/shared-data";
 import cloneDeep from "lodash/cloneDeep.js";
 import { VfxRecipe } from "./VfxRecipe.js";
@@ -155,7 +156,10 @@ export class Vfx extends SceneObject {
     }
 
     getRenderList(context: SceneContext): RenderList {
-        return super.getRenderList({ ...context, visibilityFilter: true });
+        return super.getRenderList({
+            ...context,
+            visibilityFilter: [VisibilityFilter.enum.visible]
+        });
     }
 
     buildAnimatableObjectRecipe(): AnimatableObjectRecipe {

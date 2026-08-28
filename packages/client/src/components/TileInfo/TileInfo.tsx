@@ -8,13 +8,19 @@ import { AttributesComponent } from "../Attributes";
 
 export interface TileInfoComponentProps {
     tileInfo: TileInfo | null;
+    /** When true, only terrain and furniture are shown (no item/unit). */
+    terrainAndFurnitureOnly?: boolean;
     sx?: SxProps;
 }
 
-export function TileInfoComponent({ tileInfo, sx }: TileInfoComponentProps) {
-    const item = tileInfo?.item;
-    const unit = tileInfo?.unit;
-    const unitUsing = tileInfo?.unitUsing;
+export function TileInfoComponent({
+    tileInfo,
+    terrainAndFurnitureOnly = false,
+    sx
+}: TileInfoComponentProps) {
+    const item = terrainAndFurnitureOnly ? undefined : tileInfo?.item;
+    const unit = terrainAndFurnitureOnly ? undefined : tileInfo?.unit;
+    const unitUsing = terrainAndFurnitureOnly ? undefined : tileInfo?.unitUsing;
     const terrain = tileInfo?.terrain;
     const furniture = tileInfo?.furniture;
 

@@ -14,6 +14,7 @@ const ImageDirectories = [
     "./data/items",
     "./data/icons",
     "./data/furniture",
+    "./data/markers",
     "./data/vfx"
 ];
 

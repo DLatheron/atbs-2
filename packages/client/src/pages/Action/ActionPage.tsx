@@ -11,6 +11,7 @@ import { ErrorPanel } from "../../components/SidePanel/ErrorPanel";
 import { FireModePanel } from "../../components/SidePanel/FireModePanel/FireModePanel";
 import { MapMode } from "../../MapMode";
 import { ActionMenuComponent } from "../../components/ActionMenu";
+import { UnitSelectionOverlay } from "../../components/UnitSelectionOverlay";
 import { InventoryModal } from "../../modals";
 
 export interface ActionPageProps {
@@ -63,7 +64,10 @@ export function ActionPage({ visible }: ActionPageProps) {
 
     const { world } = useWorld();
 
-    const renderMap = useCallback((props: CanvasLoopProps) => world.renderWorld(props), [world]);
+    const renderMap = useCallback(
+        (props: CanvasLoopProps) => world.renderActionPhase(props),
+        [world]
+    );
 
     const onMouseEnter = useCallback(
         (event: React.MouseEvent) => world?.onMouseEnter(event),
@@ -155,6 +159,14 @@ export function ActionPage({ visible }: ActionPageProps) {
                 sx={{ gridArea: "map" }}
                 disabled={disabled}
             >
+                <UnitSelectionOverlay
+                    tilePos={unit?.location ?? null}
+                    visible={
+                        !!unit &&
+                        (sidePanelMode === MapMode.enum["unit-mode"] ||
+                            sidePanelMode === MapMode.enum["fire-mode"])
+                    }
+                />
                 {sidePanelMode === MapMode.enum["unit-mode"] && unit && unitActionMode && (
                     <ActionMenuComponent
                         key={unit.id}

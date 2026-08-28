@@ -22,11 +22,13 @@ import {
     TimedAnimatableObjectRemoval,
     TimedVisibilityUpdate,
     UnitSummary,
-    VisibilityViewerSummary
+    VisibilityViewerSummary,
+    VisibilityFilter,
+    DeploymentZoneSummary
 } from "@atbs/shared-data";
 import { Vec2 } from "../../maths/dist/Vec2";
 import { CanvasLoopProps } from "./components/CanvasLoop";
-import { ITilePos, TilePos } from "../../maths/dist/TilePos";
+import { ITilePos, TilePos, toTilePosString } from "../../maths/dist/TilePos";
 import { Aabb } from "../../maths/dist/Aabb";
 import { Camera2d } from "./Camera2d";
 import {
@@ -46,6 +48,10 @@ import { IInteractionHandler } from "./IInteractionHandler";
 import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
+import {
+    drawDeploymentZoneConstraintOutline,
+    drawDeploymentZoneMinUnitsLabel
+} from "./pages/Deployment/deploymentZoneOverlay.js";
 import { MapMode } from "./MapMode";
 import {
     DebugDrawArc,
@@ -128,8 +134,17 @@ export class World {
     private _actionMenuTilePos?: TilePos;
     private _anchoredOverlays = new Map<
         string,
-        { getElement: () => HTMLElement | null; tilePos: TilePos }
+        {
+            getElement: () => HTMLElement | null;
+            tilePos: TilePos;
+            /** center: translate(-50%,-50%) scale(zoom). topLeft: explicit zoomed box, no transform. */
+            anchor: "center" | "topLeft";
+        }
     >();
+    private _pausedAnchoredOverlayIds = new Set<string>();
+
+    private _deploymentMarkers: DeploymentZoneSummary | null;
+    private _deploymentMarker: string;
 
     _waitForRenderStart: Promise<void>;
     _renderStarted: (() => void) | null = null;
@@ -176,16 +191,25 @@ export class World {
         this._actionMenuRef = undefined;
         this._actionMenuTilePos = undefined;
         this._anchoredOverlays = new Map();
+        this._pausedAnchoredOverlayIds = new Set();
+        this._deploymentMarkers = null;
+        this._deploymentMarker = "";
     }
 
     static readonly ACTION_MENU_OVERLAY_ID = "action-menu";
+    static readonly UNIT_SELECTION_OVERLAY_ID = "unit-selection";
 
     registerAnchoredOverlay(
         id: string,
         getElement: () => HTMLElement | null,
-        tilePos: TilePos
+        tilePos: TilePos,
+        options?: { anchor?: "center" | "topLeft" }
     ): void {
-        this._anchoredOverlays.set(id, { getElement, tilePos });
+        this._anchoredOverlays.set(id, {
+            getElement,
+            tilePos,
+            anchor: options?.anchor ?? "center"
+        });
     }
 
     updateAnchoredOverlayTile(id: string, tilePos: TilePos): void {
@@ -197,6 +221,7 @@ export class World {
 
     unregisterAnchoredOverlay(id: string): void {
         this._anchoredOverlays.delete(id);
+        this._pausedAnchoredOverlayIds.delete(id);
     }
 
     get hasMap(): boolean {
@@ -254,6 +279,7 @@ export class World {
             const tilePos = new TilePos(value.location);
             this.actionMenuTilePos = tilePos;
             this.updateAnchoredOverlayTile(World.ACTION_MENU_OVERLAY_ID, tilePos);
+            this.updateAnchoredOverlayTile(World.UNIT_SELECTION_OVERLAY_ID, tilePos);
         }
     }
 
@@ -471,6 +497,30 @@ export class World {
 
     get animationController(): AnimationController {
         return this._animationController;
+    }
+
+    get hasDeploymentMarkers(): boolean {
+        return !!this._deploymentMarkers;
+    }
+
+    set deploymentMarker(value: string) {
+        this._deploymentMarker = value;
+    }
+
+    get deploymentMarker(): string {
+        return this._deploymentMarker;
+    }
+
+    set deploymentMarkers(value: DeploymentZoneSummary | null) {
+        this._deploymentMarkers = value;
+    }
+
+    get deploymentMarkers(): DeploymentZoneSummary {
+        if (!this._deploymentMarkers) {
+            throw new Error("Deployment markers should not be null");
+        }
+
+        return this._deploymentMarkers;
     }
 
     async setTracers(
@@ -1052,7 +1102,52 @@ export class World {
         }
     }
 
-    renderWorld(canvasLoopProps: CanvasLoopProps) {
+    renderDeploymentPhase(canvasLoopProps: CanvasLoopProps) {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const { canvas, context } = canvasLoopProps;
+        const { time, frameDelta } = this._timer.tick();
+        const { width, height } = canvas;
+
+        canvas.style.cursor = this.mouseCursor ?? this.defaultMouseCursor ?? "default";
+
+        this.camera.viewportDimensions = new Vec2(width, height);
+
+        this.update({ time, frameDelta });
+
+        const { tileSize } = this.map;
+        const zoom = this.camera.zoom;
+        const scale = new Vec2(zoom, zoom);
+        const offset = new Vec2((tileSize * zoom) / 2, (tileSize * zoom) / 2);
+
+        context.clearRect(0, 0, width, height);
+
+        this.renderTerrainAndFurniture(context, tileSize, scale, offset, []);
+
+        if (this.hasDeploymentMarkers) {
+            this.renderDeploymentMarkers(
+                context,
+                tileSize,
+                scale,
+                offset,
+                this.deploymentMarkers,
+                time,
+                width,
+                height
+            );
+        }
+
+        this._repositionAnchoredOverlays();
+
+        if (this._renderStarted) {
+            this._renderStarted();
+            this._renderStarted = null;
+        }
+    }
+
+    renderActionPhase(canvasLoopProps: CanvasLoopProps) {
         if (!this.hasMap) {
             return;
         }
@@ -1358,6 +1453,147 @@ export class World {
         });
     }
 
+    renderDeploymentMarkers(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        tileSize: number,
+        scale: Vec2,
+        offset: Vec2,
+        deploymentMarkers: DeploymentZoneSummary,
+        time: number,
+        viewportWidth: number,
+        viewportHeight: number
+    ) {
+        const getDeploymentZone = (tilePosString: string) => {
+            return deploymentMarkers.find(
+                (marker) =>
+                    marker.tiles.has(tilePosString) ||
+                    (marker.allTiles.size > 0 && marker.allTiles.has(tilePosString))
+            );
+        };
+
+        const shimmerTiles: { left: number; top: number; size: number }[] = [];
+
+        this.iterateViewportTiles((_renderList, tilePos, worldPos) => {
+            const tilePosString = toTilePosString(tilePos);
+            const deploymentZone = getDeploymentZone(tilePosString);
+            if (!deploymentZone || !deploymentZone.tiles.has(tilePosString)) {
+                return;
+            }
+
+            const canvasPos = this.camera.worldToCanvas(worldPos);
+            const tileCanvasSize = tileSize * scale.x;
+            const half = tileCanvasSize / 2;
+            const left = canvasPos.x + offset.x - half;
+            const top = canvasPos.y + offset.y - half;
+
+            this.drawRenderList({
+                context,
+                canvasPos,
+                renderList: [
+                    {
+                        imageId: this.deploymentMarker,
+                        opacity: deploymentZone.disabled ? 0.5 : 1
+                    }
+                ],
+                tilePos,
+                tileSize,
+                scale,
+                offset,
+                grayscale: deploymentZone.disabled
+            });
+
+            if (!deploymentZone.disabled) {
+                shimmerTiles.push({ left, top, size: tileCanvasSize });
+            }
+        });
+
+        if (shimmerTiles.length > 0) {
+            const shimmer = this._deploymentShimmerState(time, viewportWidth, viewportHeight);
+            for (const tile of shimmerTiles) {
+                this._drawDeploymentMarkerShimmer(context, tile, shimmer);
+            }
+        }
+
+        for (const zone of deploymentMarkers) {
+            drawDeploymentZoneConstraintOutline(
+                context,
+                zone,
+                this.camera,
+                tileSize,
+                scale,
+                offset,
+                time
+            );
+            drawDeploymentZoneMinUnitsLabel(context, zone, this.camera, tileSize, scale, offset);
+        }
+    }
+
+    private _deploymentShimmerState(
+        time: number,
+        viewportWidth: number,
+        viewportHeight: number
+    ): {
+        bandStart: number;
+        bandWidth: number;
+        peakAlpha: number;
+        viewportWidth: number;
+        viewportHeight: number;
+    } {
+        const periodMs = 3200;
+        const cycle = (time % periodMs) / periodMs;
+        const pingPong = 1 - Math.abs(2 * cycle - 1);
+        const easedPhase = pingPong * pingPong * (3 - 2 * pingPong);
+
+        const bandWidth = Math.max(viewportWidth, viewportHeight) * 0.14;
+        const travel = viewportWidth + bandWidth;
+        const bandStart = -bandWidth + easedPhase * travel;
+
+        return {
+            bandStart,
+            bandWidth,
+            peakAlpha: 0.62,
+            viewportWidth,
+            viewportHeight
+        };
+    }
+
+    private _drawDeploymentMarkerShimmer(
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+        tile: { left: number; top: number; size: number },
+        shimmer: {
+            bandStart: number;
+            bandWidth: number;
+            peakAlpha: number;
+            viewportWidth: number;
+            viewportHeight: number;
+        }
+    ): void {
+        const { left, top, size } = tile;
+        const { bandStart, bandWidth, peakAlpha, viewportWidth, viewportHeight } = shimmer;
+
+        context.save();
+        context.beginPath();
+        context.rect(left, top, size, size);
+        context.clip();
+
+        const gradient = context.createLinearGradient(
+            bandStart,
+            0,
+            bandStart + bandWidth,
+            viewportHeight
+        );
+        gradient.addColorStop(0, "rgba(255, 255, 255, 0)");
+        gradient.addColorStop(0.35, `rgba(255, 255, 255, ${peakAlpha * 0.55})`);
+        gradient.addColorStop(0.5, `rgba(255, 255, 255, ${peakAlpha})`);
+        gradient.addColorStop(0.65, `rgba(255, 255, 255, ${peakAlpha * 0.55})`);
+        gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+        context.globalCompositeOperation = "overlay";
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, viewportWidth, viewportHeight);
+        context.restore();
+    }
+
     private _drawDeferredAnimations(
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
         deferredAnimations: DeferredTileAnimation[]
@@ -1381,7 +1617,8 @@ export class World {
         tileSize,
         scale,
         offset,
-        deferredAnimations
+        deferredAnimations,
+        grayscale = false
     }: {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
@@ -1391,16 +1628,15 @@ export class World {
         scale: Vec2;
         offset: Vec2;
         deferredAnimations?: DeferredTileAnimation[];
+        grayscale?: boolean;
     }): void {
         renderList.forEach(
-            ({
-                imageId,
-                orientation = Orientation.NORTH,
-                opacity = 1,
-                visibilityFilter = false
-            }) => {
+            ({ imageId, orientation = Orientation.NORTH, opacity = 1, visibilityFilter }) => {
                 if (imageId.startsWith("anim-")) {
-                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                    if (
+                        visibilityFilter?.includes(VisibilityFilter.enum.visible) &&
+                        !this.visibleTiles.has(tilePos.toString())
+                    ) {
                         return;
                     }
 
@@ -1428,7 +1664,10 @@ export class World {
                         return;
                     }
 
-                    if (visibilityFilter && !this.visibleTiles.has(tilePos.toString())) {
+                    if (
+                        visibilityFilter?.includes(VisibilityFilter.enum.visible) &&
+                        !this.visibleTiles.has(tilePos.toString())
+                    ) {
                         return;
                     }
 
@@ -1440,7 +1679,8 @@ export class World {
                         opacity,
                         tileSize,
                         scale,
-                        offset
+                        offset,
+                        grayscale
                     });
                 }
             }
@@ -1452,9 +1692,11 @@ export class World {
         canvasPos,
         image,
         orientation,
+        opacity,
         tileSize,
         scale,
-        offset
+        offset,
+        grayscale = false
     }: {
         context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
         canvasPos: Vec2;
@@ -1464,8 +1706,15 @@ export class World {
         tileSize: number;
         scale: Vec2;
         offset: Vec2;
+        grayscale?: boolean;
     }): void {
         const angleInRadians = OrientationToRadians[orientation];
+
+        context.save();
+        context.globalAlpha = opacity;
+        if (grayscale) {
+            context.filter = "grayscale(100%)";
+        }
 
         context.translate(canvasPos.x + offset.x, canvasPos.y + offset.y);
         context.rotate(angleInRadians);
@@ -1482,6 +1731,7 @@ export class World {
         );
         context.rotate(-angleInRadians);
         context.translate(-(canvasPos.x + offset.x), -(canvasPos.y + offset.y));
+        context.restore();
     }
 
     onMouseEnter(event: MouseEvent | React.MouseEvent) {
@@ -1540,20 +1790,43 @@ export class World {
 
         const { camera } = this;
         const { zoom } = camera;
+        const { tileSize } = this.map;
 
-        for (const overlay of this._anchoredOverlays.values()) {
+        for (const [id, overlay] of this._anchoredOverlays) {
+            if (this._pausedAnchoredOverlayIds.has(id)) {
+                continue;
+            }
+
             const element = overlay.getElement();
             if (!element) {
                 continue;
             }
 
-            const canvasPos = camera.worldToCanvas(this.tileCenterToWorld(overlay.tilePos));
-
-            element.style.left = `${canvasPos.x}px`;
-            element.style.top = `${canvasPos.y}px`;
-            // Scale with zoom so a world-sized overlay (e.g. 3×3 tile action menu) stays aligned.
-            element.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+            if (overlay.anchor === "topLeft") {
+                // Layout box matches the painted tile so drag grab-offset stays correct.
+                const canvasPos = camera.worldToCanvas(this.tileToWorld(overlay.tilePos));
+                const size = tileSize * zoom;
+                element.style.left = `${canvasPos.x}px`;
+                element.style.top = `${canvasPos.y}px`;
+                element.style.width = `${size}px`;
+                element.style.height = `${size}px`;
+                element.style.transform = "";
+            } else {
+                const canvasPos = camera.worldToCanvas(this.tileCenterToWorld(overlay.tilePos));
+                element.style.left = `${canvasPos.x}px`;
+                element.style.top = `${canvasPos.y}px`;
+                // Scale with zoom so a world-sized overlay (e.g. 3×3 tile action menu) stays aligned.
+                element.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+            }
         }
+    }
+
+    pauseAnchoredOverlay(id: string): void {
+        this._pausedAnchoredOverlayIds.add(id);
+    }
+
+    resumeAnchoredOverlay(id: string): void {
+        this._pausedAnchoredOverlayIds.delete(id);
     }
 
     private static readonly _singleton = new World(ImageCache.GetSingleton());

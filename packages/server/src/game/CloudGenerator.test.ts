@@ -9,7 +9,8 @@ import {
     GasExplosion,
     RenderImage,
     RenderMode,
-    SmokeExplosion
+    SmokeExplosion,
+    VisibilityFilter
 } from "@atbs/shared-data";
 import { PNG } from "pngjs";
 import type { Game } from "./Game.js";
@@ -368,7 +369,11 @@ describe("CloudGenerator", () => {
             result.tileUpdates[0].tileByRenderMode[RenderMode.enum.MAP_MODE];
         const vfxImages = mapMode.filter((image) => image.imageId.startsWith("anim-"));
         expect(vfxImages.length).toBeGreaterThan(0);
-        expect(vfxImages.every((image) => image.visibilityFilter === true)).toBe(true);
+        expect(
+            vfxImages.every((image) =>
+                image.visibilityFilter?.includes(VisibilityFilter.enum.visible)
+            )
+        ).toBe(true);
     });
 
     it("does not enter a 100-obstruction wall and retries it next wave", () => {

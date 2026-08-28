@@ -84,6 +84,8 @@ export function useActionPage() {
     useEffect(() => {
         console.info("Mounting ActionPage Message Handlers");
 
+        world.deploymentMarkers = null;
+
         const handlerHandles = [
             messageManager.registerHandler("server:map", (_context, payload) => {
                 console.info("$$$ Received map message $$$", payload.width, "x", payload.height);

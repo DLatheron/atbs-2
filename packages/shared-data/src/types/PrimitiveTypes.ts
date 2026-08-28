@@ -155,11 +155,15 @@ export const Attribute = z.object({
 });
 export type Attribute = z.infer<typeof Attribute>;
 
+const visibilityFilter = ["visible", "deployment"] as const;
+export const VisibilityFilter = z.enum(visibilityFilter);
+export type VisibilityFilter = z.infer<typeof VisibilityFilter>;
+
 export const RenderImage = z.object({
     imageId: ImageId,
     orientation: z.enum(Orientation).optional(), // Assume NORTH.
     opacity: z.number().optional(), // Assume 1.
-    visibilityFilter: z.boolean().optional() // Assume true (always draw).
+    visibilityFilter: z.array(VisibilityFilter).optional()
 });
 export type RenderImage = z.infer<typeof RenderImage>;
 
@@ -958,3 +962,67 @@ export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;
 
 export const InterestMask = z.union([z.literal("items"), z.literal("vfx"), z.string()]);
 export type InterestMask = z.infer<typeof InterestMask>;
+
+export const UnitDeploymentWire = z.object({
+    location: ITilePos.nullable().describe("Deployed tile, or null when undeployed"),
+    orientation: z
+        .enum(Orientation)
+        .optional()
+        .describe("Facing when deployed; omitted when undeployed"),
+    mapImage: RenderList.optional().describe(
+        "MAP_MODE sprites resolved for the deployed facing; omitted when undeployed"
+    )
+});
+export type UnitDeploymentWire = z.infer<typeof UnitDeploymentWire>;
+
+export const DeploymentZoneSummaryWire = z.array(
+    z.object({
+        name: z.string().describe("The name of the deployment zone"),
+        minUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The minimum number of units that must be deployed to this zone"),
+        maxUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The maximum number of units that can be deployed to this zone"),
+        disabled: z.boolean().describe("Whether the deployment zone is disabled"),
+        orientation: z.enum(Orientation).describe("Facing for units deployed in this zone"),
+        deployedCount: z
+            .number()
+            .int()
+            .nonnegative()
+            .describe("Number of units currently deployed in this zone"),
+        outlineColor: IColour.optional().describe(
+            "Outline colour for zones with deployment constraints"
+        ),
+        tiles: z.array(ITilePos).describe("Tiles still available for deployment"),
+        allTiles: z.array(ITilePos).describe("Every tile in the zone footprint")
+    })
+);
+export type DeploymentZoneSummaryWire = z.infer<typeof DeploymentZoneSummaryWire>;
+
+export const DeploymentZoneSummary = z.array(
+    z.object({
+        name: z.string().describe("The name of the deployment zone"),
+        minUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The minimum number of units that must be deployed to this zone"),
+        maxUnits: z
+            .number()
+            .positive()
+            .optional()
+            .describe("The maximum number of units that can be deployed to this zone"),
+        disabled: z.boolean().describe("Whether the deployment zone is disabled"),
+        orientation: z.enum(Orientation).describe("Facing for units deployed in this zone"),
+        deployedCount: z.number().int().nonnegative(),
+        outlineColor: IColour.optional(),
+        tiles: z.set(z.string()).describe("Tiles still available for deployment"),
+        allTiles: z.set(z.string()).describe("Every tile in the zone footprint")
+    })
+);
+export type DeploymentZoneSummary = z.infer<typeof DeploymentZoneSummary>;

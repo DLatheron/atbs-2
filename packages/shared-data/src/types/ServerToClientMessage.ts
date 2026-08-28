@@ -23,7 +23,9 @@ import {
     TimedVisibilityUpdate,
     UnitId,
     InstanceId,
-    StoreSnapshot
+    StoreSnapshot,
+    DeploymentZoneSummaryWire,
+    UnitDeploymentWire
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
@@ -276,6 +278,33 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:opportunity:fire:end"),
         payload: z.null()
+    }),
+    z.object({
+        type: z.literal("server:deployment:side:start"),
+        payload: z.object({
+            side: SideSummary,
+            units: z.array(UnitSummary)
+        })
+    }),
+    z.object({
+        type: z.literal("server:deployment:markers"),
+        payload: z.object({
+            marker: z.string(),
+            deploymentZones: DeploymentZoneSummaryWire,
+            units: z
+                .record(UnitId, UnitDeploymentWire)
+                .describe("Deployment location and facing for each unit"),
+            canEndDeployment: z
+                .boolean()
+                .describe(
+                    "True when all units are deployed and every zone meets its minUnits requirement"
+                ),
+            endDeploymentBlockedReasons: z
+                .array(z.string())
+                .describe(
+                    "Unmet requirements preventing deployment from ending; empty when canEndDeployment is true"
+                )
+        })
     })
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessage>;

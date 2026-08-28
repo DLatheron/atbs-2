@@ -1,6 +1,17 @@
-import { Phase, SideId, WaitingFor } from "@atbs/shared-data";
+import {
+    Phase,
+    RenderList,
+    RenderMode,
+    SideId,
+    TrackingSpeed,
+    UnitId,
+    WaitingFor
+} from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager, Game } from "../Game.js";
+import { ITilePos, Orientation, TilePos } from "@atbs/maths";
+import type { Client } from "../Client.js";
+import type { Side } from "../Side.js";
 
 export class DeploymentPhaseHandler extends PhaseHandler {
     private readonly _deployingSideIds: SideId[];
@@ -21,8 +32,15 @@ export class DeploymentPhaseHandler extends PhaseHandler {
         this._waitingSideIds = [];
 
         for (const side of game.sides) {
-            if (side.needsDeploymentPhase) {
+            if (side.needsManualDeploymentPhase) {
+                side.units.forEach((unit) => {
+                    unit.location = null;
+                });
+
                 this._deployingSideIds.push(side.id);
+            } else if (side.usesRandomDeployment) {
+                side.performRandomDeployment();
+                this._waitingSideIds.push(side.id);
             } else {
                 this._waitingSideIds.push(side.id);
             }
@@ -36,6 +54,10 @@ export class DeploymentPhaseHandler extends PhaseHandler {
         });
 
         this.sendWaitMessageToWaitingClient();
+
+        if (this._deployingSideIds.length === 0) {
+            await this.game.nextPhase();
+        }
     }
 
     sideIdCompleted(clientSideId: SideId) {
@@ -49,6 +71,63 @@ export class DeploymentPhaseHandler extends PhaseHandler {
         this.sendWaitMessageToWaitingClient();
     }
 
+    private _requireDeployingSide(client: Client): Side {
+        const { sideId } = client;
+        if (!sideId) {
+            throw new Error("Client does not have a set side ID");
+        }
+        if (!this._deployingSideIds.includes(sideId)) {
+            throw new Error(`Side ${sideId} is not deploying`);
+        }
+        return this.game.getSide(sideId);
+    }
+
+    private _sendDeploymentMarkers(client: Client, side: Side): void {
+        client.sendMessage({
+            type: "server:deployment:markers",
+            payload: {
+                marker: side.deploymentMarker,
+                deploymentZones: side.toDeploymentZoneSummary(),
+                units: side.units.reduce(
+                    (acc, unit) => {
+                        acc[unit.id] = {
+                            location: unit.location,
+                            ...(unit.location && {
+                                orientation: unit.orientation,
+                                mapImage: unit.getRenderList({
+                                    renderMode: RenderMode.enum.MAP_MODE,
+                                    states: []
+                                })
+                            })
+                        };
+                        return acc;
+                    },
+                    {} as Record<
+                        UnitId,
+                        {
+                            location: ITilePos | null;
+                            orientation?: Orientation;
+                            mapImage?: RenderList;
+                        }
+                    >
+                ),
+                canEndDeployment: side.canEndDeployment,
+                endDeploymentBlockedReasons: side.endDeploymentBlockedReasons
+            }
+        });
+    }
+
+    private _sendCameraToTile(client: Client, tilePos: ITilePos): void {
+        client.sendMessage({
+            type: "server:camera:move:to",
+            payload: {
+                target: "tile",
+                tilePos,
+                trackingSpeed: TrackingSpeed.enum.FAST
+            }
+        });
+    }
+
     sendWaitMessageToWaitingClient() {
         const waitingFor: WaitingFor = {
             phase: this.phase,
@@ -57,6 +136,26 @@ export class DeploymentPhaseHandler extends PhaseHandler {
 
         for (const client of this.game.clients) {
             const { sideId } = client;
+            if (!sideId) {
+                throw new Error("Client does not have a set side ID");
+            }
+
+            const side = this.game.getSide(sideId);
+
+            if (sideId && side.needsManualDeploymentPhase) {
+                client.sendMessage({
+                    type: "server:map",
+                    payload: this.game.map.renderDeploymentMap()
+                });
+                this._sendDeploymentMarkers(client, side);
+                client.sendMessage({
+                    type: "server:deployment:side:start",
+                    payload: {
+                        side: side.toSummary(),
+                        units: side.units.map((unit) => unit.toSummary())
+                    }
+                });
+            }
 
             if (sideId && this._waitingSideIds.includes(sideId)) {
                 client.sendMessage({ type: "server:wait", payload: waitingFor });
@@ -71,18 +170,76 @@ export class DeploymentPhaseHandler extends PhaseHandler {
             messageManager.registerHandler(
                 "client:deployment:end",
                 ({ game }, _payload, client) => {
-                    const { sideId: clientSideId } = client;
-                    if (!clientSideId) {
-                        throw new Error("Client does not have a set side ID");
+                    const side = this._requireDeployingSide(client);
+                    if (!side.canEndDeployment) {
+                        throw new Error(
+                            `Side ${side.id} cannot end deployment: units or zone minima not satisfied`
+                        );
                     }
 
-                    this.sideIdCompleted(clientSideId);
+                    side.finalizeDeployment();
+                    this.sideIdCompleted(side.id);
 
                     if (this._deployingSideIds.length === 0) {
                         game.nextPhase();
                     }
                 }
-            )
+            ),
+
+            messageManager.registerHandler("client:deployment:deploy", (_ctx, payload, client) => {
+                const side = this._requireDeployingSide(client);
+                const tilePos = new TilePos(payload.tilePos);
+                side.deployUnit(payload.unitId, tilePos);
+                this._sendDeploymentMarkers(client, side);
+                this._sendCameraToTile(client, tilePos);
+            }),
+
+            messageManager.registerHandler(
+                "client:deployment:undeploy",
+                (_ctx, payload, client) => {
+                    const side = this._requireDeployingSide(client);
+                    side.undeployUnit(payload.unitId);
+                    this._sendDeploymentMarkers(client, side);
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:deployment:deploy:random",
+                (_ctx, payload, client) => {
+                    const side = this._requireDeployingSide(client);
+                    const tilePos = side.randomDeployment(payload.unitId);
+                    this._sendDeploymentMarkers(client, side);
+                    this._sendCameraToTile(client, tilePos);
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:deployment:deploy:all",
+                (_ctx, _payload, client) => {
+                    const side = this._requireDeployingSide(client);
+                    side.randomDeployAll();
+                    this._sendDeploymentMarkers(client, side);
+                }
+            ),
+
+            messageManager.registerHandler(
+                "client:deployment:undeploy:all",
+                (_ctx, _payload, client) => {
+                    const side = this._requireDeployingSide(client);
+                    side.undeployAll();
+                    this._sendDeploymentMarkers(client, side);
+                }
+            ),
+
+            messageManager.registerHandler("client:game:tile:info", ({ game }, payload, from) => {
+                const tilePos = new TilePos(payload.tilePos);
+                const tile = game.map.getTile(tilePos);
+
+                from.sendMessage({
+                    type: "server:game:tile:info",
+                    payload: tile.getTileInfo()
+                });
+            })
         ];
     }
 }
