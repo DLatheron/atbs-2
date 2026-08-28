@@ -1,4 +1,12 @@
-import { Phase, RenderList, RenderMode, SideId, TrackingSpeed, UnitId, WaitingFor } from "@atbs/shared-data";
+import {
+    Phase,
+    RenderList,
+    RenderMode,
+    SideId,
+    TrackingSpeed,
+    UnitId,
+    WaitingFor
+} from "@atbs/shared-data";
 import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager, Game } from "../Game.js";
 import { ITilePos, Orientation, TilePos } from "@atbs/maths";
@@ -170,16 +178,13 @@ export class DeploymentPhaseHandler extends PhaseHandler {
                 }
             ),
 
-            messageManager.registerHandler(
-                "client:deployment:deploy",
-                (_ctx, payload, client) => {
-                    const side = this._requireDeployingSide(client);
-                    const tilePos = new TilePos(payload.tilePos);
-                    side.deployUnit(payload.unitId, tilePos);
-                    this._sendDeploymentMarkers(client, side);
-                    this._sendCameraToTile(client, tilePos);
-                }
-            ),
+            messageManager.registerHandler("client:deployment:deploy", (_ctx, payload, client) => {
+                const side = this._requireDeployingSide(client);
+                const tilePos = new TilePos(payload.tilePos);
+                side.deployUnit(payload.unitId, tilePos);
+                this._sendDeploymentMarkers(client, side);
+                this._sendCameraToTile(client, tilePos);
+            }),
 
             messageManager.registerHandler(
                 "client:deployment:undeploy",

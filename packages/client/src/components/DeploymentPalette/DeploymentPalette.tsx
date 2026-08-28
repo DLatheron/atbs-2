@@ -178,7 +178,22 @@ export function UnitTile({
                 height={100}
                 disabled={disabled || deployed}
             />
-            {deployed && <Typography variant="body2" sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%) rotate(45deg);", fontSize: "1.75rem", fontWeight: "bold", ...cutoutTextSx("211, 211, 211") }}>Deployed</Typography>}
+            {deployed && (
+                <Typography
+                    variant="body2"
+                    sx={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%) rotate(45deg);",
+                        fontSize: "1.75rem",
+                        fontWeight: "bold",
+                        ...cutoutTextSx("211, 211, 211")
+                    }}
+                >
+                    Deployed
+                </Typography>
+            )}
         </Box>
     );
 

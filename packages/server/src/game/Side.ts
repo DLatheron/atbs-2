@@ -12,7 +12,14 @@ import { UnitRecipeManager } from "./UnitRecipeManager.js";
 import type { Game } from "./Game.js";
 import { InventoryRecipe } from "./Inventory.js";
 import { Store, StoreRecipe } from "./Store.js";
-import { fromTilePosString, ITilePos, Orientation, TilePos, toTilePosString } from "@atbs/maths";
+import {
+    fromTilePosString,
+    ITilePos,
+    IColour,
+    Orientation,
+    TilePos,
+    toTilePosString
+} from "@atbs/maths";
 import { ShuffleArray } from "../../../maths/src/Misc.js";
 import { VisibilityPoi } from "./VisibilityPoi.js";
 
@@ -87,7 +94,19 @@ export const SideRecipe = z.object({
                                     .describe("The tiles that the zone covers."),
                                 orientation: z
                                     .enum(Orientation)
-                                    .describe("The orientation of the zone.")
+                                    .describe("The orientation of the zone."),
+                                outlineColor: z
+                                    .union([
+                                        IColour,
+                                        z
+                                            .string()
+                                            .regex(/^#[0-9A-Fa-f]{6}$/)
+                                            .describe("Hex colour, e.g. #ffb020")
+                                    ])
+                                    .optional()
+                                    .describe(
+                                        "Outline colour for zones with minUnits or maxUnits constraints"
+                                    )
                             })
                             .describe("A zone that the side can deploy to.")
                     )
@@ -103,8 +122,34 @@ interface DeploymentZone {
     minUnits: number | undefined;
     maxUnits: number | undefined;
     orientation: Orientation;
+    outlineColor: IColour | undefined;
+    allTiles: Set<string>;
     tiles: Set<string>;
     units: Set<UnitId>;
+}
+
+function normalizeOutlineColor(color: IColour | string): IColour {
+    if (typeof color === "string") {
+        const hex = color.slice(1);
+        return {
+            r: Number.parseInt(hex.slice(0, 2), 16),
+            g: Number.parseInt(hex.slice(2, 4), 16),
+            b: Number.parseInt(hex.slice(4, 6), 16),
+            a: 1
+        };
+    }
+
+    return color;
+}
+
+const DEFAULT_CONSTRAINT_OUTLINE_COLOR: IColour = { r: 255, g: 176, b: 32, a: 1 };
+
+function zoneOutlineColor(zone: DeploymentZone): IColour | undefined {
+    if (zone.minUnits == null && zone.maxUnits == null) {
+        return undefined;
+    }
+
+    return zone.outlineColor ?? DEFAULT_CONSTRAINT_OUTLINE_COLOR;
 }
 
 export class Side {
@@ -254,14 +299,19 @@ export class Side {
                 minUnits: zone.minUnits,
                 maxUnits: zone.maxUnits,
                 tiles: new Set<string>(),
+                allTiles: new Set<string>(),
                 units: new Set<UnitId>(),
-                orientation: zone.orientation
+                orientation: zone.orientation,
+                outlineColor:
+                    zone.outlineColor != null ? normalizeOutlineColor(zone.outlineColor) : undefined
             };
 
             for (const [pos, size] of zone.tiles) {
                 for (let col = pos.col; col < pos.col + size.width; col++) {
                     for (let row = pos.row; row < pos.row + size.height; row++) {
-                        calculatedZone.tiles.add(toTilePosString({ col, row }));
+                        const tileString = toTilePosString({ col, row });
+                        calculatedZone.tiles.add(tileString);
+                        calculatedZone.allTiles.add(tileString);
                     }
                 }
             }
@@ -457,7 +507,10 @@ export class Side {
             maxUnits: zone.maxUnits,
             disabled: zone.units.size >= (zone.maxUnits ?? Infinity),
             orientation: zone.orientation,
-            tiles: Array.from(zone.tiles.values()).map((tile) => fromTilePosString(tile))
+            deployedCount: zone.units.size,
+            outlineColor: zoneOutlineColor(zone),
+            tiles: Array.from(zone.tiles.values()).map((tile) => fromTilePosString(tile)),
+            allTiles: Array.from(zone.allTiles.values()).map((tile) => fromTilePosString(tile))
         }));
     }
 

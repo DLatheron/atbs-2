@@ -55,7 +55,12 @@ function DeploymentActionButton({
             onClick={onClick}
             sx={{ aspectRatio: 1, p: 0, minWidth: 0, ...sx }}
         >
-            <ImageComponent images={[{ imageId }]} width={ACTION_ICON_SIZE} height={ACTION_ICON_SIZE} disabled={disabled} />
+            <ImageComponent
+                images={[{ imageId }]}
+                width={ACTION_ICON_SIZE}
+                height={ACTION_ICON_SIZE}
+                disabled={disabled}
+            />
         </Button>
     );
 }
@@ -120,9 +125,7 @@ export function DeploymentModePanel({
 
     const endDeploymentDisabled = disabled || !canEndDeployment;
     const endDeploymentTooltip =
-        endDeploymentDisabled && endDeploymentBlockedReason
-            ? endDeploymentBlockedReason
-            : "";
+        endDeploymentDisabled && endDeploymentBlockedReason ? endDeploymentBlockedReason : "";
 
     return (
         <Container
@@ -141,7 +144,10 @@ export function DeploymentModePanel({
                 ...sx
             }}
         >
-            <Stack spacing={1} sx={{ gridArea: "panel-info", p: 1, overflowY: "auto", minHeight: 0 }}>
+            <Stack
+                spacing={1}
+                sx={{ gridArea: "panel-info", p: 1, overflowY: "auto", minHeight: 0 }}
+            >
                 <DeploymentPalette
                     units={units}
                     unitDeployment={unitDeployment}

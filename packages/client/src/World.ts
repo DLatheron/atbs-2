@@ -48,6 +48,10 @@ import { IInteractionHandler } from "./IInteractionHandler";
 import { MapModeHandler } from "./modeHandlers/MapModeHandler";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
 import { CSSProperties } from "@mui/material";
+import {
+    drawDeploymentZoneConstraintOutline,
+    drawDeploymentZoneMinUnitsLabel
+} from "./pages/Deployment/deploymentZoneOverlay.js";
 import { MapMode } from "./MapMode";
 import {
     DebugDrawArc,
@@ -1460,7 +1464,11 @@ export class World {
         viewportHeight: number
     ) {
         const getDeploymentZone = (tilePosString: string) => {
-            return deploymentMarkers.find((marker) => marker.tiles.has(tilePosString));
+            return deploymentMarkers.find(
+                (marker) =>
+                    marker.tiles.has(tilePosString) ||
+                    (marker.allTiles.size > 0 && marker.allTiles.has(tilePosString))
+            );
         };
 
         const shimmerTiles: { left: number; top: number; size: number }[] = [];
@@ -1468,7 +1476,7 @@ export class World {
         this.iterateViewportTiles((_renderList, tilePos, worldPos) => {
             const tilePosString = toTilePosString(tilePos);
             const deploymentZone = getDeploymentZone(tilePosString);
-            if (!deploymentZone) {
+            if (!deploymentZone || !deploymentZone.tiles.has(tilePosString)) {
                 return;
             }
 
@@ -1499,13 +1507,24 @@ export class World {
             }
         });
 
-        if (shimmerTiles.length === 0) {
-            return;
+        if (shimmerTiles.length > 0) {
+            const shimmer = this._deploymentShimmerState(time, viewportWidth, viewportHeight);
+            for (const tile of shimmerTiles) {
+                this._drawDeploymentMarkerShimmer(context, tile, shimmer);
+            }
         }
 
-        const shimmer = this._deploymentShimmerState(time, viewportWidth, viewportHeight);
-        for (const tile of shimmerTiles) {
-            this._drawDeploymentMarkerShimmer(context, tile, shimmer);
+        for (const zone of deploymentMarkers) {
+            drawDeploymentZoneConstraintOutline(
+                context,
+                zone,
+                this.camera,
+                tileSize,
+                scale,
+                offset,
+                time
+            );
+            drawDeploymentZoneMinUnitsLabel(context, zone, this.camera, tileSize, scale, offset);
         }
     }
 

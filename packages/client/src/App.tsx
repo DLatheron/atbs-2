@@ -154,8 +154,7 @@ export function App() {
             <DeploymentPage
                 key={`deployment-${gameId}`}
                 visible={
-                    phase === Phase.enum.deployment &&
-                    waitingFor?.phase !== Phase.enum.deployment
+                    phase === Phase.enum.deployment && waitingFor?.phase !== Phase.enum.deployment
                 }
             />
             <ActionPage key={`turns-${gameId}`} visible={phase === Phase.enum.action} />

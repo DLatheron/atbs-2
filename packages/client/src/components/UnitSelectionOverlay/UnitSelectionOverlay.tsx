@@ -92,10 +92,7 @@ export function UnitSelectionOverlay({ tilePos, visible = true }: UnitSelectionO
 
     useLayoutEffect(() => {
         if (show && tilePos) {
-            world.updateAnchoredOverlayTile(
-                World.UNIT_SELECTION_OVERLAY_ID,
-                new TilePos(tilePos)
-            );
+            world.updateAnchoredOverlayTile(World.UNIT_SELECTION_OVERLAY_ID, new TilePos(tilePos));
         }
     }, [world, show, tilePos?.col, tilePos?.row]);
 

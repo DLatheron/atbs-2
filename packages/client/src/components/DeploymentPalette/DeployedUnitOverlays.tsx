@@ -46,12 +46,9 @@ function DeployedUnitOverlay({
     );
 
     useLayoutEffect(() => {
-        world.registerAnchoredOverlay(
-            overlayId,
-            () => elementRef.current,
-            new TilePos(tilePos),
-            { anchor: "topLeft" }
-        );
+        world.registerAnchoredOverlay(overlayId, () => elementRef.current, new TilePos(tilePos), {
+            anchor: "topLeft"
+        });
         return () => {
             world.resumeAnchoredOverlay(overlayId);
             world.unregisterAnchoredOverlay(overlayId);

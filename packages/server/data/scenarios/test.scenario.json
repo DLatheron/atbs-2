@@ -409,6 +409,7 @@
                         {
                             "minUnits": 1,
                             "maxUnits": 1,
+                            "outlineColor": "#ffb020",
                             "tiles": [
                                 [
                                     { "col": 0, "row": 0 },

@@ -40,10 +40,7 @@ function dragSourceFromData(data: unknown): DeploymentDragSource | null {
         return null;
     }
     const source = data as DeploymentDragSource;
-    if (
-        (source.type === "palette" || source.type === "map") &&
-        typeof source.unitId === "string"
-    ) {
+    if ((source.type === "palette" || source.type === "map") && typeof source.unitId === "string") {
         return source;
     }
     return null;
@@ -67,10 +64,7 @@ function clientPointToTile(
     return world.worldToTile(worldPos);
 }
 
-function dropTileFromDragEnd(
-    world: ReturnType<typeof useWorld>["world"],
-    event: DragEndEvent
-) {
+function dropTileFromDragEnd(world: ReturnType<typeof useWorld>["world"], event: DragEndEvent) {
     const activator = event.activatorEvent;
     if (!activator || !("clientX" in activator)) {
         return null;
@@ -199,9 +193,7 @@ export function DeploymentPage({ visible }: DeploymentPageProps) {
             }
 
             const tilePosString = toTilePosString(tilePos);
-            const zone = world.deploymentMarkers.find((marker) =>
-                marker.tiles.has(tilePosString)
-            );
+            const zone = world.deploymentMarkers.find((marker) => marker.tiles.has(tilePosString));
             if (!zone) {
                 return;
             }

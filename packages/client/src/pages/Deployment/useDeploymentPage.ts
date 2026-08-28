@@ -11,6 +11,7 @@ import {
     UnitSummary
 } from "@atbs/shared-data";
 import { ITilePos, TilePos, toTilePosString, Vec2 } from "@atbs/maths";
+import { allTilesFromWire } from "./deploymentZoneOverlay.js";
 
 export function useDeploymentPage() {
     const { messageManager, sendMessage } = useServerMessageManager();
@@ -60,9 +61,12 @@ export function useDeploymentPage() {
                         maxUnits: deploymentZone.maxUnits,
                         disabled: deploymentZone.disabled,
                         orientation: deploymentZone.orientation,
+                        deployedCount: deploymentZone.deployedCount ?? 0,
+                        outlineColor: deploymentZone.outlineColor,
                         tiles: new Set(
                             deploymentZone.tiles.map((tile: ITilePos) => toTilePosString(tile))
-                        )
+                        ),
+                        allTiles: allTilesFromWire(deploymentZone.allTiles ?? deploymentZone.tiles)
                     })
                 );
 
@@ -203,7 +207,10 @@ export function useDeploymentPage() {
         pendingRedeployRef.current.clear();
         setUnitDeployment((prev) =>
             Object.fromEntries(
-                Object.keys(prev).map((unitId) => [unitId, { location: null } satisfies UnitDeploymentWire])
+                Object.keys(prev).map((unitId) => [
+                    unitId,
+                    { location: null } satisfies UnitDeploymentWire
+                ])
             )
         );
         sendMessage({
@@ -238,9 +245,7 @@ export function useDeploymentPage() {
                 ? units.findIndex((unit) => unit.id === selectedUnitId)
                 : -1;
             const nextIndex =
-                currentIndex < 0
-                    ? 0
-                    : (currentIndex + direction + units.length) % units.length;
+                currentIndex < 0 ? 0 : (currentIndex + direction + units.length) % units.length;
             const nextUnit = units[nextIndex];
             if (nextUnit) {
                 onSelectUnit(nextUnit.id);

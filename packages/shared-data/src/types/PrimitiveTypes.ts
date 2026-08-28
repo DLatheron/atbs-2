@@ -990,7 +990,16 @@ export const DeploymentZoneSummaryWire = z.array(
             .describe("The maximum number of units that can be deployed to this zone"),
         disabled: z.boolean().describe("Whether the deployment zone is disabled"),
         orientation: z.enum(Orientation).describe("Facing for units deployed in this zone"),
-        tiles: z.array(ITilePos).describe("Tile position encoded as a string")
+        deployedCount: z
+            .number()
+            .int()
+            .nonnegative()
+            .describe("Number of units currently deployed in this zone"),
+        outlineColor: IColour.optional().describe(
+            "Outline colour for zones with deployment constraints"
+        ),
+        tiles: z.array(ITilePos).describe("Tiles still available for deployment"),
+        allTiles: z.array(ITilePos).describe("Every tile in the zone footprint")
     })
 );
 export type DeploymentZoneSummaryWire = z.infer<typeof DeploymentZoneSummaryWire>;
@@ -1010,7 +1019,10 @@ export const DeploymentZoneSummary = z.array(
             .describe("The maximum number of units that can be deployed to this zone"),
         disabled: z.boolean().describe("Whether the deployment zone is disabled"),
         orientation: z.enum(Orientation).describe("Facing for units deployed in this zone"),
-        tiles: z.set(z.string()).describe("Tile position encoded as a string")
+        deployedCount: z.number().int().nonnegative(),
+        outlineColor: IColour.optional(),
+        tiles: z.set(z.string()).describe("Tiles still available for deployment"),
+        allTiles: z.set(z.string()).describe("Every tile in the zone footprint")
     })
 );
 export type DeploymentZoneSummary = z.infer<typeof DeploymentZoneSummary>;
