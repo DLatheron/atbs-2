@@ -114,6 +114,33 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.null()
     }),
     z.object({
+        type: z.literal("client:deployment:deploy"),
+        payload: z.object({
+            unitId: UnitId,
+            tilePos: ITilePos
+        })
+    }),
+    z.object({
+        type: z.literal("client:deployment:undeploy"),
+        payload: z.object({
+            unitId: UnitId
+        })
+    }),
+    z.object({
+        type: z.literal("client:deployment:deploy:random"),
+        payload: z.object({
+            unitId: UnitId
+        })
+    }),
+    z.object({
+        type: z.literal("client:deployment:deploy:all"),
+        payload: z.null()
+    }),
+    z.object({
+        type: z.literal("client:deployment:undeploy:all"),
+        payload: z.null()
+    }),
+    z.object({
         type: z.literal("client:game:refresh"),
         payload: z.null()
     }),

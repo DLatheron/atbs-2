@@ -963,6 +963,18 @@ export type TimedTileUpdate = z.infer<typeof TimedTileUpdate>;
 export const InterestMask = z.union([z.literal("items"), z.literal("vfx"), z.string()]);
 export type InterestMask = z.infer<typeof InterestMask>;
 
+export const UnitDeploymentWire = z.object({
+    location: ITilePos.nullable().describe("Deployed tile, or null when undeployed"),
+    orientation: z
+        .enum(Orientation)
+        .optional()
+        .describe("Facing when deployed; omitted when undeployed"),
+    mapImage: RenderList.optional().describe(
+        "MAP_MODE sprites resolved for the deployed facing; omitted when undeployed"
+    )
+});
+export type UnitDeploymentWire = z.infer<typeof UnitDeploymentWire>;
+
 export const DeploymentZoneSummaryWire = z.array(
     z.object({
         id: z.string().describe("The ID of the deployment zone"),
@@ -977,6 +989,7 @@ export const DeploymentZoneSummaryWire = z.array(
             .optional()
             .describe("The maximum number of units that can be deployed to this zone"),
         disabled: z.boolean().describe("Whether the deployment zone is disabled"),
+        orientation: z.enum(Orientation).describe("Facing for units deployed in this zone"),
         tiles: z.array(ITilePos).describe("Tile position encoded as a string")
     })
 );
@@ -996,6 +1009,7 @@ export const DeploymentZoneSummary = z.array(
             .optional()
             .describe("The maximum number of units that can be deployed to this zone"),
         disabled: z.boolean().describe("Whether the deployment zone is disabled"),
+        orientation: z.enum(Orientation).describe("Facing for units deployed in this zone"),
         tiles: z.set(z.string()).describe("Tile position encoded as a string")
     })
 );

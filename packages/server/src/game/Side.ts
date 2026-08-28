@@ -345,6 +345,21 @@ export class Side {
         unit.orientation = Orientation.SOUTH;
     }
 
+    private _randomTileInZone(zone: DeploymentZone): TilePos | null {
+        if (zone.units.size >= (zone.maxUnits ?? Infinity) || zone.tiles.size === 0) {
+            return null;
+        }
+
+        const tilePositions = Array.from(zone.tiles);
+        const shuffled = ShuffleArray(tilePositions);
+        const tilePosition = shuffled[Math.floor(Math.random() * tilePositions.length)];
+        if (!tilePosition) {
+            return null;
+        }
+
+        return new TilePos(fromTilePosString(tilePosition));
+    }
+
     randomDeployment(unitId: UnitId): TilePos {
         const unit = this.getUnit(unitId);
         if (unit.location) {
@@ -382,12 +397,45 @@ export class Side {
     }
 
     randomDeployAll(): void {
+        const minimumPlacements: DeploymentZone[] = [];
+        for (const zone of this._deploymentZones) {
+            const deficit = (zone.minUnits ?? 0) - zone.units.size;
+            for (let i = 0; i < deficit; i++) {
+                minimumPlacements.push(zone);
+            }
+        }
+
+        const shuffledMinimumPlacements = ShuffleArray(minimumPlacements);
+
+        for (const zone of shuffledMinimumPlacements) {
+            const undeployedUnits = this._units.filter((candidate) => !candidate.location);
+            if (undeployedUnits.length === 0) {
+                break;
+            }
+
+            const unit = undeployedUnits[Math.floor(Math.random() * undeployedUnits.length)];
+            const tilePos = this._randomTileInZone(zone);
+            if (!tilePos) {
+                continue;
+            }
+
+            this.deployUnit(unit.id, tilePos);
+        }
+
         for (const unit of this._units) {
             if (unit.location) {
                 continue;
             }
 
             this.randomDeployment(unit.id);
+        }
+    }
+
+    undeployAll(): void {
+        for (const unit of [...this._units]) {
+            if (unit.location) {
+                this.undeployUnit(unit.id);
+            }
         }
     }
 
@@ -408,7 +456,36 @@ export class Side {
             minUnits: zone.minUnits,
             maxUnits: zone.maxUnits,
             disabled: zone.units.size >= (zone.maxUnits ?? Infinity),
+            orientation: zone.orientation,
             tiles: Array.from(zone.tiles.values()).map((tile) => fromTilePosString(tile))
         }));
+    }
+
+    /**
+     * Human-readable reason deployment cannot end, or null when it can.
+     */
+    get endDeploymentBlockedReason(): string | null {
+        if (this._units.some((unit) => unit.location === null)) {
+            return "All units must be deployed";
+        }
+
+        for (const zone of this._deploymentZones) {
+            const minUnits = zone.minUnits ?? 0;
+            if (zone.units.size < minUnits) {
+                if (zone.units.size === 0) {
+                    return `Zone ${zone.id} does not have any deployed units`;
+                }
+                return `Zone ${zone.id} requires at least ${minUnits} deployed unit${minUnits === 1 ? "" : "s"}`;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * True when every unit is deployed and every zone meets its minUnits floor.
+     */
+    get canEndDeployment(): boolean {
+        return this.endDeploymentBlockedReason === null;
     }
 }

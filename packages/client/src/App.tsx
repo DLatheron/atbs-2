@@ -153,7 +153,10 @@ export function App() {
             <ArmamentPage key={`armamentlobby-${gameId}`} visible={phase === Phase.enum.armament} />
             <DeploymentPage
                 key={`deployment-${gameId}`}
-                visible={phase === Phase.enum.deployment}
+                visible={
+                    phase === Phase.enum.deployment &&
+                    waitingFor?.phase !== Phase.enum.deployment
+                }
             />
             <ActionPage key={`turns-${gameId}`} visible={phase === Phase.enum.action} />
             <WaitModal waitingFor={waitingFor} />

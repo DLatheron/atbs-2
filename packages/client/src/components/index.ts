@@ -10,3 +10,4 @@ export * from "./ScenarioList";
 export * from "./SidePanel";
 export * from "./TileInfo";
 export * from "./TitleBar";
+export * from "./UnitSelectionOverlay";

@@ -24,7 +24,8 @@ import {
     UnitId,
     InstanceId,
     StoreSnapshot,
-    DeploymentZoneSummaryWire
+    DeploymentZoneSummaryWire,
+    UnitDeploymentWire
 } from "./PrimitiveTypes.js";
 import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
@@ -291,8 +292,17 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             marker: z.string(),
             deploymentZones: DeploymentZoneSummaryWire,
             units: z
-                .record(UnitId, ITilePos.nullable())
-                .describe("Where each unit is deployed (or not if null)")
+                .record(UnitId, UnitDeploymentWire)
+                .describe("Deployment location and facing for each unit"),
+            canEndDeployment: z
+                .boolean()
+                .describe(
+                    "True when all units are deployed and every zone meets its minUnits requirement"
+                ),
+            endDeploymentBlockedReason: z
+                .string()
+                .nullable()
+                .describe("Why deployment cannot end; null when canEndDeployment is true")
         })
     })
 ]);

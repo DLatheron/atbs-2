@@ -16,7 +16,9 @@ export interface UnitDetailsComponentProps {
     };
     noName?: boolean;
     noImages?: boolean;
+    noItemImages?: boolean;
     noDescription?: boolean;
+    noItemDescription?: boolean;
     sx?: SxProps;
 }
 
@@ -25,7 +27,9 @@ export function UnitDetailsComponent({
     item,
     noName = false,
     noImages = false,
+    noItemImages = false,
     noDescription = false,
+    noItemDescription = false,
     sx
 }: UnitDetailsComponentProps) {
     return (
@@ -55,8 +59,8 @@ export function UnitDetailsComponent({
             {item && (
                 <Stack spacing={1}>
                     <Typography variant="h6">Using Item:</Typography>
-                    {!noImages && <ImageComponent images={item.uiImage} />}
-                    {!noDescription && <DescriptionComponent description={item.description} />}
+                    {!noItemImages && <ImageComponent images={item.uiImage} />}
+                    {!noItemDescription && <DescriptionComponent description={item.description} />}
                 </Stack>
             )}
         </Stack>

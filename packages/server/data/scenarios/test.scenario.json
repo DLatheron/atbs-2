@@ -415,7 +415,7 @@
                                     { "width": 2, "height": 2 }
                                 ]
                             ],
-                            "orientation": 4
+                            "orientation": 1
                         },
                         {
                             "tiles": [[{ "col": 10, "row": 10 }]],
@@ -428,7 +428,7 @@
                                     { "width": 1, "height": 4 }
                                 ]
                             ],
-                            "orientation": 0
+                            "orientation": 3
                         }
                     ]
                 }
