@@ -32,12 +32,15 @@ export class DeploymentPhaseHandler extends PhaseHandler {
         this._waitingSideIds = [];
 
         for (const side of game.sides) {
-            if (side.needsDeploymentPhase) {
+            if (side.needsManualDeploymentPhase) {
                 side.units.forEach((unit) => {
                     unit.location = null;
                 });
 
                 this._deployingSideIds.push(side.id);
+            } else if (side.usesRandomDeployment) {
+                side.performRandomDeployment();
+                this._waitingSideIds.push(side.id);
             } else {
                 this._waitingSideIds.push(side.id);
             }
@@ -51,6 +54,10 @@ export class DeploymentPhaseHandler extends PhaseHandler {
         });
 
         this.sendWaitMessageToWaitingClient();
+
+        if (this._deployingSideIds.length === 0) {
+            await this.game.nextPhase();
+        }
     }
 
     sideIdCompleted(clientSideId: SideId) {
@@ -135,7 +142,7 @@ export class DeploymentPhaseHandler extends PhaseHandler {
 
             const side = this.game.getSide(sideId);
 
-            if (sideId && this.game.getSide(sideId).needsDeploymentPhase) {
+            if (sideId && side.needsManualDeploymentPhase) {
                 client.sendMessage({
                     type: "server:map",
                     payload: this.game.map.renderDeploymentMap()

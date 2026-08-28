@@ -29,6 +29,55 @@ export const WidthHeight = z.object({
 });
 export type WidthHeight = z.infer<typeof WidthHeight>;
 
+const DeploymentZoneRecipe = z
+    .object({
+        name: z
+            .string()
+            .nonempty()
+            .optional()
+            .describe("Display name for the deployment zone."),
+        minUnits: z
+            .number()
+            .int()
+            .nonnegative()
+            .optional()
+            .describe("The minimum number of units that can be deployed to the zone."),
+        maxUnits: z
+            .number()
+            .int()
+            .nonnegative()
+            .optional()
+            .describe("The maximum number of units that can be deployed to the zone."),
+        tiles: z
+            .array(
+                z.tuple([
+                    ITilePos,
+                    WidthHeight.optional().default({ width: 1, height: 1 })
+                ])
+            )
+            .describe("The tiles that the zone covers."),
+        orientation: z.enum(Orientation).describe("The orientation of the zone."),
+        outlineColor: z
+            .union([
+                IColour,
+                z
+                    .string()
+                    .regex(/^#[0-9A-Fa-f]{6}$/)
+                    .describe("Hex colour, e.g. #ffb020")
+            ])
+            .optional()
+            .describe("Outline colour for zones with minUnits or maxUnits constraints")
+    })
+    .describe("A zone that the side can deploy to.");
+
+const ZonedDeploymentRecipe = z.object({
+    marker: z
+        .string()
+        .nonempty()
+        .describe("The marker that will be used to deploy the side."),
+    zones: z.array(DeploymentZoneRecipe).min(1).describe("Deployment zones for the side.")
+});
+
 export const SideRecipe = z.object({
     id: SideId,
     name: z.string().nonempty(),
@@ -56,66 +105,14 @@ export const SideRecipe = z.object({
         ]),
         deployment: z.discriminatedUnion("type", [
             z.object({
-                type: z.literal("fixed").describe("The type of deployment phase.")
+                type: z.literal("fixed").describe("Units keep their scenario locations.")
             }),
-            z
-                .object({
-                    type: z.literal("manual").describe("The type of deployment phase."),
-                    marker: z
-                        .string()
-                        .nonempty()
-                        .describe("The marker that will be used to deploy the side."),
-                    zones: z.array(
-                        z
-                            .object({
-                                name: z
-                                    .string()
-                                    .nonempty()
-                                    .describe("Display name for the deployment zone."),
-                                minUnits: z
-                                    .number()
-                                    .int()
-                                    .nonnegative()
-                                    .optional()
-                                    .describe(
-                                        "The minimum number of units that can be deployed to the zone."
-                                    ),
-                                maxUnits: z
-                                    .number()
-                                    .int()
-                                    .nonnegative()
-                                    .optional()
-                                    .describe(
-                                        "The maximum number of units that can be deployed to the zone."
-                                    ),
-                                tiles: z
-                                    .array(
-                                        z.tuple([
-                                            ITilePos,
-                                            WidthHeight.optional().default({ width: 1, height: 1 })
-                                        ])
-                                    )
-                                    .describe("The tiles that the zone covers."),
-                                orientation: z
-                                    .enum(Orientation)
-                                    .describe("The orientation of the zone."),
-                                outlineColor: z
-                                    .union([
-                                        IColour,
-                                        z
-                                            .string()
-                                            .regex(/^#[0-9A-Fa-f]{6}$/)
-                                            .describe("Hex colour, e.g. #ffb020")
-                                    ])
-                                    .optional()
-                                    .describe(
-                                        "Outline colour for zones with minUnits or maxUnits constraints"
-                                    )
-                            })
-                            .describe("A zone that the side can deploy to.")
-                    )
-                })
-                .describe("A zone that the side can deploy to.")
+            ZonedDeploymentRecipe.extend({
+                type: z.literal("manual").describe("The player deploys units manually.")
+            }),
+            ZonedDeploymentRecipe.extend({
+                type: z.literal("random").describe("The server deploys units randomly at phase start.")
+            })
         ])
     })
 });
@@ -206,6 +203,32 @@ export class Side {
             this._deployableUnitsMap.set(unit.id, null);
         }
         this._deploymentZones = this._buildDeploymentZones() ?? [];
+        if (this.participatesInDeploymentPhase) {
+            this._validateDeploymentFeasibility();
+        }
+    }
+
+    private get _deploymentType(): SideRecipe["phases"]["deployment"]["type"] {
+        return this._recipe.phases.deployment.type;
+    }
+
+    /** Side uses manual deployment UI during the deployment phase. */
+    get needsManualDeploymentPhase(): boolean {
+        return this._deploymentType === "manual";
+    }
+
+    /** @deprecated Use {@link needsManualDeploymentPhase} or {@link participatesInDeploymentPhase}. */
+    get needsDeploymentPhase(): boolean {
+        return this.needsManualDeploymentPhase;
+    }
+
+    /** Side is deployed via zones during the deployment phase (manual or random). */
+    get participatesInDeploymentPhase(): boolean {
+        return this._deploymentType === "manual" || this._deploymentType === "random";
+    }
+
+    get usesRandomDeployment(): boolean {
+        return this._deploymentType === "random";
     }
 
     get id(): SideId {
@@ -243,10 +266,6 @@ export class Side {
         return this._store;
     }
 
-    get needsDeploymentPhase(): boolean {
-        return this._recipe.phases.deployment.type === "manual";
-    }
-
     get units(): Unit[] {
         return this._units;
     }
@@ -260,10 +279,11 @@ export class Side {
     }
 
     get deploymentMarker(): string {
-        if (this._recipe.phases.deployment.type === "fixed") {
+        const deployment = this._recipe.phases.deployment;
+        if (deployment.type === "fixed") {
             throw new Error(`Side ${this.id} has no deployment marker`);
         }
-        return this._recipe.phases.deployment.marker;
+        return deployment.marker;
     }
 
     canSee(poi: VisibilityPoi): boolean {
@@ -291,15 +311,19 @@ export class Side {
     }
 
     private _buildDeploymentZones(): DeploymentZone[] | undefined {
-        if (this._recipe.phases.deployment.type === "fixed") {
+        if (!this.participatesInDeploymentPhase) {
             return;
         }
 
         const deploymentZones: DeploymentZone[] = [];
+        const deployment = this._recipe.phases.deployment;
+        if (deployment.type === "fixed") {
+            return;
+        }
 
-        for (const zone of this._recipe.phases.deployment.zones) {
+        for (const zone of deployment.zones) {
             const calculatedZone: DeploymentZone = {
-                name: zone.name,
+                name: zone.name ?? `Zone ${deploymentZones.length + 1}`,
                 minUnits: zone.minUnits,
                 maxUnits: zone.maxUnits,
                 tiles: new Set<string>(),
@@ -329,12 +353,77 @@ export class Side {
         return deploymentZones;
     }
 
+    private _validateDeploymentFeasibility(): void {
+        const unitCount = this._units.length;
+        let totalMinUnits = 0;
+        let maxDeployCapacity = 0;
+
+        for (const zone of this._deploymentZones) {
+            const minUnits = zone.minUnits ?? 0;
+            const maxUnits = zone.maxUnits;
+            const tileCount = zone.allTiles.size;
+
+            if (tileCount === 0) {
+                throw new Error(`Side ${this.id}: zone "${zone.name}" has no deployment tiles`);
+            }
+
+            if (maxUnits != null && minUnits > maxUnits) {
+                throw new Error(
+                    `Side ${this.id}: zone "${zone.name}" minUnits (${minUnits}) exceeds maxUnits (${maxUnits})`
+                );
+            }
+
+            if (minUnits > tileCount) {
+                throw new Error(
+                    `Side ${this.id}: zone "${zone.name}" minUnits (${minUnits}) exceeds tile count (${tileCount})`
+                );
+            }
+
+            totalMinUnits += minUnits;
+            const zoneCapacity =
+                maxUnits != null ? Math.min(maxUnits, tileCount) : tileCount;
+            maxDeployCapacity += zoneCapacity;
+        }
+
+        if (totalMinUnits > unitCount) {
+            throw new Error(
+                `Side ${this.id}: total minUnits (${totalMinUnits}) exceeds unit count (${unitCount})`
+            );
+        }
+
+        if (maxDeployCapacity < unitCount) {
+            throw new Error(
+                `Side ${this.id}: deployment capacity (${maxDeployCapacity}) is less than unit count (${unitCount})`
+            );
+        }
+    }
+
+    /**
+     * Clears unit locations, randomly deploys every unit, and commits positions.
+     * Throws when constraints cannot be satisfied.
+     */
+    performRandomDeployment(): void {
+        for (const unit of this._units) {
+            unit.location = null;
+        }
+
+        this.randomDeployAll();
+
+        if (!this.canEndDeployment) {
+            throw new Error(
+                `Side ${this.id}: random deployment failed to satisfy constraints (${this.endDeploymentBlockedReasons.join("; ")})`
+            );
+        }
+
+        this.finalizeDeployment();
+    }
+
     getDeploymentZone(location: ITilePos): DeploymentZone | undefined {
         return this._deploymentZones?.find((zone) => zone.tiles.has(toTilePosString(location)));
     }
 
     getDeploymentMarker(tilePos: ITilePos): string | undefined {
-        if (this._recipe.phases.deployment.type === "fixed") {
+        if (!this.participatesInDeploymentPhase) {
             return;
         }
 
@@ -508,7 +597,7 @@ export class Side {
      * Commits staged deployment positions as each unit's map location.
      */
     finalizeDeployment(): void {
-        if (this._recipe.phases.deployment.type === "fixed") {
+        if (!this.participatesInDeploymentPhase) {
             return;
         }
 

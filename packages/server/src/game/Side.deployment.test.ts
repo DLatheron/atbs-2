@@ -156,7 +156,7 @@ describe("Side deployment", () => {
         game = null;
     });
 
-    function createSideHarness() {
+    function createSideHarness(recipe: SideRecipe = DEPLOYMENT_SIDE_RECIPE) {
         const scenarioRecipe = scenarioRecipeManager.get(AUTOMATED_TEST_SCENARIO_ID);
         const itemManager = new ItemManager(itemRecipeManager);
         const furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
@@ -180,7 +180,7 @@ describe("Side deployment", () => {
         const map = new WorldMap(mapRecipeManager.get(scenarioRecipe.worldMapId), mockGame);
         Object.assign(mockGame, { map });
 
-        const side = new Side(DEPLOYMENT_SIDE_RECIPE, mockGame);
+        const side = new Side(recipe, mockGame);
         mockGame.sides = [side];
 
         return { side, map, game: mockGame };
@@ -338,5 +338,67 @@ describe("Side deployment", () => {
             (message) => (message as { type: string }).type === "server:map"
         ) as { payload: { tilesByRenderMode: { MAP_MODE: unknown[][] } } } | undefined;
         expect(mapMessage).toBeDefined();
+    });
+
+    it("auto-deploys random sides and leaves manual sides deploying", async () => {
+        const { game: liveGame, goodiesSocket, baddiesSocket } = await startDeploymentPhase();
+
+        expect(liveGame.phase).toBe(Phase.enum.deployment);
+
+        const baddies = liveGame.getSide("baddies");
+        const hansLocation = baddies.getUnit("hans-gruber.unit").location;
+        expect(hansLocation).not.toBeNull();
+        expect(hansLocation!.col).toBeGreaterThanOrEqual(12);
+        expect(hansLocation!.col).toBeLessThanOrEqual(14);
+        expect(hansLocation!.row).toBeGreaterThanOrEqual(8);
+        expect(hansLocation!.row).toBeLessThanOrEqual(10);
+
+        const baddiesWait = baddiesSocket.sent
+            .filter((message) => (message as { type: string }).type === "server:wait")
+            .at(-1) as { payload: { phase: string; sides: { id: string }[] } | null };
+        expect(baddiesWait.payload?.phase).toBe(Phase.enum.deployment);
+        expect(baddiesWait.payload?.sides.map(({ id }) => id)).toEqual(["goodies"]);
+
+        expect(
+            goodiesSocket.sent.some(
+                (message) => (message as { type: string }).type === "server:deployment:side:start"
+            )
+        ).toBe(true);
+        expect(
+            baddiesSocket.sent.some(
+                (message) => (message as { type: string }).type === "server:deployment:side:start"
+            )
+        ).toBe(false);
+    });
+
+    it("throws when random deployment constraints cannot be satisfied", () => {
+        const infeasibleRecipe = SideRecipe.parse({
+            id: "bad-side",
+            name: "Bad Side",
+            description: [{ text: "Bad" }],
+            oppositionSideIds: ["other"],
+            units: [
+                { id: "captain-smith.unit", overrides: {} },
+                { id: "corporal-barry.unit", overrides: {} }
+            ],
+            phases: {
+                armament: { type: "fixed" },
+                deployment: {
+                    type: "random",
+                    marker: "deploy-1",
+                    zones: [
+                        {
+                            name: "Too Small",
+                            minUnits: 2,
+                            maxUnits: 2,
+                            tiles: [[{ col: 0, row: 0 }]],
+                            orientation: Orientation.NORTH
+                        }
+                    ]
+                }
+            }
+        });
+
+        expect(() => createSideHarness(infeasibleRecipe)).toThrow(/minUnits \(2\) exceeds tile count/i);
     });
 });

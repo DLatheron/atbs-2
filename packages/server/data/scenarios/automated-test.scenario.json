@@ -748,7 +748,20 @@
                     }
                 },
                 "deployment": {
-                    "type": "fixed"
+                    "type": "random",
+                    "marker": "deploy-1",
+                    "zones": [
+                        {
+                            "name": "Ambush",
+                            "tiles": [
+                                [
+                                    { "col": 12, "row": 8 },
+                                    { "width": 3, "height": 3 }
+                                ]
+                            ],
+                            "orientation": 6
+                        }
+                    ]
                 }
             }
         }

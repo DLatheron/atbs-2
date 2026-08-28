@@ -403,7 +403,7 @@
                     }
                 },
                 "deployment": {
-                    "type": "manual",
+                    "type": "fixed",
                     "marker": "deploy-1",
                     "zones": [
                         {

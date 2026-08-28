@@ -595,7 +595,7 @@ export class Game {
 
         // Place units into the map.
         this.sides.forEach((side) => {
-            if (side.needsDeploymentPhase) {
+            if (side.participatesInDeploymentPhase) {
                 side.finalizeDeployment();
             }
 
