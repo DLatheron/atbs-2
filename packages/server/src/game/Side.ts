@@ -31,11 +31,7 @@ export type WidthHeight = z.infer<typeof WidthHeight>;
 
 const DeploymentZoneRecipe = z
     .object({
-        name: z
-            .string()
-            .nonempty()
-            .optional()
-            .describe("Display name for the deployment zone."),
+        name: z.string().nonempty().optional().describe("Display name for the deployment zone."),
         minUnits: z
             .number()
             .int()
@@ -49,12 +45,7 @@ const DeploymentZoneRecipe = z
             .optional()
             .describe("The maximum number of units that can be deployed to the zone."),
         tiles: z
-            .array(
-                z.tuple([
-                    ITilePos,
-                    WidthHeight.optional().default({ width: 1, height: 1 })
-                ])
-            )
+            .array(z.tuple([ITilePos, WidthHeight.optional().default({ width: 1, height: 1 })]))
             .describe("The tiles that the zone covers."),
         orientation: z.enum(Orientation).describe("The orientation of the zone."),
         outlineColor: z
@@ -71,10 +62,7 @@ const DeploymentZoneRecipe = z
     .describe("A zone that the side can deploy to.");
 
 const ZonedDeploymentRecipe = z.object({
-    marker: z
-        .string()
-        .nonempty()
-        .describe("The marker that will be used to deploy the side."),
+    marker: z.string().nonempty().describe("The marker that will be used to deploy the side."),
     zones: z.array(DeploymentZoneRecipe).min(1).describe("Deployment zones for the side.")
 });
 
@@ -111,7 +99,9 @@ export const SideRecipe = z.object({
                 type: z.literal("manual").describe("The player deploys units manually.")
             }),
             ZonedDeploymentRecipe.extend({
-                type: z.literal("random").describe("The server deploys units randomly at phase start.")
+                type: z
+                    .literal("random")
+                    .describe("The server deploys units randomly at phase start.")
             })
         ])
     })
@@ -380,8 +370,7 @@ export class Side {
             }
 
             totalMinUnits += minUnits;
-            const zoneCapacity =
-                maxUnits != null ? Math.min(maxUnits, tileCount) : tileCount;
+            const zoneCapacity = maxUnits != null ? Math.min(maxUnits, tileCount) : tileCount;
             maxDeployCapacity += zoneCapacity;
         }
 

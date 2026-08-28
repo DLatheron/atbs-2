@@ -399,6 +399,8 @@ describe("Side deployment", () => {
             }
         });
 
-        expect(() => createSideHarness(infeasibleRecipe)).toThrow(/minUnits \(2\) exceeds tile count/i);
+        expect(() => createSideHarness(infeasibleRecipe)).toThrow(
+            /minUnits \(2\) exceeds tile count/i
+        );
     });
 });
