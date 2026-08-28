@@ -28,6 +28,9 @@ export type ClientId = z.infer<typeof ClientId>;
 export const GameId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
 export type GameId = z.infer<typeof GameId>;
 
+export const EditorId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+export type EditorId = z.infer<typeof EditorId>;
+
 export const ScenarioId = z.string().nonempty();
 export type ScenarioId = z.infer<typeof ScenarioId>;
 

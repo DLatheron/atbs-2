@@ -124,6 +124,17 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         payload: ClientMap
     }),
     z.object({
+        type: z.literal("server:editor:map"),
+        payload: ClientMap
+    }),
+    z.object({
+        type: z.literal("server:editor:saved"),
+        payload: z.object({
+            filename: z.string().nonempty(),
+            mapId: z.string().nonempty()
+        })
+    }),
+    z.object({
         type: z.literal("server:unit:mode:move"),
         payload: UnitSummary.nullable()
     }),

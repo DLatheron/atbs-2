@@ -5,4 +5,6 @@ export * from "./useKeyboard.js";
 export * from "./useInterval.js";
 export * from "./useServerMessageManager.js";
 export * from "./useServerSocket.js";
+export * from "./useEditorMessageManager.js";
+export * from "./useEditorSocket.js";
 export * from "./useWorld.js";

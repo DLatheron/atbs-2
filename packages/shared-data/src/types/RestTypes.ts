@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { URLSearchParams } from "url";
 
-import { ClientId, GameId } from "./PrimitiveTypes.js";
+import { ClientId, EditorId, GameId } from "./PrimitiveTypes.js";
 
 export function parseURLSearchParams<T extends z.ZodTypeAny>(
     schema: T,
@@ -95,3 +95,67 @@ export const ConnectSocketQueryParams = z.object({
     gameId: GameId
 });
 export type ConnectSocketQueryParams = z.infer<typeof ConnectSocketQueryParams>;
+
+/**
+ * Editor URL Query Params
+ */
+export const EditorQueryParams = z.object({
+    "client-id": ClientId.optional(),
+    "editor-id": EditorId.optional(),
+    mode: CreateOrJoin.optional(),
+    name: z.string().optional()
+});
+export type EditorQueryParams = z.infer<typeof EditorQueryParams>;
+
+/**
+ * Create Editor Request/Response
+ */
+export const CreateEditorRequestBody = z.object({
+    clientId: ClientId,
+    name: z.string().nonempty().max(64).default("Default Client Name")
+});
+export type CreateEditorRequestBody = z.infer<typeof CreateEditorRequestBody>;
+
+export const CreateEditorResponseBody = z.object({
+    editorId: EditorId
+});
+export type CreateEditorResponseBody = z.infer<typeof CreateEditorResponseBody>;
+
+/**
+ * Join Editor Request/Response
+ */
+export const JoinEditorRequestBody = z.object({
+    editorId: EditorId,
+    clientId: ClientId,
+    name: z.string().nonempty().max(64).default("Default Client Name")
+});
+export type JoinEditorRequestBody = z.infer<typeof JoinEditorRequestBody>;
+
+export const JoinEditorResponseBody = z.object({
+    editorId: EditorId
+});
+export type JoinEditorResponseBody = z.infer<typeof JoinEditorResponseBody>;
+
+/**
+ * Save Editor Request/Response
+ */
+export const SaveEditorRequestBody = z.object({
+    editorId: EditorId,
+    clientId: ClientId
+});
+export type SaveEditorRequestBody = z.infer<typeof SaveEditorRequestBody>;
+
+export const SaveEditorResponseBody = z.object({
+    filename: z.string().nonempty(),
+    mapId: z.string().nonempty()
+});
+export type SaveEditorResponseBody = z.infer<typeof SaveEditorResponseBody>;
+
+/**
+ * Editor Socket Query Params
+ */
+export const ConnectEditorSocketQueryParams = z.object({
+    clientId: ClientId,
+    editorId: EditorId
+});
+export type ConnectEditorSocketQueryParams = z.infer<typeof ConnectEditorSocketQueryParams>;

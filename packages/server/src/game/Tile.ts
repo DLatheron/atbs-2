@@ -806,6 +806,34 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         return this.furniture?.getAvailableActions(relativeOrientation, itemInUse) ?? [];
     }
 
+    toRecipe(): TileRecipe {
+        const recipe: TileRecipe = {
+            terrain: {
+                id: this._terrain.id,
+                orientation: Orientation.NORTH
+            }
+        };
+
+        if (this._furniture) {
+            recipe.furniture = {
+                id: this._furniture.recipeId,
+                orientation: this._furniture.orientation,
+                state: this._furniture.state
+            };
+        }
+
+        if (this._items.length > 0) {
+            recipe.items = this._items.map((item) => ({
+                id: item.recipeId,
+                overrides: {
+                    quantity: item.quantity
+                }
+            }));
+        }
+
+        return recipe;
+    }
+
     getActionDefinition(
         action: UnitActionType,
         relativeOrientation: Orientation,

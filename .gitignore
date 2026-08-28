@@ -7,3 +7,4 @@ coverage
 .env
 .env.*
 **/public/cache/damage/
+packages/server/data/editor-saves/*.map.json

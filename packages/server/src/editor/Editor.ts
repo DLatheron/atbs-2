@@ -1,0 +1,254 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { randomInt } from "node:crypto";
+import {
+    ClientId,
+    ClientToServerMessage,
+    EditorId,
+    ServerToClientMessage
+} from "@atbs/shared-data";
+import { CastToArray, Logger, MessageManager } from "@atbs/misc";
+
+import { EditorClient } from "./EditorClient.js";
+import { EditorClientManager } from "./EditorClientManager.js";
+import { editorManager } from "./EditorManager.js";
+import { createDefaultMapRecipe } from "./createDefaultMapRecipe.js";
+import { WorldMap, type MapHost } from "../game/WorldMap.js";
+import { ItemManager } from "../game/ItemManager.js";
+import { ItemRecipeManager } from "../game/ItemRecipeManager.js";
+import { FurnitureManager } from "../game/FurnitureManager.js";
+import { FurnitureRecipeManager } from "../game/FurnitureRecipeManager.js";
+import { MaterialManager } from "../game/MaterialManager.js";
+import { VisibilityManager } from "../game/VisibilityManager.js";
+import { config } from "../config/config.schema.js";
+
+const EDITOR_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+const EDITOR_SAVES_DIR = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../data/editor-saves"
+);
+
+function randomSegment(length: number): string {
+    let segment = "";
+    for (let i = 0; i < length; i++) {
+        segment += EDITOR_ID_CHARS[randomInt(EDITOR_ID_CHARS.length)];
+    }
+    return segment;
+}
+
+function generateEditorId(): string {
+    return `${randomSegment(4)}-${randomSegment(4)}`;
+}
+
+interface EditorMessageContext {
+    editor: Editor;
+}
+
+export type EditorMessageManager = MessageManager<
+    EditorMessageContext,
+    ClientToServerMessage,
+    EditorClient
+>;
+
+export class Editor implements MapHost {
+    readonly logger: Logger;
+
+    private _ownerId: ClientId;
+    private readonly _id: EditorId;
+    private readonly _clientManager: EditorClientManager;
+    private readonly _context: EditorMessageContext;
+    private readonly _messageManager: EditorMessageManager;
+    private readonly _itemManager: ItemManager;
+    private readonly _furnitureManager: FurnitureManager;
+    private readonly _visibilityManager: VisibilityManager;
+    private readonly _map: WorldMap;
+    private _isDestroying = false;
+
+    constructor(
+        ownerId: ClientId,
+        itemRecipeManager: ItemRecipeManager,
+        furnitureRecipeManager: FurnitureRecipeManager,
+        materialManager: MaterialManager
+    ) {
+        const editorId = generateEditorId() as EditorId;
+
+        this.logger = new Logger(`Editor-${editorId}`, config.logLevels?.editor);
+
+        this._id = editorId;
+        this._ownerId = ownerId;
+        this._clientManager = new EditorClientManager();
+        this._itemManager = new ItemManager(itemRecipeManager);
+        this._furnitureManager = new FurnitureManager(furnitureRecipeManager, materialManager);
+        this._visibilityManager = new VisibilityManager(this);
+
+        this._context = { editor: this };
+        this._messageManager = new MessageManager<
+            EditorMessageContext,
+            ClientToServerMessage,
+            EditorClient
+        >(this._context);
+
+        this._map = new WorldMap(createDefaultMapRecipe(editorId), this);
+
+        this._registerMessageHandlers();
+    }
+
+    get id(): EditorId {
+        return this._id;
+    }
+
+    get editorId(): EditorId {
+        return this._id;
+    }
+
+    get ownerId(): ClientId {
+        return this._ownerId;
+    }
+
+    get clients(): EditorClient[] {
+        return this._clientManager.clients;
+    }
+
+    get numClients(): number {
+        return this.clients.length;
+    }
+
+    get itemManager(): ItemManager {
+        return this._itemManager;
+    }
+
+    get furnitureManager(): FurnitureManager {
+        return this._furnitureManager;
+    }
+
+    get visibilityManager(): VisibilityManager {
+        return this._visibilityManager;
+    }
+
+    get map(): WorldMap {
+        return this._map;
+    }
+
+    reportError(error: string) {
+        this.logger.error(error);
+    }
+
+    addClient(clientId: ClientId, name: string): EditorClient | null {
+        const existingClient = this._clientManager.findClient(clientId);
+        if (existingClient) {
+            this.reportError(`Client ${clientId} is already in editor ${this.editorId}`);
+            return existingClient;
+        }
+
+        const client = new EditorClient({ id: clientId, name }, this);
+        this._clientManager.addClient(client);
+
+        return client;
+    }
+
+    removeClient(clientId: ClientId): boolean {
+        const removed = this._clientManager.removeClient(clientId);
+
+        if (removed && this.numClients === 0 && !this._isDestroying) {
+            this.destroyEditor();
+            editorManager.removeEditor(this.editorId);
+        }
+
+        return removed;
+    }
+
+    getClient(clientId: ClientId) {
+        return this._clientManager.getClient(clientId);
+    }
+
+    findClient(clientId: ClientId): EditorClient | undefined {
+        return this._clientManager.findClient(clientId);
+    }
+
+    clientConnected(client: EditorClient): void {
+        client.sendMessage({
+            type: "server:editor:map",
+            payload: this._map.renderDeploymentMap()
+        });
+    }
+
+    clientDisconnected(_client: EditorClient): void {
+        // No-op for now; session teardown happens when the last client is removed.
+    }
+
+    sendMessage(message: ServerToClientMessage, to: ClientId | ClientId[]) {
+        const clients = CastToArray(to).map((clientId) => this.getClient(clientId));
+        clients.forEach((client) => client.sendMessage(message));
+    }
+
+    broadcastMessage(message: ServerToClientMessage, exclude?: ClientId | ClientId[]) {
+        const excludes = exclude ? CastToArray(exclude) : [];
+
+        for (const client of this._clientManager.clients) {
+            if (!excludes.includes(client.id)) {
+                client.sendMessage(message);
+            }
+        }
+    }
+
+    queueMessage(message: ClientToServerMessage, from: EditorClient) {
+        this._messageManager.enqueueMessage(message, from);
+    }
+
+    receiveMessage(data: MessageEvent, from: EditorClient) {
+        const messageString = data.toString();
+
+        try {
+            const message = ClientToServerMessage.parse(JSON.parse(messageString));
+            this.queueMessage(message, from);
+        } catch (error) {
+            this.logger.error("Issue decoding message", messageString);
+            throw error;
+        }
+    }
+
+    async saveMap(): Promise<{ filename: string; mapId: string }> {
+        const mapRecipe = this._map.toMapRecipe();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const filename = `${mapRecipe.id}-${timestamp}.map.json`;
+        const fullPath = path.join(EDITOR_SAVES_DIR, filename);
+
+        await mkdir(EDITOR_SAVES_DIR, { recursive: true });
+        await writeFile(fullPath, `${JSON.stringify(mapRecipe, null, 4)}\n`, "utf-8");
+
+        this.logger.info(`Saved map recipe to ${fullPath}`);
+
+        return { filename, mapId: mapRecipe.id };
+    }
+
+    destroyEditor() {
+        if (this._isDestroying) {
+            return;
+        }
+
+        this._isDestroying = true;
+        this.logger.info("Destroying editor", this.editorId);
+
+        while (this.clients.length > 0) {
+            const client = this.clients[0];
+            client.forceDisconnect();
+            this._clientManager.removeClient(client.id);
+        }
+    }
+
+    private _registerMessageHandlers() {
+        this._messageManager.registerHandler("client:editor:save", async (_context, _payload, from) => {
+            try {
+                const result = await this.saveMap();
+                from.sendMessage({
+                    type: "server:editor:saved",
+                    payload: result
+                });
+            } catch (error) {
+                this.logger.error("Failed to save editor map", error);
+            }
+        });
+    }
+}

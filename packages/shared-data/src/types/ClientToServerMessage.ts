@@ -300,6 +300,10 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
             itemId: ItemId,
             prime: Prime
         })
+    }),
+    z.object({
+        type: z.literal("client:editor:save"),
+        payload: z.object({})
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;
