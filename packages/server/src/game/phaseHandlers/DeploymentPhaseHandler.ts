@@ -105,7 +105,7 @@ export class DeploymentPhaseHandler extends PhaseHandler {
                     >
                 ),
                 canEndDeployment: side.canEndDeployment,
-                endDeploymentBlockedReason: side.endDeploymentBlockedReason
+                endDeploymentBlockedReasons: side.endDeploymentBlockedReasons
             }
         });
     }
@@ -170,6 +170,7 @@ export class DeploymentPhaseHandler extends PhaseHandler {
                         );
                     }
 
+                    side.finalizeDeployment();
                     this.sideIdCompleted(side.id);
 
                     if (this._deployingSideIds.length === 0) {

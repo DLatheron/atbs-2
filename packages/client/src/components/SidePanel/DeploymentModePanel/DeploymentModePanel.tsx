@@ -1,5 +1,5 @@
 import { TileInfo, UnitDeploymentWire, UnitId, UnitSummary } from "@atbs/shared-data";
-import { Button, Container, Grid, Stack, SxProps, Tooltip } from "@mui/material";
+import { Box, Button, Collapse, Container, Grid, Stack, SxProps, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useKeyboard } from "../../../hooks";
 import { DeploymentPalette } from "../../DeploymentPalette";
@@ -18,7 +18,7 @@ export interface DeploymentModePanelProps {
     tileInfo: TileInfo | null;
 
     canEndDeployment: boolean;
-    endDeploymentBlockedReason: string | null;
+    endDeploymentBlockedReasons: string[];
     onEndDeployment: () => void;
     onSelectUnit: (unitId: UnitId, options?: { scrollToUnit?: boolean }) => void;
     onDeployRandom: (unitId: UnitId) => void;
@@ -73,7 +73,7 @@ export function DeploymentModePanel({
     selectedUnitId,
     tileInfo,
     canEndDeployment,
-    endDeploymentBlockedReason,
+    endDeploymentBlockedReasons,
     onEndDeployment,
     onSelectUnit,
     onDeployRandom,
@@ -124,8 +124,7 @@ export function DeploymentModePanel({
     }
 
     const endDeploymentDisabled = disabled || !canEndDeployment;
-    const endDeploymentTooltip =
-        endDeploymentDisabled && endDeploymentBlockedReason ? endDeploymentBlockedReason : "";
+    const showDeploymentRequirements = endDeploymentBlockedReasons.length > 0;
 
     return (
         <Container
@@ -217,20 +216,45 @@ export function DeploymentModePanel({
                         }}
                     />
                 </Grid>
-                <Tooltip title={endDeploymentTooltip} disableHoverListener={!endDeploymentTooltip}>
-                    <span style={{ display: "inline-block", width: "100%" }}>
-                        <Button
-                            id="end-deployment"
-                            title={endDeploymentTooltip || "End deployment phase"}
-                            variant="outlined"
-                            disabled={endDeploymentDisabled}
-                            onClick={onEndDeployment}
-                            fullWidth
+                <Collapse in={showDeploymentRequirements}>
+                    <Box
+                        sx={{
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            px: 1.5,
+                            py: 1,
+                            mb: 1,
+                            bgcolor: "action.hover"
+                        }}
+                    >
+                        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                            Requirements
+                        </Typography>
+                        <Box
+                            component="ul"
+                            sx={{
+                                m: 0,
+                                pl: 2.5,
+                                "& li": { typography: "body2" }
+                            }}
                         >
-                            End Deployment
-                        </Button>
-                    </span>
-                </Tooltip>
+                            {endDeploymentBlockedReasons.map((reason) => (
+                                <li key={reason}>{reason}</li>
+                            ))}
+                        </Box>
+                    </Box>
+                </Collapse>
+                <Button
+                    id="end-deployment"
+                    title="End deployment phase"
+                    variant="outlined"
+                    disabled={endDeploymentDisabled}
+                    onClick={onEndDeployment}
+                    fullWidth
+                >
+                    End Deployment
+                </Button>
             </Stack>
         </Container>
     );

@@ -19,6 +19,7 @@ import { TerrainManager } from "./TerrainManager.js";
 import { UnitRecipeManager } from "./UnitRecipeManager.js";
 import { VfxRecipeManager } from "./VfxRecipeManager.js";
 import { AnimationRecipeManager } from "./AnimationRecipeManager.js";
+import { bindAutomatedTestScenario } from "./automatedTestScenario.js";
 
 const dataDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../data");
 
@@ -127,8 +128,8 @@ describe("Armament phase", () => {
     });
 
     /**
-     * Connecting two clients auto-starts the test scenario (see `LobbyPhaseHandler`),
-     * which puts both manual arming sides into the armament phase.
+     * Connecting two clients auto-starts the lobby (see `LobbyPhaseHandler`),
+     * using the automated-test scenario bound before connect.
      */
     async function startArmamentPhase() {
         game = new Game(
@@ -139,6 +140,8 @@ describe("Armament phase", () => {
             vfxRecipeManager,
             materialManager
         );
+
+        bindAutomatedTestScenario(game, scenarioRecipeManager);
 
         const armingSocket = new FakeSocket();
         const waitingSocket = new FakeSocket();

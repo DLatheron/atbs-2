@@ -977,7 +977,7 @@ export type UnitDeploymentWire = z.infer<typeof UnitDeploymentWire>;
 
 export const DeploymentZoneSummaryWire = z.array(
     z.object({
-        id: z.string().describe("The ID of the deployment zone"),
+        name: z.string().describe("The name of the deployment zone"),
         minUnits: z
             .number()
             .positive()
@@ -1006,7 +1006,7 @@ export type DeploymentZoneSummaryWire = z.infer<typeof DeploymentZoneSummaryWire
 
 export const DeploymentZoneSummary = z.array(
     z.object({
-        id: z.string().describe("The ID of the deployment zone"),
+        name: z.string().describe("The name of the deployment zone"),
         minUnits: z
             .number()
             .positive()

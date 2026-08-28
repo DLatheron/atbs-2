@@ -299,10 +299,11 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
                 .describe(
                     "True when all units are deployed and every zone meets its minUnits requirement"
                 ),
-            endDeploymentBlockedReason: z
-                .string()
-                .nullable()
-                .describe("Why deployment cannot end; null when canEndDeployment is true")
+            endDeploymentBlockedReasons: z
+                .array(z.string())
+                .describe(
+                    "Unmet requirements preventing deployment from ending; empty when canEndDeployment is true"
+                )
         })
     })
 ]);

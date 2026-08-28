@@ -53,7 +53,7 @@ function DeployedUnitOverlay({
             world.resumeAnchoredOverlay(overlayId);
             world.unregisterAnchoredOverlay(overlayId);
         };
-    }, [world, overlayId, tilePos.col, tilePos.row]);
+    }, [world, overlayId, tilePos]);
 
     useLayoutEffect(() => {
         if (isDragging) {

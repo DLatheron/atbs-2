@@ -1,26 +1,10 @@
 {
-    "id": "test.scenario",
-    "name": "Test Scenario",
+    "id": "automated-test.scenario",
+    "name": "Automated Test Scenario",
     "description": [
         {
-            "image": "public/previews/test.scenario.png",
-            "alt": "test scenario preview",
-            "width": 400,
-            "height": 400
-        },
-        {
-            "text": "This is a test scenario designed specifically to test the ATBS framework, its not real and can't be played.",
+            "text": "Scenario used by automated server tests only. Do not edit for manual playtesting.",
             "pb": 2
-        },
-        {
-            "text": "It has multiple paragraphs of description.",
-            "pb": 2
-        },
-        {
-            "text": "This is a scenario loaded from a file."
-        },
-        {
-            "line": true
         }
     ],
     "worldMapId": "mansion.map",
@@ -59,7 +43,7 @@
             ],
             "phases": {
                 "armament": {
-                    "type": "fixed",
+                    "type": "manual",
                     "store": {
                         "budget": 20000,
                         "threshold": -1000,
@@ -407,7 +391,7 @@
                     "marker": "deploy-1",
                     "zones": [
                         {
-                            "name": "North west corner",
+                            "name": "Entry Point",
                             "minUnits": 1,
                             "maxUnits": 1,
                             "outlineColor": "#ffb020",
@@ -420,12 +404,12 @@
                             "orientation": 1
                         },
                         {
-                            "name": "West side",
+                            "name": "Rooftop",
                             "tiles": [[{ "col": 10, "row": 10 }]],
                             "orientation": 2
                         },
                         {
-                            "name": "Single point",
+                            "name": "Alley",
                             "tiles": [
                                 [
                                     { "col": 2, "row": 2 },
@@ -462,7 +446,7 @@
             ],
             "phases": {
                 "armament": {
-                    "type": "fixed",
+                    "type": "manual",
                     "store": {
                         "budget": 20000,
                         "threshold": -1000,

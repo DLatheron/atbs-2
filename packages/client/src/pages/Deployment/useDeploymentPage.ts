@@ -24,9 +24,7 @@ export function useDeploymentPage() {
     const [tileInfo, setTileInfo] = useState<TileInfo | null>(null);
     const [disabled /*, setDisabled*/] = useState<boolean>(false);
     const [canEndDeployment, setCanEndDeployment] = useState<boolean>(false);
-    const [endDeploymentBlockedReason, setEndDeploymentBlockedReason] = useState<string | null>(
-        null
-    );
+    const [endDeploymentBlockedReasons, setEndDeploymentBlockedReasons] = useState<string[]>([]);
     // Expected final tile while undeploy+deploy are in flight — suppresses the
     // intermediate null from undeploy so the overlay does not flick home.
     const pendingRedeployRef = useRef<Map<UnitId, ITilePos>>(new Map());
@@ -56,7 +54,7 @@ export function useDeploymentPage() {
                 world.deploymentMarker = payload.marker;
                 world.deploymentMarkers = payload.deploymentZones.map(
                     (deploymentZone: DeploymentZoneSummaryWire[0]) => ({
-                        id: deploymentZone.id,
+                        name: deploymentZone.name,
                         minUnits: deploymentZone.minUnits,
                         maxUnits: deploymentZone.maxUnits,
                         disabled: deploymentZone.disabled,
@@ -91,7 +89,7 @@ export function useDeploymentPage() {
                     return units;
                 });
                 setCanEndDeployment(payload.canEndDeployment);
-                setEndDeploymentBlockedReason(payload.endDeploymentBlockedReason);
+                setEndDeploymentBlockedReasons(payload.endDeploymentBlockedReasons);
             }),
 
             messageManager.registerHandler("server:camera:move:to", async (_context, payload) => {
@@ -266,7 +264,7 @@ export function useDeploymentPage() {
         tileInfo,
         disabled,
         canEndDeployment,
-        endDeploymentBlockedReason,
+        endDeploymentBlockedReasons,
         onEndDeploymentPhase,
         onDeploy,
         onUndeploy,

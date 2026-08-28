@@ -68,6 +68,10 @@ export const SideRecipe = z.object({
                     zones: z.array(
                         z
                             .object({
+                                name: z
+                                    .string()
+                                    .nonempty()
+                                    .describe("Display name for the deployment zone."),
                                 minUnits: z
                                     .number()
                                     .int()
@@ -118,7 +122,7 @@ export const SideRecipe = z.object({
 export type SideRecipe = z.infer<typeof SideRecipe>;
 
 interface DeploymentZone {
-    id: string;
+    name: string;
     minUnits: number | undefined;
     maxUnits: number | undefined;
     orientation: Orientation;
@@ -295,7 +299,7 @@ export class Side {
 
         for (const zone of this._recipe.phases.deployment.zones) {
             const calculatedZone: DeploymentZone = {
-                id: `zone-${deploymentZones.length}`,
+                name: zone.name,
                 minUnits: zone.minUnits,
                 maxUnits: zone.maxUnits,
                 tiles: new Set<string>(),
@@ -356,7 +360,7 @@ export class Side {
 
         if (deploymentZone.maxUnits && deploymentZone.maxUnits <= deploymentZone.units.size) {
             throw new Error(
-                `Zone ${deploymentZone.id} cannot have more than ${deploymentZone.maxUnits} units`
+                `Zone ${deploymentZone.name} cannot have more than ${deploymentZone.maxUnits} units`
             );
         }
 
@@ -500,9 +504,26 @@ export class Side {
         return [{ imageId: this.deploymentMarker, opacity: disabled ? 0.5 : 1 }];
     }
 
+    /**
+     * Commits staged deployment positions as each unit's map location.
+     */
+    finalizeDeployment(): void {
+        if (this._recipe.phases.deployment.type === "fixed") {
+            return;
+        }
+
+        for (const unit of this._units) {
+            const deployment = this._deployableUnitsMap.get(unit.id);
+            if (deployment) {
+                unit.location = deployment.location;
+                unit.orientation = deployment.zone.orientation;
+            }
+        }
+    }
+
     toDeploymentZoneSummary(): DeploymentZoneSummaryWire {
         return this._deploymentZones.map((zone) => ({
-            id: zone.id,
+            name: zone.name,
             minUnits: zone.minUnits,
             maxUnits: zone.maxUnits,
             disabled: zone.units.size >= (zone.maxUnits ?? Infinity),
@@ -515,30 +536,31 @@ export class Side {
     }
 
     /**
-     * Human-readable reason deployment cannot end, or null when it can.
+     * Human-readable reasons deployment cannot end. Empty when deployment can end.
      */
-    get endDeploymentBlockedReason(): string | null {
+    get endDeploymentBlockedReasons(): string[] {
+        const reasons: string[] = [];
+
         if (this._units.some((unit) => unit.location === null)) {
-            return "All units must be deployed";
+            reasons.push("All units must be deployed");
         }
 
         for (const zone of this._deploymentZones) {
             const minUnits = zone.minUnits ?? 0;
             if (zone.units.size < minUnits) {
-                if (zone.units.size === 0) {
-                    return `Zone ${zone.id} does not have any deployed units`;
-                }
-                return `Zone ${zone.id} requires at least ${minUnits} deployed unit${minUnits === 1 ? "" : "s"}`;
+                reasons.push(
+                    `${zone.name} must have at least ${minUnits} unit${minUnits === 1 ? "" : "s"}`
+                );
             }
         }
 
-        return null;
+        return reasons;
     }
 
     /**
      * True when every unit is deployed and every zone meets its minUnits floor.
      */
     get canEndDeployment(): boolean {
-        return this.endDeploymentBlockedReason === null;
+        return this.endDeploymentBlockedReasons.length === 0;
     }
 }

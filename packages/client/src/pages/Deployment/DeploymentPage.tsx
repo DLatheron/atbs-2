@@ -88,7 +88,7 @@ export function DeploymentPage({ visible }: DeploymentPageProps) {
         selectedUnitId,
         tileInfo,
         canEndDeployment,
-        endDeploymentBlockedReason,
+        endDeploymentBlockedReasons,
         onEndDeploymentPhase,
         onDeploy,
         onUndeploy,
@@ -325,7 +325,7 @@ export function DeploymentPage({ visible }: DeploymentPageProps) {
                         selectedUnitId={selectedUnitId}
                         tileInfo={tileInfo}
                         canEndDeployment={canEndDeployment}
-                        endDeploymentBlockedReason={endDeploymentBlockedReason}
+                        endDeploymentBlockedReasons={endDeploymentBlockedReasons}
                         onEndDeployment={onEndDeploymentPhase}
                         onSelectUnit={onSelectUnit}
                         onDeployRandom={onDeployRandom}

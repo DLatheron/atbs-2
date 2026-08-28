@@ -594,11 +594,15 @@ export class Game {
         this.selectedUnit = null;
 
         // Place units into the map.
-        this.sides.forEach((side) =>
+        this.sides.forEach((side) => {
+            if (side.needsDeploymentPhase) {
+                side.finalizeDeployment();
+            }
+
             side.units.forEach((unit) => {
                 this.map.addUnit(unit);
-            })
-        );
+            });
+        });
 
         if (config.showVisibilityDebugGraphics) {
             const debugGraphics: DebugGraphic[] = [];
