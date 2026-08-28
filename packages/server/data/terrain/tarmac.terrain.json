@@ -1,0 +1,18 @@
+{
+    "id": "tarmac.terrain",
+    "name": "Tarmac",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Well maintained tarmac."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "tarmac"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

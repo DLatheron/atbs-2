@@ -108,7 +108,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     protected _location: TilePos;
     protected _aabb: Aabb;
     protected _tileSize: number;
-    protected readonly _terrain: Terrain;
+    protected _terrain: Terrain;
+    protected _terrainOrientation: Orientation;
     protected readonly _furniture?: Furniture;
     protected _items: Item[];
     protected _units: Unit[];
@@ -128,7 +129,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._location = location;
         this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
         this._tileSize = tileSize;
-        this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
+        this._terrain = TerrainManager.GetSingleton().getOrCreate(recipe.terrain.id);
+        this._terrainOrientation = recipe.terrain.orientation ?? Orientation.NORTH;
         this._furniture = recipe.furniture
             ? furnitureManager.newFurniture(recipe.furniture.id, {
                   location,
@@ -144,6 +146,22 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
 
     get terrain(): Terrain {
         return this._terrain;
+    }
+
+    get terrainOrientation(): Orientation {
+        return this._terrainOrientation;
+    }
+
+    getTerrainState(): { terrainId: string; orientation: Orientation } {
+        return {
+            terrainId: this._terrain.id,
+            orientation: this._terrainOrientation
+        };
+    }
+
+    setTerrain(terrainId: string, orientation: Orientation): void {
+        this._terrain = TerrainManager.GetSingleton().getOrCreate(terrainId);
+        this._terrainOrientation = orientation;
     }
 
     get furniture(): Furniture | undefined {
@@ -276,8 +294,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
+        const terrainContext: SceneContext = {
+            ...context,
+            applyOrientation: this._terrainOrientation
+        };
+
         return [
-            ...this.terrain.getRenderList(context),
+            ...this.terrain.getRenderList(terrainContext),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.units.map((unit) => unit.getRenderList(context)).flat(),
@@ -295,8 +318,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         injectedImage: RenderImage,
         damageCache?: DamageCacheManager
     ): RenderList {
+        const terrainContext: SceneContext = {
+            ...context,
+            applyOrientation: this._terrainOrientation
+        };
+
         return [
-            ...this.terrain.getRenderList(context),
+            ...this.terrain.getRenderList(terrainContext),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat(),
@@ -810,7 +838,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         const recipe: TileRecipe = {
             terrain: {
                 id: this._terrain.id,
-                orientation: Orientation.NORTH
+                orientation: this._terrainOrientation
             }
         };
 

@@ -31,6 +31,10 @@ import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import {
+    EditorHistoryState,
+    TerrainPaletteWire
+} from "./EditorTypes.js";
+import {
     AnimatableObjectRecipe,
     DeathAnimation,
     PlayAnimation,
@@ -133,6 +137,18 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
             filename: z.string().nonempty(),
             mapId: z.string().nonempty()
         })
+    }),
+    z.object({
+        type: z.literal("server:editor:terrain:palette"),
+        payload: TerrainPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:map:update"),
+        payload: z.array(TileUpdate)
+    }),
+    z.object({
+        type: z.literal("server:editor:history"),
+        payload: EditorHistoryState
     }),
     z.object({
         type: z.literal("server:unit:mode:move"),

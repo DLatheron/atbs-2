@@ -304,6 +304,29 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("client:editor:save"),
         payload: z.object({})
+    }),
+    z.object({
+        type: z.literal("client:editor:terrain:paint"),
+        payload: z.object({
+            tilePos: ITilePos,
+            terrainId: z.string().nonempty(),
+            orientation: z.enum(Orientation),
+            randomiseOrientation: z.boolean()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:terrain:reset"),
+        payload: z.object({
+            tilePos: ITilePos
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:undo"),
+        payload: z.object({})
+    }),
+    z.object({
+        type: z.literal("client:editor:redo"),
+        payload: z.object({})
     })
 ]);
 export type ClientToServerMessage = z.infer<typeof ClientToServerMessage>;

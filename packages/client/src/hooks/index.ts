@@ -1,3 +1,4 @@
+export * from "./useImageCache.js";
 export * from "./useImageSrc.js";
 export * from "./useClientId.js";
 export * from "./useComponentSize.js";
@@ -7,4 +8,5 @@ export * from "./useServerMessageManager.js";
 export * from "./useServerSocket.js";
 export * from "./useEditorMessageManager.js";
 export * from "./useEditorSocket.js";
+export * from "./useEditorWorld.js";
 export * from "./useWorld.js";

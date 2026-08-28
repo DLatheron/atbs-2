@@ -1,0 +1,18 @@
+{
+    "id": "quarter.blend",
+    "name": "1/4 Blend",
+    "category": "Blend",
+    "description": [
+        {
+            "text": "1/4 Blend."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "quarter"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

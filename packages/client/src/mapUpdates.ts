@@ -4,6 +4,7 @@ import {
     RenderList,
     RenderMode,
     SceneObject,
+    TileUpdate,
     TimedTileUpdate
 } from "@atbs/shared-data";
 import { TilePos } from "@atbs/maths";
@@ -75,6 +76,24 @@ export async function preloadTraceImages(
         }),
         imageCache.preloadImages(imageIdsFromDeathAnimations(deaths))
     ]);
+}
+
+export function applyTileUpdate(
+    map: ClientMap,
+    update: TileUpdate,
+    imageCache?: ImageCache
+): void {
+    applyTimedTileUpdate(map, { ...update, timeMs: 0 }, imageCache);
+}
+
+export function applyTileUpdates(
+    map: ClientMap,
+    updates: TileUpdate[],
+    imageCache?: ImageCache
+): void {
+    for (const update of updates) {
+        applyTileUpdate(map, update, imageCache);
+    }
 }
 
 export function applyTimedTileUpdate(

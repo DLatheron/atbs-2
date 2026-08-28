@@ -6,14 +6,18 @@ import {
     ClientId,
     ClientToServerMessage,
     EditorId,
-    ServerToClientMessage
+    ServerToClientMessage,
+    TileUpdate
 } from "@atbs/shared-data";
 import { CastToArray, Logger, MessageManager } from "@atbs/misc";
+import { Orientation, TilePos } from "@atbs/maths";
 
 import { EditorClient } from "./EditorClient.js";
 import { EditorClientManager } from "./EditorClientManager.js";
 import { editorManager } from "./EditorManager.js";
 import { createDefaultMapRecipe } from "./createDefaultMapRecipe.js";
+import { EditorHistory } from "./EditorHistory.js";
+import { TerrainPaletteManager } from "./TerrainPaletteManager.js";
 import { WorldMap, type MapHost } from "../game/WorldMap.js";
 import { ItemManager } from "../game/ItemManager.js";
 import { ItemRecipeManager } from "../game/ItemRecipeManager.js";
@@ -22,6 +26,8 @@ import { FurnitureRecipeManager } from "../game/FurnitureRecipeManager.js";
 import { MaterialManager } from "../game/MaterialManager.js";
 import { VisibilityManager } from "../game/VisibilityManager.js";
 import { config } from "../config/config.schema.js";
+
+const DEFAULT_TERRAIN_ID = "grass.terrain";
 
 const EDITOR_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -64,6 +70,8 @@ export class Editor implements MapHost {
     private readonly _furnitureManager: FurnitureManager;
     private readonly _visibilityManager: VisibilityManager;
     private readonly _map: WorldMap;
+    private readonly _history: EditorHistory;
+    private readonly _terrainPalette;
     private _isDestroying = false;
 
     constructor(
@@ -91,6 +99,8 @@ export class Editor implements MapHost {
         >(this._context);
 
         this._map = new WorldMap(createDefaultMapRecipe(editorId), this);
+        this._history = new EditorHistory();
+        this._terrainPalette = TerrainPaletteManager.GetSingleton().getDefault();
 
         this._registerMessageHandlers();
     }
@@ -172,6 +182,14 @@ export class Editor implements MapHost {
             type: "server:editor:map",
             payload: this._map.renderDeploymentMap()
         });
+        client.sendMessage({
+            type: "server:editor:terrain:palette",
+            payload: this._terrainPalette.toWireFormat()
+        });
+        client.sendMessage({
+            type: "server:editor:history",
+            payload: this._historyState()
+        });
     }
 
     clientDisconnected(_client: EditorClient): void {
@@ -250,5 +268,112 @@ export class Editor implements MapHost {
                 this.logger.error("Failed to save editor map", error);
             }
         });
+
+        this._messageManager.registerHandler(
+            "client:editor:terrain:paint",
+            async (_context, payload) => {
+                await this._paintTerrain(payload);
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:terrain:reset",
+            async (_context, payload) => {
+                await this._resetTerrain(payload.tilePos);
+            }
+        );
+
+        this._messageManager.registerHandler("client:editor:undo", async (_context, _payload) => {
+            await this._undo();
+        });
+
+        this._messageManager.registerHandler("client:editor:redo", async (_context, _payload) => {
+            await this._redo();
+        });
+    }
+
+    private _historyState() {
+        return {
+            canUndo: this._history.canUndo,
+            canRedo: this._history.canRedo
+        };
+    }
+
+    private _broadcastHistory() {
+        this.broadcastMessage({
+            type: "server:editor:history",
+            payload: this._historyState()
+        });
+    }
+
+    private _broadcastTileUpdates(updates: TileUpdate[]) {
+        if (updates.length === 0) {
+            return;
+        }
+
+        this.broadcastMessage({
+            type: "server:editor:map:update",
+            payload: updates
+        });
+    }
+
+    private async _paintTerrain(payload: {
+        tilePos: { row: number; col: number };
+        terrainId: string;
+        orientation: Orientation;
+        randomiseOrientation: boolean;
+    }) {
+        const tilePos = new TilePos(payload.tilePos);
+        const tile = this._map.getTile(tilePos);
+        const before = tile.getTerrainState();
+
+        await EditorHistory.ensureTerrainExists(payload.terrainId);
+
+        const paletteTerrain = this._terrainPalette.getTerrainById(payload.terrainId);
+        const allowRandomOrientation = paletteTerrain
+            ? this._terrainPalette.allowsRandomOrientation(payload.terrainId)
+            : false;
+
+        const orientation = EditorHistory.resolveOrientation(
+            payload.orientation,
+            payload.randomiseOrientation,
+            allowRandomOrientation
+        );
+
+        tile.setTerrain(payload.terrainId, orientation);
+        const after = tile.getTerrainState();
+
+        this._history.recordTerrainEdit({ tilePos: payload.tilePos, before, after });
+        this._broadcastTileUpdates([tile.generateTileUpdate()]);
+        this._broadcastHistory();
+    }
+
+    private async _resetTerrain(tilePos: { row: number; col: number }) {
+        const pos = new TilePos(tilePos);
+        const tile = this._map.getTile(pos);
+        const before = tile.getTerrainState();
+        const after = { terrainId: DEFAULT_TERRAIN_ID, orientation: before.orientation };
+
+        tile.setTerrain(DEFAULT_TERRAIN_ID, after.orientation);
+
+        this._history.recordTerrainEdit({ tilePos, before, after });
+        this._broadcastTileUpdates([tile.generateTileUpdate()]);
+        this._broadcastHistory();
+    }
+
+    private async _undo() {
+        const update = await this._history.undo(this._map);
+        if (update) {
+            this._broadcastTileUpdates([update]);
+            this._broadcastHistory();
+        }
+    }
+
+    private async _redo() {
+        const update = await this._history.redo(this._map);
+        if (update) {
+            this._broadcastTileUpdates([update]);
+            this._broadcastHistory();
+        }
     }
 }

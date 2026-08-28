@@ -1,0 +1,18 @@
+{
+    "id": "sand.terrain",
+    "name": "Sand",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Fine sand."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "sand"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

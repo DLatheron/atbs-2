@@ -1,5 +1,7 @@
 import { TerrainId } from "@atbs/shared-data";
+import { isCompoundId } from "./ImageManager.js";
 import { Terrain, TerrainRecipe } from "./Terrain.js";
+import { TerrainFactory } from "./TerrainFactory.js";
 import { readdir, readFile } from "fs/promises";
 import path from "path";
 import { config } from "../config/config.schema.js";
@@ -50,11 +52,24 @@ export class TerrainManager {
     }
 
     get(terrainId: TerrainId): Terrain {
-        const scenario = this.find(terrainId);
-        if (!scenario) {
+        const terrain = this.find(terrainId);
+        if (!terrain) {
             throw new Error(`Terrain ${terrainId} not found`);
         }
-        return scenario;
+        return terrain;
+    }
+
+    getOrCreate(terrainId: TerrainId): Terrain {
+        const existing = this.find(terrainId);
+        if (existing) {
+            return existing;
+        }
+
+        if (isCompoundId(terrainId)) {
+            return TerrainFactory.createCompoundTerrain(terrainId);
+        }
+
+        throw new Error(`Terrain ${terrainId} not found`);
     }
 
     has(terrainId: TerrainId): boolean {

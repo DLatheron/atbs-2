@@ -1,0 +1,23 @@
+{
+    "id": "terrain.terrainpalette",
+    "name": "Terrain Palette",
+    "terrains": [
+        "grass.terrain",
+        "concrete.terrain",
+        "tarmac.terrain",
+        "sand.terrain",
+        "coarse-sand.terrain",
+        "dried-earth.terrain",
+        "blue-tiles.terrain",
+        "red-tiles.terrain",
+        "grey-blocks.terrain",
+        "wooden-blocks.terrain"
+    ],
+    "noRandomOrientation": [
+        "blue-tiles.terrain",
+        "red-tiles.terrain",
+        "grey-blocks.terrain",
+        "wooden-blocks.terrain"
+    ],
+    "blends": ["half.blend", "quarter.blend", "three-quarter.blend"]
+}

@@ -1,0 +1,18 @@
+{
+    "id": "blue-tiles.terrain",
+    "name": "Blue Tiles",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Blue tiles."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "blue-tiles"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

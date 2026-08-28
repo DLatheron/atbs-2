@@ -2,9 +2,17 @@
     "id": "grass.terrain",
     "name": "Grass",
     "category": "Terrain",
-    "description": [{ "text": "A blanket of coarse grass." }],
+    "description": [
+        {
+            "text": "A blanket of coarse grass."
+        }
+    ],
     "renderable": {
-        "default": [{ "imageId": "grass" }],
+        "default": [
+            {
+                "imageId": "grass"
+            }
+        ],
         "FIRE_MODE": []
     }
 }

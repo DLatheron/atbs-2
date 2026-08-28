@@ -1,0 +1,18 @@
+{
+    "id": "grey-blocks.terrain",
+    "name": "Grey Blocks",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Grey blocks."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "grey-blocks"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

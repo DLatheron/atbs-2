@@ -1,0 +1,18 @@
+{
+    "id": "wooden-blocks.terrain",
+    "name": "Wooden Blocks",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Wooden blocks."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "wooden-blocks"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

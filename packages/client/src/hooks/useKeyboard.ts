@@ -10,6 +10,10 @@ export function useKeyboard(
 ) {
     const onKeyUp = useCallback(
         (event: KeyboardEvent) => {
+            if (disabled) {
+                return;
+            }
+
             const handler = keyMap[event.code];
             if (handler) {
                 event.stopPropagation();
@@ -17,7 +21,7 @@ export function useKeyboard(
                 handler(event);
             }
         },
-        [keyMap]
+        [disabled, keyMap]
     );
 
     useEffect(() => {
@@ -26,11 +30,11 @@ export function useKeyboard(
         }
 
         console.info("Adding useKeyboard handlers...");
-        window.addEventListener("keyup", onKeyUp, false);
+        window.addEventListener("keydown", onKeyUp, false);
 
         return () => {
             console.info("...removing useKeyboard handlers");
-            window.removeEventListener("keyup", onKeyUp, false);
+            window.removeEventListener("keydown", onKeyUp, false);
         };
     }, [disabled, onKeyUp, keyMap]);
 }

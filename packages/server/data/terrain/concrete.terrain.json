@@ -2,9 +2,17 @@
     "id": "concrete.terrain",
     "name": "Concrete",
     "category": "Terrain",
-    "description": [{ "text": "Solid concrete." }],
+    "description": [
+        {
+            "text": "Solid concrete."
+        }
+    ],
     "renderable": {
-        "default": [{ "imageId": "concrete" }],
+        "default": [
+            {
+                "imageId": "concrete"
+            }
+        ],
         "FIRE_MODE": []
     }
 }

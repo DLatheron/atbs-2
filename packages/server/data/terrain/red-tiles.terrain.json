@@ -1,0 +1,18 @@
+{
+    "id": "red-tiles.terrain",
+    "name": "Red Tiles",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Red tiles."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "red-tiles"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

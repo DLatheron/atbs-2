@@ -7,7 +7,7 @@ import {
     SidePanel,
     TitleBarComponent
 } from "../../components";
-import { useWorld } from "../../hooks";
+import { useEditorWorld } from "../../hooks";
 import { useEditorPage } from "./useEditorPage";
 import { EditorSidePanel } from "./EditorSidePanel";
 
@@ -20,8 +20,17 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
     const statusBarHeight = 60;
     const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
 
-    const { savedMessage, onSave } = useEditorPage();
-    const { world } = useWorld();
+    const {
+        savedMessage,
+        onSave,
+        terrainPalette,
+        selectedTerrain,
+        setSelectedTerrain,
+        history,
+        onUndo,
+        onRedo
+    } = useEditorPage();
+    const { world } = useEditorWorld();
 
     const renderMap = useCallback(
         (props: CanvasLoopProps) => world.renderDeploymentPhase(props),
@@ -43,11 +52,6 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
     const onMouseUp = useCallback((event: React.MouseEvent) => world?.onMouseUp(event), [world]);
     const onMouseDown = useCallback(
         (event: React.MouseEvent) => world?.onMouseDown(event),
-        [world]
-    );
-    const onClick = useCallback((event: React.MouseEvent) => world?.onClick(event), [world]);
-    const onDoubleClick = useCallback(
-        (event: React.MouseEvent) => world?.onDoubleClick(event),
         [world]
     );
     const onWheel = useCallback((event: WheelEvent) => world?.onWheel(event), [world]);
@@ -106,8 +110,6 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                 onMouseMove={onMouseMove}
                 onMouseUp={onMouseUp}
                 onMouseDown={onMouseDown}
-                onClick={onClick}
-                onDoubleClick={onDoubleClick}
                 onWheel={onWheel}
                 sx={{ gridArea: "map" }}
             />
@@ -117,7 +119,16 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     height: `calc(100vh - ${statusBarHeightAndPadding}px)`
                 }}
             >
-                <EditorSidePanel onSave={onSave} savedMessage={savedMessage} />
+                <EditorSidePanel
+                    onSave={onSave}
+                    savedMessage={savedMessage}
+                    terrainPalette={terrainPalette}
+                    selectedTerrain={selectedTerrain}
+                    onSelectedTerrainChange={setSelectedTerrain}
+                    history={history}
+                    onUndo={onUndo}
+                    onRedo={onRedo}
+                />
             </SidePanel>
         </Container>
     );
