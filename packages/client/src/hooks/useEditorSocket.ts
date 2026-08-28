@@ -242,10 +242,6 @@ export function useEditorSocket(options: EditorSocketOptions) {
                     generation,
                     onOpen: (editorSocket: EditorSocket) => {
                         console.info("Editor socket connected");
-                        setSearchParams((searchParams) => {
-                            searchParams.delete("mode");
-                            return searchParams;
-                        });
                         setConnected(true);
                         clearConnectAttemptInFlight(generation);
                         onConnected?.(editorSocket);
@@ -351,10 +347,6 @@ export function useEditorSocket(options: EditorSocketOptions) {
                     generation,
                     onOpen: (editorSocket: EditorSocket) => {
                         console.info("Editor socket connected");
-                        setSearchParams((searchParams) => {
-                            searchParams.delete("mode");
-                            return searchParams;
-                        });
                         setConnected(true);
                         clearConnectAttemptInFlight(generation);
                         onConnected?.(editorSocket);
