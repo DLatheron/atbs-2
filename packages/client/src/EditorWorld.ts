@@ -224,6 +224,7 @@ export class EditorWorld extends World {
         grayscale?: boolean;
     }): void {
         const editorRenderList = params.renderList.map(
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             ({ visibilityFilter: _visibilityFilter, ...image }) => image
         );
 
@@ -343,6 +344,47 @@ export class EditorWorld extends World {
         this.sendMessage({ type: "client:editor:redo", payload: {} });
     }
 
+    panToTile(tilePos: TilePos) {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const clamped = tilePos.clamp(this.tileBounds);
+        this.camera.interpolateToWorldPos(
+            this.tileCenterToWorld(clamped),
+            TrackingSpeed.enum.IMMEDIATE
+        );
+    }
+
+    paintAtTile(tilePos: TilePos, options?: { altKey?: boolean }) {
+        if (!this.hasMap) {
+            return;
+        }
+
+        const clamped = tilePos.clamp(this.tileBounds);
+        const altKey = options?.altKey ?? false;
+
+        this._hoverTilePos = clamped;
+        this._updateWallPreview(clamped);
+
+        switch (this._editorPanel) {
+            case "Terrain":
+                this._paintTerrainAt(clamped, altKey);
+                break;
+            case "Furniture":
+                this._paintFurnitureAt(clamped, altKey);
+                break;
+            case "Walls":
+                this._paintWallAt(clamped, altKey);
+                break;
+            case "Items":
+                this._paintItemAt(clamped, altKey);
+                break;
+            default:
+                break;
+        }
+    }
+
     private _isMapDrag(event: MouseEvent | React.MouseEvent): boolean {
         return event.button === 2;
     }
@@ -409,8 +451,15 @@ export class EditorWorld extends World {
         }
 
         this._paintContext.lastTilePos = tilePos;
+        this._paintTerrainAt(tilePos, event.altKey);
+    }
 
-        if (event.altKey) {
+    private _paintTerrainAt(tilePos: TilePos, altKey: boolean) {
+        if (!this._terrainPalette) {
+            return;
+        }
+
+        if (altKey) {
             this.sendMessage({
                 type: "client:editor:terrain:reset",
                 payload: { tilePos }
@@ -443,7 +492,6 @@ export class EditorWorld extends World {
         }
 
         const tilePos = this._getEventHoverTilePos(event);
-        const brushSize = getFurnitureBrushSize(this._furniturePalette, this._selectedFurniture);
 
         if (
             this._paintContext.lastTilePos &&
@@ -455,6 +503,21 @@ export class EditorWorld extends World {
         this._paintContext.lastTilePos = tilePos;
 
         if (event.altKey) {
+            this._paintFurnitureAt(tilePos, true);
+            return;
+        }
+
+        this._paintFurnitureAt(tilePos, false);
+    }
+
+    private _paintFurnitureAt(tilePos: TilePos, altKey: boolean) {
+        if (!this._furniturePalette) {
+            return;
+        }
+
+        const brushSize = getFurnitureBrushSize(this._furniturePalette, this._selectedFurniture);
+
+        if (altKey) {
             this.sendMessage({
                 type: "client:editor:furniture:reset",
                 payload: {
@@ -505,8 +568,15 @@ export class EditorWorld extends World {
         }
 
         this._paintContext.lastTilePos = tilePos;
+        this._paintWallAt(tilePos, event.altKey);
+    }
 
-        if (event.altKey) {
+    private _paintWallAt(tilePos: TilePos, altKey: boolean) {
+        if (!this._wallPalette) {
+            return;
+        }
+
+        if (altKey) {
             this.sendMessage({
                 type: "client:editor:wall:reset",
                 payload: { tilePos }
@@ -546,8 +616,15 @@ export class EditorWorld extends World {
         }
 
         this._paintContext.lastTilePos = tilePos;
+        this._paintItemAt(tilePos, event.altKey);
+    }
 
-        if (event.altKey) {
+    private _paintItemAt(tilePos: TilePos, altKey: boolean) {
+        if (!this._itemPalette) {
+            return;
+        }
+
+        if (altKey) {
             this.sendMessage({
                 type: "client:editor:item:reset",
                 payload: { tilePos }

@@ -3,8 +3,10 @@ import { TerrainPanel } from "../../components/TerrainPanel";
 import { FurniturePanel } from "../../components/FurniturePanel";
 import { WallsPanel } from "../../components/WallsPanel";
 import { ItemsPanel } from "../../components/ItemsPanel";
+import { EditorMinimap } from "../../components/EditorMinimap";
 import {
     EditorHistoryState,
+    EditorMapWire,
     FurniturePaletteWire,
     ItemPaletteWire,
     SelectedFurniture,
@@ -14,11 +16,13 @@ import {
     TerrainPaletteWire,
     WallPaletteWire
 } from "@atbs/shared-data";
-import { EditorPanelMode } from "../../EditorWorld";
+import { EditorPanelMode, EditorWorld } from "../../EditorWorld";
 
 const EDITOR_TABS = ["Terrain", "Furniture", "Walls", "Items", "Markers"] as const;
 
 export interface EditorSidePanelProps {
+    map: EditorMapWire | null;
+    world: EditorWorld;
     onSave: () => void;
     savedMessage: string | null;
     terrainPalette: TerrainPaletteWire | null;
@@ -41,6 +45,8 @@ export interface EditorSidePanelProps {
 }
 
 export function EditorSidePanel({
+    map,
+    world,
     onSave,
     savedMessage,
     terrainPalette,
@@ -71,6 +77,8 @@ export function EditorSidePanel({
                 boxSizing: "border-box"
             }}
         >
+            <EditorMinimap map={map} world={world} />
+
             <Tabs
                 value={editorPanel}
                 onChange={(_event, value: EditorPanelMode) => onEditorPanelChange(value)}

@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { EditorId } from "@atbs/shared-data";
 import { CanvasLoopProps, MapComponent, SidePanel, TitleBarComponent } from "../../components";
 import { useEditorWorld } from "../../hooks";
+import { EditorWorld } from "../../EditorWorld";
 import { useEditorPage } from "./useEditorPage";
 import { EditorSidePanel } from "./EditorSidePanel";
 
@@ -16,6 +17,7 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
     const statusBarHeightAndPadding = statusBarHeight + 2 * 8;
 
     const {
+        map,
         savedMessage,
         onSave,
         terrainPalette,
@@ -126,6 +128,8 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                 }}
             >
                 <EditorSidePanel
+                    map={map}
+                    world={world as EditorWorld}
                     onSave={onSave}
                     savedMessage={savedMessage}
                     terrainPalette={terrainPalette}
