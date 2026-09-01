@@ -21,12 +21,15 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         terrainPalette,
         furniturePalette,
         wallPalette,
+        itemPalette,
         selectedTerrain,
         setSelectedTerrain,
         selectedFurniture,
         setSelectedFurniture,
         selectedWall,
         setSelectedWall,
+        selectedItem,
+        setSelectedItem,
         editorPanel,
         setEditorPanel,
         history,
@@ -128,12 +131,15 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     terrainPalette={terrainPalette}
                     furniturePalette={furniturePalette}
                     wallPalette={wallPalette}
+                    itemPalette={itemPalette}
                     selectedTerrain={selectedTerrain}
                     onSelectedTerrainChange={setSelectedTerrain}
                     selectedFurniture={selectedFurniture}
                     onSelectedFurnitureChange={setSelectedFurniture}
                     selectedWall={selectedWall}
                     onSelectedWallChange={setSelectedWall}
+                    selectedItem={selectedItem}
+                    onSelectedItemChange={setSelectedItem}
                     editorPanel={editorPanel}
                     onEditorPanelChange={setEditorPanel}
                     history={history}

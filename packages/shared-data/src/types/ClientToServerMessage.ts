@@ -356,6 +356,19 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
+        type: z.literal("client:editor:item:paint"),
+        payload: z.object({
+            tilePos: ITilePos,
+            itemId: ItemId
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:item:reset"),
+        payload: z.object({
+            tilePos: ITilePos
+        })
+    }),
+    z.object({
         type: z.literal("client:editor:undo"),
         payload: z.object({})
     }),

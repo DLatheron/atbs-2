@@ -20,6 +20,7 @@ import { EditorHistory, type FurnitureTileState } from "./EditorHistory.js";
 import { TerrainPaletteManager } from "./TerrainPaletteManager.js";
 import { FurniturePaletteManager } from "./FurniturePaletteManager.js";
 import { WallPaletteManager } from "./WallPaletteManager.js";
+import { ItemPaletteManager } from "./ItemPaletteManager.js";
 import {
     getBrushDimensions,
     iterateFurnitureTiles,
@@ -82,6 +83,7 @@ export class Editor implements MapHost {
     private readonly _terrainPalette;
     private readonly _furniturePalette;
     private readonly _wallPalette;
+    private readonly _itemPalette;
     private _isDestroying = false;
 
     constructor(
@@ -113,6 +115,7 @@ export class Editor implements MapHost {
         this._terrainPalette = TerrainPaletteManager.GetSingleton().getDefault();
         this._furniturePalette = FurniturePaletteManager.GetSingleton().getDefault();
         this._wallPalette = WallPaletteManager.GetSingleton().getDefault();
+        this._itemPalette = ItemPaletteManager.GetSingleton().getDefault();
 
         this._registerMessageHandlers();
     }
@@ -205,6 +208,10 @@ export class Editor implements MapHost {
         client.sendMessage({
             type: "server:editor:wall:palette",
             payload: this._wallPalette.toWireFormat(FurnitureRecipeManager.GetSingleton())
+        });
+        client.sendMessage({
+            type: "server:editor:item:palette",
+            payload: this._itemPalette.toWireFormat(ItemRecipeManager.GetSingleton())
         });
         client.sendMessage({
             type: "server:editor:history",
@@ -332,6 +339,20 @@ export class Editor implements MapHost {
             "client:editor:wall:reset",
             async (_context, payload) => {
                 await this._resetWall(payload.tilePos);
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:item:paint",
+            async (_context, payload) => {
+                await this._paintItem(payload);
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:item:reset",
+            async (_context, payload) => {
+                await this._resetItem(payload.tilePos);
             }
         );
 
@@ -669,8 +690,50 @@ export class Editor implements MapHost {
         this._broadcastHistory();
     }
 
+    private async _paintItem(payload: { tilePos: { row: number; col: number }; itemId: string }) {
+        const tilePos = new TilePos(payload.tilePos);
+        const tile = this._map.getTile(tilePos);
+        const before = tile.getItemState();
+
+        this._clearTileItems(tile);
+
+        const item = this._itemManager.newItem(payload.itemId, { location: tilePos });
+        tile.addItem(item);
+
+        const after = tile.getItemState();
+
+        this._history.recordItemEdit({ tilePos: payload.tilePos, before, after });
+        this._broadcastTileUpdates([tile.generateTileUpdate()]);
+        this._broadcastHistory();
+    }
+
+    private async _resetItem(tilePos: { row: number; col: number }) {
+        const pos = new TilePos(tilePos);
+        const tile = this._map.getTile(pos);
+        const before = tile.getItemState();
+
+        this._clearTileItems(tile);
+
+        const after = tile.getItemState();
+
+        this._history.recordItemEdit({ tilePos, before, after });
+        this._broadcastTileUpdates([tile.generateTileUpdate()]);
+        this._broadcastHistory();
+    }
+
+    private _clearTileItems(tile: ReturnType<WorldMap["getTile"]>) {
+        for (const item of [...tile.items]) {
+            tile.removeItem(item);
+            this._itemManager.deleteItem(item.id);
+        }
+    }
+
     private async _undo() {
-        const updates = await this._history.undo(this._map, this._furnitureManager);
+        const updates = await this._history.undo(
+            this._map,
+            this._furnitureManager,
+            this._itemManager
+        );
         if (updates.length > 0) {
             this._broadcastTileUpdates(updates);
             this._broadcastHistory();
@@ -678,7 +741,11 @@ export class Editor implements MapHost {
     }
 
     private async _redo() {
-        const updates = await this._history.redo(this._map, this._furnitureManager);
+        const updates = await this._history.redo(
+            this._map,
+            this._furnitureManager,
+            this._itemManager
+        );
         if (updates.length > 0) {
             this._broadcastTileUpdates(updates);
             this._broadcastHistory();

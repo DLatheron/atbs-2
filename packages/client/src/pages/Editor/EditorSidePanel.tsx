@@ -2,10 +2,13 @@ import { Box, Button, Tab, Tabs, Typography } from "@mui/material";
 import { TerrainPanel } from "../../components/TerrainPanel";
 import { FurniturePanel } from "../../components/FurniturePanel";
 import { WallsPanel } from "../../components/WallsPanel";
+import { ItemsPanel } from "../../components/ItemsPanel";
 import {
     EditorHistoryState,
     FurniturePaletteWire,
+    ItemPaletteWire,
     SelectedFurniture,
+    SelectedItem,
     SelectedTerrain,
     SelectedWall,
     TerrainPaletteWire,
@@ -21,12 +24,15 @@ export interface EditorSidePanelProps {
     terrainPalette: TerrainPaletteWire | null;
     furniturePalette: FurniturePaletteWire | null;
     wallPalette: WallPaletteWire | null;
+    itemPalette: ItemPaletteWire | null;
     selectedTerrain: SelectedTerrain;
     onSelectedTerrainChange: (selectedTerrain: SelectedTerrain) => void;
     selectedFurniture: SelectedFurniture;
     onSelectedFurnitureChange: (selectedFurniture: SelectedFurniture) => void;
     selectedWall: SelectedWall;
     onSelectedWallChange: (selectedWall: SelectedWall) => void;
+    selectedItem: SelectedItem;
+    onSelectedItemChange: (selectedItem: SelectedItem) => void;
     editorPanel: EditorPanelMode;
     onEditorPanelChange: (editorPanel: EditorPanelMode) => void;
     history: EditorHistoryState;
@@ -40,12 +46,15 @@ export function EditorSidePanel({
     terrainPalette,
     furniturePalette,
     wallPalette,
+    itemPalette,
     selectedTerrain,
     onSelectedTerrainChange,
     selectedFurniture,
     onSelectedFurnitureChange,
     selectedWall,
     onSelectedWallChange,
+    selectedItem,
+    onSelectedItemChange,
     editorPanel,
     onEditorPanelChange,
     history,
@@ -67,7 +76,14 @@ export function EditorSidePanel({
                 onChange={(_event, value: EditorPanelMode) => onEditorPanelChange(value)}
                 variant="scrollable"
                 scrollButtons="auto"
-                sx={{ minHeight: 40, borderBottom: 1, borderColor: "divider" }}
+                sx={{
+                    minHeight: 40,
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    "& .MuiTabs-list": {
+                        flexWrap: "wrap"
+                    }
+                }}
             >
                 {EDITOR_TABS.map((label) => (
                     <Tab key={label} label={label} value={label} sx={{ minHeight: 40, py: 0 }} />
@@ -92,6 +108,12 @@ export function EditorSidePanel({
                         wallPalette={wallPalette}
                         selectedWall={selectedWall}
                         onSelectedWallChange={onSelectedWallChange}
+                    />
+                ) : editorPanel === "Items" && itemPalette ? (
+                    <ItemsPanel
+                        itemPalette={itemPalette}
+                        selectedItem={selectedItem}
+                        onSelectedItemChange={onSelectedItemChange}
                     />
                 ) : (
                     <Typography variant="body2" color="text.secondary">

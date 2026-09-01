@@ -4,7 +4,9 @@ import {
     EditorHistoryState,
     EditorMapWire,
     FurniturePaletteWire,
+    ItemPaletteWire,
     SelectedFurniture,
+    SelectedItem,
     SelectedTerrain,
     SelectedWall,
     TerrainPaletteWire,
@@ -13,6 +15,7 @@ import {
 import { useEditorMessageManager, useEditorWorld, useImageCache, useKeyboard } from "../../hooks";
 import { applyTileUpdates } from "../../mapUpdates";
 import { createDefaultSelectedFurniture } from "../../helpers/furnitureHelpers";
+import { createDefaultSelectedItem } from "../../helpers/itemHelpers";
 import { createDefaultSelectedTerrain } from "../../helpers/terrainHelpers";
 import { applyWallHotKey, createDefaultSelectedWall } from "../../helpers/wallHelpers";
 import { EditorPanelMode, EditorWorld } from "../../EditorWorld";
@@ -25,6 +28,7 @@ export function useEditorPage() {
     const [terrainPalette, setTerrainPalette] = useState<TerrainPaletteWire | null>(null);
     const [furniturePalette, setFurniturePalette] = useState<FurniturePaletteWire | null>(null);
     const [wallPalette, setWallPalette] = useState<WallPaletteWire | null>(null);
+    const [itemPalette, setItemPalette] = useState<ItemPaletteWire | null>(null);
     const [selectedTerrain, setSelectedTerrain] = useState<SelectedTerrain>(
         createDefaultSelectedTerrain()
     );
@@ -32,6 +36,7 @@ export function useEditorPage() {
         createDefaultSelectedFurniture()
     );
     const [selectedWall, setSelectedWall] = useState<SelectedWall>(createDefaultSelectedWall());
+    const [selectedItem, setSelectedItem] = useState<SelectedItem>(createDefaultSelectedItem());
     const [editorPanel, setEditorPanel] = useState<EditorPanelMode>("Terrain");
     const [history, setHistory] = useState<EditorHistoryState>({
         canUndo: false,
@@ -51,6 +56,10 @@ export function useEditorPage() {
     useEffect(() => {
         world.selectedWall = selectedWall;
     }, [world, selectedWall]);
+
+    useEffect(() => {
+        world.selectedItem = selectedItem;
+    }, [world, selectedItem]);
 
     useEffect(() => {
         (world as EditorWorld).onSelectedWallChange = setSelectedWall;
@@ -91,6 +100,11 @@ export function useEditorPage() {
             messageManager.registerHandler("server:editor:wall:palette", (_context, payload) => {
                 world.wallPalette = payload;
                 setWallPalette(payload);
+            }),
+
+            messageManager.registerHandler("server:editor:item:palette", (_context, payload) => {
+                world.itemPalette = payload;
+                setItemPalette(payload);
             }),
 
             messageManager.registerHandler("server:editor:map:update", (_context, payload) => {
@@ -250,12 +264,15 @@ export function useEditorPage() {
         terrainPalette,
         furniturePalette,
         wallPalette,
+        itemPalette,
         selectedTerrain,
         setSelectedTerrain,
         selectedFurniture,
         setSelectedFurniture,
         selectedWall,
         setSelectedWall,
+        selectedItem,
+        setSelectedItem,
         editorPanel,
         setEditorPanel,
         history,

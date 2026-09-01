@@ -1,6 +1,6 @@
 import z from "zod";
 import { Orientation } from "@atbs/maths";
-import { RenderList } from "./PrimitiveTypes.js";
+import { ItemId, RenderList } from "./PrimitiveTypes.js";
 
 export const TerrainPaletteEntry = z.object({
     id: z.string().nonempty(),
@@ -112,3 +112,20 @@ export const SelectedWall = z.object({
     direction: z.enum(Orientation).optional()
 });
 export type SelectedWall = z.infer<typeof SelectedWall>;
+
+export const ItemPaletteEntry = z.object({
+    id: ItemId,
+    name: z.string().nonempty(),
+    uiImage: RenderList
+});
+export type ItemPaletteEntry = z.infer<typeof ItemPaletteEntry>;
+
+export const ItemPaletteWire = z.object({
+    items: z.array(ItemPaletteEntry).min(1)
+});
+export type ItemPaletteWire = z.infer<typeof ItemPaletteWire>;
+
+export const SelectedItem = z.object({
+    index: z.number().int().nonnegative()
+});
+export type SelectedItem = z.infer<typeof SelectedItem>;

@@ -14,6 +14,7 @@ import { BlendManager } from "./game/BlendManager.js";
 import { TerrainPaletteManager } from "./editor/TerrainPaletteManager.js";
 import { FurniturePaletteManager } from "./editor/FurniturePaletteManager.js";
 import { WallPaletteManager } from "./editor/WallPaletteManager.js";
+import { ItemPaletteManager } from "./editor/ItemPaletteManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -39,6 +40,9 @@ export async function createApp(): Promise<Application> {
 
     const wallPaletteManager = WallPaletteManager.GetSingleton();
     await wallPaletteManager.loadWallPalettes();
+
+    const itemPaletteManager = ItemPaletteManager.GetSingleton();
+    await itemPaletteManager.loadItemPalettes();
 
     const materialManager = MaterialManager.GetSingleton();
     await materialManager.loadMaterials();

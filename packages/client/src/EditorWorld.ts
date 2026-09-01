@@ -2,7 +2,10 @@ import { Orientation, TilePos, Vec2, rotateOrientation } from "@atbs/maths";
 import {
     EditorFurnitureTile,
     FurniturePaletteWire,
+    ItemPaletteWire,
+    RenderList,
     SelectedFurniture,
+    SelectedItem,
     SelectedTerrain,
     SelectedWall,
     TerrainPaletteWire,
@@ -34,6 +37,7 @@ import {
     getPaintRandomiseOrientation,
     getTerrainId
 } from "./helpers/terrainHelpers";
+import { createDefaultSelectedItem, getItemId } from "./helpers/itemHelpers";
 
 export type EditorPanelMode = "Terrain" | "Furniture" | "Walls" | "Items" | "Markers";
 
@@ -43,10 +47,12 @@ export class EditorWorld extends World {
     private _terrainPalette: TerrainPaletteWire | null = null;
     private _furniturePalette: FurniturePaletteWire | null = null;
     private _wallPalette: WallPaletteWire | null = null;
+    private _itemPalette: ItemPaletteWire | null = null;
     private _furnitureLayer: EditorFurnitureTile[][] | null = null;
     private _selectedTerrain: SelectedTerrain = createDefaultSelectedTerrain();
     private _selectedFurniture: SelectedFurniture = createDefaultSelectedFurniture();
     private _selectedWall: SelectedWall = createDefaultSelectedWall();
+    private _selectedItem: SelectedItem = createDefaultSelectedItem();
     private _onSelectedWallChange: ((selectedWall: SelectedWall) => void) | null = null;
     private _editorPanel: EditorPanelMode = "Terrain";
     private _paintContext: { lastTilePos?: TilePos } | null = null;
@@ -89,6 +95,14 @@ export class EditorWorld extends World {
         this._wallPalette = value;
     }
 
+    get itemPalette(): ItemPaletteWire | null {
+        return this._itemPalette;
+    }
+
+    set itemPalette(value: ItemPaletteWire | null) {
+        this._itemPalette = value;
+    }
+
     get furnitureLayer(): EditorFurnitureTile[][] | null {
         return this._furnitureLayer;
     }
@@ -119,6 +133,14 @@ export class EditorWorld extends World {
 
     set selectedWall(value: SelectedWall) {
         this._selectedWall = value;
+    }
+
+    get selectedItem(): SelectedItem {
+        return this._selectedItem;
+    }
+
+    set selectedItem(value: SelectedItem) {
+        this._selectedItem = value;
     }
 
     set onSelectedWallChange(callback: ((selectedWall: SelectedWall) => void) | null) {
@@ -190,6 +212,27 @@ export class EditorWorld extends World {
         );
     }
 
+    drawRenderList(params: {
+        context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+        canvasPos: Vec2;
+        renderList: RenderList;
+        tilePos: TilePos;
+        tileSize: number;
+        scale: Vec2;
+        offset: Vec2;
+        deferredAnimations?: Parameters<World["drawRenderList"]>[0]["deferredAnimations"];
+        grayscale?: boolean;
+    }): void {
+        const editorRenderList = params.renderList.map(
+            ({ visibilityFilter: _visibilityFilter, ...image }) => image
+        );
+
+        super.drawRenderList({
+            ...params,
+            renderList: editorRenderList
+        });
+    }
+
     onMouseEnter(event: MouseEvent | React.MouseEvent) {
         if (!this.hasMap) {
             return;
@@ -223,6 +266,9 @@ export class EditorWorld extends World {
             } else if (this._editorPanel === "Walls") {
                 this._paintContext = {};
                 this._paintWall(event);
+            } else if (this._editorPanel === "Items") {
+                this._paintContext = {};
+                this._paintItem(event);
             }
         }
     }
@@ -261,6 +307,8 @@ export class EditorWorld extends World {
             this._paintFurniture(event);
         } else if (this._editorPanel === "Walls") {
             this._paintWall(event);
+        } else if (this._editorPanel === "Items") {
+            this._paintItem(event);
         }
     }
 
@@ -479,6 +527,44 @@ export class EditorWorld extends World {
                 orientation: this._selectedWall.orientation,
                 autoFit: this._selectedWall.autoFit,
                 direction: this._selectedWall.direction
+            }
+        });
+    }
+
+    private _paintItem(event: MouseEvent | React.MouseEvent) {
+        if (!this._itemPalette || !this._paintContext) {
+            return;
+        }
+
+        const tilePos = this._getEventTilePos(event);
+
+        if (
+            this._paintContext.lastTilePos &&
+            TilePos.IsEqual(this._paintContext.lastTilePos, tilePos)
+        ) {
+            return;
+        }
+
+        this._paintContext.lastTilePos = tilePos;
+
+        if (event.altKey) {
+            this.sendMessage({
+                type: "client:editor:item:reset",
+                payload: { tilePos }
+            });
+            return;
+        }
+
+        const itemId = getItemId(this._itemPalette, this._selectedItem);
+        if (!itemId) {
+            return;
+        }
+
+        this.sendMessage({
+            type: "client:editor:item:paint",
+            payload: {
+                tilePos,
+                itemId
             }
         });
     }

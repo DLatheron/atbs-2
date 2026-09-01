@@ -33,6 +33,7 @@ import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import {
     EditorHistoryState,
     FurniturePaletteWire,
+    ItemPaletteWire,
     TerrainPaletteWire,
     WallPaletteWire
 } from "./EditorTypes.js";
@@ -152,6 +153,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:editor:wall:palette"),
         payload: WallPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:item:palette"),
+        payload: ItemPaletteWire
     }),
     z.object({
         type: z.literal("server:editor:map:update"),

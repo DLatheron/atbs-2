@@ -1,0 +1,186 @@
+{
+    "id": "items.itempalette",
+    "name": "Item Palette",
+    "items": [
+        {
+            "id": "12-gauge-buckshot.round"
+        },
+        {
+            "id": "12-gauge-flechette.round"
+        },
+        {
+            "id": "12-gauge-slug.round"
+        },
+        {
+            "id": "357-magnum.round"
+        },
+        {
+            "id": "40mm-gas.round"
+        },
+        {
+            "id": "40mm-he.round"
+        },
+        {
+            "id": "40mm-smoke.round"
+        },
+        {
+            "id": "40mm-stun.round"
+        },
+        {
+            "id": "45-acp.round"
+        },
+        {
+            "id": "45-hollow-point.round"
+        },
+        {
+            "id": "5.56mm-nato.round"
+        },
+        {
+            "id": "50-calibre.round"
+        },
+        {
+            "id": "7.62mm.round"
+        },
+        {
+            "id": "9mm-hollow-point.round"
+        },
+        {
+            "id": "9mm-parabellum.round"
+        },
+        {
+            "id": "ak-47-drum.magazine"
+        },
+        {
+            "id": "ak-47.gun"
+        },
+        {
+            "id": "ak-47.magazine"
+        },
+        {
+            "id": "barrett.gun"
+        },
+        {
+            "id": "barrett.magazine"
+        },
+        {
+            "id": "c4.grenade"
+        },
+        {
+            "id": "coffee-token.item"
+        },
+        {
+            "id": "desert-eagle.gun"
+        },
+        {
+            "id": "desert-eagle.magazine"
+        },
+        {
+            "id": "fn-hi-power.gun"
+        },
+        {
+            "id": "frag.grenade"
+        },
+        {
+            "id": "front-door-key.item"
+        },
+        {
+            "id": "gas.grenade"
+        },
+        {
+            "id": "hi-power.magazine"
+        },
+        {
+            "id": "law-rocket.round"
+        },
+        {
+            "id": "law.gun"
+        },
+        {
+            "id": "m16-20.magazine"
+        },
+        {
+            "id": "m16-30.magazine"
+        },
+        {
+            "id": "m16.gun"
+        },
+        {
+            "id": "m1911-15.magazine"
+        },
+        {
+            "id": "m1911-7.magazine"
+        },
+        {
+            "id": "m1911.gun"
+        },
+        {
+            "id": "m203.gun"
+        },
+        {
+            "id": "m4+m203.gun"
+        },
+        {
+            "id": "m4.gun"
+        },
+        {
+            "id": "m9-15.magazine"
+        },
+        {
+            "id": "m9-30.magazine"
+        },
+        {
+            "id": "m9.gun"
+        },
+        {
+            "id": "mac-10.gun"
+        },
+        {
+            "id": "mac-10.magazine"
+        },
+        {
+            "id": "mp5-15.magazine"
+        },
+        {
+            "id": "mp5-30.magazine"
+        },
+        {
+            "id": "mp5a2.gun"
+        },
+        {
+            "id": "mp5k.gun"
+        },
+        {
+            "id": "mp5sd.gun"
+        },
+        {
+            "id": "shotgun.gun"
+        },
+        {
+            "id": "skeleton-keys.item"
+        },
+        {
+            "id": "smoke.grenade"
+        },
+        {
+            "id": "spas-12.gun"
+        },
+        {
+            "id": "stun.grenade"
+        },
+        {
+            "id": "svd.gun"
+        },
+        {
+            "id": "svd.magazine"
+        },
+        {
+            "id": "uzi-drum.magazine"
+        },
+        {
+            "id": "uzi.gun"
+        },
+        {
+            "id": "uzi.magazine"
+        }
+    ]
+}

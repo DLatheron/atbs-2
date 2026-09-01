@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Orientation } from "@atbs/maths";
-import { getAdjacentWallEdge, matchWallPiece, rotateWallEdges } from "@atbs/shared-data";
+import { matchWallPiece, rotateWallEdges } from "@atbs/shared-data";
 
 const WALL_PALETTE = [
     { id: "wall.furniture", edges: ["0-2-0", null, "0-2-0", null] as const },

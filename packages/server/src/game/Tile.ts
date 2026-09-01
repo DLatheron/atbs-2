@@ -313,6 +313,15 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._updateTilePoi();
     }
 
+    getItemState(): { items: { id: ItemId; quantity: number }[] } {
+        return {
+            items: this._items.map((item) => ({
+                id: item.recipeId,
+                quantity: item.quantity
+            }))
+        };
+    }
+
     addVfx(vfx: Vfx): void {
         this._vfx.unshift(vfx);
 
