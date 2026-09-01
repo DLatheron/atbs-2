@@ -16,8 +16,15 @@ import { EditorClient } from "./EditorClient.js";
 import { EditorClientManager } from "./EditorClientManager.js";
 import { editorManager } from "./EditorManager.js";
 import { createDefaultMapRecipe } from "./createDefaultMapRecipe.js";
-import { EditorHistory } from "./EditorHistory.js";
+import { EditorHistory, type FurnitureTileState } from "./EditorHistory.js";
 import { TerrainPaletteManager } from "./TerrainPaletteManager.js";
+import { FurniturePaletteManager } from "./FurniturePaletteManager.js";
+import {
+    getBrushDimensions,
+    iterateFurnitureTiles,
+    resolveFurnitureTileOrientation,
+    rotateSample
+} from "./furnitureHelpers.js";
 import { WorldMap, type MapHost } from "../game/WorldMap.js";
 import { ItemManager } from "../game/ItemManager.js";
 import { ItemRecipeManager } from "../game/ItemRecipeManager.js";
@@ -72,6 +79,7 @@ export class Editor implements MapHost {
     private readonly _map: WorldMap;
     private readonly _history: EditorHistory;
     private readonly _terrainPalette;
+    private readonly _furniturePalette;
     private _isDestroying = false;
 
     constructor(
@@ -101,6 +109,7 @@ export class Editor implements MapHost {
         this._map = new WorldMap(createDefaultMapRecipe(editorId), this);
         this._history = new EditorHistory();
         this._terrainPalette = TerrainPaletteManager.GetSingleton().getDefault();
+        this._furniturePalette = FurniturePaletteManager.GetSingleton().getDefault();
 
         this._registerMessageHandlers();
     }
@@ -185,6 +194,12 @@ export class Editor implements MapHost {
         client.sendMessage({
             type: "server:editor:terrain:palette",
             payload: this._terrainPalette.toWireFormat()
+        });
+        client.sendMessage({
+            type: "server:editor:furniture:palette",
+            payload: this._furniturePalette.toWireFormat(
+                FurnitureRecipeManager.GetSingleton()
+            )
         });
         client.sendMessage({
             type: "server:editor:history",
@@ -283,6 +298,20 @@ export class Editor implements MapHost {
             }
         );
 
+        this._messageManager.registerHandler(
+            "client:editor:furniture:paint",
+            async (_context, payload) => {
+                await this._paintFurniture(payload);
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:furniture:reset",
+            async (_context, payload) => {
+                await this._resetFurniture(payload);
+            }
+        );
+
         this._messageManager.registerHandler("client:editor:undo", async (_context, _payload) => {
             await this._undo();
         });
@@ -348,6 +377,115 @@ export class Editor implements MapHost {
         this._broadcastHistory();
     }
 
+    private async _paintFurniture(payload: {
+        tilePos: { row: number; col: number };
+        furnitureId: string;
+        brushSize: { x: number; y: number };
+        brushOrientation: Orientation;
+        orientation: Orientation;
+        randomiseOrientation: boolean;
+    }) {
+        const tilePos = new TilePos(payload.tilePos);
+        const selectedFurniture = this._furniturePalette.getFurnitureById(payload.furnitureId);
+        if (!selectedFurniture) {
+            throw new Error(`Furniture with id ${payload.furnitureId} not found`);
+        }
+
+        const width = selectedFurniture.tiles[0].length;
+        const height = selectedFurniture.tiles.length;
+
+        if (width !== payload.brushSize.x || height !== payload.brushSize.y) {
+            throw new Error(
+                `Furniture with id ${payload.furnitureId} does not match the brush size`
+            );
+        }
+
+        const actualOrientation = EditorHistory.resolveOrientation(
+            payload.orientation,
+            payload.randomiseOrientation,
+            selectedFurniture.allowRandomOrientation
+        );
+
+        const isMultiTile = width > 1 || height > 1;
+        const dimensions = getBrushDimensions(payload.brushSize, actualOrientation);
+        const tileEdits: {
+            tilePos: { row: number; col: number };
+            before: FurnitureTileState;
+            after: FurnitureTileState;
+        }[] = [];
+
+        iterateFurnitureTiles(dimensions, (tileXY) => {
+            const samplePos = rotateSample(tileXY, dimensions, actualOrientation);
+            const tileDefinition = selectedFurniture.tiles[samplePos.y][samplePos.x];
+            const affectedTilePos = tilePos.add(tileXY);
+            const tile = this._map.getTile(affectedTilePos);
+            const before = tile.getFurnitureState();
+
+            const tileOrientation = resolveFurnitureTileOrientation(
+                tileDefinition.orientation,
+                actualOrientation,
+                isMultiTile
+            );
+
+            tile.setFurniture(
+                this._furnitureManager.newFurniture(tileDefinition.furnitureId, {
+                    location: affectedTilePos,
+                    orientation: tileOrientation
+                })
+            );
+
+            tileEdits.push({
+                tilePos: affectedTilePos,
+                before,
+                after: tile.getFurnitureState()
+            });
+        });
+
+        this._history.recordFurnitureEdit({ tiles: tileEdits });
+        this._broadcastTileUpdates(
+            tileEdits.map(({ tilePos: pos }) =>
+                this._map.getTile(new TilePos(pos)).generateTileUpdate()
+            )
+        );
+        this._broadcastHistory();
+    }
+
+    private async _resetFurniture(payload: {
+        tilePos: { row: number; col: number };
+        brushSize: { x: number; y: number };
+        brushOrientation: Orientation;
+    }) {
+        const tilePos = new TilePos(payload.tilePos);
+        const dimensions = getBrushDimensions(payload.brushSize, payload.brushOrientation);
+        const tileEdits: {
+            tilePos: { row: number; col: number };
+            before: FurnitureTileState;
+            after: FurnitureTileState;
+        }[] = [];
+
+        iterateFurnitureTiles(dimensions, (tileXY) => {
+            const affectedTilePos = tilePos.add(tileXY);
+            const tile = this._map.getTile(affectedTilePos);
+            const before = tile.getFurnitureState();
+
+            tile.clearFurniture();
+
+            tileEdits.push({
+                tilePos: affectedTilePos,
+                before,
+                after: tile.getFurnitureState()
+            });
+        });
+
+        this._history.recordFurnitureEdit({ tiles: tileEdits });
+        this._broadcastTileUpdates(
+            tileEdits.map(({ tilePos: pos }) =>
+                this._map.getTile(new TilePos(pos)).generateTileUpdate()
+            )
+        );
+        this._broadcastHistory();
+    }
+
     private async _resetTerrain(tilePos: { row: number; col: number }) {
         const pos = new TilePos(tilePos);
         const tile = this._map.getTile(pos);
@@ -362,17 +500,17 @@ export class Editor implements MapHost {
     }
 
     private async _undo() {
-        const update = await this._history.undo(this._map);
-        if (update) {
-            this._broadcastTileUpdates([update]);
+        const updates = await this._history.undo(this._map, this._furnitureManager);
+        if (updates.length > 0) {
+            this._broadcastTileUpdates(updates);
             this._broadcastHistory();
         }
     }
 
     private async _redo() {
-        const update = await this._history.redo(this._map);
-        if (update) {
-            this._broadcastTileUpdates([update]);
+        const updates = await this._history.redo(this._map, this._furnitureManager);
+        if (updates.length > 0) {
+            this._broadcastTileUpdates(updates);
             this._broadcastHistory();
         }
     }

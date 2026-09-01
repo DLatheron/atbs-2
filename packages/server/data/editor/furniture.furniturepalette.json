@@ -1,0 +1,96 @@
+{
+    "id": "furniture.furniturepalette",
+    "name": "Furniture Palette",
+    "furniture": [
+        {
+            "id": "drinks-machine",
+            "tiles": [["drinks-machine.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "door",
+            "tiles": [["door.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "big-tree",
+            "tiles": [
+                ["big-tree-0-0.furniture", "big-tree-1-0.furniture"],
+                ["big-tree-0-1.furniture", "big-tree-1-1.furniture"]
+            ],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "big-bush",
+            "tiles": [
+                ["big-bush-0-0.furniture", "big-bush-1-0.furniture"],
+                ["big-bush-0-1.furniture", "big-bush-1-1.furniture"]
+            ],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "palm-tree",
+            "tiles": [
+                ["palm-tree-0-0.furniture", "palm-tree-1-0.furniture"],
+                ["palm-tree-0-1.furniture", "palm-tree-1-1.furniture"]
+            ],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "bush-1",
+            "tiles": [["bush-1.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "bush-2",
+            "tiles": [["bush-2.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "bush-3",
+            "tiles": [["bush-3.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "bush-4",
+            "tiles": [["bush-4.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "bush-5",
+            "tiles": [["bush-5.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "fern",
+            "tiles": [["fern.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "flower-bush",
+            "tiles": [["flower-bush.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "rose-bush",
+            "tiles": [["rose-bush.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "fountain",
+            "tiles": [["fountain.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "wall-section",
+            "tiles": [
+                [
+                    { "id": "wall.furniture", "orientation": 2 },
+                    { "id": "wall.furniture", "orientation": 2 },
+                    { "id": "wall.furniture", "orientation": 2 }
+                ]
+            ],
+            "allowRandomOrientation": false
+        }
+    ]
+}

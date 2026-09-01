@@ -295,6 +295,14 @@ export class WorldMap {
                 })
             )
         );
+        const fireModeTiles = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) =>
+                tile.getRenderList({
+                    renderMode: RenderMode.enum.FIRE_MODE,
+                    states: []
+                })
+            )
+        );
 
         return {
             width: this.width,
@@ -302,7 +310,7 @@ export class WorldMap {
             tileSize: this.tileSize,
             tilesByRenderMode: {
                 [RenderMode.enum.MAP_MODE]: mapModeTiles,
-                [RenderMode.enum.FIRE_MODE]: []
+                [RenderMode.enum.FIRE_MODE]: fireModeTiles
             }
         };
     }

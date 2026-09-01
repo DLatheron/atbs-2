@@ -321,6 +321,25 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
+        type: z.literal("client:editor:furniture:paint"),
+        payload: z.object({
+            tilePos: ITilePos,
+            furnitureId: z.string().nonempty(),
+            brushSize: IVec2,
+            brushOrientation: z.enum(Orientation),
+            orientation: z.enum(Orientation),
+            randomiseOrientation: z.boolean()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:furniture:reset"),
+        payload: z.object({
+            tilePos: ITilePos,
+            brushSize: IVec2,
+            brushOrientation: z.enum(Orientation)
+        })
+    }),
+    z.object({
         type: z.literal("client:editor:undo"),
         payload: z.object({})
     }),

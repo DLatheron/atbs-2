@@ -89,6 +89,11 @@ function RandomiseToggle({
 }) {
     return (
         <FormControlLabel
+            sx={{
+                ml: 0,
+                mr: 0,
+                boxSizing: "border-box"
+            }}
             control={
                 <Switch
                     size="small"

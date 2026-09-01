@@ -24,8 +24,13 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         savedMessage,
         onSave,
         terrainPalette,
+        furniturePalette,
         selectedTerrain,
         setSelectedTerrain,
+        selectedFurniture,
+        setSelectedFurniture,
+        editorPanel,
+        setEditorPanel,
         history,
         onUndo,
         onRedo
@@ -74,7 +79,7 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     'title-bar title-bar'
                     'map panel'
                 `,
-                gridTemplateColumns: "1fr 300px",
+                gridTemplateColumns: "1fr 320px",
                 gridTemplateRows: "auto 1fr"
             }}
             disableGutters
@@ -123,8 +128,13 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     onSave={onSave}
                     savedMessage={savedMessage}
                     terrainPalette={terrainPalette}
+                    furniturePalette={furniturePalette}
                     selectedTerrain={selectedTerrain}
                     onSelectedTerrainChange={setSelectedTerrain}
+                    selectedFurniture={selectedFurniture}
+                    onSelectedFurnitureChange={setSelectedFurniture}
+                    editorPanel={editorPanel}
+                    onEditorPanelChange={setEditorPanel}
                     history={history}
                     onUndo={onUndo}
                     onRedo={onRedo}

@@ -32,6 +32,7 @@ import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import {
     EditorHistoryState,
+    FurniturePaletteWire,
     TerrainPaletteWire
 } from "./EditorTypes.js";
 import {
@@ -141,6 +142,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:editor:terrain:palette"),
         payload: TerrainPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:furniture:palette"),
+        payload: FurniturePaletteWire
     }),
     z.object({
         type: z.literal("server:editor:map:update"),

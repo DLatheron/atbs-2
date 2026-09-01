@@ -1,17 +1,28 @@
 import { Box, Button, Tab, Tabs, Typography } from "@mui/material";
-import { useState } from "react";
 import { TerrainPanel } from "../../components/TerrainPanel";
-import { EditorHistoryState, SelectedTerrain, TerrainPaletteWire } from "@atbs/shared-data";
+import { FurniturePanel } from "../../components/FurniturePanel";
+import {
+    EditorHistoryState,
+    FurniturePaletteWire,
+    SelectedFurniture,
+    SelectedTerrain,
+    TerrainPaletteWire
+} from "@atbs/shared-data";
+import { EditorPanelMode } from "../../EditorWorld";
 
 const EDITOR_TABS = ["Terrain", "Furniture", "Walls", "Items", "Markers"] as const;
-type EditorTab = (typeof EDITOR_TABS)[number];
 
 export interface EditorSidePanelProps {
     onSave: () => void;
     savedMessage: string | null;
     terrainPalette: TerrainPaletteWire | null;
+    furniturePalette: FurniturePaletteWire | null;
     selectedTerrain: SelectedTerrain;
     onSelectedTerrainChange: (selectedTerrain: SelectedTerrain) => void;
+    selectedFurniture: SelectedFurniture;
+    onSelectedFurnitureChange: (selectedFurniture: SelectedFurniture) => void;
+    editorPanel: EditorPanelMode;
+    onEditorPanelChange: (editorPanel: EditorPanelMode) => void;
     history: EditorHistoryState;
     onUndo: () => void;
     onRedo: () => void;
@@ -21,14 +32,17 @@ export function EditorSidePanel({
     onSave,
     savedMessage,
     terrainPalette,
+    furniturePalette,
     selectedTerrain,
     onSelectedTerrainChange,
+    selectedFurniture,
+    onSelectedFurnitureChange,
+    editorPanel,
+    onEditorPanelChange,
     history,
     onUndo,
     onRedo
 }: EditorSidePanelProps) {
-    const [tab, setTab] = useState<EditorTab>("Terrain");
-
     return (
         <Box
             sx={{
@@ -40,8 +54,8 @@ export function EditorSidePanel({
             }}
         >
             <Tabs
-                value={tab}
-                onChange={(_event, value: EditorTab) => setTab(value)}
+                value={editorPanel}
+                onChange={(_event, value: EditorPanelMode) => onEditorPanelChange(value)}
                 variant="scrollable"
                 scrollButtons="auto"
                 sx={{ minHeight: 40, borderBottom: 1, borderColor: "divider" }}
@@ -52,15 +66,21 @@ export function EditorSidePanel({
             </Tabs>
 
             <Box sx={{ flex: 1, minHeight: 0, py: 1, overflow: "hidden" }}>
-                {tab === "Terrain" && terrainPalette ? (
+                {editorPanel === "Terrain" && terrainPalette ? (
                     <TerrainPanel
                         terrainPalette={terrainPalette}
                         selectedTerrain={selectedTerrain}
                         onSelectedTerrainChange={onSelectedTerrainChange}
                     />
+                ) : editorPanel === "Furniture" && furniturePalette ? (
+                    <FurniturePanel
+                        furniturePalette={furniturePalette}
+                        selectedFurniture={selectedFurniture}
+                        onSelectedFurnitureChange={onSelectedFurnitureChange}
+                    />
                 ) : (
                     <Typography variant="body2" color="text.secondary">
-                        {tab}: Coming soon
+                        {editorPanel}: Coming soon
                     </Typography>
                 )}
             </Box>

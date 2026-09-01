@@ -110,12 +110,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     protected _tileSize: number;
     protected _terrain: Terrain;
     protected _terrainOrientation: Orientation;
-    protected readonly _furniture?: Furniture;
+    protected _furniture?: Furniture;
     protected _items: Item[];
     protected _units: Unit[];
     protected _vfx: Vfx[];
 
     private readonly _visibilityManager: VisibilityManager;
+    private readonly _furnitureManager: FurnitureManager;
 
     constructor(
         location: TilePos,
@@ -129,6 +130,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._location = location;
         this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
         this._tileSize = tileSize;
+        this._furnitureManager = furnitureManager;
+        this._visibilityManager = visibilityManager;
         this._terrain = TerrainManager.GetSingleton().getOrCreate(recipe.terrain.id);
         this._terrainOrientation = recipe.terrain.orientation ?? Orientation.NORTH;
         this._furniture = recipe.furniture
@@ -141,7 +144,6 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._items = [];
         this._units = [];
         this._vfx = [];
-        this._visibilityManager = visibilityManager;
     }
 
     get terrain(): Terrain {
@@ -166,6 +168,32 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
 
     get furniture(): Furniture | undefined {
         return this._furniture;
+    }
+
+    getFurnitureState(): { furnitureId?: string; orientation?: Orientation; state?: FurnitureState } {
+        if (!this._furniture) {
+            return {};
+        }
+
+        return {
+            furnitureId: this._furniture.recipeId,
+            orientation: this._furniture.orientation,
+            state: this._furniture.state
+        };
+    }
+
+    setFurniture(furniture: Furniture): void {
+        if (this._furniture) {
+            this._furnitureManager.deleteFurniture(this._furniture.id);
+        }
+        this._furniture = furniture;
+    }
+
+    clearFurniture(): void {
+        if (this._furniture) {
+            this._furnitureManager.deleteFurniture(this._furniture.id);
+            this._furniture = undefined;
+        }
     }
 
     get units(): Unit[] {

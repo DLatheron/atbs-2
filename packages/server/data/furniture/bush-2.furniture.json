@@ -1,0 +1,39 @@
+{
+    "id": "bush-2.furniture",
+    "name": "Bush",
+    "description": [
+        {
+            "text": "A bush"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "bush-2"
+                }
+            ]
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "soft-circle-cl"
+                }
+            ]
+        }
+    },
+    "materials": [
+        "thin-wood.material"
+    ],
+    "hitPoints": {
+        "max": 20
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 8
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

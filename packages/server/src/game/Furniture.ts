@@ -213,7 +213,8 @@ export class Furniture extends SceneObject {
         const unitContext = {
             ...context,
             states: [this.state],
-            orientation: this.orientation
+            orientation: this.orientation,
+            applyOrientation: this.orientation
         };
 
         const renderList = super.getRenderList(unitContext);

@@ -2,14 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ClientMap,
     EditorHistoryState,
+    FurniturePaletteWire,
+    SelectedFurniture,
     SelectedTerrain,
     TerrainPaletteWire
 } from "@atbs/shared-data";
-import { rotateOrientation } from "@atbs/maths";
 import { useEditorMessageManager, useEditorWorld, useImageCache, useKeyboard } from "../../hooks";
 import { applyTileUpdates } from "../../mapUpdates";
+import { createDefaultSelectedFurniture } from "../../helpers/furnitureHelpers";
 import { createDefaultSelectedTerrain } from "../../helpers/terrainHelpers";
-import { EditorWorld } from "../../EditorWorld";
+import { EditorPanelMode, EditorWorld } from "../../EditorWorld";
 
 export function useEditorPage() {
     const { messageManager, sendMessage } = useEditorMessageManager();
@@ -17,9 +19,14 @@ export function useEditorPage() {
     const { imageCache } = useImageCache();
     const [map, setMap] = useState<ClientMap | null>(null);
     const [terrainPalette, setTerrainPalette] = useState<TerrainPaletteWire | null>(null);
+    const [furniturePalette, setFurniturePalette] = useState<FurniturePaletteWire | null>(null);
     const [selectedTerrain, setSelectedTerrain] = useState<SelectedTerrain>(
         createDefaultSelectedTerrain()
     );
+    const [selectedFurniture, setSelectedFurniture] = useState<SelectedFurniture>(
+        createDefaultSelectedFurniture()
+    );
+    const [editorPanel, setEditorPanel] = useState<EditorPanelMode>("Terrain");
     const [history, setHistory] = useState<EditorHistoryState>({
         canUndo: false,
         canRedo: false
@@ -31,8 +38,14 @@ export function useEditorPage() {
     }, [world, selectedTerrain]);
 
     useEffect(() => {
-        world.terrainModeActive = true;
-    }, [world]);
+        world.selectedFurniture = selectedFurniture;
+        world.syncEditorState();
+    }, [world, selectedFurniture]);
+
+    useEffect(() => {
+        world.editorPanel = editorPanel;
+        world.syncEditorState();
+    }, [world, editorPanel]);
 
     useEffect(() => {
         console.info("Mounting EditorPage Message Handlers");
@@ -47,6 +60,11 @@ export function useEditorPage() {
             messageManager.registerHandler("server:editor:terrain:palette", (_context, payload) => {
                 world.terrainPalette = payload;
                 setTerrainPalette(payload);
+            }),
+
+            messageManager.registerHandler("server:editor:furniture:palette", (_context, payload) => {
+                world.furniturePalette = payload;
+                setFurniturePalette(payload);
             }),
 
             messageManager.registerHandler("server:editor:map:update", (_context, payload) => {
@@ -97,12 +115,17 @@ export function useEditorPage() {
         (world as EditorWorld).redo();
     }, [world]);
 
-    const rotateTerrain = useCallback((steps: -2 | 2) => {
-        setSelectedTerrain((current: SelectedTerrain) => ({
-            ...current,
-            orientation: rotateOrientation(current.orientation, steps)
-        }));
-    }, []);
+    const rotateSelection = useCallback(
+        (steps: -2 | 2) => {
+            (world as EditorWorld).rotateSelection(steps);
+            if (editorPanel === "Furniture") {
+                setSelectedFurniture({ ...(world as EditorWorld).selectedFurniture });
+            } else {
+                setSelectedTerrain({ ...(world as EditorWorld).selectedTerrain });
+            }
+        },
+        [world, editorPanel]
+    );
 
     const keyMap = useMemo(
         () => ({
@@ -116,10 +139,10 @@ export function useEditorPage() {
                     onUndo();
                 }
             },
-            BracketLeft: () => rotateTerrain(-2),
-            BracketRight: () => rotateTerrain(2)
+            BracketLeft: () => rotateSelection(-2),
+            BracketRight: () => rotateSelection(2)
         }),
-        [onRedo, onUndo, rotateTerrain]
+        [onRedo, onUndo, rotateSelection]
     );
 
     useKeyboard({
@@ -130,8 +153,13 @@ export function useEditorPage() {
     return {
         map,
         terrainPalette,
+        furniturePalette,
         selectedTerrain,
         setSelectedTerrain,
+        selectedFurniture,
+        setSelectedFurniture,
+        editorPanel,
+        setEditorPanel,
         history,
         savedMessage,
         onSave,

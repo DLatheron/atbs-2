@@ -1,8 +1,24 @@
-import { TilePos, Vec2 } from "@atbs/maths";
-import { SelectedTerrain, TerrainPaletteWire, TrackingSpeed } from "@atbs/shared-data";
+import { Orientation, TilePos, Vec2, rotateOrientation } from "@atbs/maths";
+import {
+    FurniturePaletteWire,
+    SelectedFurniture,
+    SelectedTerrain,
+    TerrainPaletteWire,
+    TrackingSpeed
+} from "@atbs/shared-data";
 import { ImageCache } from "./ImageCache";
 import { World } from "./World";
+import { CanvasLoopProps } from "./components/CanvasLoop";
 import { ModeHandler } from "./modeHandlers/ModeHandler";
+import { drawEditorHoverTileOutline } from "./pages/Editor/editorHoverTileOverlay";
+import {
+    createDefaultSelectedFurniture,
+    getFurnitureBrushSize,
+    getFurnitureHoverSize,
+    getFurniturePaletteEntryId,
+    getPaintRandomiseOrientation as getFurniturePaintRandomiseOrientation,
+    rotateFurnitureSelection
+} from "./helpers/furnitureHelpers";
 import {
     createDefaultSelectedTerrain,
     getPaintOrientation,
@@ -10,12 +26,16 @@ import {
     getTerrainId
 } from "./helpers/terrainHelpers";
 
+export type EditorPanelMode = "Terrain" | "Furniture" | "Walls" | "Items" | "Markers";
+
 export class EditorWorld extends World {
     private static readonly _singleton = new EditorWorld(ImageCache.GetSingleton());
 
     private _terrainPalette: TerrainPaletteWire | null = null;
+    private _furniturePalette: FurniturePaletteWire | null = null;
     private _selectedTerrain: SelectedTerrain = createDefaultSelectedTerrain();
-    private _terrainModeActive = true;
+    private _selectedFurniture: SelectedFurniture = createDefaultSelectedFurniture();
+    private _editorPanel: EditorPanelMode = "Terrain";
     private _paintContext: { lastTilePos?: TilePos } | null = null;
     private _mapDrag: {
         worldPos: Vec2;
@@ -24,6 +44,9 @@ export class EditorWorld extends World {
         lastCanvasPos: Vec2;
         movementDelta: Vec2;
     } | null = null;
+    private _hoverTilePos: TilePos | undefined;
+    private _hoverTileSize = new Vec2(1, 1);
+    private _hoverTileOrientation = Orientation.NORTH;
 
     static GetSingleton(): EditorWorld {
         return EditorWorld._singleton;
@@ -37,6 +60,14 @@ export class EditorWorld extends World {
         this._terrainPalette = value;
     }
 
+    get furniturePalette(): FurniturePaletteWire | null {
+        return this._furniturePalette;
+    }
+
+    set furniturePalette(value: FurniturePaletteWire | null) {
+        this._furniturePalette = value;
+    }
+
     get selectedTerrain(): SelectedTerrain {
         return this._selectedTerrain;
     }
@@ -45,12 +76,21 @@ export class EditorWorld extends World {
         this._selectedTerrain = value;
     }
 
-    get terrainModeActive(): boolean {
-        return this._terrainModeActive;
+    get selectedFurniture(): SelectedFurniture {
+        return this._selectedFurniture;
     }
 
-    set terrainModeActive(value: boolean) {
-        this._terrainModeActive = value;
+    set selectedFurniture(value: SelectedFurniture) {
+        this._selectedFurniture = value;
+    }
+
+    get editorPanel(): EditorPanelMode {
+        return this._editorPanel;
+    }
+
+    set editorPanel(value: EditorPanelMode) {
+        this._editorPanel = value;
+        this._updateHoverTileSize();
     }
 
     constructor(imageCache: ImageCache) {
@@ -67,6 +107,40 @@ export class EditorWorld extends World {
         this.camera.update({ time, frameDelta });
     }
 
+    renderDeploymentPhase(canvasLoopProps: CanvasLoopProps) {
+        super.renderDeploymentPhase(canvasLoopProps);
+
+        if (!this._hoverTilePos || !this.hasMap) {
+            return;
+        }
+
+        const { context } = canvasLoopProps;
+        const { tileSize } = this.map;
+        const zoom = this.camera.zoom;
+        const scale = new Vec2(zoom, zoom);
+        const offset = new Vec2((tileSize * zoom) / 2, (tileSize * zoom) / 2);
+
+        drawEditorHoverTileOutline(
+            context,
+            this.camera,
+            this._hoverTilePos,
+            tileSize,
+            this._hoverTileSize.x,
+            this._hoverTileSize.y,
+            scale,
+            offset,
+            this.frameTime
+        );
+    }
+
+    onMouseEnter(event: MouseEvent | React.MouseEvent) {
+        this._updateHoverTile(event);
+    }
+
+    onMouseLeave(_event: MouseEvent | React.MouseEvent) {
+        this._hoverTilePos = undefined;
+    }
+
     onMouseDown(event: MouseEvent | React.MouseEvent) {
         if (!this.hasMap) {
             return;
@@ -77,9 +151,14 @@ export class EditorWorld extends World {
             return;
         }
 
-        if (event.button === 0 && this._terrainModeActive) {
-            this._paintContext = {};
-            this._paintTile(event);
+        if (event.button === 0) {
+            if (this._editorPanel === "Terrain") {
+                this._paintContext = {};
+                this._paintTile(event);
+            } else if (this._editorPanel === "Furniture") {
+                this._paintContext = {};
+                this._paintFurniture(event);
+            }
         }
     }
 
@@ -105,13 +184,34 @@ export class EditorWorld extends World {
             return;
         }
 
-        if (this._paintContext && this._terrainModeActive) {
+        this._updateHoverTile(event);
+
+        if (!this._paintContext) {
+            return;
+        }
+
+        if (this._editorPanel === "Terrain") {
             this._paintTile(event);
+        } else if (this._editorPanel === "Furniture") {
+            this._paintFurniture(event);
         }
     }
 
     onWheel(event: WheelEvent | React.WheelEvent) {
         super.onWheel(event);
+    }
+
+    rotateSelection(steps: -2 | 2) {
+        if (this._editorPanel === "Furniture") {
+            this._selectedFurniture = rotateFurnitureSelection(this._selectedFurniture, steps);
+            this._updateHoverTileSize();
+            return;
+        }
+
+        this._selectedTerrain = {
+            ...this._selectedTerrain,
+            orientation: rotateOrientation(this._selectedTerrain.orientation, steps)
+        };
     }
 
     undo() {
@@ -178,9 +278,7 @@ export class EditorWorld extends World {
             return;
         }
 
-        const canvasPos = ModeHandler.EventToCanvasPos(event);
-        const worldPos = this.camera.canvasToWorld(canvasPos);
-        const tilePos = this.worldToTile(worldPos);
+        const tilePos = this._getEventTilePos(event);
 
         if (
             this._paintContext.lastTilePos &&
@@ -216,5 +314,133 @@ export class EditorWorld extends World {
                 )
             }
         });
+    }
+
+    private _paintFurniture(event: MouseEvent | React.MouseEvent) {
+        if (!this._furniturePalette || !this._paintContext) {
+            return;
+        }
+
+        const tilePos = this._getEventHoverTilePos(event);
+        const brushSize = getFurnitureBrushSize(this._furniturePalette, this._selectedFurniture);
+
+        if (
+            this._paintContext.lastTilePos &&
+            TilePos.IsEqual(this._paintContext.lastTilePos, tilePos)
+        ) {
+            return;
+        }
+
+        this._paintContext.lastTilePos = tilePos;
+
+        if (event.altKey) {
+            this.sendMessage({
+                type: "client:editor:furniture:reset",
+                payload: {
+                    tilePos,
+                    brushSize,
+                    brushOrientation: this._hoverTileOrientation
+                }
+            });
+            return;
+        }
+
+        const furnitureId = getFurniturePaletteEntryId(
+            this._furniturePalette,
+            this._selectedFurniture
+        );
+        if (!furnitureId) {
+            return;
+        }
+
+        this.sendMessage({
+            type: "client:editor:furniture:paint",
+            payload: {
+                tilePos,
+                furnitureId,
+                brushSize,
+                brushOrientation: this._hoverTileOrientation,
+                orientation: this._selectedFurniture.orientation,
+                randomiseOrientation: getFurniturePaintRandomiseOrientation(
+                    this._furniturePalette,
+                    this._selectedFurniture
+                )
+            }
+        });
+    }
+
+    private _getEventHoverTilePos(event: MouseEvent | React.MouseEvent): TilePos {
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        const worldPos = this.camera.canvasToWorld(canvasPos);
+        const { tileSize } = this.map;
+        const hoverTileSize = new Vec2(
+            this._hoverTileSize.x * tileSize,
+            this._hoverTileSize.y * tileSize
+        );
+        const widthPx =
+            this._hoverTileOrientation === Orientation.NORTH ||
+            this._hoverTileOrientation === Orientation.SOUTH
+                ? hoverTileSize.x
+                : hoverTileSize.y;
+        const heightPx =
+            this._hoverTileOrientation === Orientation.NORTH ||
+            this._hoverTileOrientation === Orientation.SOUTH
+                ? hoverTileSize.y
+                : hoverTileSize.x;
+
+        const offset = new Vec2((widthPx - tileSize) / 2, (heightPx - tileSize) / 2);
+
+        return this.worldToTile(worldPos.sub(offset));
+    }
+
+    private _getEventTilePos(event: MouseEvent | React.MouseEvent): TilePos {
+        if (this._editorPanel === "Furniture") {
+            return this._getEventHoverTilePos(event);
+        }
+
+        const canvasPos = ModeHandler.EventToCanvasPos(event);
+        const worldPos = this.camera.canvasToWorld(canvasPos);
+        return this.worldToTile(worldPos);
+    }
+
+    private _updateHoverTile(event: MouseEvent | React.MouseEvent) {
+        if (!this.hasMap) {
+            this._hoverTilePos = undefined;
+            return;
+        }
+
+        const tilePos = this._getEventTilePos(event);
+
+        if (
+            tilePos.col < 0 ||
+            tilePos.row < 0 ||
+            tilePos.col >= this.map.width ||
+            tilePos.row >= this.map.height
+        ) {
+            this._hoverTilePos = undefined;
+            return;
+        }
+
+        if (!this._hoverTilePos || !TilePos.IsEqual(this._hoverTilePos, tilePos)) {
+            this._hoverTilePos = tilePos;
+        }
+    }
+
+    private _updateHoverTileSize() {
+        if (this._editorPanel === "Furniture" && this._furniturePalette) {
+            this._hoverTileSize = getFurnitureHoverSize(
+                this._furniturePalette,
+                this._selectedFurniture
+            );
+            this._hoverTileOrientation = this._selectedFurniture.orientation;
+            return;
+        }
+
+        this._hoverTileSize = new Vec2(1, 1);
+        this._hoverTileOrientation = Orientation.NORTH;
+    }
+
+    syncEditorState() {
+        this._updateHoverTileSize();
     }
 }

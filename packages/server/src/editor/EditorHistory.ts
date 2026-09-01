@@ -1,9 +1,11 @@
 import { ITilePos, Orientation, TilePos, randomOrientation } from "@atbs/maths";
-import { TileUpdate } from "@atbs/shared-data";
+import { FurnitureState, TileUpdate } from "@atbs/shared-data";
 import type { WorldMap } from "../game/WorldMap.js";
 import { TerrainManager } from "../game/TerrainManager.js";
 import { ImageManager, isCompoundId } from "../game/ImageManager.js";
 import { TerrainFactory } from "../game/TerrainFactory.js";
+import { FurnitureManager } from "../game/FurnitureManager.js";
+import { FurnitureId } from "@atbs/shared-data";
 
 export interface TerrainTileState {
     terrainId: string;
@@ -16,9 +18,27 @@ export interface TerrainEditCommand {
     after: TerrainTileState;
 }
 
+export interface FurnitureTileState {
+    furnitureId?: FurnitureId;
+    orientation?: Orientation;
+    state?: FurnitureState;
+}
+
+export interface FurnitureEditCommand {
+    tiles: {
+        tilePos: ITilePos;
+        before: FurnitureTileState;
+        after: FurnitureTileState;
+    }[];
+}
+
+type EditCommand =
+    | { type: "terrain"; command: TerrainEditCommand }
+    | { type: "furniture"; command: FurnitureEditCommand };
+
 export class EditorHistory {
-    private readonly _undoStack: TerrainEditCommand[] = [];
-    private readonly _redoStack: TerrainEditCommand[] = [];
+    private readonly _undoStack: EditCommand[] = [];
+    private readonly _redoStack: EditCommand[] = [];
 
     get canUndo(): boolean {
         return this._undoStack.length > 0;
@@ -41,32 +61,100 @@ export class EditorHistory {
             return;
         }
 
-        this._undoStack.push(command);
+        this._undoStack.push({ type: "terrain", command });
         this._redoStack.length = 0;
     }
 
-    async undo(map: WorldMap): Promise<TileUpdate | undefined> {
-        const command = this._undoStack.pop();
-        if (!command) {
-            return undefined;
+    recordFurnitureEdit(command: FurnitureEditCommand) {
+        if (command.tiles.length === 0) {
+            return;
         }
 
-        await this._applyTerrainState(map, command.tilePos, command.before);
-        this._redoStack.push(command);
+        const hasChanges = command.tiles.some(
+            (tile) =>
+                tile.before.furnitureId !== tile.after.furnitureId ||
+                tile.before.orientation !== tile.after.orientation ||
+                tile.before.state !== tile.after.state
+        );
 
-        return map.getTile(new TilePos(command.tilePos)).generateTileUpdate();
+        if (!hasChanges) {
+            return;
+        }
+
+        this._undoStack.push({ type: "furniture", command });
+        this._redoStack.length = 0;
     }
 
-    async redo(map: WorldMap): Promise<TileUpdate | undefined> {
-        const command = this._redoStack.pop();
-        if (!command) {
-            return undefined;
+    async undo(map: WorldMap, furnitureManager: FurnitureManager): Promise<TileUpdate[]> {
+        const edit = this._undoStack.pop();
+        if (!edit) {
+            return [];
         }
 
-        await this._applyTerrainState(map, command.tilePos, command.after);
-        this._undoStack.push(command);
+        const updates = await this._applyEdit(map, furnitureManager, edit, "before");
+        this._redoStack.push(edit);
 
-        return map.getTile(new TilePos(command.tilePos)).generateTileUpdate();
+        return updates;
+    }
+
+    async redo(map: WorldMap, furnitureManager: FurnitureManager): Promise<TileUpdate[]> {
+        const edit = this._redoStack.pop();
+        if (!edit) {
+            return [];
+        }
+
+        const updates = await this._applyEdit(map, furnitureManager, edit, "after");
+        this._undoStack.push(edit);
+
+        return updates;
+    }
+
+    private async _applyEdit(
+        map: WorldMap,
+        furnitureManager: FurnitureManager,
+        edit: EditCommand,
+        direction: "before" | "after"
+    ): Promise<TileUpdate[]> {
+        if (edit.type === "terrain") {
+            const state = edit.command[direction];
+            await this._applyTerrainState(map, edit.command.tilePos, state);
+            return [map.getTile(new TilePos(edit.command.tilePos)).generateTileUpdate()];
+        }
+
+        const updates: TileUpdate[] = [];
+        for (const tileEdit of edit.command.tiles) {
+            const state = tileEdit[direction];
+            await this._applyFurnitureState(
+                map,
+                furnitureManager,
+                tileEdit.tilePos,
+                state
+            );
+            updates.push(map.getTile(new TilePos(tileEdit.tilePos)).generateTileUpdate());
+        }
+        return updates;
+    }
+
+    private async _applyFurnitureState(
+        map: WorldMap,
+        furnitureManager: FurnitureManager,
+        tilePos: ITilePos,
+        state: FurnitureTileState
+    ) {
+        const tile = map.getTile(new TilePos(tilePos));
+
+        if (!state.furnitureId) {
+            tile.clearFurniture();
+            return;
+        }
+
+        tile.setFurniture(
+            furnitureManager.newFurniture(state.furnitureId, {
+                location: new TilePos(tilePos),
+                orientation: state.orientation,
+                state: state.state
+            })
+        );
     }
 
     static resolveOrientation(

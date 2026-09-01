@@ -50,3 +50,29 @@ export const EditorHistoryState = z.object({
     canRedo: z.boolean()
 });
 export type EditorHistoryState = z.infer<typeof EditorHistoryState>;
+
+export const FurniturePaletteTileEntry = z.object({
+    id: z.string().nonempty(),
+    name: z.string().nonempty(),
+    uiImage: RenderList
+});
+export type FurniturePaletteTileEntry = z.infer<typeof FurniturePaletteTileEntry>;
+
+export const FurniturePaletteEntry = z.object({
+    id: z.string().nonempty(),
+    furniture: z.array(z.array(FurniturePaletteTileEntry)).min(1),
+    allowRandomOrientation: z.boolean()
+});
+export type FurniturePaletteEntry = z.infer<typeof FurniturePaletteEntry>;
+
+export const FurniturePaletteWire = z.object({
+    furniture: z.array(FurniturePaletteEntry).min(1)
+});
+export type FurniturePaletteWire = z.infer<typeof FurniturePaletteWire>;
+
+export const SelectedFurniture = z.object({
+    index: z.number().int().nonnegative(),
+    orientation: z.enum(Orientation),
+    randomiseOrientation: z.boolean()
+});
+export type SelectedFurniture = z.infer<typeof SelectedFurniture>;

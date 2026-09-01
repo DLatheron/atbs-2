@@ -12,6 +12,7 @@ import { AnimationRecipeManager } from "./game/AnimationRecipeManager.js";
 import { VfxRecipeManager } from "./game/VfxRecipeManager.js";
 import { BlendManager } from "./game/BlendManager.js";
 import { TerrainPaletteManager } from "./editor/TerrainPaletteManager.js";
+import { FurniturePaletteManager } from "./editor/FurniturePaletteManager.js";
 
 export async function createApp(): Promise<Application> {
     const app = express();
@@ -31,6 +32,9 @@ export async function createApp(): Promise<Application> {
 
     const terrainPaletteManager = TerrainPaletteManager.GetSingleton();
     await terrainPaletteManager.loadTerrainPalettes();
+
+    const furniturePaletteManager = FurniturePaletteManager.GetSingleton();
+    await furniturePaletteManager.loadFurniturePalettes();
 
     const materialManager = MaterialManager.GetSingleton();
     await materialManager.loadMaterials();
@@ -60,6 +64,7 @@ export async function createApp(): Promise<Application> {
     app.locals.terrainManager = terrainManager;
     app.locals.blendManager = blendManager;
     app.locals.terrainPaletteManager = terrainPaletteManager;
+    app.locals.furniturePaletteManager = furniturePaletteManager;
     app.locals.materialManager = materialManager;
     app.locals.mapRecipeManager = mapRecipeManager;
     app.locals.unitRecipeManager = unitRecipeManager;
