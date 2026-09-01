@@ -124,12 +124,7 @@ export class EditorHistory {
         const updates: TileUpdate[] = [];
         for (const tileEdit of edit.command.tiles) {
             const state = tileEdit[direction];
-            await this._applyFurnitureState(
-                map,
-                furnitureManager,
-                tileEdit.tilePos,
-                state
-            );
+            await this._applyFurnitureState(map, furnitureManager, tileEdit.tilePos, state);
             updates.push(map.getTile(new TilePos(tileEdit.tilePos)).generateTileUpdate());
         }
         return updates;
@@ -186,11 +181,7 @@ export class EditorHistory {
         throw new Error(`Unknown terrain id: ${terrainId}`);
     }
 
-    private async _applyTerrainState(
-        map: WorldMap,
-        tilePos: ITilePos,
-        state: TerrainTileState
-    ) {
+    private async _applyTerrainState(map: WorldMap, tilePos: ITilePos, state: TerrainTileState) {
         await EditorHistory.ensureTerrainExists(state.terrainId);
         const tile = map.getTile(new TilePos(tilePos));
         tile.setTerrain(state.terrainId, state.orientation);

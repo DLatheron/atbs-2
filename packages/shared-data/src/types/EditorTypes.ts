@@ -76,3 +76,39 @@ export const SelectedFurniture = z.object({
     randomiseOrientation: z.boolean()
 });
 export type SelectedFurniture = z.infer<typeof SelectedFurniture>;
+
+export const WallEdgeTuple = z.tuple([
+    z.string().nullable(),
+    z.string().nullable(),
+    z.string().nullable(),
+    z.string().nullable()
+]);
+export type WallEdgeTuple = z.infer<typeof WallEdgeTuple>;
+
+export const WallPaletteEntry = z.object({
+    id: z.string().nonempty(),
+    name: z.string().nonempty(),
+    uiImage: RenderList,
+    edges: WallEdgeTuple
+});
+export type WallPaletteEntry = z.infer<typeof WallPaletteEntry>;
+
+export const WallHotKeyAction = z.object({
+    id: z.string().nonempty(),
+    orientation: z.enum(Orientation)
+});
+export type WallHotKeyAction = z.infer<typeof WallHotKeyAction>;
+
+export const WallPaletteWire = z.object({
+    walls: z.array(WallPaletteEntry).min(1),
+    hotKeys: z.record(z.string(), z.array(WallHotKeyAction)).optional()
+});
+export type WallPaletteWire = z.infer<typeof WallPaletteWire>;
+
+export const SelectedWall = z.object({
+    index: z.number().int().nonnegative(),
+    orientation: z.enum(Orientation),
+    autoFit: z.boolean(),
+    direction: z.enum(Orientation).optional()
+});
+export type SelectedWall = z.infer<typeof SelectedWall>;

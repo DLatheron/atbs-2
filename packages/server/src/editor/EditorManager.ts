@@ -4,10 +4,7 @@ import { config } from "../config/config.schema.js";
 import { Logger } from "@atbs/misc";
 
 export class EditorManager {
-    static readonly Logger: Logger = new Logger(
-        "EditorManager",
-        config.logLevels?.editorManager
-    );
+    static readonly Logger: Logger = new Logger("EditorManager", config.logLevels?.editorManager);
 
     private readonly _editors = new Map<EditorId, Editor>();
 

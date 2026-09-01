@@ -1,12 +1,15 @@
 import { Box, Button, Tab, Tabs, Typography } from "@mui/material";
 import { TerrainPanel } from "../../components/TerrainPanel";
 import { FurniturePanel } from "../../components/FurniturePanel";
+import { WallsPanel } from "../../components/WallsPanel";
 import {
     EditorHistoryState,
     FurniturePaletteWire,
     SelectedFurniture,
     SelectedTerrain,
-    TerrainPaletteWire
+    SelectedWall,
+    TerrainPaletteWire,
+    WallPaletteWire
 } from "@atbs/shared-data";
 import { EditorPanelMode } from "../../EditorWorld";
 
@@ -17,10 +20,13 @@ export interface EditorSidePanelProps {
     savedMessage: string | null;
     terrainPalette: TerrainPaletteWire | null;
     furniturePalette: FurniturePaletteWire | null;
+    wallPalette: WallPaletteWire | null;
     selectedTerrain: SelectedTerrain;
     onSelectedTerrainChange: (selectedTerrain: SelectedTerrain) => void;
     selectedFurniture: SelectedFurniture;
     onSelectedFurnitureChange: (selectedFurniture: SelectedFurniture) => void;
+    selectedWall: SelectedWall;
+    onSelectedWallChange: (selectedWall: SelectedWall) => void;
     editorPanel: EditorPanelMode;
     onEditorPanelChange: (editorPanel: EditorPanelMode) => void;
     history: EditorHistoryState;
@@ -33,10 +39,13 @@ export function EditorSidePanel({
     savedMessage,
     terrainPalette,
     furniturePalette,
+    wallPalette,
     selectedTerrain,
     onSelectedTerrainChange,
     selectedFurniture,
     onSelectedFurnitureChange,
+    selectedWall,
+    onSelectedWallChange,
     editorPanel,
     onEditorPanelChange,
     history,
@@ -77,6 +86,12 @@ export function EditorSidePanel({
                         furniturePalette={furniturePalette}
                         selectedFurniture={selectedFurniture}
                         onSelectedFurnitureChange={onSelectedFurnitureChange}
+                    />
+                ) : editorPanel === "Walls" && wallPalette ? (
+                    <WallsPanel
+                        wallPalette={wallPalette}
+                        selectedWall={selectedWall}
+                        onSelectedWallChange={onSelectedWallChange}
                     />
                 ) : (
                     <Typography variant="body2" color="text.secondary">

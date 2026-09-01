@@ -22,9 +22,7 @@
             ]
         }
     },
-    "materials": [
-        "thin-wood.material"
-    ],
+    "materials": ["thin-wood.material"],
     "hitPoints": {
         "max": 20
     },

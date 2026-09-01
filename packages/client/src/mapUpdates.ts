@@ -1,6 +1,7 @@
 import {
     ClientMap,
     DeathAnimation,
+    EditorMapWire,
     RenderList,
     RenderMode,
     SceneObject,
@@ -78,11 +79,7 @@ export async function preloadTraceImages(
     ]);
 }
 
-export function applyTileUpdate(
-    map: ClientMap,
-    update: TileUpdate,
-    imageCache?: ImageCache
-): void {
+export function applyTileUpdate(map: ClientMap, update: TileUpdate, imageCache?: ImageCache): void {
     applyTimedTileUpdate(map, { ...update, timeMs: 0 }, imageCache);
 }
 
@@ -107,6 +104,10 @@ export function applyTimedTileUpdate(
         update.tileByRenderMode[RenderMode.enum.MAP_MODE];
     map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][tilePos.col] =
         update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
+
+    if ("furnitureLayer" in map && update.furniture !== undefined) {
+        (map as EditorMapWire).furnitureLayer[tilePos.row][tilePos.col] = update.furniture;
+    }
 
     if (imageCache) {
         refreshTimedTileUpdateImages(imageCache, update);

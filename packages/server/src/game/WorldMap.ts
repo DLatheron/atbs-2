@@ -1,4 +1,4 @@
-import { ClientMap, RenderMode, MapId, type VisualType } from "@atbs/shared-data";
+import { ClientMap, EditorMapWire, RenderMode, MapId, type VisualType } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import {
@@ -312,6 +312,28 @@ export class WorldMap {
                 [RenderMode.enum.MAP_MODE]: mapModeTiles,
                 [RenderMode.enum.FIRE_MODE]: fireModeTiles
             }
+        };
+    }
+
+    renderEditorMap(): EditorMapWire {
+        const baseMap = this.renderDeploymentMap();
+        const furnitureLayer = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) => {
+                const furnitureState = tile.getFurnitureState();
+                if (!furnitureState.furnitureId) {
+                    return null;
+                }
+
+                return {
+                    furnitureId: furnitureState.furnitureId,
+                    orientation: furnitureState.orientation ?? Orientation.NORTH
+                };
+            })
+        );
+
+        return {
+            ...baseMap,
+            furnitureLayer
         };
     }
 

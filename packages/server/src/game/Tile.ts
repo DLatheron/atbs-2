@@ -170,7 +170,11 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         return this._furniture;
     }
 
-    getFurnitureState(): { furnitureId?: string; orientation?: Orientation; state?: FurnitureState } {
+    getFurnitureState(): {
+        furnitureId?: string;
+        orientation?: Orientation;
+        state?: FurnitureState;
+    } {
         if (!this._furniture) {
             return {};
         }
@@ -805,6 +809,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     generateTileUpdate(): TileUpdate {
+        const furnitureState = this.getFurnitureState();
+
         return {
             tilePos: this.location,
             tileByRenderMode: {
@@ -816,7 +822,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
                     renderMode: RenderMode.enum.FIRE_MODE,
                     states: []
                 })
-            }
+            },
+            furniture: furnitureState.furnitureId
+                ? {
+                      furnitureId: furnitureState.furnitureId,
+                      orientation: furnitureState.orientation ?? Orientation.NORTH
+                  }
+                : null
         };
     }
 

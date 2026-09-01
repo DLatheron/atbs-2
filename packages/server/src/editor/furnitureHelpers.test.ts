@@ -9,37 +9,29 @@ import {
 
 describe("resolveFurnitureTileOrientation", () => {
     it("uses placement orientation for single-tile furniture", () => {
-        expect(
-            resolveFurnitureTileOrientation(Orientation.NORTH, Orientation.EAST, false)
-        ).toBe(Orientation.EAST);
+        expect(resolveFurnitureTileOrientation(Orientation.NORTH, Orientation.EAST, false)).toBe(
+            Orientation.EAST
+        );
     });
 
     it("applies the same counter-rotation to every tile in a multi-tile piece", () => {
         const placementOrientation = Orientation.EAST;
 
-        expect(
-            resolveFurnitureTileOrientation(
-                Orientation.NORTH,
-                placementOrientation,
-                true
-            )
-        ).toBe(resolveTileOrientation(Orientation.NORTH, placementOrientation));
-        expect(
-            resolveFurnitureTileOrientation(
-                Orientation.NORTH,
-                placementOrientation,
-                true
-            )
-        ).toBe(rotateOrientation(Orientation.NORTH, -placementOrientation));
+        expect(resolveFurnitureTileOrientation(Orientation.NORTH, placementOrientation, true)).toBe(
+            resolveTileOrientation(Orientation.NORTH, placementOrientation)
+        );
+        expect(resolveFurnitureTileOrientation(Orientation.NORTH, placementOrientation, true)).toBe(
+            rotateOrientation(Orientation.NORTH, -placementOrientation)
+        );
     });
 
     it("adjusts directional multi-tile parts relative to the whole placement", () => {
-        expect(
-            resolveFurnitureTileOrientation(Orientation.EAST, Orientation.NORTH, true)
-        ).toBe(Orientation.EAST);
-        expect(
-            resolveFurnitureTileOrientation(Orientation.EAST, Orientation.EAST, true)
-        ).toBe(Orientation.NORTH);
+        expect(resolveFurnitureTileOrientation(Orientation.EAST, Orientation.NORTH, true)).toBe(
+            Orientation.EAST
+        );
+        expect(resolveFurnitureTileOrientation(Orientation.EAST, Orientation.EAST, true)).toBe(
+            Orientation.NORTH
+        );
     });
 });
 

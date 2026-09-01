@@ -33,8 +33,10 @@ import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import {
     EditorHistoryState,
     FurniturePaletteWire,
-    TerrainPaletteWire
+    TerrainPaletteWire,
+    WallPaletteWire
 } from "./EditorTypes.js";
+import { EditorMapWire } from "./PrimitiveTypes.js";
 import {
     AnimatableObjectRecipe,
     DeathAnimation,
@@ -130,7 +132,7 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     }),
     z.object({
         type: z.literal("server:editor:map"),
-        payload: ClientMap
+        payload: EditorMapWire
     }),
     z.object({
         type: z.literal("server:editor:saved"),
@@ -146,6 +148,10 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:editor:furniture:palette"),
         payload: FurniturePaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:wall:palette"),
+        payload: WallPaletteWire
     }),
     z.object({
         type: z.literal("server:editor:map:update"),

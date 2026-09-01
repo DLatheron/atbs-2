@@ -1,9 +1,5 @@
 import { useCallback } from "react";
-import {
-    EditorQueryParams,
-    parseURLSearchParams,
-    ServerToClientMessage
-} from "@atbs/shared-data";
+import { EditorQueryParams, parseURLSearchParams, ServerToClientMessage } from "@atbs/shared-data";
 import { Container } from "@mui/material";
 import { useSearchParams } from "react-router-dom";
 

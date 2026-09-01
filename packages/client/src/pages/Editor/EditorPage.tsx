@@ -1,12 +1,7 @@
 import { Container, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { EditorId } from "@atbs/shared-data";
-import {
-    CanvasLoopProps,
-    MapComponent,
-    SidePanel,
-    TitleBarComponent
-} from "../../components";
+import { CanvasLoopProps, MapComponent, SidePanel, TitleBarComponent } from "../../components";
 import { useEditorWorld } from "../../hooks";
 import { useEditorPage } from "./useEditorPage";
 import { EditorSidePanel } from "./EditorSidePanel";
@@ -25,10 +20,13 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         onSave,
         terrainPalette,
         furniturePalette,
+        wallPalette,
         selectedTerrain,
         setSelectedTerrain,
         selectedFurniture,
         setSelectedFurniture,
+        selectedWall,
+        setSelectedWall,
         editorPanel,
         setEditorPanel,
         history,
@@ -129,10 +127,13 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     savedMessage={savedMessage}
                     terrainPalette={terrainPalette}
                     furniturePalette={furniturePalette}
+                    wallPalette={wallPalette}
                     selectedTerrain={selectedTerrain}
                     onSelectedTerrainChange={setSelectedTerrain}
                     selectedFurniture={selectedFurniture}
                     onSelectedFurnitureChange={setSelectedFurniture}
+                    selectedWall={selectedWall}
+                    onSelectedWallChange={setSelectedWall}
                     editorPanel={editorPanel}
                     onEditorPanelChange={setEditorPanel}
                     history={history}

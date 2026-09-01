@@ -1,31 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Orientation } from "@atbs/maths";
 import {
-    ClientMap,
     EditorHistoryState,
+    EditorMapWire,
     FurniturePaletteWire,
     SelectedFurniture,
     SelectedTerrain,
-    TerrainPaletteWire
+    SelectedWall,
+    TerrainPaletteWire,
+    WallPaletteWire
 } from "@atbs/shared-data";
 import { useEditorMessageManager, useEditorWorld, useImageCache, useKeyboard } from "../../hooks";
 import { applyTileUpdates } from "../../mapUpdates";
 import { createDefaultSelectedFurniture } from "../../helpers/furnitureHelpers";
 import { createDefaultSelectedTerrain } from "../../helpers/terrainHelpers";
+import { applyWallHotKey, createDefaultSelectedWall } from "../../helpers/wallHelpers";
 import { EditorPanelMode, EditorWorld } from "../../EditorWorld";
 
 export function useEditorPage() {
     const { messageManager, sendMessage } = useEditorMessageManager();
     const { world } = useEditorWorld();
     const { imageCache } = useImageCache();
-    const [map, setMap] = useState<ClientMap | null>(null);
+    const [map, setMap] = useState<EditorMapWire | null>(null);
     const [terrainPalette, setTerrainPalette] = useState<TerrainPaletteWire | null>(null);
     const [furniturePalette, setFurniturePalette] = useState<FurniturePaletteWire | null>(null);
+    const [wallPalette, setWallPalette] = useState<WallPaletteWire | null>(null);
     const [selectedTerrain, setSelectedTerrain] = useState<SelectedTerrain>(
         createDefaultSelectedTerrain()
     );
     const [selectedFurniture, setSelectedFurniture] = useState<SelectedFurniture>(
         createDefaultSelectedFurniture()
     );
+    const [selectedWall, setSelectedWall] = useState<SelectedWall>(createDefaultSelectedWall());
     const [editorPanel, setEditorPanel] = useState<EditorPanelMode>("Terrain");
     const [history, setHistory] = useState<EditorHistoryState>({
         canUndo: false,
@@ -43,6 +49,17 @@ export function useEditorPage() {
     }, [world, selectedFurniture]);
 
     useEffect(() => {
+        world.selectedWall = selectedWall;
+    }, [world, selectedWall]);
+
+    useEffect(() => {
+        (world as EditorWorld).onSelectedWallChange = setSelectedWall;
+        return () => {
+            (world as EditorWorld).onSelectedWallChange = null;
+        };
+    }, [world]);
+
+    useEffect(() => {
         world.editorPanel = editorPanel;
         world.syncEditorState();
     }, [world, editorPanel]);
@@ -54,6 +71,7 @@ export function useEditorPage() {
             messageManager.registerHandler("server:editor:map", (_context, payload) => {
                 console.info("Received editor map", payload.width, "x", payload.height);
                 world.map = payload;
+                (world as EditorWorld).furnitureLayer = payload.furnitureLayer;
                 setMap(payload);
             }),
 
@@ -62,9 +80,17 @@ export function useEditorPage() {
                 setTerrainPalette(payload);
             }),
 
-            messageManager.registerHandler("server:editor:furniture:palette", (_context, payload) => {
-                world.furniturePalette = payload;
-                setFurniturePalette(payload);
+            messageManager.registerHandler(
+                "server:editor:furniture:palette",
+                (_context, payload) => {
+                    world.furniturePalette = payload;
+                    setFurniturePalette(payload);
+                }
+            ),
+
+            messageManager.registerHandler("server:editor:wall:palette", (_context, payload) => {
+                world.wallPalette = payload;
+                setWallPalette(payload);
             }),
 
             messageManager.registerHandler("server:editor:map:update", (_context, payload) => {
@@ -120,12 +146,34 @@ export function useEditorPage() {
             (world as EditorWorld).rotateSelection(steps);
             if (editorPanel === "Furniture") {
                 setSelectedFurniture({ ...(world as EditorWorld).selectedFurniture });
+            } else if (editorPanel === "Walls") {
+                setSelectedWall({ ...(world as EditorWorld).selectedWall });
             } else {
                 setSelectedTerrain({ ...(world as EditorWorld).selectedTerrain });
             }
         },
         [world, editorPanel]
     );
+
+    useEffect(() => {
+        if (editorPanel !== "Walls" || !wallPalette) {
+            return;
+        }
+
+        const onWallHotKeyDown = (event: KeyboardEvent) => {
+            if (event.ctrlKey || event.metaKey || event.altKey) {
+                return;
+            }
+
+            setSelectedWall(
+                (current: SelectedWall) =>
+                    applyWallHotKey(wallPalette, current, event.key) ?? current
+            );
+        };
+
+        window.addEventListener("keydown", onWallHotKeyDown);
+        return () => window.removeEventListener("keydown", onWallHotKeyDown);
+    }, [editorPanel, wallPalette]);
 
     const keyMap = useMemo(
         () => ({
@@ -140,13 +188,60 @@ export function useEditorPage() {
                 }
             },
             BracketLeft: () => rotateSelection(-2),
-            BracketRight: () => rotateSelection(2)
+            BracketRight: () => rotateSelection(2),
+            ArrowUp: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(Orientation.NORTH);
+                }
+            },
+            ArrowRight: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(Orientation.EAST);
+                }
+            },
+            ArrowDown: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(Orientation.SOUTH);
+                }
+            },
+            ArrowLeft: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(Orientation.WEST);
+                }
+            }
         }),
-        [onRedo, onUndo, rotateSelection]
+        [onRedo, onUndo, rotateSelection, editorPanel, world]
+    );
+
+    const keyUpMap = useMemo(
+        () => ({
+            ArrowUp: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(undefined);
+                }
+            },
+            ArrowRight: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(undefined);
+                }
+            },
+            ArrowDown: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(undefined);
+                }
+            },
+            ArrowLeft: () => {
+                if (editorPanel === "Walls") {
+                    (world as EditorWorld).setWallDirection(undefined);
+                }
+            }
+        }),
+        [editorPanel, world]
     );
 
     useKeyboard({
         keyMap,
+        keyUpMap,
         disabled: false
     });
 
@@ -154,10 +249,13 @@ export function useEditorPage() {
         map,
         terrainPalette,
         furniturePalette,
+        wallPalette,
         selectedTerrain,
         setSelectedTerrain,
         selectedFurniture,
         setSelectedFurniture,
+        selectedWall,
+        setSelectedWall,
         editorPanel,
         setEditorPanel,
         history,

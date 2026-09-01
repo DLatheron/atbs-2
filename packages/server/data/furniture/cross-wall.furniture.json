@@ -1,7 +1,7 @@
 {
-    "id": "wall.furniture",
-    "name": "Wall",
-    "description": [{ "text": "A concrete wall" }],
+    "id": "cross-wall.furniture",
+    "name": "Wall 4-Way Junction",
+    "description": [{ "text": "A four-way wall junction" }],
     "renderable": {
         "default": {
             "default": [{ "imageId": "wall" }],

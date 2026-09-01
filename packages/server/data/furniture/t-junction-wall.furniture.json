@@ -1,0 +1,24 @@
+{
+    "id": "t-junction-wall.furniture",
+    "name": "Wall T-Junction",
+    "description": [{ "text": "A wall T-junction" }],
+    "renderable": {
+        "default": {
+            "default": [{ "imageId": "wall" }, { "imageId": "partial-wall", "orientation": 6 }],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                { "imageId": "wall-cl" },
+                { "imageId": "partial-wall-cl", "orientation": 6 }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["concrete.material"],
+    "hitPoints": { "max": 200 },
+    "movementObstruction": {
+        "default": { "default": 200 },
+        "destroyed": { "default": 0 }
+    }
+}

@@ -15,10 +15,7 @@ export function rotateSample(pos: IVec2, dimensions: IVec2, orientation: Orienta
     }
 }
 
-export function iterateFurnitureTiles(
-    dimensions: IVec2,
-    callback: (pos: IVec2) => void
-): void {
+export function iterateFurnitureTiles(dimensions: IVec2, callback: (pos: IVec2) => void): void {
     for (let y = 0; y < dimensions.y; y++) {
         for (let x = 0; x < dimensions.x; x++) {
             callback({ x, y });
@@ -26,10 +23,7 @@ export function iterateFurnitureTiles(
     }
 }
 
-export function getBrushDimensions(
-    brushSize: IVec2,
-    brushOrientation: Orientation
-): Vec2 {
+export function getBrushDimensions(brushSize: IVec2, brushOrientation: Orientation): Vec2 {
     return brushOrientation === Orientation.NORTH || brushOrientation === Orientation.SOUTH
         ? new Vec2(brushSize.x, brushSize.y)
         : new Vec2(brushSize.y, brushSize.x);

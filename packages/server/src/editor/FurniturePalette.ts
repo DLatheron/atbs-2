@@ -75,7 +75,10 @@ export class FurniturePalette {
     }
 
     toWireFormat(furnitureRecipeManager: FurnitureRecipeManager): FurniturePaletteWire {
-        const uiCache = new Map<string, { name: string; uiImage: ReturnType<SceneObject["getRenderList"]> }>();
+        const uiCache = new Map<
+            string,
+            { name: string; uiImage: ReturnType<SceneObject["getRenderList"]> }
+        >();
 
         const getUiEntry = (furnitureId: string) => {
             const cached = uiCache.get(furnitureId);

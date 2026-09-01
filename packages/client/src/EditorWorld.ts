@@ -1,10 +1,13 @@
 import { Orientation, TilePos, Vec2, rotateOrientation } from "@atbs/maths";
 import {
+    EditorFurnitureTile,
     FurniturePaletteWire,
     SelectedFurniture,
     SelectedTerrain,
+    SelectedWall,
     TerrainPaletteWire,
-    TrackingSpeed
+    TrackingSpeed,
+    WallPaletteWire
 } from "@atbs/shared-data";
 import { ImageCache } from "./ImageCache";
 import { World } from "./World";
@@ -20,6 +23,12 @@ import {
     rotateFurnitureSelection
 } from "./helpers/furnitureHelpers";
 import {
+    createDefaultSelectedWall,
+    getWallId,
+    matchWallForTile,
+    rotateWallSelection
+} from "./helpers/wallHelpers";
+import {
     createDefaultSelectedTerrain,
     getPaintOrientation,
     getPaintRandomiseOrientation,
@@ -33,8 +42,12 @@ export class EditorWorld extends World {
 
     private _terrainPalette: TerrainPaletteWire | null = null;
     private _furniturePalette: FurniturePaletteWire | null = null;
+    private _wallPalette: WallPaletteWire | null = null;
+    private _furnitureLayer: EditorFurnitureTile[][] | null = null;
     private _selectedTerrain: SelectedTerrain = createDefaultSelectedTerrain();
     private _selectedFurniture: SelectedFurniture = createDefaultSelectedFurniture();
+    private _selectedWall: SelectedWall = createDefaultSelectedWall();
+    private _onSelectedWallChange: ((selectedWall: SelectedWall) => void) | null = null;
     private _editorPanel: EditorPanelMode = "Terrain";
     private _paintContext: { lastTilePos?: TilePos } | null = null;
     private _mapDrag: {
@@ -68,6 +81,22 @@ export class EditorWorld extends World {
         this._furniturePalette = value;
     }
 
+    get wallPalette(): WallPaletteWire | null {
+        return this._wallPalette;
+    }
+
+    set wallPalette(value: WallPaletteWire | null) {
+        this._wallPalette = value;
+    }
+
+    get furnitureLayer(): EditorFurnitureTile[][] | null {
+        return this._furnitureLayer;
+    }
+
+    set furnitureLayer(value: EditorFurnitureTile[][] | null) {
+        this._furnitureLayer = value;
+    }
+
     get selectedTerrain(): SelectedTerrain {
         return this._selectedTerrain;
     }
@@ -84,6 +113,18 @@ export class EditorWorld extends World {
         this._selectedFurniture = value;
     }
 
+    get selectedWall(): SelectedWall {
+        return this._selectedWall;
+    }
+
+    set selectedWall(value: SelectedWall) {
+        this._selectedWall = value;
+    }
+
+    set onSelectedWallChange(callback: ((selectedWall: SelectedWall) => void) | null) {
+        this._onSelectedWallChange = callback;
+    }
+
     get editorPanel(): EditorPanelMode {
         return this._editorPanel;
     }
@@ -96,6 +137,22 @@ export class EditorWorld extends World {
     constructor(imageCache: ImageCache) {
         super(imageCache);
         this._interactionHandler = null;
+    }
+
+    setWallDirection(direction: Orientation | undefined) {
+        if (this._selectedWall.direction === direction) {
+            return;
+        }
+
+        this._selectedWall = {
+            ...this._selectedWall,
+            direction
+        };
+        this._notifySelectedWallChange();
+
+        if (this._hoverTilePos) {
+            this._updateWallPreview(this._hoverTilePos);
+        }
     }
 
     updateFrame({ time, frameDelta }: { time: number; frameDelta: number }) {
@@ -134,9 +191,14 @@ export class EditorWorld extends World {
     }
 
     onMouseEnter(event: MouseEvent | React.MouseEvent) {
+        if (!this.hasMap) {
+            return;
+        }
+
         this._updateHoverTile(event);
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onMouseLeave(_event: MouseEvent | React.MouseEvent) {
         this._hoverTilePos = undefined;
     }
@@ -158,6 +220,9 @@ export class EditorWorld extends World {
             } else if (this._editorPanel === "Furniture") {
                 this._paintContext = {};
                 this._paintFurniture(event);
+            } else if (this._editorPanel === "Walls") {
+                this._paintContext = {};
+                this._paintWall(event);
             }
         }
     }
@@ -194,6 +259,8 @@ export class EditorWorld extends World {
             this._paintTile(event);
         } else if (this._editorPanel === "Furniture") {
             this._paintFurniture(event);
+        } else if (this._editorPanel === "Walls") {
+            this._paintWall(event);
         }
     }
 
@@ -205,6 +272,12 @@ export class EditorWorld extends World {
         if (this._editorPanel === "Furniture") {
             this._selectedFurniture = rotateFurnitureSelection(this._selectedFurniture, steps);
             this._updateHoverTileSize();
+            return;
+        }
+
+        if (this._editorPanel === "Walls") {
+            this._selectedWall = rotateWallSelection(this._selectedWall, steps);
+            this._notifySelectedWallChange();
             return;
         }
 
@@ -369,6 +442,47 @@ export class EditorWorld extends World {
         });
     }
 
+    private _paintWall(event: MouseEvent | React.MouseEvent) {
+        if (!this._wallPalette || !this._paintContext) {
+            return;
+        }
+
+        const tilePos = this._getEventTilePos(event);
+
+        if (
+            this._paintContext.lastTilePos &&
+            TilePos.IsEqual(this._paintContext.lastTilePos, tilePos)
+        ) {
+            return;
+        }
+
+        this._paintContext.lastTilePos = tilePos;
+
+        if (event.altKey) {
+            this.sendMessage({
+                type: "client:editor:wall:reset",
+                payload: { tilePos }
+            });
+            return;
+        }
+
+        const wallId = getWallId(this._wallPalette, this._selectedWall);
+        if (!wallId) {
+            return;
+        }
+
+        this.sendMessage({
+            type: "client:editor:wall:paint",
+            payload: {
+                tilePos,
+                wallId,
+                orientation: this._selectedWall.orientation,
+                autoFit: this._selectedWall.autoFit,
+                direction: this._selectedWall.direction
+            }
+        });
+    }
+
     private _getEventHoverTilePos(event: MouseEvent | React.MouseEvent): TilePos {
         const canvasPos = ModeHandler.EventToCanvasPos(event);
         const worldPos = this.camera.canvasToWorld(canvasPos);
@@ -423,7 +537,40 @@ export class EditorWorld extends World {
 
         if (!this._hoverTilePos || !TilePos.IsEqual(this._hoverTilePos, tilePos)) {
             this._hoverTilePos = tilePos;
+            this._updateWallPreview(tilePos);
         }
+    }
+
+    private _updateWallPreview(tilePos: TilePos) {
+        if (
+            this._editorPanel !== "Walls" ||
+            !this._selectedWall.autoFit ||
+            !this._wallPalette ||
+            !this._furnitureLayer
+        ) {
+            return;
+        }
+
+        const matched = matchWallForTile(
+            this._wallPalette,
+            this._furnitureLayer,
+            tilePos,
+            this._selectedWall
+        );
+
+        if (
+            matched.index === this._selectedWall.index &&
+            matched.orientation === this._selectedWall.orientation
+        ) {
+            return;
+        }
+
+        this._selectedWall = matched;
+        this._notifySelectedWallChange();
+    }
+
+    private _notifySelectedWallChange() {
+        this._onSelectedWallChange?.(this._selectedWall);
     }
 
     private _updateHoverTileSize() {

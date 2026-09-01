@@ -19,6 +19,7 @@ import { createDefaultMapRecipe } from "./createDefaultMapRecipe.js";
 import { EditorHistory, type FurnitureTileState } from "./EditorHistory.js";
 import { TerrainPaletteManager } from "./TerrainPaletteManager.js";
 import { FurniturePaletteManager } from "./FurniturePaletteManager.js";
+import { WallPaletteManager } from "./WallPaletteManager.js";
 import {
     getBrushDimensions,
     iterateFurnitureTiles,
@@ -80,6 +81,7 @@ export class Editor implements MapHost {
     private readonly _history: EditorHistory;
     private readonly _terrainPalette;
     private readonly _furniturePalette;
+    private readonly _wallPalette;
     private _isDestroying = false;
 
     constructor(
@@ -110,6 +112,7 @@ export class Editor implements MapHost {
         this._history = new EditorHistory();
         this._terrainPalette = TerrainPaletteManager.GetSingleton().getDefault();
         this._furniturePalette = FurniturePaletteManager.GetSingleton().getDefault();
+        this._wallPalette = WallPaletteManager.GetSingleton().getDefault();
 
         this._registerMessageHandlers();
     }
@@ -189,7 +192,7 @@ export class Editor implements MapHost {
     clientConnected(client: EditorClient): void {
         client.sendMessage({
             type: "server:editor:map",
-            payload: this._map.renderDeploymentMap()
+            payload: this._map.renderEditorMap()
         });
         client.sendMessage({
             type: "server:editor:terrain:palette",
@@ -197,9 +200,11 @@ export class Editor implements MapHost {
         });
         client.sendMessage({
             type: "server:editor:furniture:palette",
-            payload: this._furniturePalette.toWireFormat(
-                FurnitureRecipeManager.GetSingleton()
-            )
+            payload: this._furniturePalette.toWireFormat(FurnitureRecipeManager.GetSingleton())
+        });
+        client.sendMessage({
+            type: "server:editor:wall:palette",
+            payload: this._wallPalette.toWireFormat(FurnitureRecipeManager.GetSingleton())
         });
         client.sendMessage({
             type: "server:editor:history",
@@ -207,6 +212,7 @@ export class Editor implements MapHost {
         });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     clientDisconnected(_client: EditorClient): void {
         // No-op for now; session teardown happens when the last client is removed.
     }
@@ -272,17 +278,20 @@ export class Editor implements MapHost {
     }
 
     private _registerMessageHandlers() {
-        this._messageManager.registerHandler("client:editor:save", async (_context, _payload, from) => {
-            try {
-                const result = await this.saveMap();
-                from.sendMessage({
-                    type: "server:editor:saved",
-                    payload: result
-                });
-            } catch (error) {
-                this.logger.error("Failed to save editor map", error);
+        this._messageManager.registerHandler(
+            "client:editor:save",
+            async (_context, _payload, from) => {
+                try {
+                    const result = await this.saveMap();
+                    from.sendMessage({
+                        type: "server:editor:saved",
+                        payload: result
+                    });
+                } catch (error) {
+                    this.logger.error("Failed to save editor map", error);
+                }
             }
-        });
+        );
 
         this._messageManager.registerHandler(
             "client:editor:terrain:paint",
@@ -312,10 +321,26 @@ export class Editor implements MapHost {
             }
         );
 
+        this._messageManager.registerHandler(
+            "client:editor:wall:paint",
+            async (_context, payload) => {
+                await this._paintWall(payload);
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:wall:reset",
+            async (_context, payload) => {
+                await this._resetWall(payload.tilePos);
+            }
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         this._messageManager.registerHandler("client:editor:undo", async (_context, _payload) => {
             await this._undo();
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         this._messageManager.registerHandler("client:editor:redo", async (_context, _payload) => {
             await this._redo();
         });
@@ -476,6 +501,151 @@ export class Editor implements MapHost {
                 after: tile.getFurnitureState()
             });
         });
+
+        this._history.recordFurnitureEdit({ tiles: tileEdits });
+        this._broadcastTileUpdates(
+            tileEdits.map(({ tilePos: pos }) =>
+                this._map.getTile(new TilePos(pos)).generateTileUpdate()
+            )
+        );
+        this._broadcastHistory();
+    }
+
+    private async _paintWall(payload: {
+        tilePos: { row: number; col: number };
+        wallId: string;
+        orientation: Orientation;
+        autoFit: boolean;
+        direction?: Orientation;
+    }) {
+        const tilePos = new TilePos(payload.tilePos);
+        const affectedPositions = this._getWallRematchPositions(tilePos, payload.autoFit);
+        const beforeStates = new Map(
+            affectedPositions.map((pos) => [
+                pos.toString(),
+                this._map.getTile(pos).getFurnitureState()
+            ])
+        );
+
+        const fallback = { id: payload.wallId, orientation: payload.orientation };
+        const matched = payload.autoFit
+            ? this._wallPalette.matchWall(this._map, tilePos, fallback, payload.direction)
+            : fallback;
+
+        this._setWallAt(tilePos, matched.id, matched.orientation);
+
+        if (payload.autoFit) {
+            this._rematchAdjacentWalls(tilePos);
+            this._rematchWallAt(tilePos, payload.direction);
+        }
+
+        this._recordAndBroadcastWallEdits(affectedPositions, beforeStates);
+    }
+
+    private async _resetWall(tilePos: { row: number; col: number }) {
+        const pos = new TilePos(tilePos);
+        const affectedPositions = this._getWallRematchPositions(pos, true);
+        const beforeStates = new Map(
+            affectedPositions.map((position) => [
+                position.toString(),
+                this._map.getTile(position).getFurnitureState()
+            ])
+        );
+
+        this._map.getTile(pos).clearFurniture();
+        this._rematchAdjacentWalls(pos);
+
+        this._recordAndBroadcastWallEdits(affectedPositions, beforeStates);
+    }
+
+    private _getWallRematchPositions(tilePos: TilePos, includeNeighbors: boolean): TilePos[] {
+        if (!includeNeighbors) {
+            return [tilePos];
+        }
+
+        return [
+            tilePos,
+            tilePos.stepInDirection(Orientation.NORTH),
+            tilePos.stepInDirection(Orientation.EAST),
+            tilePos.stepInDirection(Orientation.SOUTH),
+            tilePos.stepInDirection(Orientation.WEST)
+        ];
+    }
+
+    private _setWallAt(tilePos: TilePos, wallId: string, orientation: Orientation) {
+        this._map.getTile(tilePos).setFurniture(
+            this._furnitureManager.newFurniture(wallId, {
+                location: tilePos,
+                orientation
+            })
+        );
+    }
+
+    private _rematchWallAt(tilePos: TilePos, preferredDirection?: Orientation) {
+        const tile = this._map.getTile(tilePos);
+        const state = tile.getFurnitureState();
+
+        if (!state.furnitureId || !this._wallPalette.isWallFurniture(state.furnitureId)) {
+            return;
+        }
+
+        const matched = this._wallPalette.matchWall(
+            this._map,
+            tilePos,
+            {
+                id: state.furnitureId,
+                orientation: state.orientation ?? Orientation.NORTH
+            },
+            preferredDirection
+        );
+
+        this._setWallAt(tilePos, matched.id, matched.orientation);
+    }
+
+    private _rematchAdjacentWalls(tilePos: TilePos) {
+        for (const direction of [
+            Orientation.NORTH,
+            Orientation.EAST,
+            Orientation.SOUTH,
+            Orientation.WEST
+        ]) {
+            this._rematchWallAt(tilePos.stepInDirection(direction));
+        }
+    }
+
+    private _recordAndBroadcastWallEdits(
+        affectedPositions: TilePos[],
+        beforeStates: Map<string, FurnitureTileState>
+    ) {
+        const tileEdits: {
+            tilePos: { row: number; col: number };
+            before: FurnitureTileState;
+            after: FurnitureTileState;
+        }[] = [];
+
+        for (const position of affectedPositions) {
+            const before = beforeStates.get(position.toString());
+            if (!before) {
+                continue;
+            }
+
+            const after = this._map.getTile(position).getFurnitureState();
+            if (
+                before.furnitureId !== after.furnitureId ||
+                before.orientation !== after.orientation ||
+                before.state !== after.state
+            ) {
+                tileEdits.push({
+                    tilePos: position,
+                    before,
+                    after
+                });
+            }
+        }
+
+        if (tileEdits.length === 0) {
+            return;
+        }
 
         this._history.recordFurnitureEdit({ tiles: tileEdits });
         this._broadcastTileUpdates(

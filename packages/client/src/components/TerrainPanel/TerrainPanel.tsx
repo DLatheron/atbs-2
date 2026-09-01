@@ -1,12 +1,4 @@
-import {
-    Box,
-    FormControlLabel,
-    IconButton,
-    Switch,
-    Tab,
-    Tabs,
-    Typography
-} from "@mui/material";
+import { Box, FormControlLabel, IconButton, Switch, Tab, Tabs, Typography } from "@mui/material";
 import { Orientation, rotateOrientation } from "@atbs/maths";
 import { RenderImage, RenderList, SelectedTerrain, TerrainPaletteWire } from "@atbs/shared-data";
 import { useEffect, useMemo } from "react";
@@ -166,9 +158,7 @@ function SimpleTerrain({
                 </IconButton>
             </Box>
             <RandomiseToggle
-                checked={
-                    selectedTerrain.randomiseOrientation && !!terrain?.allowRandomOrientation
-                }
+                checked={selectedTerrain.randomiseOrientation && !!terrain?.allowRandomOrientation}
                 disabled={!terrain?.allowRandomOrientation}
                 onChange={(checked) =>
                     onSelectedTerrainChange({
