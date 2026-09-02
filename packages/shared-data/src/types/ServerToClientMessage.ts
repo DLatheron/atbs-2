@@ -32,6 +32,7 @@ import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import {
     EditorHistoryState,
+    EditorMarkersState,
     FurniturePaletteWire,
     ItemPaletteWire,
     TerrainPaletteWire,
@@ -157,6 +158,16 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:editor:item:palette"),
         payload: ItemPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:markers:state"),
+        payload: EditorMarkersState
+    }),
+    z.object({
+        type: z.literal("server:editor:markers:saved"),
+        payload: z.object({
+            filename: z.string().nonempty()
+        })
     }),
     z.object({
         type: z.literal("server:editor:map:update"),

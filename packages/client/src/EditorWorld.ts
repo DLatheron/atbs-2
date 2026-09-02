@@ -1,6 +1,7 @@
 import { Orientation, TilePos, Vec2, rotateOrientation } from "@atbs/maths";
 import {
     EditorFurnitureTile,
+    EditorMarkersState,
     FurniturePaletteWire,
     ItemPaletteWire,
     RenderList,
@@ -38,6 +39,7 @@ import {
     getTerrainId
 } from "./helpers/terrainHelpers";
 import { createDefaultSelectedItem, getItemId } from "./helpers/itemHelpers";
+import { markersStateToDeploymentSummary, findZoneAtTile } from "./helpers/markerHelpers";
 
 export type EditorPanelMode = "Terrain" | "Furniture" | "Walls" | "Items" | "Markers";
 
@@ -53,6 +55,7 @@ export class EditorWorld extends World {
     private _selectedFurniture: SelectedFurniture = createDefaultSelectedFurniture();
     private _selectedWall: SelectedWall = createDefaultSelectedWall();
     private _selectedItem: SelectedItem = createDefaultSelectedItem();
+    private _markersState: EditorMarkersState | null = null;
     private _onSelectedWallChange: ((selectedWall: SelectedWall) => void) | null = null;
     private _editorPanel: EditorPanelMode = "Terrain";
     private _paintContext: { lastTilePos?: TilePos } | null = null;
@@ -143,6 +146,15 @@ export class EditorWorld extends World {
         this._selectedItem = value;
     }
 
+    get markersState(): EditorMarkersState | null {
+        return this._markersState;
+    }
+
+    set markersState(value: EditorMarkersState | null) {
+        this._markersState = value;
+        this._syncDeploymentMarkersPreview();
+    }
+
     set onSelectedWallChange(callback: ((selectedWall: SelectedWall) => void) | null) {
         this._onSelectedWallChange = callback;
     }
@@ -154,6 +166,7 @@ export class EditorWorld extends World {
     set editorPanel(value: EditorPanelMode) {
         this._editorPanel = value;
         this._updateHoverTileSize();
+        this._syncDeploymentMarkersPreview();
     }
 
     constructor(imageCache: ImageCache) {
@@ -270,6 +283,9 @@ export class EditorWorld extends World {
             } else if (this._editorPanel === "Items") {
                 this._paintContext = {};
                 this._paintItem(event);
+            } else if (this._editorPanel === "Markers") {
+                this._paintContext = {};
+                this._paintMarkers(event);
             }
         }
     }
@@ -310,6 +326,8 @@ export class EditorWorld extends World {
             this._paintWall(event);
         } else if (this._editorPanel === "Items") {
             this._paintItem(event);
+        } else if (this._editorPanel === "Markers") {
+            this._paintMarkers(event);
         }
     }
 
@@ -380,9 +398,28 @@ export class EditorWorld extends World {
             case "Items":
                 this._paintItemAt(clamped, altKey);
                 break;
+            case "Markers":
+                this._paintMarkersAt(clamped, altKey);
+                break;
             default:
                 break;
         }
+    }
+
+    private _syncDeploymentMarkersPreview() {
+        if (this._editorPanel !== "Markers" || !this._markersState) {
+            if (this._editorPanel !== "Markers") {
+                this.deploymentMarkers = null;
+            }
+            return;
+        }
+
+        this.deploymentMarker = this._markersState.selectedSideId;
+        this.imageCache.requestImage(this._markersState.selectedSideId);
+        this.deploymentMarkers = markersStateToDeploymentSummary(
+            this._markersState,
+            this._markersState.selectedSideId
+        );
     }
 
     private _isMapDrag(event: MouseEvent | React.MouseEvent): boolean {
@@ -643,6 +680,62 @@ export class EditorWorld extends World {
                 tilePos,
                 itemId
             }
+        });
+    }
+
+    private _paintMarkers(event: MouseEvent | React.MouseEvent) {
+        if (!this._paintContext) {
+            return;
+        }
+
+        const tilePos = this._getEventTilePos(event);
+
+        if (
+            this._paintContext.lastTilePos &&
+            TilePos.IsEqual(this._paintContext.lastTilePos, tilePos)
+        ) {
+            return;
+        }
+
+        this._paintContext.lastTilePos = tilePos;
+        this._paintMarkersAt(tilePos, event.altKey);
+    }
+
+    private _paintMarkersAt(tilePos: TilePos, altKey: boolean) {
+        if (!this._markersState) {
+            return;
+        }
+
+        if (altKey) {
+            if (!this._markersState.selectedZoneId) {
+                return;
+            }
+
+            this.sendMessage({
+                type: "client:editor:markers:remove-tile",
+                payload: { tilePos }
+            });
+            return;
+        }
+
+        const owner = findZoneAtTile(this._markersState, tilePos);
+        if (owner) {
+            if (owner.zoneId !== this._markersState.selectedZoneId) {
+                this.sendMessage({
+                    type: "client:editor:markers:select-zone",
+                    payload: { zoneId: owner.zoneId }
+                });
+            }
+            return;
+        }
+
+        if (!this._markersState.selectedZoneId) {
+            return;
+        }
+
+        this.sendMessage({
+            type: "client:editor:markers:add-tile",
+            payload: { tilePos }
         });
     }
 

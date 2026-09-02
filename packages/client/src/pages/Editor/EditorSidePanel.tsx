@@ -1,14 +1,18 @@
 import { Box, Button, Tab, Tabs, Typography } from "@mui/material";
+import { Orientation } from "@atbs/maths";
 import { TerrainPanel } from "../../components/TerrainPanel";
 import { FurniturePanel } from "../../components/FurniturePanel";
 import { WallsPanel } from "../../components/WallsPanel";
 import { ItemsPanel } from "../../components/ItemsPanel";
+import { MarkersPanel } from "../../components/MarkersPanel";
 import { EditorMinimap } from "../../components/EditorMinimap";
 import {
     EditorHistoryState,
     EditorMapWire,
+    EditorMarkersState,
     FurniturePaletteWire,
     ItemPaletteWire,
+    MarkerSideId,
     SelectedFurniture,
     SelectedItem,
     SelectedTerrain,
@@ -29,6 +33,8 @@ export interface EditorSidePanelProps {
     furniturePalette: FurniturePaletteWire | null;
     wallPalette: WallPaletteWire | null;
     itemPalette: ItemPaletteWire | null;
+    markersState: EditorMarkersState | null;
+    markersSavedMessage: string | null;
     selectedTerrain: SelectedTerrain;
     onSelectedTerrainChange: (selectedTerrain: SelectedTerrain) => void;
     selectedFurniture: SelectedFurniture;
@@ -37,6 +43,18 @@ export interface EditorSidePanelProps {
     onSelectedWallChange: (selectedWall: SelectedWall) => void;
     selectedItem: SelectedItem;
     onSelectedItemChange: (selectedItem: SelectedItem) => void;
+    onSelectMarkerSide: (sideId: MarkerSideId) => void;
+    onSelectMarkerZone: (zoneId: string | null) => void;
+    onNewMarkerZone: () => void;
+    onDoneMarkerZone: () => void;
+    onDeleteMarkerZone: () => void;
+    onUpdateMarkerZone: (updates: {
+        name?: string;
+        minUnits?: number | null;
+        maxUnits?: number | null;
+        orientation?: Orientation;
+    }) => void;
+    onSaveMarkers: () => void;
     editorPanel: EditorPanelMode;
     onEditorPanelChange: (editorPanel: EditorPanelMode) => void;
     history: EditorHistoryState;
@@ -53,6 +71,8 @@ export function EditorSidePanel({
     furniturePalette,
     wallPalette,
     itemPalette,
+    markersState,
+    markersSavedMessage,
     selectedTerrain,
     onSelectedTerrainChange,
     selectedFurniture,
@@ -61,6 +81,13 @@ export function EditorSidePanel({
     onSelectedWallChange,
     selectedItem,
     onSelectedItemChange,
+    onSelectMarkerSide,
+    onSelectMarkerZone,
+    onNewMarkerZone,
+    onDoneMarkerZone,
+    onDeleteMarkerZone,
+    onUpdateMarkerZone,
+    onSaveMarkers,
     editorPanel,
     onEditorPanelChange,
     history,
@@ -82,14 +109,21 @@ export function EditorSidePanel({
             <Tabs
                 value={editorPanel}
                 onChange={(_event, value: EditorPanelMode) => onEditorPanelChange(value)}
-                variant="scrollable"
-                scrollButtons="auto"
                 sx={{
                     minHeight: 40,
                     borderBottom: 1,
                     borderColor: "divider",
+                    "& .MuiTabs-indicator": {
+                        display: "none"
+                    },
                     "& .MuiTabs-list": {
                         flexWrap: "wrap"
+                    },
+                    "& .MuiTab-root": {
+                        borderBottom: "2px solid transparent"
+                    },
+                    "& .MuiTab-root.Mui-selected": {
+                        borderBottomColor: "primary.main"
                     }
                 }}
             >
@@ -122,6 +156,18 @@ export function EditorSidePanel({
                         itemPalette={itemPalette}
                         selectedItem={selectedItem}
                         onSelectedItemChange={onSelectedItemChange}
+                    />
+                ) : editorPanel === "Markers" && markersState ? (
+                    <MarkersPanel
+                        markersState={markersState}
+                        savedMessage={markersSavedMessage}
+                        onSelectSide={onSelectMarkerSide}
+                        onSelectZone={onSelectMarkerZone}
+                        onNewZone={onNewMarkerZone}
+                        onDoneZone={onDoneMarkerZone}
+                        onDeleteZone={onDeleteMarkerZone}
+                        onUpdateZone={onUpdateMarkerZone}
+                        onSaveMarkers={onSaveMarkers}
                     />
                 ) : (
                     <Typography variant="body2" color="text.secondary">

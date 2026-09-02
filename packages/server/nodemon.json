@@ -1,5 +1,6 @@
 {
     "watch": ["src", "data", "../maths/dist", "../misc/dist", "../shared-data/dist"],
+    "ignore": ["data/editor-saves/**"],
     "ext": "ts,js,json",
     "exec": "node --import tsx src/server.ts",
     "delay": 300

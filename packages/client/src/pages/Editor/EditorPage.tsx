@@ -1,4 +1,4 @@
-import { Container, Typography } from "@mui/material";
+import { Box, Button, Container, Typography } from "@mui/material";
 import { useCallback } from "react";
 import { EditorId } from "@atbs/shared-data";
 import { CanvasLoopProps, MapComponent, SidePanel, TitleBarComponent } from "../../components";
@@ -6,6 +6,7 @@ import { useEditorWorld } from "../../hooks";
 import { EditorWorld } from "../../EditorWorld";
 import { useEditorPage } from "./useEditorPage";
 import { EditorSidePanel } from "./EditorSidePanel";
+import { MapDetailsModal, NewMapModal } from "../../modals";
 
 export interface EditorPageProps {
     visible: boolean;
@@ -20,10 +21,20 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         map,
         savedMessage,
         onSave,
+        mapDetailsOpen,
+        onOpenMapDetails,
+        onCloseMapDetails,
+        onConfirmMapDetails,
+        newMapOpen,
+        onOpenNewMap,
+        onCloseNewMap,
+        onConfirmNewMap,
         terrainPalette,
         furniturePalette,
         wallPalette,
         itemPalette,
+        markersState,
+        markersSavedMessage,
         selectedTerrain,
         setSelectedTerrain,
         selectedFurniture,
@@ -36,7 +47,14 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         setEditorPanel,
         history,
         onUndo,
-        onRedo
+        onRedo,
+        onSelectMarkerSide,
+        onSelectMarkerZone,
+        onNewMarkerZone,
+        onDoneMarkerZone,
+        onDeleteMarkerZone,
+        onUpdateMarkerZone,
+        onSaveMarkers
     } = useEditorPage();
     const { world } = useEditorWorld();
 
@@ -97,20 +115,54 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     disableGutters
                     sx={{
                         display: "grid",
-                        gridTemplateAreas: "'title id'",
-                        gridTemplateColumns: "1fr 1fr",
+                        gridTemplateAreas: "'title actions id'",
+                        gridTemplateColumns: "auto 1fr auto",
                         columnGap: 3,
-                        height: statusBarHeight
+                        height: statusBarHeight,
+                        alignItems: "center"
                     }}
                 >
-                    <Typography sx={{ m: "auto 0", gridArea: "title" }} variant="h4">
+                    <Typography sx={{ gridArea: "title" }} variant="h4">
                         Map Editor
                     </Typography>
-                    <Typography sx={{ m: "auto", gridArea: "id" }} variant="h5">
+                    <Box sx={{ gridArea: "actions", display: "flex", gap: 1, justifySelf: "start" }}>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            onClick={onOpenNewMap}
+                            disabled={!terrainPalette}
+                        >
+                            New Map...
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            onClick={onOpenMapDetails}
+                            disabled={!map}
+                        >
+                            Map Details...
+                        </Button>
+                    </Box>
+                    <Typography sx={{ gridArea: "id" }} variant="h5">
                         {editorId ?? "-"}
                     </Typography>
                 </Container>
             </TitleBarComponent>
+            <NewMapModal
+                open={newMapOpen}
+                hasUnsavedChanges={history.hasUnsavedChanges}
+                terrainPalette={terrainPalette}
+                onClose={onCloseNewMap}
+                onConfirm={onConfirmNewMap}
+            />
+            <MapDetailsModal
+                open={mapDetailsOpen}
+                mapWidth={map?.width ?? 32}
+                mapHeight={map?.height ?? 32}
+                terrainPalette={terrainPalette}
+                onClose={onCloseMapDetails}
+                onConfirm={onConfirmMapDetails}
+            />
             <MapComponent
                 renderMap={renderMap}
                 onMouseEnter={onMouseEnter}
@@ -136,6 +188,8 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     furniturePalette={furniturePalette}
                     wallPalette={wallPalette}
                     itemPalette={itemPalette}
+                    markersState={markersState}
+                    markersSavedMessage={markersSavedMessage}
                     selectedTerrain={selectedTerrain}
                     onSelectedTerrainChange={setSelectedTerrain}
                     selectedFurniture={selectedFurniture}
@@ -144,6 +198,13 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     onSelectedWallChange={setSelectedWall}
                     selectedItem={selectedItem}
                     onSelectedItemChange={setSelectedItem}
+                    onSelectMarkerSide={onSelectMarkerSide}
+                    onSelectMarkerZone={onSelectMarkerZone}
+                    onNewMarkerZone={onNewMarkerZone}
+                    onDoneMarkerZone={onDoneMarkerZone}
+                    onDeleteMarkerZone={onDeleteMarkerZone}
+                    onUpdateMarkerZone={onUpdateMarkerZone}
+                    onSaveMarkers={onSaveMarkers}
                     editorPanel={editorPanel}
                     onEditorPanelChange={setEditorPanel}
                     history={history}

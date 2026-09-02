@@ -1,5 +1,5 @@
 import z from "zod";
-import { Orientation } from "@atbs/maths";
+import { ITilePos, Orientation } from "@atbs/maths";
 import { ItemId, RenderList } from "./PrimitiveTypes.js";
 
 export const TerrainPaletteEntry = z.object({
@@ -47,7 +47,8 @@ export type SelectedTerrain = z.infer<typeof SelectedTerrain>;
 
 export const EditorHistoryState = z.object({
     canUndo: z.boolean(),
-    canRedo: z.boolean()
+    canRedo: z.boolean(),
+    hasUnsavedChanges: z.boolean()
 });
 export type EditorHistoryState = z.infer<typeof EditorHistoryState>;
 
@@ -129,3 +130,65 @@ export const SelectedItem = z.object({
     index: z.number().int().nonnegative()
 });
 export type SelectedItem = z.infer<typeof SelectedItem>;
+
+export const MARKER_SIDE_IDS = ["deploy-1", "deploy-2", "safe-1", "safe-2"] as const;
+export const MarkerSideId = z.enum(MARKER_SIDE_IDS);
+export type MarkerSideId = (typeof MARKER_SIDE_IDS)[number];
+
+export const EditorDeploymentZoneWire = z.object({
+    id: z.string().nonempty(),
+    name: z.string().nonempty(),
+    minUnits: z.number().int().nonnegative().optional(),
+    maxUnits: z.number().int().nonnegative().optional(),
+    orientation: z.enum(Orientation),
+    tiles: z.array(ITilePos),
+    isDrawing: z.boolean(),
+    rectangles: z.array(
+        z.object({
+            col: z.number().int(),
+            row: z.number().int(),
+            width: z.number().int().positive(),
+            height: z.number().int().positive()
+        })
+    )
+});
+export type EditorDeploymentZoneWire = {
+    id: string;
+    name: string;
+    minUnits?: number;
+    maxUnits?: number;
+    orientation: Orientation;
+    tiles: ITilePos[];
+    isDrawing: boolean;
+    rectangles: { col: number; row: number; width: number; height: number }[];
+};
+
+export const EditorMarkersState = z.object({
+    selectedSideId: MarkerSideId,
+    selectedZoneId: z.string().nullable(),
+    sides: z.object({
+        "deploy-1": z.object({ zones: z.array(EditorDeploymentZoneWire) }),
+        "deploy-2": z.object({ zones: z.array(EditorDeploymentZoneWire) }),
+        "safe-1": z.object({ zones: z.array(EditorDeploymentZoneWire) }),
+        "safe-2": z.object({ zones: z.array(EditorDeploymentZoneWire) })
+    })
+});
+export type EditorMarkersState = {
+    selectedSideId: MarkerSideId;
+    selectedZoneId: string | null;
+    sides: Record<MarkerSideId, { zones: EditorDeploymentZoneWire[] }>;
+};
+
+export const MAP_RESIZE_ANCHORS = [
+    "north-west",
+    "north",
+    "north-east",
+    "west",
+    "center",
+    "east",
+    "south-west",
+    "south",
+    "south-east"
+] as const;
+export const MapResizeAnchor = z.enum(MAP_RESIZE_ANCHORS);
+export type MapResizeAnchor = z.infer<typeof MapResizeAnchor>;

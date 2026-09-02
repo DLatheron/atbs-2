@@ -13,6 +13,7 @@ import {
 } from "./PrimitiveTypes.js";
 import { ITilePos, IVec2, Orientation } from "@atbs/maths";
 import { UnitActionType } from "./ActionTypes.js";
+import { MapResizeAnchor } from "./EditorTypes.js";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
@@ -306,6 +307,27 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.object({})
     }),
     z.object({
+        type: z.literal("client:editor:map:resize"),
+        payload: z.object({
+            width: z.number().int().min(32).max(256),
+            height: z.number().int().min(32).max(256),
+            anchor: MapResizeAnchor,
+            defaultTerrainId: z.string().nonempty(),
+            defaultOrientation: z.enum(Orientation),
+            randomiseOrientation: z.boolean()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:map:new"),
+        payload: z.object({
+            width: z.number().int().min(32).max(256),
+            height: z.number().int().min(32).max(256),
+            defaultTerrainId: z.string().nonempty(),
+            defaultOrientation: z.enum(Orientation),
+            randomiseOrientation: z.boolean()
+        })
+    }),
+    z.object({
         type: z.literal("client:editor:terrain:paint"),
         payload: z.object({
             tilePos: ITilePos,
@@ -367,6 +389,64 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         payload: z.object({
             tilePos: ITilePos
         })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:select-side"),
+        payload: z.object({
+            sideId: z.enum(["deploy-1", "deploy-2", "safe-1", "safe-2"])
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:select-zone"),
+        payload: z.object({
+            zoneId: z.string().nullable()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:select-zone-at"),
+        payload: z.object({
+            tilePos: ITilePos
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:new-zone"),
+        payload: z.object({})
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:done-zone"),
+        payload: z.object({})
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:update-zone"),
+        payload: z.object({
+            zoneId: z.string().nonempty(),
+            name: z.string().nonempty().optional(),
+            minUnits: z.number().int().nonnegative().nullable().optional(),
+            maxUnits: z.number().int().nonnegative().nullable().optional(),
+            orientation: z.enum(Orientation).optional()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:delete-zone"),
+        payload: z.object({
+            zoneId: z.string().nonempty()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:add-tile"),
+        payload: z.object({
+            tilePos: ITilePos
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:remove-tile"),
+        payload: z.object({
+            tilePos: ITilePos
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:markers:save"),
+        payload: z.object({})
     }),
     z.object({
         type: z.literal("client:editor:undo"),

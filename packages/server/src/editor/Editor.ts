@@ -7,7 +7,8 @@ import {
     ClientToServerMessage,
     EditorId,
     ServerToClientMessage,
-    TileUpdate
+    TileUpdate,
+    resizeMapRecipe
 } from "@atbs/shared-data";
 import { CastToArray, Logger, MessageManager } from "@atbs/misc";
 import { Orientation, TilePos } from "@atbs/maths";
@@ -15,12 +16,13 @@ import { Orientation, TilePos } from "@atbs/maths";
 import { EditorClient } from "./EditorClient.js";
 import { EditorClientManager } from "./EditorClientManager.js";
 import { editorManager } from "./EditorManager.js";
-import { createDefaultMapRecipe } from "./createDefaultMapRecipe.js";
+import { createDefaultMapRecipe, createMapRecipe } from "./createDefaultMapRecipe.js";
 import { EditorHistory, type FurnitureTileState } from "./EditorHistory.js";
 import { TerrainPaletteManager } from "./TerrainPaletteManager.js";
 import { FurniturePaletteManager } from "./FurniturePaletteManager.js";
 import { WallPaletteManager } from "./WallPaletteManager.js";
 import { ItemPaletteManager } from "./ItemPaletteManager.js";
+import { EditorMarkers } from "./EditorMarkers.js";
 import {
     getBrushDimensions,
     iterateFurnitureTiles,
@@ -78,12 +80,13 @@ export class Editor implements MapHost {
     private readonly _itemManager: ItemManager;
     private readonly _furnitureManager: FurnitureManager;
     private readonly _visibilityManager: VisibilityManager;
-    private readonly _map: WorldMap;
+    private _map: WorldMap;
     private readonly _history: EditorHistory;
     private readonly _terrainPalette;
     private readonly _furniturePalette;
     private readonly _wallPalette;
     private readonly _itemPalette;
+    private readonly _markers: EditorMarkers;
     private _isDestroying = false;
 
     constructor(
@@ -116,6 +119,7 @@ export class Editor implements MapHost {
         this._furniturePalette = FurniturePaletteManager.GetSingleton().getDefault();
         this._wallPalette = WallPaletteManager.GetSingleton().getDefault();
         this._itemPalette = ItemPaletteManager.GetSingleton().getDefault();
+        this._markers = new EditorMarkers();
 
         this._registerMessageHandlers();
     }
@@ -214,6 +218,10 @@ export class Editor implements MapHost {
             payload: this._itemPalette.toWireFormat(ItemRecipeManager.GetSingleton())
         });
         client.sendMessage({
+            type: "server:editor:markers:state",
+            payload: this._markers.getState()
+        });
+        client.sendMessage({
             type: "server:editor:history",
             payload: this._historyState()
         });
@@ -265,8 +273,56 @@ export class Editor implements MapHost {
         await writeFile(fullPath, `${JSON.stringify(mapRecipe, null, 4)}\n`, "utf-8");
 
         this.logger.info(`Saved map recipe to ${fullPath}`);
+        this._history.markSaved();
 
         return { filename, mapId: mapRecipe.id };
+    }
+
+    private _replaceMap(recipe: ReturnType<WorldMap["toMapRecipe"]>) {
+        this._itemManager.reset();
+        this._map = new WorldMap(recipe, this);
+    }
+
+    async resizeMap(
+        payload: Extract<ClientToServerMessage, { type: "client:editor:map:resize" }>["payload"]
+    ): Promise<{ filename: string; mapId: string }> {
+        const saveResult = await this.saveMap();
+        const currentRecipe = this._map.toMapRecipe();
+        const resized = resizeMapRecipe(currentRecipe, payload);
+
+        this._replaceMap({
+            ...currentRecipe,
+            width: resized.width,
+            height: resized.height,
+            tiles: resized.tiles
+        });
+        this._markers.clipToMapBounds(resized.width, resized.height);
+        this._history.clear();
+
+        this.broadcastMessage({
+            type: "server:editor:map",
+            payload: this._map.renderEditorMap()
+        });
+        this._broadcastMarkersState();
+        this._broadcastHistory();
+
+        return saveResult;
+    }
+
+    newMap(
+        payload: Extract<ClientToServerMessage, { type: "client:editor:map:new" }>["payload"]
+    ): void {
+        const recipe = createMapRecipe(this._id, payload);
+        this._replaceMap(recipe);
+        this._markers.reset();
+        this._history.clear();
+
+        this.broadcastMessage({
+            type: "server:editor:map",
+            payload: this._map.renderEditorMap()
+        });
+        this._broadcastMarkersState();
+        this._broadcastHistory();
     }
 
     destroyEditor() {
@@ -296,6 +352,32 @@ export class Editor implements MapHost {
                     });
                 } catch (error) {
                     this.logger.error("Failed to save editor map", error);
+                }
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:map:resize",
+            async (_context, payload, from) => {
+                try {
+                    const result = await this.resizeMap(payload);
+                    from.sendMessage({
+                        type: "server:editor:saved",
+                        payload: result
+                    });
+                } catch (error) {
+                    this.logger.error("Failed to resize editor map", error);
+                }
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:map:new",
+            async (_context, payload) => {
+                try {
+                    this.newMap(payload);
+                } catch (error) {
+                    this.logger.error("Failed to create new editor map", error);
                 }
             }
         );
@@ -356,6 +438,101 @@ export class Editor implements MapHost {
             }
         );
 
+        this._messageManager.registerHandler(
+            "client:editor:markers:select-side",
+            async (_context, payload) => {
+                this._markers.selectSide(payload.sideId);
+                this._broadcastMarkersState();
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:select-zone",
+            async (_context, payload) => {
+                this._markers.selectZone(payload.zoneId);
+                this._broadcastMarkersState();
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:select-zone-at",
+            async (_context, payload) => {
+                if (this._markers.selectZoneAt(payload.tilePos)) {
+                    this._broadcastMarkersState();
+                }
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:new-zone",
+            async (_context, _payload) => {
+                this._mutateMarkers(() => {
+                    this._markers.newZone();
+                });
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:done-zone",
+            async (_context, _payload) => {
+                this._mutateMarkers(() => {
+                    this._markers.doneZone();
+                });
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:update-zone",
+            async (_context, payload) => {
+                this._mutateMarkers(() => {
+                    this._markers.updateZone(payload);
+                });
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:delete-zone",
+            async (_context, payload) => {
+                this._mutateMarkers(() => {
+                    this._markers.deleteZone(payload.zoneId);
+                });
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:add-tile",
+            async (_context, payload) => {
+                this._mutateMarkers(() => {
+                    this._markers.addTile(payload.tilePos, this._map.width, this._map.height);
+                });
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:remove-tile",
+            async (_context, payload) => {
+                this._mutateMarkers(() => {
+                    this._markers.removeTile(payload.tilePos);
+                });
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:markers:save",
+            async (_context, _payload, from) => {
+                try {
+                    const mapRecipe = this._map.toMapRecipe();
+                    const result = await this._markers.saveScenario(mapRecipe.id, mapRecipe.name);
+                    from.sendMessage({
+                        type: "server:editor:markers:saved",
+                        payload: result
+                    });
+                } catch (error) {
+                    this.logger.error("Failed to save marker scenario", error);
+                }
+            }
+        );
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         this._messageManager.registerHandler("client:editor:undo", async (_context, _payload) => {
             await this._undo();
@@ -370,7 +547,8 @@ export class Editor implements MapHost {
     private _historyState() {
         return {
             canUndo: this._history.canUndo,
-            canRedo: this._history.canRedo
+            canRedo: this._history.canRedo,
+            hasUnsavedChanges: this._history.hasUnsavedChanges
         };
     }
 
@@ -390,6 +568,26 @@ export class Editor implements MapHost {
             type: "server:editor:map:update",
             payload: updates
         });
+    }
+
+    private _broadcastMarkersState() {
+        this.broadcastMessage({
+            type: "server:editor:markers:state",
+            payload: this._markers.getState()
+        });
+    }
+
+    private _mutateMarkers(mutator: () => unknown) {
+        const before = this._markers.createSnapshot();
+        mutator();
+        const after = this._markers.createSnapshot();
+
+        if (JSON.stringify(before) !== JSON.stringify(after)) {
+            this._history.recordMarkersEdit({ before, after });
+            this._broadcastHistory();
+        }
+
+        this._broadcastMarkersState();
     }
 
     private async _paintTerrain(payload: {
@@ -727,25 +925,37 @@ export class Editor implements MapHost {
     }
 
     private async _undo() {
-        const updates = await this._history.undo(
+        const result = await this._history.undo(
             this._map,
             this._furnitureManager,
-            this._itemManager
+            this._itemManager,
+            this._markers
         );
-        if (updates.length > 0) {
-            this._broadcastTileUpdates(updates);
+        if (result.tileUpdates.length > 0) {
+            this._broadcastTileUpdates(result.tileUpdates);
+        }
+        if (result.markersChanged) {
+            this._broadcastMarkersState();
+        }
+        if (result.tileUpdates.length > 0 || result.markersChanged) {
             this._broadcastHistory();
         }
     }
 
     private async _redo() {
-        const updates = await this._history.redo(
+        const result = await this._history.redo(
             this._map,
             this._furnitureManager,
-            this._itemManager
+            this._itemManager,
+            this._markers
         );
-        if (updates.length > 0) {
-            this._broadcastTileUpdates(updates);
+        if (result.tileUpdates.length > 0) {
+            this._broadcastTileUpdates(result.tileUpdates);
+        }
+        if (result.markersChanged) {
+            this._broadcastMarkersState();
+        }
+        if (result.tileUpdates.length > 0 || result.markersChanged) {
             this._broadcastHistory();
         }
     }

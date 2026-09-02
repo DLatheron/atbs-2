@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Orientation } from "@atbs/maths";
 import {
     EditorHistoryState,
     EditorMapWire,
+    EditorMarkersState,
     FurniturePaletteWire,
     ItemPaletteWire,
+    MapResizeAnchor,
+    MarkerSideId,
     SelectedFurniture,
     SelectedItem,
     SelectedTerrain,
@@ -19,6 +20,8 @@ import { createDefaultSelectedItem } from "../../helpers/itemHelpers";
 import { createDefaultSelectedTerrain } from "../../helpers/terrainHelpers";
 import { applyWallHotKey, createDefaultSelectedWall } from "../../helpers/wallHelpers";
 import { EditorPanelMode, EditorWorld } from "../../EditorWorld";
+import { Orientation } from "@atbs/maths";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function useEditorPage() {
     const { messageManager, sendMessage } = useEditorMessageManager();
@@ -29,6 +32,8 @@ export function useEditorPage() {
     const [furniturePalette, setFurniturePalette] = useState<FurniturePaletteWire | null>(null);
     const [wallPalette, setWallPalette] = useState<WallPaletteWire | null>(null);
     const [itemPalette, setItemPalette] = useState<ItemPaletteWire | null>(null);
+    const [markersState, setMarkersState] = useState<EditorMarkersState | null>(null);
+    const [markersSavedMessage, setMarkersSavedMessage] = useState<string | null>(null);
     const [selectedTerrain, setSelectedTerrain] = useState<SelectedTerrain>(
         createDefaultSelectedTerrain()
     );
@@ -40,9 +45,12 @@ export function useEditorPage() {
     const [editorPanel, setEditorPanel] = useState<EditorPanelMode>("Terrain");
     const [history, setHistory] = useState<EditorHistoryState>({
         canUndo: false,
-        canRedo: false
+        canRedo: false,
+        hasUnsavedChanges: false
     });
     const [savedMessage, setSavedMessage] = useState<string | null>(null);
+    const [mapDetailsOpen, setMapDetailsOpen] = useState(false);
+    const [newMapOpen, setNewMapOpen] = useState(false);
 
     useEffect(() => {
         world.selectedTerrain = selectedTerrain;
@@ -60,6 +68,10 @@ export function useEditorPage() {
     useEffect(() => {
         world.selectedItem = selectedItem;
     }, [world, selectedItem]);
+
+    useEffect(() => {
+        (world as EditorWorld).markersState = markersState;
+    }, [world, markersState]);
 
     useEffect(() => {
         (world as EditorWorld).onSelectedWallChange = setSelectedWall;
@@ -107,6 +119,16 @@ export function useEditorPage() {
                 setItemPalette(payload);
             }),
 
+            messageManager.registerHandler("server:editor:markers:state", (_context, payload) => {
+                setMarkersState(payload);
+            }),
+
+            messageManager.registerHandler("server:editor:markers:saved", (_context, payload) => {
+                const message = `Saved markers as ${payload.filename}`;
+                console.info(message);
+                setMarkersSavedMessage(message);
+            }),
+
             messageManager.registerHandler("server:editor:map:update", (_context, payload) => {
                 if (!world.hasMap) {
                     return;
@@ -140,12 +162,71 @@ export function useEditorPage() {
         return () => clearTimeout(timer);
     }, [savedMessage]);
 
+    useEffect(() => {
+        if (!markersSavedMessage) {
+            return;
+        }
+        const timer = window.setTimeout(() => setMarkersSavedMessage(null), 4000);
+        return () => clearTimeout(timer);
+    }, [markersSavedMessage]);
+
     const onSave = useCallback(() => {
         sendMessage({
             type: "client:editor:save",
             payload: {}
         });
     }, [sendMessage]);
+
+    const onOpenMapDetails = useCallback(() => {
+        setMapDetailsOpen(true);
+    }, []);
+
+    const onCloseMapDetails = useCallback(() => {
+        setMapDetailsOpen(false);
+    }, []);
+
+    const onOpenNewMap = useCallback(() => {
+        setNewMapOpen(true);
+    }, []);
+
+    const onCloseNewMap = useCallback(() => {
+        setNewMapOpen(false);
+    }, []);
+
+    const onConfirmMapDetails = useCallback(
+        (details: {
+            width: number;
+            height: number;
+            anchor: MapResizeAnchor;
+            defaultTerrainId: string;
+            defaultOrientation: Orientation;
+            randomiseOrientation: boolean;
+        }) => {
+            sendMessage({
+                type: "client:editor:map:resize",
+                payload: details
+            });
+            setMapDetailsOpen(false);
+        },
+        [sendMessage]
+    );
+
+    const onConfirmNewMap = useCallback(
+        (details: {
+            width: number;
+            height: number;
+            defaultTerrainId: string;
+            defaultOrientation: Orientation;
+            randomiseOrientation: boolean;
+        }) => {
+            sendMessage({
+                type: "client:editor:map:new",
+                payload: details
+            });
+            setNewMapOpen(false);
+        },
+        [sendMessage]
+    );
 
     const onUndo = useCallback(() => {
         (world as EditorWorld).undo();
@@ -154,6 +235,63 @@ export function useEditorPage() {
     const onRedo = useCallback(() => {
         (world as EditorWorld).redo();
     }, [world]);
+
+    const onSelectMarkerSide = useCallback(
+        (sideId: MarkerSideId) => {
+            sendMessage({ type: "client:editor:markers:select-side", payload: { sideId } });
+        },
+        [sendMessage]
+    );
+
+    const onSelectMarkerZone = useCallback(
+        (zoneId: string | null) => {
+            sendMessage({ type: "client:editor:markers:select-zone", payload: { zoneId } });
+        },
+        [sendMessage]
+    );
+
+    const onNewMarkerZone = useCallback(() => {
+        sendMessage({ type: "client:editor:markers:new-zone", payload: {} });
+    }, [sendMessage]);
+
+    const onDoneMarkerZone = useCallback(() => {
+        sendMessage({ type: "client:editor:markers:done-zone", payload: {} });
+    }, [sendMessage]);
+
+    const onDeleteMarkerZone = useCallback(() => {
+        if (!markersState?.selectedZoneId) {
+            return;
+        }
+        sendMessage({
+            type: "client:editor:markers:delete-zone",
+            payload: { zoneId: markersState.selectedZoneId }
+        });
+    }, [sendMessage, markersState?.selectedZoneId]);
+
+    const onUpdateMarkerZone = useCallback(
+        (updates: {
+            name?: string;
+            minUnits?: number | null;
+            maxUnits?: number | null;
+            orientation?: Orientation;
+        }) => {
+            if (!markersState?.selectedZoneId) {
+                return;
+            }
+            sendMessage({
+                type: "client:editor:markers:update-zone",
+                payload: {
+                    zoneId: markersState.selectedZoneId,
+                    ...updates
+                }
+            });
+        },
+        [sendMessage, markersState?.selectedZoneId]
+    );
+
+    const onSaveMarkers = useCallback(() => {
+        sendMessage({ type: "client:editor:markers:save", payload: {} });
+    }, [sendMessage]);
 
     const rotateSelection = useCallback(
         (steps: -2 | 2) => {
@@ -265,6 +403,8 @@ export function useEditorPage() {
         furniturePalette,
         wallPalette,
         itemPalette,
+        markersState,
+        markersSavedMessage,
         selectedTerrain,
         setSelectedTerrain,
         selectedFurniture,
@@ -278,7 +418,22 @@ export function useEditorPage() {
         history,
         savedMessage,
         onSave,
+        mapDetailsOpen,
+        onOpenMapDetails,
+        onCloseMapDetails,
+        onConfirmMapDetails,
+        newMapOpen,
+        onOpenNewMap,
+        onCloseNewMap,
+        onConfirmNewMap,
         onUndo,
-        onRedo
+        onRedo,
+        onSelectMarkerSide,
+        onSelectMarkerZone,
+        onNewMarkerZone,
+        onDoneMarkerZone,
+        onDeleteMarkerZone,
+        onUpdateMarkerZone,
+        onSaveMarkers
     };
 }
