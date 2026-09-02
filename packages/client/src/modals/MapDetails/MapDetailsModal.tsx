@@ -123,7 +123,9 @@ export function MapDetailsModal({
                             onHeightChange={setHeight}
                         />
 
-                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <Box
+                            sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+                        >
                             <Typography variant="subtitle2" sx={{ mb: 1 }}>
                                 Existing map position
                             </Typography>

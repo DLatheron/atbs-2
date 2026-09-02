@@ -371,16 +371,13 @@ export class Editor implements MapHost {
             }
         );
 
-        this._messageManager.registerHandler(
-            "client:editor:map:new",
-            async (_context, payload) => {
-                try {
-                    this.newMap(payload);
-                } catch (error) {
-                    this.logger.error("Failed to create new editor map", error);
-                }
+        this._messageManager.registerHandler("client:editor:map:new", async (_context, payload) => {
+            try {
+                this.newMap(payload);
+            } catch (error) {
+                this.logger.error("Failed to create new editor map", error);
             }
-        );
+        });
 
         this._messageManager.registerHandler(
             "client:editor:terrain:paint",
@@ -465,6 +462,7 @@ export class Editor implements MapHost {
 
         this._messageManager.registerHandler(
             "client:editor:markers:new-zone",
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             async (_context, _payload) => {
                 this._mutateMarkers(() => {
                     this._markers.newZone();
@@ -474,6 +472,7 @@ export class Editor implements MapHost {
 
         this._messageManager.registerHandler(
             "client:editor:markers:done-zone",
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             async (_context, _payload) => {
                 this._mutateMarkers(() => {
                     this._markers.doneZone();

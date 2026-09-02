@@ -10,9 +10,7 @@ describe("tilesToMinimalRectangles", () => {
             { col: 1, row: 1 }
         ];
 
-        expect(tilesToMinimalRectangles(tiles)).toEqual([
-            { col: 0, row: 0, width: 2, height: 2 }
-        ]);
+        expect(tilesToMinimalRectangles(tiles)).toEqual([{ col: 0, row: 0, width: 2, height: 2 }]);
     });
 
     it("merges an L-shape into two rectangles", () => {
@@ -24,8 +22,6 @@ describe("tilesToMinimalRectangles", () => {
 
         const rectangles = tilesToMinimalRectangles(tiles);
         expect(rectangles).toHaveLength(2);
-        expect(rectanglesToTileKeys(rectangles).sort()).toEqual(
-            ["0,0", "0,1", "1,0"].sort()
-        );
+        expect(rectanglesToTileKeys(rectangles).sort()).toEqual(["0,0", "0,1", "1,0"].sort());
     });
 });

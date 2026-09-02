@@ -1,5 +1,6 @@
 import { Orientation, TilePos, Vec2, rotateOrientation } from "@atbs/maths";
 import {
+    ClientMap,
     EditorFurnitureTile,
     EditorMarkersState,
     FurniturePaletteWire,
@@ -65,10 +66,32 @@ export class EditorWorld extends World {
         currCanvasPos: Vec2;
         lastCanvasPos: Vec2;
         movementDelta: Vec2;
+        canvas: HTMLCanvasElement;
     } | null = null;
+    private _pendingCameraCenter: Vec2 | null = null;
     private _hoverTilePos: TilePos | undefined;
     private _hoverTileSize = new Vec2(1, 1);
     private _hoverTileOrientation = Orientation.NORTH;
+
+    private readonly _onWindowMapDragMove = (event: MouseEvent) => {
+        if (!this._mapDrag) {
+            return;
+        }
+
+        // Right button released outside the canvas (e.g. browser ate mouseup).
+        if ((event.buttons & 2) === 0) {
+            this._endMapDrag();
+            return;
+        }
+
+        this._applyMapDragCanvasPos(this._clientToDragCanvasPos(event));
+    };
+
+    private readonly _onWindowMapDragUp = (event: MouseEvent) => {
+        if (event.button === 2) {
+            this._endMapDrag();
+        }
+    };
 
     static GetSingleton(): EditorWorld {
         return EditorWorld._singleton;
@@ -174,6 +197,24 @@ export class EditorWorld extends World {
         this._interactionHandler = null;
     }
 
+    set map(value: ClientMap | null) {
+        super.map = value;
+        if (!value) {
+            this._pendingCameraCenter = null;
+            return;
+        }
+
+        this._pendingCameraCenter = new Vec2(
+            (value.width * value.tileSize) / 2,
+            (value.height * value.tileSize) / 2
+        );
+        this._tryApplyPendingCameraCenter();
+    }
+
+    get map(): ClientMap {
+        return super.map;
+    }
+
     setWallDirection(direction: Orientation | undefined) {
         if (this._selectedWall.direction === direction) {
             return;
@@ -190,13 +231,14 @@ export class EditorWorld extends World {
         }
     }
 
-    updateFrame({ time, frameDelta }: { time: number; frameDelta: number }) {
+    update({ time, frameDelta }: { time: number; frameDelta: number }) {
         if (this._mapDrag) {
+            // Match MapModeHandler: movementDelta is the delta since the last frame.
             this._mapDrag.lastCanvasPos = this._mapDrag.currCanvasPos;
         }
 
-        this.camera.worldBounds = this.worldBounds;
-        this.camera.update({ time, frameDelta });
+        this._tryApplyPendingCameraCenter();
+        super.update({ time, frameDelta });
     }
 
     renderDeploymentPhase(canvasLoopProps: CanvasLoopProps) {
@@ -296,7 +338,7 @@ export class EditorWorld extends World {
         }
 
         if (this._isMapDrag(event)) {
-            this._endMapDrag(event);
+            this._endMapDrag();
         }
 
         this._paintContext = null;
@@ -308,7 +350,7 @@ export class EditorWorld extends World {
         }
 
         if (this._mapDrag) {
-            this._updateMapDrag(event);
+            this._applyMapDragCanvasPos(this._clientToDragCanvasPos(event));
             return;
         }
 
@@ -426,51 +468,92 @@ export class EditorWorld extends World {
         return event.button === 2;
     }
 
-    private _startMapDrag(event: MouseEvent | React.MouseEvent) {
-        const baseCanvasPos = ModeHandler.EventToCanvasPos(event);
-        this._mapDrag = {
-            worldPos: this.camera.worldPos,
-            baseCanvasPos,
-            currCanvasPos: baseCanvasPos,
-            lastCanvasPos: baseCanvasPos,
-            movementDelta: Vec2.Zero()
-        };
-        this.camera.additionalVelocity = null;
-        this.mouseCursor = "grabbing";
-    }
-
-    private _endMapDrag(event: MouseEvent | React.MouseEvent) {
-        if (!this._mapDrag) {
+    private _tryApplyPendingCameraCenter() {
+        if (!this._pendingCameraCenter || !this.camera.hasViewportDimensions) {
             return;
         }
 
-        this._updateMapDrag(event, TrackingSpeed.enum.FAST);
-        this.camera.additionalVelocity = this.camera.canvasDeltaToWorldDelta(
-            this._mapDrag.movementDelta
-        );
-        this._mapDrag = null;
-        this.mouseCursor = undefined;
+        this.camera.worldBounds = this.worldBounds;
+        this.camera.setWorldPosImmediate(this._pendingCameraCenter);
+        this._pendingCameraCenter = null;
     }
 
-    private _updateMapDrag(
+    private _clientToDragCanvasPos(event: MouseEvent | React.MouseEvent): Vec2 {
+        const canvas = this._mapDrag?.canvas;
+        if (!canvas) {
+            return ModeHandler.EventToCanvasPos(event);
+        }
+
+        return this._clientToDragCanvasPosForCanvas(event, canvas);
+    }
+
+    private _clientToDragCanvasPosForCanvas(
         event: MouseEvent | React.MouseEvent,
-        trackingSpeed: (typeof TrackingSpeed.enum)[keyof typeof TrackingSpeed.enum] = TrackingSpeed
-            .enum.VERY_FAST
-    ) {
+        canvas: HTMLCanvasElement
+    ): Vec2 {
+        const rect = canvas.getBoundingClientRect();
+        const cssX = event.clientX - rect.left;
+        const cssY = event.clientY - rect.top;
+
+        if (rect.width <= 0 || rect.height <= 0 || canvas.width <= 0 || canvas.height <= 0) {
+            return new Vec2(cssX, cssY);
+        }
+
+        return new Vec2(cssX * (canvas.width / rect.width), cssY * (canvas.height / rect.height));
+    }
+
+    private _applyMapDragCanvasPos(currPos: Vec2) {
         if (!this._mapDrag) {
             return;
         }
 
-        const currPos = ModeHandler.EventToCanvasPos(event);
-        const delta = currPos.sub(this._mapDrag.lastCanvasPos);
+        this._mapDrag.movementDelta = currPos.sub(this._mapDrag.lastCanvasPos);
         this._mapDrag.currCanvasPos = currPos;
-        this._mapDrag.movementDelta = delta;
-
         const totalDifference = this.camera.canvasDeltaToWorldDelta(
             currPos.sub(this._mapDrag.baseCanvasPos)
         );
         const newWorldPos = this._mapDrag.worldPos.sub(totalDifference);
-        this.camera.interpolateToWorldPos(newWorldPos, trackingSpeed);
+        this.camera.setWorldPosImmediate(newWorldPos);
+    }
+
+    private _startMapDrag(event: MouseEvent | React.MouseEvent) {
+        const canvas = event.currentTarget;
+        if (!(canvas instanceof HTMLCanvasElement)) {
+            return;
+        }
+
+        const baseCanvasPos = this._clientToDragCanvasPosForCanvas(event, canvas);
+        this._mapDrag = {
+            // Clone so later camera updates cannot mutate the drag origin.
+            worldPos: this.camera.worldPos.clone(),
+            baseCanvasPos,
+            currCanvasPos: baseCanvasPos,
+            lastCanvasPos: baseCanvasPos,
+            movementDelta: Vec2.Zero(),
+            canvas
+        };
+        this.camera.clearZoomFocus();
+        this.camera.additionalVelocity = null;
+        this.mouseCursor = "grabbing";
+
+        window.addEventListener("mousemove", this._onWindowMapDragMove);
+        window.addEventListener("mouseup", this._onWindowMapDragUp);
+    }
+
+    private _endMapDrag() {
+        if (!this._mapDrag) {
+            return;
+        }
+
+        window.removeEventListener("mousemove", this._onWindowMapDragMove);
+        window.removeEventListener("mouseup", this._onWindowMapDragUp);
+
+        const { movementDelta } = this._mapDrag;
+        this._mapDrag = null;
+        this.mouseCursor = undefined;
+
+        // Keep flinging in the release direction; Camera2d hard-stops at bounds.
+        this.camera.additionalVelocity = this.camera.canvasDeltaToWorldDelta(movementDelta);
     }
 
     private _paintTile(event: MouseEvent | React.MouseEvent) {

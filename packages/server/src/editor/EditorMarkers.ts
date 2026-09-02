@@ -353,7 +353,9 @@ export class EditorMarkers {
         return undefined;
     }
 
-    private _findTileOwner(tilePos: ITilePos): { sideId: MarkerSideId; zoneId: string } | undefined {
+    private _findTileOwner(
+        tilePos: ITilePos
+    ): { sideId: MarkerSideId; zoneId: string } | undefined {
         const key = toTilePosString(tilePos);
 
         for (const sideId of MARKER_SIDE_IDS) {
@@ -372,7 +374,12 @@ export class EditorMarkers {
             for (const zone of this._sides[sideId].zones) {
                 for (const key of [...zone.tileKeys]) {
                     const tilePos = fromTilePosString(key);
-                    if (tilePos.col < 0 || tilePos.col >= width || tilePos.row < 0 || tilePos.row >= height) {
+                    if (
+                        tilePos.col < 0 ||
+                        tilePos.col >= width ||
+                        tilePos.row < 0 ||
+                        tilePos.row >= height
+                    ) {
                         zone.tileKeys.delete(key);
                     }
                 }

@@ -125,7 +125,9 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                     <Typography sx={{ gridArea: "title" }} variant="h4">
                         Map Editor
                     </Typography>
-                    <Box sx={{ gridArea: "actions", display: "flex", gap: 1, justifySelf: "start" }}>
+                    <Box
+                        sx={{ gridArea: "actions", display: "flex", gap: 1, justifySelf: "start" }}
+                    >
                         <Button
                             variant="outlined"
                             color="inherit"

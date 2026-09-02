@@ -22,9 +22,7 @@ function createTerrainTile(
     return {
         terrain: {
             id: options.defaultTerrainId,
-            orientation: options.randomiseOrientation
-                ? randomise()
-                : options.defaultOrientation
+            orientation: options.randomiseOrientation ? randomise() : options.defaultOrientation
         }
     };
 }

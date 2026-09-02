@@ -1,11 +1,4 @@
-import {
-    Alert,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle
-} from "@mui/material";
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { Orientation } from "@atbs/maths";
 import { TerrainPaletteWire } from "@atbs/shared-data";
 import { useEffect, useMemo, useState } from "react";

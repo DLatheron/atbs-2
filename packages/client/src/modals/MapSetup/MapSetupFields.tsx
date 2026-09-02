@@ -2,10 +2,9 @@ import { Box, FormControlLabel, Switch, TextField, Typography } from "@mui/mater
 import { Orientation, rotateOrientation } from "@atbs/maths";
 import { RenderImage, TerrainPaletteEntry, TerrainPaletteWire } from "@atbs/shared-data";
 import { ImageComponent } from "../../components/Image";
+import { MAX_MAP_SIZE, MIN_MAP_SIZE } from "./mapSetupHelpers";
 
 const TILE_SIZE = 56;
-export const MIN_MAP_SIZE = 32;
-export const MAX_MAP_SIZE = 256;
 
 export interface MapSetupFieldsProps {
     width: number;
@@ -139,17 +138,4 @@ export function MapSetupFields(props: MapSetupFieldsProps) {
             <MapTerrainFields {...props} />
         </>
     );
-}
-
-export function isValidMapSetup(width: number, height: number): boolean {
-    return (
-        width >= MIN_MAP_SIZE &&
-        width <= MAX_MAP_SIZE &&
-        height >= MIN_MAP_SIZE &&
-        height <= MAX_MAP_SIZE
-    );
-}
-
-export function clampMapSize(value: number): number {
-    return Math.min(MAX_MAP_SIZE, Math.max(MIN_MAP_SIZE, value));
 }

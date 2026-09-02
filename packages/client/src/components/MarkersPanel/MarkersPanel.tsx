@@ -91,7 +91,8 @@ export function MarkersPanel({
             <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
                 {selectedSide.zones.length === 0 ? (
                     <Typography variant="body2" color="text.secondary">
-                        No zones for {markersState.selectedSideId}. Create one to start marking tiles.
+                        No zones for {markersState.selectedSideId}. Create one to start marking
+                        tiles.
                     </Typography>
                 ) : (
                     selectedSide.zones.map((zone) => {

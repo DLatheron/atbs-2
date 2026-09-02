@@ -74,9 +74,7 @@ function createDefaultTile(
     options: ResizeMapRecipeOptions,
     randomise: () => Orientation
 ): ResizeMapTileRecipe {
-    const orientation = options.randomiseOrientation
-        ? randomise()
-        : options.defaultOrientation;
+    const orientation = options.randomiseOrientation ? randomise() : options.defaultOrientation;
 
     return {
         terrain: {
@@ -106,12 +104,7 @@ export function resizeMapRecipe<T extends ResizeMapTileRecipe>(
             const oldCol = newCol - colOffset;
             const oldRow = newRow - rowOffset;
 
-            if (
-                oldCol >= 0 &&
-                oldCol < recipe.width &&
-                oldRow >= 0 &&
-                oldRow < recipe.height
-            ) {
+            if (oldCol >= 0 && oldCol < recipe.width && oldRow >= 0 && oldRow < recipe.height) {
                 return structuredClone(recipe.tiles[oldRow][oldCol]);
             }
 

@@ -166,7 +166,14 @@ export class EditorHistory {
             return { tileUpdates: [], markersChanged: false };
         }
 
-        const result = await this._applyEdit(map, furnitureManager, itemManager, markers, edit, "before");
+        const result = await this._applyEdit(
+            map,
+            furnitureManager,
+            itemManager,
+            markers,
+            edit,
+            "before"
+        );
         this._redoStack.push(edit);
 
         return result;
@@ -183,7 +190,14 @@ export class EditorHistory {
             return { tileUpdates: [], markersChanged: false };
         }
 
-        const result = await this._applyEdit(map, furnitureManager, itemManager, markers, edit, "after");
+        const result = await this._applyEdit(
+            map,
+            furnitureManager,
+            itemManager,
+            markers,
+            edit,
+            "after"
+        );
         this._undoStack.push(edit);
 
         return result;
