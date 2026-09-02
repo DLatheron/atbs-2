@@ -1,0 +1,39 @@
+{
+    "id": "fuel-tank-edge.furniture",
+    "name": "Fuel Tank Edge",
+    "description": [
+        {
+            "text": "Moonbase Delta fuel tank edge"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "fuel-tank-edge"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "fuel-tank-edge-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 220
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 180
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

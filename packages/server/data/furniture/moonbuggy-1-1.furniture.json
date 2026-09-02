@@ -1,0 +1,39 @@
+{
+    "id": "moonbuggy-1-1.furniture",
+    "name": "Moonbuggy",
+    "description": [
+        {
+            "text": "Moonbase Delta moonbuggy"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "moonbuggy-1-1"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "moonbuggy-1-1-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 200
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 150
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

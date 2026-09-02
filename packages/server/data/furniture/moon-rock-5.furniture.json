@@ -1,0 +1,39 @@
+{
+    "id": "moon-rock-5.furniture",
+    "name": "Moon Rock",
+    "description": [
+        {
+            "text": "Moonbase Delta moon rock"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "moon-rock-5"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "moon-rock-5-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["stone.material"],
+    "hitPoints": {
+        "max": 80
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 20
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

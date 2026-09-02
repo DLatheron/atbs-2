@@ -1,0 +1,18 @@
+{
+    "id": "moon-surface.terrain",
+    "name": "Moon Surface",
+    "category": "Terrain",
+    "description": [
+        {
+            "text": "Barren lunar regolith."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "moon-surface"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

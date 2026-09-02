@@ -1,0 +1,39 @@
+{
+    "id": "magenta-console-3.furniture",
+    "name": "Magenta Console",
+    "description": [
+        {
+            "text": "Moonbase Delta magenta console"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "magenta-console-3"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "magenta-console-3-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 70
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 60
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

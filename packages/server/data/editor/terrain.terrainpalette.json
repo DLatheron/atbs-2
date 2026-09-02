@@ -3,6 +3,8 @@
     "name": "Terrain Palette",
     "terrains": [
         "grass.terrain",
+        "garden-grass.terrain",
+        "moon-surface.terrain",
         "concrete.terrain",
         "tarmac.terrain",
         "sand.terrain",
@@ -17,7 +19,8 @@
         "blue-tiles.terrain",
         "red-tiles.terrain",
         "grey-blocks.terrain",
-        "wooden-blocks.terrain"
+        "wooden-blocks.terrain",
+        "moon-surface.terrain"
     ],
     "blends": ["half.blend", "quarter.blend", "three-quarter.blend"]
 }

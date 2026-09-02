@@ -1,0 +1,39 @@
+{
+    "id": "cyan-cross-wall.furniture",
+    "name": "Cyan Cross Wall",
+    "description": [
+        {
+            "text": "Moonbase Delta cyan cross wall"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "cyan-cross-wall"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "cyan-cross-wall-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 200
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 200
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

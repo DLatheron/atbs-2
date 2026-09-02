@@ -1,0 +1,39 @@
+{
+    "id": "misc-fixture.furniture",
+    "name": "Misc Fixture",
+    "description": [
+        {
+            "text": "Moonbase Delta misc fixture"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "misc-fixture"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "misc-fixture-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 50
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 40
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

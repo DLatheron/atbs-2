@@ -1,0 +1,39 @@
+{
+    "id": "fuel-tank-corner.furniture",
+    "name": "Fuel Tank Corner",
+    "description": [
+        {
+            "text": "Moonbase Delta fuel tank corner"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "fuel-tank-corner"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "fuel-tank-corner-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 220
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 180
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

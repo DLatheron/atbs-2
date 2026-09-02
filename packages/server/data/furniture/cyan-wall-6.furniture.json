@@ -1,0 +1,39 @@
+{
+    "id": "cyan-wall-6.furniture",
+    "name": "Cyan Wall",
+    "description": [
+        {
+            "text": "Moonbase Delta cyan wall"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "cyan-wall-6"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "cyan-wall-6-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 200
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 200
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

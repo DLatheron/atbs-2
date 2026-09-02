@@ -9,11 +9,7 @@ import { Orientation, TilePos } from "@atbs/maths";
 import z from "zod";
 import { FurnitureRecipeManager } from "../game/FurnitureRecipeManager.js";
 import type { WorldMap } from "../game/WorldMap.js";
-import {
-    getAdjacentWallEdge,
-    matchWallPiece,
-    type SurroundingWallEdges
-} from "@atbs/shared-data";
+import { getAdjacentWallEdge, matchWallPiece, type SurroundingWallEdges } from "@atbs/shared-data";
 
 export const WallPaletteRecipe = z.object({
     id: z.string(),
