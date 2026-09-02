@@ -1,12 +1,12 @@
-import { Box, Button, Container, Typography } from "@mui/material";
+import { Box, Button, Container, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { useCallback } from "react";
-import { EditorId } from "@atbs/shared-data";
+import { EditorId, RenderMode } from "@atbs/shared-data";
 import { CanvasLoopProps, MapComponent, SidePanel, TitleBarComponent } from "../../components";
 import { useEditorWorld } from "../../hooks";
 import { EditorWorld } from "../../EditorWorld";
 import { useEditorPage } from "./useEditorPage";
 import { EditorSidePanel } from "./EditorSidePanel";
-import { MapDetailsModal, NewMapModal } from "../../modals";
+import { MapDetailsModal, NewMapModal, LoadMapModal } from "../../modals";
 
 export interface EditorPageProps {
     visible: boolean;
@@ -29,6 +29,13 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         onOpenNewMap,
         onCloseNewMap,
         onConfirmNewMap,
+        loadMapOpen,
+        loadMapEntries,
+        loadMapLoading,
+        onOpenLoadMap,
+        onCloseLoadMap,
+        onRequestLoadMapList,
+        onConfirmLoadMap,
         terrainPalette,
         furniturePalette,
         wallPalette,
@@ -45,6 +52,8 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
         setSelectedItem,
         editorPanel,
         setEditorPanel,
+        renderMode,
+        setRenderMode,
         history,
         onUndo,
         onRedo,
@@ -139,11 +148,48 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                         <Button
                             variant="outlined"
                             color="inherit"
+                            onClick={onOpenLoadMap}
+                            disabled={!map}
+                        >
+                            Load Map...
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
                             onClick={onOpenMapDetails}
                             disabled={!map}
                         >
                             Map Details...
                         </Button>
+                        <ToggleButtonGroup
+                            exclusive
+                            size="small"
+                            value={renderMode}
+                            onChange={(_event, value: RenderMode | null) => {
+                                if (value) {
+                                    setRenderMode(value);
+                                }
+                            }}
+                            sx={{
+                                ml: 1,
+                                "& .MuiToggleButton-root": {
+                                    color: "inherit",
+                                    borderColor: "rgba(255, 255, 255, 0.5)",
+                                    px: 1.5,
+                                    py: 0.25
+                                },
+                                "& .MuiToggleButton-root.Mui-selected": {
+                                    color: "black",
+                                    backgroundColor: "white",
+                                    "&:hover": {
+                                        backgroundColor: "rgba(255, 255, 255, 0.85)"
+                                    }
+                                }
+                            }}
+                        >
+                            <ToggleButton value={RenderMode.enum.MAP_MODE}>Map</ToggleButton>
+                            <ToggleButton value={RenderMode.enum.FIRE_MODE}>Fire</ToggleButton>
+                        </ToggleButtonGroup>
                     </Box>
                     <Typography sx={{ gridArea: "id" }} variant="h5">
                         {editorId ?? "-"}
@@ -156,6 +202,15 @@ export function EditorPage({ visible, editorId }: EditorPageProps) {
                 terrainPalette={terrainPalette}
                 onClose={onCloseNewMap}
                 onConfirm={onConfirmNewMap}
+            />
+            <LoadMapModal
+                open={loadMapOpen}
+                hasUnsavedChanges={history.hasUnsavedChanges}
+                maps={loadMapEntries}
+                loading={loadMapLoading}
+                onClose={onCloseLoadMap}
+                onRequestList={onRequestLoadMapList}
+                onConfirm={onConfirmLoadMap}
             />
             <MapDetailsModal
                 open={mapDetailsOpen}

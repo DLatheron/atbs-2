@@ -1,11 +1,14 @@
 import {
     EditorHistoryState,
+    EditorMapListEntry,
+    EditorMapSource,
     EditorMapWire,
     EditorMarkersState,
     FurniturePaletteWire,
     ItemPaletteWire,
     MapResizeAnchor,
     MarkerSideId,
+    RenderMode,
     SelectedFurniture,
     SelectedItem,
     SelectedTerrain,
@@ -51,6 +54,10 @@ export function useEditorPage() {
     const [savedMessage, setSavedMessage] = useState<string | null>(null);
     const [mapDetailsOpen, setMapDetailsOpen] = useState(false);
     const [newMapOpen, setNewMapOpen] = useState(false);
+    const [loadMapOpen, setLoadMapOpen] = useState(false);
+    const [loadMapEntries, setLoadMapEntries] = useState<EditorMapListEntry[] | null>(null);
+    const [loadMapLoading, setLoadMapLoading] = useState(false);
+    const [renderMode, setRenderMode] = useState<RenderMode>(RenderMode.enum.MAP_MODE);
 
     useEffect(() => {
         world.selectedTerrain = selectedTerrain;
@@ -84,6 +91,10 @@ export function useEditorPage() {
         world.editorPanel = editorPanel;
         world.syncEditorState();
     }, [world, editorPanel]);
+
+    useEffect(() => {
+        world.renderMode = renderMode;
+    }, [world, renderMode]);
 
     useEffect(() => {
         console.info("Mounting EditorPage Message Handlers");
@@ -145,6 +156,11 @@ export function useEditorPage() {
                 const message = `Saved ${payload.mapId} as ${payload.filename}`;
                 console.info(message);
                 setSavedMessage(message);
+            }),
+
+            messageManager.registerHandler("server:editor:map:list", (_context, payload) => {
+                setLoadMapEntries(payload.maps);
+                setLoadMapLoading(false);
             })
         ];
 
@@ -193,6 +209,25 @@ export function useEditorPage() {
         setNewMapOpen(false);
     }, []);
 
+    const onOpenLoadMap = useCallback(() => {
+        setLoadMapOpen(true);
+    }, []);
+
+    const onCloseLoadMap = useCallback(() => {
+        setLoadMapOpen(false);
+        setLoadMapEntries(null);
+        setLoadMapLoading(false);
+    }, []);
+
+    const onRequestLoadMapList = useCallback(() => {
+        setLoadMapLoading(true);
+        setLoadMapEntries(null);
+        sendMessage({
+            type: "client:editor:map:list",
+            payload: {}
+        });
+    }, [sendMessage]);
+
     const onConfirmMapDetails = useCallback(
         (details: {
             width: number;
@@ -224,6 +259,19 @@ export function useEditorPage() {
                 payload: details
             });
             setNewMapOpen(false);
+        },
+        [sendMessage]
+    );
+
+    const onConfirmLoadMap = useCallback(
+        (selection: { source: EditorMapSource; key: string }) => {
+            sendMessage({
+                type: "client:editor:map:load",
+                payload: selection
+            });
+            setLoadMapOpen(false);
+            setLoadMapEntries(null);
+            setLoadMapLoading(false);
         },
         [sendMessage]
     );
@@ -415,6 +463,8 @@ export function useEditorPage() {
         setSelectedItem,
         editorPanel,
         setEditorPanel,
+        renderMode,
+        setRenderMode,
         history,
         savedMessage,
         onSave,
@@ -426,6 +476,13 @@ export function useEditorPage() {
         onOpenNewMap,
         onCloseNewMap,
         onConfirmNewMap,
+        loadMapOpen,
+        loadMapEntries,
+        loadMapLoading,
+        onOpenLoadMap,
+        onCloseLoadMap,
+        onRequestLoadMapList,
+        onConfirmLoadMap,
         onUndo,
         onRedo,
         onSelectMarkerSide,

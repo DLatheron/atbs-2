@@ -13,7 +13,7 @@ import {
 } from "./PrimitiveTypes.js";
 import { ITilePos, IVec2, Orientation } from "@atbs/maths";
 import { UnitActionType } from "./ActionTypes.js";
-import { MapResizeAnchor } from "./EditorTypes.js";
+import { EditorMapSource, MapResizeAnchor } from "./EditorTypes.js";
 
 export const ClientPingPayload = z.object({ nonce: z.number() });
 export type ClientPingPayload = z.infer<typeof ClientPingPayload>;
@@ -325,6 +325,17 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
             defaultTerrainId: z.string().nonempty(),
             defaultOrientation: z.enum(Orientation),
             randomiseOrientation: z.boolean()
+        })
+    }),
+    z.object({
+        type: z.literal("client:editor:map:list"),
+        payload: z.object({})
+    }),
+    z.object({
+        type: z.literal("client:editor:map:load"),
+        payload: z.object({
+            source: EditorMapSource,
+            key: z.string().nonempty()
         })
     }),
     z.object({

@@ -192,3 +192,23 @@ export const MAP_RESIZE_ANCHORS = [
 ] as const;
 export const MapResizeAnchor = z.enum(MAP_RESIZE_ANCHORS);
 export type MapResizeAnchor = z.infer<typeof MapResizeAnchor>;
+
+export const EDITOR_MAP_SOURCES = ["defined", "editor-save"] as const;
+export const EditorMapSource = z.enum(EDITOR_MAP_SOURCES);
+export type EditorMapSource = z.infer<typeof EditorMapSource>;
+
+export const EditorMapListEntry = z.object({
+    key: z.string().nonempty(),
+    source: EditorMapSource,
+    id: z.string().nonempty(),
+    name: z.string().nonempty(),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    filename: z.string().nonempty().optional()
+});
+export type EditorMapListEntry = z.infer<typeof EditorMapListEntry>;
+
+export const EditorMapList = z.object({
+    maps: z.array(EditorMapListEntry)
+});
+export type EditorMapList = z.infer<typeof EditorMapList>;

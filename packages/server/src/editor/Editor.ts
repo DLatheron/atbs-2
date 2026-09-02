@@ -1,11 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { randomInt } from "node:crypto";
 import {
     ClientId,
     ClientToServerMessage,
     EditorId,
+    EditorMapListEntry,
     ServerToClientMessage,
     TileUpdate,
     resizeMapRecipe
@@ -23,6 +23,7 @@ import { FurniturePaletteManager } from "./FurniturePaletteManager.js";
 import { WallPaletteManager } from "./WallPaletteManager.js";
 import { ItemPaletteManager } from "./ItemPaletteManager.js";
 import { EditorMarkers } from "./EditorMarkers.js";
+import { EDITOR_SAVES_DIR, listEditorSavedMaps, loadEditorSavedMap } from "./editorMapFiles.js";
 import {
     getBrushDimensions,
     iterateFurnitureTiles,
@@ -36,16 +37,12 @@ import { FurnitureManager } from "../game/FurnitureManager.js";
 import { FurnitureRecipeManager } from "../game/FurnitureRecipeManager.js";
 import { MaterialManager } from "../game/MaterialManager.js";
 import { VisibilityManager } from "../game/VisibilityManager.js";
+import { MapRecipeManager } from "../game/MapRecipeManager.js";
 import { config } from "../config/config.schema.js";
 
 const DEFAULT_TERRAIN_ID = "grass.terrain";
 
 const EDITOR_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
-const EDITOR_SAVES_DIR = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "../../data/editor-saves"
-);
 
 function randomSegment(length: number): string {
     let segment = "";
@@ -325,6 +322,50 @@ export class Editor implements MapHost {
         this._broadcastHistory();
     }
 
+    async listMaps(): Promise<EditorMapListEntry[]> {
+        const definedMaps: EditorMapListEntry[] = MapRecipeManager.GetSingleton()
+            .list()
+            .map((recipe) => ({
+                key: recipe.id,
+                source: "defined" as const,
+                id: recipe.id,
+                name: recipe.name,
+                width: recipe.width,
+                height: recipe.height
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        const savedMaps = await listEditorSavedMaps();
+        return [...definedMaps, ...savedMaps];
+    }
+
+    async loadMap(
+        payload: Extract<ClientToServerMessage, { type: "client:editor:map:load" }>["payload"]
+    ): Promise<void> {
+        let recipe: ReturnType<WorldMap["toMapRecipe"]>;
+
+        if (payload.source === "defined") {
+            recipe = MapRecipeManager.GetSingleton().get(payload.key);
+        } else {
+            recipe = await loadEditorSavedMap(payload.key);
+        }
+
+        this._replaceMap({
+            ...recipe,
+            id: `editor.${this._id}.map`,
+            name: recipe.name
+        });
+        this._markers.reset();
+        this._history.clear();
+
+        this.broadcastMessage({
+            type: "server:editor:map",
+            payload: this._map.renderEditorMap()
+        });
+        this._broadcastMarkersState();
+        this._broadcastHistory();
+    }
+
     destroyEditor() {
         if (this._isDestroying) {
             return;
@@ -378,6 +419,32 @@ export class Editor implements MapHost {
                 this.logger.error("Failed to create new editor map", error);
             }
         });
+
+        this._messageManager.registerHandler(
+            "client:editor:map:list",
+            async (_context, _payload, from) => {
+                try {
+                    const maps = await this.listMaps();
+                    from.sendMessage({
+                        type: "server:editor:map:list",
+                        payload: { maps }
+                    });
+                } catch (error) {
+                    this.logger.error("Failed to list editor maps", error);
+                }
+            }
+        );
+
+        this._messageManager.registerHandler(
+            "client:editor:map:load",
+            async (_context, payload) => {
+                try {
+                    await this.loadMap(payload);
+                } catch (error) {
+                    this.logger.error("Failed to load editor map", error);
+                }
+            }
+        );
 
         this._messageManager.registerHandler(
             "client:editor:terrain:paint",
