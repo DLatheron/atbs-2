@@ -1,0 +1,27 @@
+{
+    "id": "stone-corner-wall.furniture",
+    "name": "Stone Wall Corner",
+    "description": [{ "text": "The corner of a thick stone wall" }],
+    "renderable": {
+        "default": {
+            "default": [
+                { "imageId": "stone-partial-wall" },
+                { "imageId": "stone-partial-wall", "orientation": 6 }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                { "imageId": "stone-partial-wall-cl" },
+                { "imageId": "stone-partial-wall-cl", "orientation": 6 }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["stone.material"],
+    "hitPoints": { "max": 350 },
+    "movementObstruction": {
+        "default": { "default": 250 },
+        "destroyed": { "default": 0 }
+    }
+}

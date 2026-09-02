@@ -45,6 +45,12 @@ export function matchWallPiece(params: {
         surroundingEdges[Orientation.WEST]
     ]);
 
+    // With no neighbours, keep the caller's selected piece/orientation so
+    // different wall families (e.g. thin concrete vs thick stone) stay intentional.
+    if (tileEdgeCount === 0) {
+        return fallback;
+    }
+
     const candidates: WallMatchCandidate[] = [];
 
     for (const [paletteIndex, wall] of walls.entries()) {
@@ -90,15 +96,11 @@ export function matchWallPiece(params: {
         }
     }
 
-    const idealEdgeCount = tileEdgeCount > 0 ? Math.max(2, tileEdgeCount) : 2;
+    const idealEdgeCount = Math.max(2, tileEdgeCount);
 
     candidates.sort((a, b) => {
         if (b.score !== a.score) {
             return b.score - a.score;
-        }
-
-        if (tileEdgeCount === 0) {
-            return a.edgeCount - b.edgeCount || a.paletteIndex - b.paletteIndex;
         }
 
         const aDistance = Math.abs(a.edgeCount - idealEdgeCount);

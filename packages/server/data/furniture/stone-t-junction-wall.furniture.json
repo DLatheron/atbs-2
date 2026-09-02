@@ -1,0 +1,27 @@
+{
+    "id": "stone-t-junction-wall.furniture",
+    "name": "Stone Wall T-Junction",
+    "description": [{ "text": "A thick stone wall T-junction" }],
+    "renderable": {
+        "default": {
+            "default": [
+                { "imageId": "stone-wall" },
+                { "imageId": "stone-partial-wall", "orientation": 6 }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                { "imageId": "stone-wall-cl" },
+                { "imageId": "stone-partial-wall-cl", "orientation": 6 }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["stone.material"],
+    "hitPoints": { "max": 350 },
+    "movementObstruction": {
+        "default": { "default": 250 },
+        "destroyed": { "default": 0 }
+    }
+}

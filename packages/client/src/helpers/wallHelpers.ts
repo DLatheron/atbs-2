@@ -5,6 +5,7 @@ import {
     WallHotKeyAction,
     WallPaletteEntry,
     WallPaletteWire,
+    getAdjacentWallEdge,
     matchWallPiece
 } from "@atbs/shared-data";
 
@@ -56,7 +57,7 @@ function getAdjacentEdgeFromLayer(
         return null;
     }
 
-    return "0-2-0";
+    return getAdjacentWallEdge(wallEntry.edges, furniture.orientation, direction);
 }
 
 export function getSurroundingEdgesFromLayer(

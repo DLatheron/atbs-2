@@ -8,6 +8,31 @@
             "allowRandomOrientation": false
         },
         {
+            "id": "wooden-chair",
+            "tiles": [["wooden-chair.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "wooden-table",
+            "tiles": [["wooden-table.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "cupboard",
+            "tiles": [["cupboard.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "kitchen-worktop",
+            "tiles": [["kitchen-worktop.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "stove",
+            "tiles": [["stove.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
             "id": "door",
             "tiles": [["door.furniture"]],
             "allowRandomOrientation": false

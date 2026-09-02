@@ -1,0 +1,21 @@
+{
+    "id": "wooden-table.furniture",
+    "name": "Wooden Table",
+    "description": [{ "text": "A sturdy wooden table" }],
+    "renderable": {
+        "default": {
+            "default": [{ "imageId": "wooden-table" }],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [{ "imageId": "wooden-table-cl" }],
+            "destroyed": []
+        }
+    },
+    "materials": ["thick-wood.material"],
+    "hitPoints": { "max": 60 },
+    "movementObstruction": {
+        "default": { "default": 80 },
+        "destroyed": { "default": 0 }
+    }
+}

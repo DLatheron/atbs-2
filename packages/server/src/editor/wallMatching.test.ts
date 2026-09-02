@@ -21,7 +21,7 @@ describe("rotateWallEdges", () => {
 });
 
 describe("matchWallPiece", () => {
-    it("selects a straight wall for an isolated tile", () => {
+    it("keeps the fallback piece for an isolated tile", () => {
         const match = matchWallPiece({
             surroundingEdges: {
                 [Orientation.NORTH]: null,
@@ -30,10 +30,10 @@ describe("matchWallPiece", () => {
                 [Orientation.WEST]: null
             },
             walls: WALL_PALETTE,
-            fallback: { id: "wall.furniture", orientation: Orientation.NORTH }
+            fallback: { id: "wall.furniture", orientation: Orientation.EAST }
         });
 
-        expect(match?.id).toBe("wall.furniture");
+        expect(match).toEqual({ id: "wall.furniture", orientation: Orientation.EAST });
     });
 
     it("selects a straight wall below a single horizontal connection", () => {
@@ -80,5 +80,29 @@ describe("matchWallPiece", () => {
 
         expect(match?.id).toBe("wall.furniture");
         expect(match?.orientation).toBe(Orientation.EAST);
+    });
+
+    it("matches thick stone walls separately from thin concrete walls", () => {
+        const mixedPalette = [
+            ...WALL_PALETTE,
+            { id: "stone-wall.furniture", edges: ["0-4-0", null, "0-4-0", null] as const },
+            {
+                id: "stone-corner-wall.furniture",
+                edges: [null, "0-4-0", "0-4-0", null] as const
+            }
+        ];
+
+        const match = matchWallPiece({
+            surroundingEdges: {
+                [Orientation.NORTH]: "0-4-0",
+                [Orientation.EAST]: null,
+                [Orientation.SOUTH]: null,
+                [Orientation.WEST]: "0-4-0"
+            },
+            walls: mixedPalette,
+            fallback: { id: "stone-wall.furniture", orientation: Orientation.NORTH }
+        });
+
+        expect(match?.id).toBe("stone-corner-wall.furniture");
     });
 });

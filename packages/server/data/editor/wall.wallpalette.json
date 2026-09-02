@@ -21,6 +21,22 @@
         {
             "id": "door.furniture",
             "edges": ["0-2-0", null, "0-2-0", null]
+        },
+        {
+            "id": "stone-wall.furniture",
+            "edges": ["0-4-0", null, "0-4-0", null]
+        },
+        {
+            "id": "stone-corner-wall.furniture",
+            "edges": [null, "0-4-0", "0-4-0", null]
+        },
+        {
+            "id": "stone-t-junction-wall.furniture",
+            "edges": ["0-4-0", "0-4-0", "0-4-0", null]
+        },
+        {
+            "id": "stone-cross-wall.furniture",
+            "edges": ["0-4-0", "0-4-0", "0-4-0", "0-4-0"]
         }
     ],
     "hotKeys": {

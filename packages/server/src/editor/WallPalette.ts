@@ -9,7 +9,11 @@ import { Orientation, TilePos } from "@atbs/maths";
 import z from "zod";
 import { FurnitureRecipeManager } from "../game/FurnitureRecipeManager.js";
 import type { WorldMap } from "../game/WorldMap.js";
-import { matchWallPiece, type SurroundingWallEdges } from "@atbs/shared-data";
+import {
+    getAdjacentWallEdge,
+    matchWallPiece,
+    type SurroundingWallEdges
+} from "@atbs/shared-data";
 
 export const WallPaletteRecipe = z.object({
     id: z.string(),
@@ -77,8 +81,16 @@ export class WallPalette {
                 return null;
             }
 
-            // Any neighbouring wall tile should offer a connection on this side.
-            return "0-2-0";
+            const wallEntry = this.getWallById(furnitureState.furnitureId);
+            if (!wallEntry) {
+                return null;
+            }
+
+            return getAdjacentWallEdge(
+                wallEntry.edges,
+                furnitureState.orientation ?? Orientation.NORTH,
+                direction
+            );
         };
 
         return {
