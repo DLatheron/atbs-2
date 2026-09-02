@@ -695,8 +695,6 @@ export class Editor implements MapHost {
         const tile = this._map.getTile(tilePos);
         const before = tile.getItemState();
 
-        this._clearTileItems(tile);
-
         const item = this._itemManager.newItem(payload.itemId, { location: tilePos });
         tile.addItem(item);
 
