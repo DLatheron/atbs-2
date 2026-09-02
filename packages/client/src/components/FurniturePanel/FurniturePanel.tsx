@@ -128,19 +128,19 @@ export function FurniturePanel({
                 >
                     {furniturePalette.furniture.map(
                         (furnitureEntry: FurniturePaletteEntry, index: number) => (
-                        <FurniturePaletteCell
-                            key={furnitureEntry.id}
-                            furniturePalette={furniturePalette}
-                            index={index}
-                            orientation={selectedFurniture.orientation}
-                            selected={index === selectedFurniture.index}
-                            onSelect={() =>
-                                onSelectedFurnitureChange({
-                                    ...selectedFurniture,
-                                    index
-                                })
-                            }
-                        />
+                            <FurniturePaletteCell
+                                key={furnitureEntry.id}
+                                furniturePalette={furniturePalette}
+                                index={index}
+                                orientation={selectedFurniture.orientation}
+                                selected={index === selectedFurniture.index}
+                                onSelect={() =>
+                                    onSelectedFurnitureChange({
+                                        ...selectedFurniture,
+                                        index
+                                    })
+                                }
+                            />
                         )
                     )}
                 </Box>

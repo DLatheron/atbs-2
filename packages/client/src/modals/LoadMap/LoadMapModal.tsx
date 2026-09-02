@@ -91,7 +91,11 @@ export function LoadMapModal({
                 <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
                     {title}
                 </Typography>
-                <List dense disablePadding sx={{ border: 1, borderColor: "divider", borderRadius: 1 }}>
+                <List
+                    dense
+                    disablePadding
+                    sx={{ border: 1, borderColor: "divider", borderRadius: 1 }}
+                >
                     {entries.map((entry) => {
                         const itemKey = `${entry.source}:${entry.key}`;
                         return (
