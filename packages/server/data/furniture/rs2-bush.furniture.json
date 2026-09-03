@@ -1,0 +1,43 @@
+{
+    "id": "rs2-bush.furniture",
+    "name": "Alien Bush",
+    "tileSet": "Rebelstar 2",
+    "category": "Nature",
+    "description": [
+        {
+            "text": "Rebelstar 2 alien bush"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "rs2-bush"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "rs2-bush-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": [
+        "thin-wood.material"
+    ],
+    "hitPoints": {
+        "max": 35
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 30
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

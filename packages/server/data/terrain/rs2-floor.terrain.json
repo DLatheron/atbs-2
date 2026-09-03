@@ -1,0 +1,19 @@
+{
+    "id": "rs2-floor.terrain",
+    "name": "Alien Floor",
+    "tileSet": "Rebelstar 2",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Rebelstar 2 alien floor"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-floor"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

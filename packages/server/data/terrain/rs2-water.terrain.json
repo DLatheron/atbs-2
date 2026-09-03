@@ -1,0 +1,19 @@
+{
+    "id": "rs2-water.terrain",
+    "name": "Water",
+    "tileSet": "Rebelstar 2",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Rebelstar 2 water"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-water"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

@@ -1,0 +1,43 @@
+{
+    "id": "rs2-corner-wall-4.furniture",
+    "name": "Alien Corner Wall",
+    "tileSet": "Rebelstar 2",
+    "category": "Walls",
+    "description": [
+        {
+            "text": "Rebelstar 2 alien corner wall"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "rs2-corner-wall-4"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "rs2-corner-wall-4-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": [
+        "thin-metal.material"
+    ],
+    "hitPoints": {
+        "max": 220
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 200
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

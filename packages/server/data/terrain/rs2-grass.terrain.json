@@ -1,0 +1,19 @@
+{
+    "id": "rs2-grass.terrain",
+    "name": "Alien Grass",
+    "tileSet": "Rebelstar 2",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Rebelstar 2 alien grass"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-grass"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

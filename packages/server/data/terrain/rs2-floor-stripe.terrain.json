@@ -1,0 +1,19 @@
+{
+    "id": "rs2-floor-stripe.terrain",
+    "name": "Striped Floor",
+    "tileSet": "Rebelstar 2",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Rebelstar 2 striped floor"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-floor-stripe"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}
