@@ -1,7 +1,8 @@
 {
     "id": "concrete.terrain",
     "name": "Concrete",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Built",
     "description": [
         {
             "text": "Solid concrete."

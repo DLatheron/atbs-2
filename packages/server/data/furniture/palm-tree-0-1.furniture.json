@@ -1,6 +1,8 @@
 {
     "id": "palm-tree-0-1.furniture",
     "name": "Palm Tree",
+    "tileSet": "Default",
+    "category": "Nature",
     "description": [
         {
             "text": "A palm tree"

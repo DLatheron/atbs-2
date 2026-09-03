@@ -1,7 +1,8 @@
 {
     "id": "garden-grass-4.terrain",
     "name": "Garden Grass 4",
-    "category": "Terrain",
+    "tileSet": "Rebelstar",
+    "category": "Garden",
     "description": [
         {
             "text": "Garden grass inside the moonbase."

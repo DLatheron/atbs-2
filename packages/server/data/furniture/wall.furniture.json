@@ -1,21 +1,41 @@
 {
     "id": "wall.furniture",
     "name": "Wall",
-    "description": [{ "text": "A concrete wall" }],
+    "tileSet": "Default",
+    "category": "Walls",
+    "description": [
+        {
+            "text": "A concrete wall"
+        }
+    ],
     "renderable": {
         "default": {
-            "default": [{ "imageId": "wall" }],
+            "default": [
+                {
+                    "imageId": "wall"
+                }
+            ],
             "destroyed": []
         },
         "FIRE_MODE": {
-            "default": [{ "imageId": "wall-cl" }],
+            "default": [
+                {
+                    "imageId": "wall-cl"
+                }
+            ],
             "destroyed": []
         }
     },
     "materials": ["concrete.material"],
-    "hitPoints": { "max": 200 },
+    "hitPoints": {
+        "max": 200
+    },
     "movementObstruction": {
-        "default": { "default": 200 },
-        "destroyed": { "default": 0 }
+        "default": {
+            "default": 200
+        },
+        "destroyed": {
+            "default": 0
+        }
     }
 }

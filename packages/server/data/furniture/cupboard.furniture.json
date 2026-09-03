@@ -1,21 +1,41 @@
 {
     "id": "cupboard.furniture",
     "name": "Cupboard",
-    "description": [{ "text": "A wooden cupboard with double doors" }],
+    "tileSet": "Default",
+    "category": "Interior",
+    "description": [
+        {
+            "text": "A wooden cupboard with double doors"
+        }
+    ],
     "renderable": {
         "default": {
-            "default": [{ "imageId": "cupboard" }],
+            "default": [
+                {
+                    "imageId": "cupboard"
+                }
+            ],
             "destroyed": []
         },
         "FIRE_MODE": {
-            "default": [{ "imageId": "cupboard-cl" }],
+            "default": [
+                {
+                    "imageId": "cupboard-cl"
+                }
+            ],
             "destroyed": []
         }
     },
     "materials": ["thick-wood.material"],
-    "hitPoints": { "max": 80 },
+    "hitPoints": {
+        "max": 80
+    },
     "movementObstruction": {
-        "default": { "default": 100 },
-        "destroyed": { "default": 0 }
+        "default": {
+            "default": 100
+        },
+        "destroyed": {
+            "default": 0
+        }
     }
 }

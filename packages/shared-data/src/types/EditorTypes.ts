@@ -5,6 +5,8 @@ import { ItemId, RenderList } from "./PrimitiveTypes.js";
 export const TerrainPaletteEntry = z.object({
     id: z.string().nonempty(),
     name: z.string().nonempty(),
+    tileSet: z.string().nonempty(),
+    category: z.string().nonempty(),
     uiImage: RenderList,
     allowRandomOrientation: z.boolean()
 });
@@ -61,6 +63,8 @@ export type FurniturePaletteTileEntry = z.infer<typeof FurniturePaletteTileEntry
 
 export const FurniturePaletteEntry = z.object({
     id: z.string().nonempty(),
+    tileSet: z.string().nonempty(),
+    category: z.string().nonempty(),
     furniture: z.array(z.array(FurniturePaletteTileEntry)).min(1),
     allowRandomOrientation: z.boolean()
 });

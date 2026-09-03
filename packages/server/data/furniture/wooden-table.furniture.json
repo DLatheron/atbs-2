@@ -1,21 +1,41 @@
 {
     "id": "wooden-table.furniture",
     "name": "Wooden Table",
-    "description": [{ "text": "A sturdy wooden table" }],
+    "tileSet": "Default",
+    "category": "Interior",
+    "description": [
+        {
+            "text": "A sturdy wooden table"
+        }
+    ],
     "renderable": {
         "default": {
-            "default": [{ "imageId": "wooden-table" }],
+            "default": [
+                {
+                    "imageId": "wooden-table"
+                }
+            ],
             "destroyed": []
         },
         "FIRE_MODE": {
-            "default": [{ "imageId": "wooden-table-cl" }],
+            "default": [
+                {
+                    "imageId": "wooden-table-cl"
+                }
+            ],
             "destroyed": []
         }
     },
     "materials": ["thick-wood.material"],
-    "hitPoints": { "max": 60 },
+    "hitPoints": {
+        "max": 60
+    },
     "movementObstruction": {
-        "default": { "default": 80 },
-        "destroyed": { "default": 0 }
+        "default": {
+            "default": 80
+        },
+        "destroyed": {
+            "default": 0
+        }
     }
 }

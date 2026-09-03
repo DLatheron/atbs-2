@@ -1,7 +1,8 @@
 {
     "id": "dried-earth.terrain",
     "name": "Dried Earth",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Natural",
     "description": [
         {
             "text": "Dried earth."

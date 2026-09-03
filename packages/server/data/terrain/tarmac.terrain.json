@@ -1,7 +1,8 @@
 {
     "id": "tarmac.terrain",
     "name": "Tarmac",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Built",
     "description": [
         {
             "text": "Well maintained tarmac."

@@ -1,7 +1,8 @@
 {
     "id": "red-tiles.terrain",
     "name": "Red Tiles",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Built",
     "description": [
         {
             "text": "Red tiles."

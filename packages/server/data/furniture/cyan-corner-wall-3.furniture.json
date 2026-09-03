@@ -1,6 +1,8 @@
 {
     "id": "cyan-corner-wall-3.furniture",
     "name": "Cyan Corner Wall",
+    "tileSet": "Rebelstar",
+    "category": "Walls",
     "description": [
         {
             "text": "Moonbase Delta cyan corner wall"

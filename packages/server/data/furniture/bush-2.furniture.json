@@ -1,6 +1,8 @@
 {
     "id": "bush-2.furniture",
     "name": "Bush",
+    "tileSet": "Default",
+    "category": "Nature",
     "description": [
         {
             "text": "A bush"

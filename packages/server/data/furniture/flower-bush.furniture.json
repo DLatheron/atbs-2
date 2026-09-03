@@ -1,6 +1,8 @@
 {
     "id": "flower-bush.furniture",
     "name": "Flower Bush",
+    "tileSet": "Default",
+    "category": "Nature",
     "description": [
         {
             "text": "A flower bush"

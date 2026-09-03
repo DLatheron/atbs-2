@@ -1,6 +1,8 @@
 {
     "id": "moon-crater.furniture",
     "name": "Moon Crater",
+    "tileSet": "Rebelstar",
+    "category": "Exterior",
     "description": [
         {
             "text": "Moonbase Delta moon crater"

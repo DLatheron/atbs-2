@@ -1,27 +1,71 @@
 {
     "id": "door.furniture",
     "name": "Door",
-    "description": [{ "text": "A heavy set front door" }],
+    "tileSet": "Default",
+    "category": "Doors",
+    "description": [
+        {
+            "text": "A heavy set front door"
+        }
+    ],
     "renderable": {
         "default": {
-            "default": [{ "imageId": "doorway" }, { "imageId": "door" }],
-            "open": [{ "imageId": "doorway" }],
-            "destroyed": [{ "imageId": "doorway" }]
+            "default": [
+                {
+                    "imageId": "doorway"
+                },
+                {
+                    "imageId": "door"
+                }
+            ],
+            "open": [
+                {
+                    "imageId": "doorway"
+                }
+            ],
+            "destroyed": [
+                {
+                    "imageId": "doorway"
+                }
+            ]
         },
         "FIRE_MODE": {
-            "default": [{ "imageId": "doorway-cl" }, { "imageId": "door-cl" }],
-            "open": [{ "imageId": "doorway-cl" }],
-            "destroyed": [{ "imageId": "doorway-cl" }]
+            "default": [
+                {
+                    "imageId": "doorway-cl"
+                },
+                {
+                    "imageId": "door-cl"
+                }
+            ],
+            "open": [
+                {
+                    "imageId": "doorway-cl"
+                }
+            ],
+            "destroyed": [
+                {
+                    "imageId": "doorway-cl"
+                }
+            ]
         }
     },
     "state": "closed",
     "materials": ["thin-wood.material", "thick-wood.material"],
-    "hitPoints": { "max": 150 },
+    "hitPoints": {
+        "max": 150
+    },
     "pixelDestruction": true,
     "movementObstruction": {
-        "default": { "default": 100 },
-        "open": { "default": 0 },
-        "destroyed": { "default": 0 }
+        "default": {
+            "default": 100
+        },
+        "open": {
+            "default": 0
+        },
+        "destroyed": {
+            "default": 0
+        }
     },
     "actions": {
         "closed": {

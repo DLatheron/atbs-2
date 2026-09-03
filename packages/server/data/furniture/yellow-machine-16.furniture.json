@@ -1,6 +1,8 @@
 {
     "id": "yellow-machine-16.furniture",
     "name": "Yellow Machine",
+    "tileSet": "Rebelstar",
+    "category": "Machinery",
     "description": [
         {
             "text": "Moonbase Delta yellow machine"

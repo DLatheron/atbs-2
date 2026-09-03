@@ -77,7 +77,12 @@ export class FurniturePalette {
     toWireFormat(furnitureRecipeManager: FurnitureRecipeManager): FurniturePaletteWire {
         const uiCache = new Map<
             string,
-            { name: string; uiImage: ReturnType<SceneObject["getRenderList"]> }
+            {
+                name: string;
+                tileSet: string;
+                category: string;
+                uiImage: ReturnType<SceneObject["getRenderList"]>;
+            }
         >();
 
         const getUiEntry = (furnitureId: string) => {
@@ -90,6 +95,8 @@ export class FurniturePalette {
             const sceneObject = new SceneObject(recipe.renderable);
             const entry = {
                 name: recipe.name,
+                tileSet: recipe.tileSet,
+                category: recipe.category,
                 uiImage: sceneObject.getRenderList({
                     renderMode: RenderMode.enum.UI_MODE,
                     states: []
@@ -100,16 +107,23 @@ export class FurniturePalette {
         };
 
         return {
-            furniture: this._entries.map(({ id, tiles, allowRandomOrientation }) => ({
-                id,
-                allowRandomOrientation,
-                furniture: tiles.map((row) =>
-                    row.map(({ furnitureId }) => {
-                        const { name, uiImage } = getUiEntry(furnitureId);
-                        return { id: furnitureId, name, uiImage };
-                    })
-                )
-            }))
+            furniture: this._entries.map(({ id, tiles, allowRandomOrientation }) => {
+                const firstTile = tiles[0]?.[0];
+                const firstUi = firstTile ? getUiEntry(firstTile.furnitureId) : undefined;
+
+                return {
+                    id,
+                    tileSet: firstUi?.tileSet ?? "Default",
+                    category: firstUi?.category ?? "Uncategorised",
+                    allowRandomOrientation,
+                    furniture: tiles.map((row) =>
+                        row.map(({ furnitureId }) => {
+                            const { name, uiImage } = getUiEntry(furnitureId);
+                            return { id: furnitureId, name, uiImage };
+                        })
+                    )
+                };
+            })
         };
     }
 }

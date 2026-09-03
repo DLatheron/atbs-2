@@ -1,6 +1,8 @@
 {
     "id": "misc-fixture-2.furniture",
     "name": "Misc Fixture",
+    "tileSet": "Rebelstar",
+    "category": "Interior",
     "description": [
         {
             "text": "Moonbase Delta misc fixture"

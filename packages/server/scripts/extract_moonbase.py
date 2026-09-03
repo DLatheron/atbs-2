@@ -103,6 +103,7 @@ class Family:
     movement: int = 40
     hit_points: int = 50
     material: str = "thin-metal.material"
+    category: str = "Interior"
 
 
 def classify_colors(img: Image.Image) -> dict:
@@ -164,6 +165,7 @@ def classify_family(fam: Family) -> None:
             fam.kind = "terrain"
             fam.base_name = "garden-grass"
             fam.material = "concrete.material"
+            fam.category = "Garden"
             return
 
     # Structural cyan walls / airlocks
@@ -174,10 +176,12 @@ def classify_family(fam: Family) -> None:
             fam.base_name = "cyan-airlock"
             fam.movement = 100
             fam.hit_points = 150
+            fam.category = "Doors"
         elif c["red"] >= 12:
             fam.base_name = "cyan-medlock"
             fam.movement = 100
             fam.hit_points = 150
+            fam.category = "Doors"
         elif edge_count >= 1 and c["cyan"] / max(nonblack, 1) > 0.45:
             n, e, s, w = edges
             if edge_count == 4:
@@ -197,10 +201,12 @@ def classify_family(fam: Family) -> None:
             fam.movement = 200
             fam.hit_points = 200
             fam.material = "thin-metal.material"
+            fam.category = "Walls"
         else:
             fam.base_name = "cyan-fixture"
             fam.movement = 80
             fam.hit_points = 80
+            fam.category = "Interior"
         fam.kind = "furniture"
         return
 
@@ -210,6 +216,7 @@ def classify_family(fam: Family) -> None:
         fam.movement = 180
         fam.hit_points = 220
         fam.material = "thin-metal.material"
+        fam.category = "Machinery"
         return
 
     # Yellow machinery / chairs / vehicles
@@ -218,11 +225,13 @@ def classify_family(fam: Family) -> None:
             fam.base_name = "yellow-machine"
             fam.movement = 100
             fam.hit_points = 120
+            fam.category = "Machinery"
         else:
             fam.base_name = "yellow-chair"
             fam.movement = 30
             fam.hit_points = 40
             fam.material = "thin-metal.material"
+            fam.category = "Interior"
         return
 
     # Magenta furniture
@@ -230,6 +239,7 @@ def classify_family(fam: Family) -> None:
         fam.base_name = "magenta-console"
         fam.movement = 60
         fam.hit_points = 70
+        fam.category = "Computers"
         return
 
     # Green plants / bunks (with other colours or denser)
@@ -239,10 +249,12 @@ def classify_family(fam: Family) -> None:
             fam.movement = 40
             fam.hit_points = 30
             fam.material = "thin-wood.material"
+            fam.category = "Garden"
         else:
             fam.base_name = "green-bunk"
             fam.movement = 60
             fam.hit_points = 60
+            fam.category = "Interior"
         return
 
     # White rocks / craters / ladders
@@ -254,6 +266,7 @@ def classify_family(fam: Family) -> None:
         fam.movement = 20
         fam.hit_points = 80
         fam.material = "stone.material"
+        fam.category = "Exterior"
         return
 
     # Red markers
@@ -261,11 +274,13 @@ def classify_family(fam: Family) -> None:
         fam.base_name = "red-marker"
         fam.movement = 10
         fam.hit_points = 20
+        fam.category = "Exterior"
         return
 
     fam.base_name = "misc-fixture"
     fam.movement = 40
     fam.hit_points = 50
+    fam.category = "Interior"
 
 
 def furniture_json(fam: Family) -> dict:
@@ -283,6 +298,8 @@ def furniture_json(fam: Family) -> dict:
     return {
         "id": fam.furniture_id,
         "name": display,
+        "tileSet": "Rebelstar",
+        "category": fam.category,
         "description": [{"text": f"Moonbase Delta {display.lower()}"}],
         "renderable": {
             "default": {
@@ -303,11 +320,12 @@ def furniture_json(fam: Family) -> dict:
     }
 
 
-def terrain_json(terrain_id: str, name: str, image_id: str, description: str) -> dict:
+def terrain_json(terrain_id: str, name: str, image_id: str, description: str, category: str) -> dict:
     return {
         "id": terrain_id,
         "name": name,
-        "category": "Terrain",
+        "tileSet": "Rebelstar",
+        "category": category,
         "description": [{"text": description}],
         "renderable": {
             "default": [{"imageId": image_id}],
@@ -397,6 +415,7 @@ def main() -> None:
             fam.movement = 150
             fam.hit_points = 200
             fam.material = "thin-metal.material"
+            fam.category = "Vehicles"
             # Keep this cell's exact pixels as canon (pieces are not rotations of each other)
             fam.canon_img = hash_to_img[h]
             fam.canon_hash = h
@@ -423,6 +442,7 @@ def main() -> None:
         fam.movement = 180
         fam.hit_points = 220
         fam.material = "thin-metal.material"
+        fam.category = "Machinery"
         fam.canon_img = hash_to_img[h]
         fam.canon_hash = h
         rots = rotations_cw(fam.canon_img)
@@ -504,6 +524,7 @@ def main() -> None:
                 "Moon Surface",
                 "moon-surface",
                 "Barren lunar regolith.",
+                "Exterior",
             ),
             indent=4,
         )
@@ -523,6 +544,7 @@ def main() -> None:
                         fam.image_id.replace("-", " ").title(),
                         fam.image_id,
                         "Garden grass inside the moonbase.",
+                        fam.category,
                     ),
                     indent=4,
                 )

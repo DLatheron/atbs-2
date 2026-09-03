@@ -1,7 +1,8 @@
 {
     "id": "sand.terrain",
     "name": "Sand",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Natural",
     "description": [
         {
             "text": "Fine sand."

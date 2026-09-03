@@ -1,7 +1,8 @@
 {
     "id": "moon-surface.terrain",
     "name": "Moon Surface",
-    "category": "Terrain",
+    "tileSet": "Rebelstar",
+    "category": "Exterior",
     "description": [
         {
             "text": "Barren lunar regolith."

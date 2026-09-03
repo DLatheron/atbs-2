@@ -1,6 +1,8 @@
 {
     "id": "magenta-console-2.furniture",
     "name": "Magenta Console",
+    "tileSet": "Rebelstar",
+    "category": "Computers",
     "description": [
         {
             "text": "Moonbase Delta magenta console"

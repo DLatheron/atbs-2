@@ -1,6 +1,8 @@
 {
     "id": "cyan-wall-6.furniture",
     "name": "Cyan Wall",
+    "tileSet": "Rebelstar",
+    "category": "Walls",
     "description": [
         {
             "text": "Moonbase Delta cyan wall"

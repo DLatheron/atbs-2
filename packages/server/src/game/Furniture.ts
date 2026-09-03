@@ -26,6 +26,8 @@ import type { Item } from "./Item.js";
 export const FurnitureRecipe = z.object({
     id: FurnitureId,
     name: z.string().nonempty(),
+    tileSet: z.string().nonempty().optional().default("Default"),
+    category: z.string().nonempty().optional().default("Uncategorised"),
     description: Description,
     renderable: SceneNode,
     hitPoints: AttributeDef.optional(),

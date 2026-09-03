@@ -24,6 +24,7 @@ export class TerrainFactory {
 
         const terrainRecipe: TerrainRecipe = {
             id: terrainId,
+            tileSet: foregroundTerrain.tileSet,
             name: `${foregroundTerrain.name} & ${backgroundTerrain.name}`,
             category: "Terrain",
             description: [

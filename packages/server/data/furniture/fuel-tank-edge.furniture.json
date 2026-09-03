@@ -1,6 +1,8 @@
 {
     "id": "fuel-tank-edge.furniture",
     "name": "Fuel Tank Edge",
+    "tileSet": "Rebelstar",
+    "category": "Machinery",
     "description": [
         {
             "text": "Moonbase Delta fuel tank edge"

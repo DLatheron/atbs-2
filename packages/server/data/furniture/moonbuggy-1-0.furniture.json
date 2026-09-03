@@ -1,6 +1,8 @@
 {
     "id": "moonbuggy-1-0.furniture",
     "name": "Moonbuggy",
+    "tileSet": "Rebelstar",
+    "category": "Vehicles",
     "description": [
         {
             "text": "Moonbase Delta moonbuggy"

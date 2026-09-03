@@ -1,6 +1,8 @@
 {
     "id": "moon-rock-6.furniture",
     "name": "Moon Rock",
+    "tileSet": "Rebelstar",
+    "category": "Exterior",
     "description": [
         {
             "text": "Moonbase Delta moon rock"

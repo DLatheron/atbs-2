@@ -1,6 +1,8 @@
 {
     "id": "big-bush-0-1.furniture",
     "name": "Big Bush",
+    "tileSet": "Default",
+    "category": "Nature",
     "description": [
         {
             "text": "A large bush"

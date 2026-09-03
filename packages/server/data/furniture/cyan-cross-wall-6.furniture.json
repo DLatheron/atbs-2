@@ -1,6 +1,8 @@
 {
     "id": "cyan-cross-wall-6.furniture",
     "name": "Cyan Cross Wall",
+    "tileSet": "Rebelstar",
+    "category": "Walls",
     "description": [
         {
             "text": "Moonbase Delta cyan cross wall"

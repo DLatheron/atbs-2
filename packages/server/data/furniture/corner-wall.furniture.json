@@ -1,27 +1,49 @@
 {
     "id": "corner-wall.furniture",
     "name": "Wall Corner",
-    "description": [{ "text": "The corner of a wall" }],
+    "tileSet": "Default",
+    "category": "Walls",
+    "description": [
+        {
+            "text": "The corner of a wall"
+        }
+    ],
     "renderable": {
         "default": {
             "default": [
-                { "imageId": "partial-wall" },
-                { "imageId": "partial-wall", "orientation": 6 }
+                {
+                    "imageId": "partial-wall"
+                },
+                {
+                    "imageId": "partial-wall",
+                    "orientation": 6
+                }
             ],
             "destroyed": []
         },
         "FIRE_MODE": {
             "default": [
-                { "imageId": "partial-wall-cl" },
-                { "imageId": "partial-wall-cl", "orientation": 6 }
+                {
+                    "imageId": "partial-wall-cl"
+                },
+                {
+                    "imageId": "partial-wall-cl",
+                    "orientation": 6
+                }
             ],
             "destroyed": []
         }
     },
     "materials": ["concrete.material"],
-    "hitPoints": { "max": 200 },
+    "hitPoints": {
+        "max": 200
+    },
     "movementObstruction": {
-        "default": { "default": 200 },
-        "destroyed": { "default": 0 }
+        "default": {
+            "default": 200
+        },
+        "destroyed": {
+            "default": 0
+        }
     }
 }

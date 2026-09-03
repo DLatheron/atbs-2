@@ -1,9 +1,22 @@
 import { Box, FormControlLabel, IconButton, Switch, Tab, Tabs, Typography } from "@mui/material";
 import { Orientation, rotateOrientation } from "@atbs/maths";
-import { RenderImage, RenderList, SelectedTerrain, TerrainPaletteWire } from "@atbs/shared-data";
-import { useEffect, useMemo } from "react";
+import {
+    BlendPaletteEntry,
+    RenderImage,
+    RenderList,
+    SelectedTerrain,
+    TerrainPaletteEntry,
+    TerrainPaletteWire
+} from "@atbs/shared-data";
+import { useEffect, useMemo, useState } from "react";
 import { ImageComponent } from "../Image";
+import { PaletteFilters } from "../PaletteFilters";
 import { getTerrainId } from "../../helpers/terrainHelpers";
+import {
+    PALETTE_FILTER_ALL,
+    itemMatchesPaletteFilters,
+    uniqueSorted
+} from "../../helpers/paletteFilters";
 import { useImageCache } from "../../hooks/useImageCache";
 
 const TILE_SIZE = 72;
@@ -14,8 +27,14 @@ export interface TerrainPanelProps {
     onSelectedTerrainChange: (selectedTerrain: SelectedTerrain) => void;
 }
 
+interface PaletteGridItem {
+    id: string;
+    uiImage: RenderList;
+    paletteIndex: number;
+}
+
 interface ImageSelectionGridProps {
-    items: { id: string; uiImage: RenderList }[];
+    items: PaletteGridItem[];
     selectedIndex: number;
     orientation: Orientation;
     blendMask?: boolean;
@@ -39,12 +58,14 @@ function ImageSelectionGrid({
                 overflowY: "auto"
             }}
         >
-            {items.map((item, index) => {
-                const selected = index === selectedIndex;
+            {items.map((item) => {
+                const selected = item.paletteIndex === selectedIndex;
                 return (
                     <Box
                         key={item.id}
-                        onClick={() => onSelectionChanged({ index, orientation })}
+                        onClick={() =>
+                            onSelectionChanged({ index: item.paletteIndex, orientation })
+                        }
                         sx={{
                             border: selected ? "2px solid #1e90ff" : "1px solid #ccc",
                             cursor: "pointer",
@@ -99,17 +120,26 @@ function RandomiseToggle({
     );
 }
 
+function toBlendGridItems(terrainPalette: TerrainPaletteWire): PaletteGridItem[] {
+    return terrainPalette.blends.map((item: BlendPaletteEntry, paletteIndex: number) => ({
+        id: item.id,
+        uiImage: item.uiImage,
+        paletteIndex
+    }));
+}
+
 function SimpleTerrain({
     terrainPalette,
     selectedTerrain,
-    onSelectedTerrainChange
-}: TerrainPanelProps) {
+    onSelectedTerrainChange,
+    visibleTerrains
+}: TerrainPanelProps & { visibleTerrains: PaletteGridItem[] }) {
     const terrain = terrainPalette.terrains[selectedTerrain.index];
 
     return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <ImageSelectionGrid
-                items={terrainPalette.terrains}
+                items={visibleTerrains}
                 selectedIndex={selectedTerrain.index}
                 orientation={selectedTerrain.orientation}
                 onSelectionChanged={({ index, orientation }) => {
@@ -174,8 +204,9 @@ function SimpleTerrain({
 function CompoundTerrain({
     terrainPalette,
     selectedTerrain,
-    onSelectedTerrainChange
-}: TerrainPanelProps) {
+    onSelectedTerrainChange,
+    visibleTerrains
+}: TerrainPanelProps & { visibleTerrains: PaletteGridItem[] }) {
     const previewImageId = getTerrainId(terrainPalette, selectedTerrain, true);
     const terrain1 = terrainPalette.terrains[selectedTerrain.image1.index];
     const terrain2 = terrainPalette.terrains[selectedTerrain.image2.index];
@@ -227,7 +258,7 @@ function CompoundTerrain({
 
             <Typography variant="subtitle2">Background</Typography>
             <ImageSelectionGrid
-                items={terrainPalette.terrains}
+                items={visibleTerrains}
                 selectedIndex={selectedTerrain.image1.index}
                 orientation={selectedTerrain.image1.orientation}
                 onSelectionChanged={({ index, orientation }) =>
@@ -253,7 +284,7 @@ function CompoundTerrain({
 
             <Typography variant="subtitle2">Blend</Typography>
             <ImageSelectionGrid
-                items={terrainPalette.blends}
+                items={toBlendGridItems(terrainPalette)}
                 selectedIndex={selectedTerrain.blend.index}
                 orientation={selectedTerrain.blend.orientation}
                 blendMask
@@ -267,7 +298,7 @@ function CompoundTerrain({
 
             <Typography variant="subtitle2">Foreground</Typography>
             <ImageSelectionGrid
-                items={terrainPalette.terrains}
+                items={visibleTerrains}
                 selectedIndex={selectedTerrain.image2.index}
                 orientation={selectedTerrain.image2.orientation}
                 onSelectionChanged={({ index, orientation }) =>
@@ -301,6 +332,32 @@ export function TerrainPanel({
 }: TerrainPanelProps) {
     const imageCache = useImageCache().imageCache;
     const tab = selectedTerrain.compoundTerrain ? 1 : 0;
+    const [selectedTileSets, setSelectedTileSets] = useState([PALETTE_FILTER_ALL]);
+    const [selectedCategories, setSelectedCategories] = useState([PALETTE_FILTER_ALL]);
+
+    const tileSetOptions = useMemo(
+        () =>
+            uniqueSorted(
+                terrainPalette.terrains.map((terrain: TerrainPaletteEntry) => terrain.tileSet)
+            ),
+        [terrainPalette.terrains]
+    );
+    const categoryOptions = useMemo(
+        () =>
+            uniqueSorted(
+                terrainPalette.terrains.map((terrain: TerrainPaletteEntry) => terrain.category)
+            ),
+        [terrainPalette.terrains]
+    );
+    const visibleTerrains = useMemo(
+        () =>
+            terrainPalette.terrains.flatMap((terrain: TerrainPaletteEntry, paletteIndex: number) =>
+                itemMatchesPaletteFilters(terrain, selectedTileSets, selectedCategories)
+                    ? [{ id: terrain.id, uiImage: terrain.uiImage, paletteIndex }]
+                    : []
+            ),
+        [terrainPalette.terrains, selectedTileSets, selectedCategories]
+    );
 
     const previewImageId = useMemo(
         () => getTerrainId(terrainPalette, selectedTerrain, true),
@@ -312,6 +369,36 @@ export function TerrainPanel({
             imageCache.requestImage(previewImageId);
         }
     }, [imageCache, previewImageId]);
+
+    useEffect(() => {
+        if (visibleTerrains.length === 0) {
+            return;
+        }
+
+        const visibleIndexes = new Set(
+            visibleTerrains.map((item: PaletteGridItem) => item.paletteIndex)
+        );
+        const fallback = visibleTerrains[0].paletteIndex;
+        const next = { ...selectedTerrain };
+        let changed = false;
+
+        if (!visibleIndexes.has(selectedTerrain.index)) {
+            next.index = fallback;
+            changed = true;
+        }
+        if (!visibleIndexes.has(selectedTerrain.image1.index)) {
+            next.image1 = { ...selectedTerrain.image1, index: fallback };
+            changed = true;
+        }
+        if (!visibleIndexes.has(selectedTerrain.image2.index)) {
+            next.image2 = { ...selectedTerrain.image2, index: fallback };
+            changed = true;
+        }
+
+        if (changed) {
+            onSelectedTerrainChange(next);
+        }
+    }, [onSelectedTerrainChange, selectedTerrain, visibleTerrains]);
 
     return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: "100%" }}>
@@ -329,18 +416,29 @@ export function TerrainPanel({
                 <Tab label="Compound" />
             </Tabs>
 
+            <PaletteFilters
+                tileSetOptions={tileSetOptions}
+                categoryOptions={categoryOptions}
+                selectedTileSets={selectedTileSets}
+                selectedCategories={selectedCategories}
+                onTileSetsChange={setSelectedTileSets}
+                onCategoriesChange={setSelectedCategories}
+            />
+
             <Box sx={{ flex: 1, overflowY: "auto", py: 1 }}>
                 {tab === 0 ? (
                     <SimpleTerrain
                         terrainPalette={terrainPalette}
                         selectedTerrain={selectedTerrain}
                         onSelectedTerrainChange={onSelectedTerrainChange}
+                        visibleTerrains={visibleTerrains}
                     />
                 ) : (
                     <CompoundTerrain
                         terrainPalette={terrainPalette}
                         selectedTerrain={selectedTerrain}
                         onSelectedTerrainChange={onSelectedTerrainChange}
+                        visibleTerrains={visibleTerrains}
                     />
                 )}
             </Box>

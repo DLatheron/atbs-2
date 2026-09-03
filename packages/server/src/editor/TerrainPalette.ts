@@ -60,6 +60,8 @@ export class TerrainPalette {
                 return {
                     id: terrain.id,
                     name: terrain.name,
+                    tileSet: terrain.tileSet,
+                    category: terrain.category,
                     uiImage: terrain.getRenderList({
                         renderMode: RenderMode.enum.UI_MODE,
                         states: []

@@ -1,6 +1,8 @@
 {
     "id": "rose-bush.furniture",
     "name": "Rose Bush",
+    "tileSet": "Default",
+    "category": "Nature",
     "description": [
         {
             "text": "A rose bush"

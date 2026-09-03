@@ -1,6 +1,8 @@
 {
     "id": "red-marker.furniture",
     "name": "Red Marker",
+    "tileSet": "Rebelstar",
+    "category": "Exterior",
     "description": [
         {
             "text": "Moonbase Delta red marker"

@@ -1,7 +1,8 @@
 {
     "id": "coarse-sand.terrain",
     "name": "Coarse Sand",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Natural",
     "description": [
         {
             "text": "Coarse sand."

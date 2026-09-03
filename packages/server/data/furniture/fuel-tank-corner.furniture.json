@@ -1,6 +1,8 @@
 {
     "id": "fuel-tank-corner.furniture",
     "name": "Fuel Tank Corner",
+    "tileSet": "Rebelstar",
+    "category": "Machinery",
     "description": [
         {
             "text": "Moonbase Delta fuel tank corner"

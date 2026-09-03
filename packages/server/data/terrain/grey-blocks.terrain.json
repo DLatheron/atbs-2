@@ -1,7 +1,8 @@
 {
     "id": "grey-blocks.terrain",
     "name": "Grey Blocks",
-    "category": "Terrain",
+    "tileSet": "Default",
+    "category": "Built",
     "description": [
         {
             "text": "Grey blocks."

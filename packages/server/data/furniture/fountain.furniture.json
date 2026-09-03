@@ -1,6 +1,8 @@
 {
     "id": "fountain.furniture",
     "name": "Fountain",
+    "tileSet": "Default",
+    "category": "Nature",
     "description": [
         {
             "text": "A fountain"

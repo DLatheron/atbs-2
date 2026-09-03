@@ -1,6 +1,8 @@
 {
     "id": "fuel-tank-centre.furniture",
     "name": "Fuel Tank Centre",
+    "tileSet": "Rebelstar",
+    "category": "Machinery",
     "description": [
         {
             "text": "Moonbase Delta fuel tank centre"

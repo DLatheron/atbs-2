@@ -5,6 +5,7 @@ import z from "zod";
 export const TerrainRecipe = z.object({
     id: z.string(),
     name: z.string().nonempty(),
+    tileSet: z.string().nonempty().optional().default("Default"),
     category: z.string().nonempty(),
     description: Description,
     orientation: z.enum(Orientation).optional(),
@@ -26,6 +27,10 @@ export class Terrain extends SceneObject {
 
     get name() {
         return this._recipe.name;
+    }
+
+    get tileSet() {
+        return this._recipe.tileSet;
     }
 
     get category() {

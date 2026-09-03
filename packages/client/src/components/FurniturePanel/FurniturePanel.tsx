@@ -6,12 +6,18 @@ import {
     RenderImage,
     SelectedFurniture
 } from "@atbs/shared-data";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ImageComponent } from "../Image";
+import { PaletteFilters } from "../PaletteFilters";
 import {
     getRotatedFurnitureDimensions,
     getRotatedFurniturePreviewImages
 } from "../../helpers/furnitureHelpers";
+import {
+    PALETTE_FILTER_ALL,
+    itemMatchesPaletteFilters,
+    uniqueSorted
+} from "../../helpers/paletteFilters";
 
 const GRID_TILE_SIZE = 28;
 const CELL_SIZE = 72;
@@ -102,6 +108,30 @@ export function FurniturePanel({
 }: FurniturePanelProps) {
     const entry = furniturePalette.furniture[selectedFurniture.index];
     const previewName = entry ? furnitureDisplayName(entry) : "Empty";
+    const [selectedTileSets, setSelectedTileSets] = useState([PALETTE_FILTER_ALL]);
+    const [selectedCategories, setSelectedCategories] = useState([PALETTE_FILTER_ALL]);
+
+    const tileSetOptions = useMemo(
+        () =>
+            uniqueSorted(
+                furniturePalette.furniture.map((item: FurniturePaletteEntry) => item.tileSet)
+            ),
+        [furniturePalette.furniture]
+    );
+    const categoryOptions = useMemo(
+        () =>
+            uniqueSorted(
+                furniturePalette.furniture.map((item: FurniturePaletteEntry) => item.category)
+            ),
+        [furniturePalette.furniture]
+    );
+    const visibleIndexes = useMemo(
+        () =>
+            furniturePalette.furniture.flatMap((item: FurniturePaletteEntry, index: number) =>
+                itemMatchesPaletteFilters(item, selectedTileSets, selectedCategories) ? [index] : []
+            ),
+        [furniturePalette.furniture, selectedTileSets, selectedCategories]
+    );
 
     useEffect(() => {
         if (entry && !entry.allowRandomOrientation && selectedFurniture.randomiseOrientation) {
@@ -112,8 +142,29 @@ export function FurniturePanel({
         }
     }, [entry, selectedFurniture, onSelectedFurnitureChange]);
 
+    useEffect(() => {
+        if (visibleIndexes.length === 0) {
+            return;
+        }
+        if (!visibleIndexes.includes(selectedFurniture.index)) {
+            onSelectedFurnitureChange({
+                ...selectedFurniture,
+                index: visibleIndexes[0]
+            });
+        }
+    }, [onSelectedFurnitureChange, selectedFurniture, visibleIndexes]);
+
     return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}>
+            <PaletteFilters
+                tileSetOptions={tileSetOptions}
+                categoryOptions={categoryOptions}
+                selectedTileSets={selectedTileSets}
+                selectedCategories={selectedCategories}
+                onTileSetsChange={setSelectedTileSets}
+                onCategoriesChange={setSelectedCategories}
+            />
+
             <Typography variant="subtitle2" sx={{ textAlign: "center" }}>
                 {previewName}
             </Typography>
@@ -126,8 +177,9 @@ export function FurniturePanel({
                         gap: 1
                     }}
                 >
-                    {furniturePalette.furniture.map(
-                        (furnitureEntry: FurniturePaletteEntry, index: number) => (
+                    {visibleIndexes.map((index: number) => {
+                        const furnitureEntry = furniturePalette.furniture[index];
+                        return (
                             <FurniturePaletteCell
                                 key={furnitureEntry.id}
                                 furniturePalette={furniturePalette}
@@ -141,8 +193,8 @@ export function FurniturePanel({
                                     })
                                 }
                             />
-                        )
-                    )}
+                        );
+                    })}
                 </Box>
             </Box>
 
