@@ -210,19 +210,34 @@ export class Camera2d {
                 this._targetCallback?.();
                 this.targetPos = undefined;
             }
+        }
 
-            let { additionalVelocity } = this;
-            if (additionalVelocity) {
-                this.interpolateByDelta(additionalVelocity, TrackingSpeed.enum.IMMEDIATE);
+        this.updateAdditionalVelocity();
+    }
 
-                additionalVelocity = additionalVelocity.scale(Camera2d.ADDITIONAL_VELOCITY_DAMPING);
+    private updateAdditionalVelocity() {
+        const velocity = this._additionalVelocity;
+        if (!velocity) {
+            return;
+        }
 
-                if (additionalVelocity.length <= 1) {
-                    this._additionalVelocity = null;
-                } else {
-                    this._additionalVelocity = additionalVelocity;
-                }
-            }
+        const before = this.worldPos;
+        const desired = before.sub(velocity);
+        const after = this.constrainToBox(desired, this.worldBounds);
+
+        // Assign through the setter so bounds stay enforced.
+        this.worldPos = after;
+
+        // Hard-stop: kill inertia on any axis that hit the bound this frame.
+        const hitX = Math.abs(after.x - desired.x) > 1e-6;
+        const hitY = Math.abs(after.y - desired.y) > 1e-6;
+        let nextVelocity = new Vec2(hitX ? 0 : velocity.x, hitY ? 0 : velocity.y);
+        nextVelocity = nextVelocity.scale(Camera2d.ADDITIONAL_VELOCITY_DAMPING);
+
+        if (nextVelocity.length <= 1) {
+            this._additionalVelocity = null;
+        } else {
+            this._additionalVelocity = nextVelocity;
         }
     }
 
@@ -255,33 +270,45 @@ export class Camera2d {
         return worldPos.sub(offsetFromCenter.divide(this.zoom));
     }
 
+    /** Set the camera position immediately, cancelling interpolation / zoom focus. */
+    setWorldPosImmediate(worldPos: Vec2, options?: { clearVelocity?: boolean }) {
+        this.targetPos = undefined;
+        this._targetCallback = undefined;
+        this._zoomFocus = null;
+        if (options?.clearVelocity !== false) {
+            this._additionalVelocity = null;
+        }
+        this.worldPos = worldPos;
+    }
+
+    clearZoomFocus() {
+        this._zoomFocus = null;
+    }
+
     constrainToBox(pos: Vec2, { min, max }: Aabb) {
+        if (!this.hasViewportDimensions) {
+            return new Vec2(pos.x, pos.y);
+        }
+
         const half = this.viewportHalfDimensions;
-        const _min = min.add(half);
-        const _max = max.sub(half);
+        const minBound = min.add(half);
+        const maxBound = max.sub(half);
 
         const newPos = new Vec2(pos.x, pos.y);
 
-        if (_min.x > _max.x) {
-            newPos.x = (min.x + max.x) / 2;
+        // When the map is smaller than the viewport, minBound > maxBound.
+        // Clamp into [maxBound, minBound] so the map can be repositioned within the
+        // screen without the classic "always snap to maxBound" sequential-clamp bug.
+        if (minBound.x > maxBound.x) {
+            newPos.x = clamp(pos.x, maxBound.x, minBound.x);
         } else {
-            if (newPos.x < _min.x) {
-                newPos.x = _min.x;
-            }
-            if (newPos.x > _max.x) {
-                newPos.x = _max.x;
-            }
+            newPos.x = clamp(pos.x, minBound.x, maxBound.x);
         }
 
-        if (_min.y > _max.y) {
-            newPos.y = (min.y + max.y) / 2;
+        if (minBound.y > maxBound.y) {
+            newPos.y = clamp(pos.y, maxBound.y, minBound.y);
         } else {
-            if (newPos.y < _min.y) {
-                newPos.y = _min.y;
-            }
-            if (newPos.y > _max.y) {
-                newPos.y = _max.y;
-            }
+            newPos.y = clamp(pos.y, minBound.y, maxBound.y);
         }
 
         return newPos;

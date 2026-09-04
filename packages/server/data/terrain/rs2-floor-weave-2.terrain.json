@@ -1,0 +1,19 @@
+{
+    "id": "rs2-floor-weave-2.terrain",
+    "name": "Woven Floor",
+    "tileSet": "Rebelstar 2",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Rebelstar 2 woven floor"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-floor-weave-2"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

@@ -1,0 +1,41 @@
+{
+    "id": "stove.furniture",
+    "name": "Stove",
+    "tileSet": "Default",
+    "category": "Interior",
+    "description": [
+        {
+            "text": "A four-burner kitchen stove"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "stove"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "stove-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 90
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 100
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

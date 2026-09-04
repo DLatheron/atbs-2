@@ -1,0 +1,39 @@
+{
+    "id": "palm-tree-1-0.furniture",
+    "name": "Palm Tree",
+    "tileSet": "Default",
+    "category": "Nature",
+    "description": [
+        {
+            "text": "A palm tree"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "palm-tree-1-0"
+                }
+            ]
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "palm-tree-cl-1-0"
+                }
+            ]
+        }
+    },
+    "materials": ["thick-wood.material", "thin-wood.material"],
+    "hitPoints": {
+        "max": 100
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 100
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

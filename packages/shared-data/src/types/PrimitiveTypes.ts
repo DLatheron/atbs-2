@@ -28,6 +28,9 @@ export type ClientId = z.infer<typeof ClientId>;
 export const GameId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
 export type GameId = z.infer<typeof GameId>;
 
+export const EditorId = z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+export type EditorId = z.infer<typeof EditorId>;
+
 export const ScenarioId = z.string().nonempty();
 export type ScenarioId = z.infer<typeof ScenarioId>;
 
@@ -946,12 +949,26 @@ export const HitSpark = z.object({
 });
 export type HitSpark = z.infer<typeof HitSpark>;
 
+export const EditorFurnitureTile = z
+    .object({
+        furnitureId: FurnitureId,
+        orientation: z.enum(Orientation)
+    })
+    .nullable();
+export type EditorFurnitureTile = z.infer<typeof EditorFurnitureTile>;
+
+export const EditorMapWire = ClientMap.extend({
+    furnitureLayer: z.array(z.array(EditorFurnitureTile))
+});
+export type EditorMapWire = z.infer<typeof EditorMapWire>;
+
 export const TileUpdate = z.object({
     tilePos: ITilePos,
     tileByRenderMode: z.object({
         [RenderMode.enum.MAP_MODE]: RenderList,
         [RenderMode.enum.FIRE_MODE]: RenderList
-    })
+    }),
+    furniture: EditorFurnitureTile.optional()
 });
 export type TileUpdate = z.infer<typeof TileUpdate>;
 

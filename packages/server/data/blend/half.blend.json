@@ -1,0 +1,18 @@
+{
+    "id": "half.blend",
+    "name": "1/2 Blend",
+    "category": "Blend",
+    "description": [
+        {
+            "text": "1/2 Blend."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "half"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

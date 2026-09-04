@@ -1,0 +1,19 @@
+{
+    "id": "dried-earth.terrain",
+    "name": "Dried Earth",
+    "tileSet": "Default",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Dried earth."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "dried-earth"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

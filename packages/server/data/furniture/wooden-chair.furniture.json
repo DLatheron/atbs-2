@@ -1,0 +1,41 @@
+{
+    "id": "wooden-chair.furniture",
+    "name": "Wooden Chair",
+    "tileSet": "Default",
+    "category": "Interior",
+    "description": [
+        {
+            "text": "A simple wooden chair"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "wooden-chair"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "wooden-chair-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-wood.material"],
+    "hitPoints": {
+        "max": 30
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 40
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

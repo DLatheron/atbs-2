@@ -1,6 +1,5 @@
 import { Logger } from "@atbs/misc";
 import { config } from "../config/config.schema.js";
-import type { Game } from "./Game.js";
 import type { WorldMap } from "./WorldMap.js";
 import type { VisibilityPoi } from "./VisibilityPoi.js";
 import type { VisibilityViewer } from "./VisibilityViewer.js";
@@ -67,21 +66,26 @@ export function isDirectionInViewCone(
     return absAngleDeg <= viewAngleInDegrees / 2;
 }
 
+/** Host that exposes a map for visibility queries (Game or Editor). */
+export interface VisibilityMapHost {
+    readonly map: WorldMap;
+}
+
 export class VisibilityManager {
     static readonly Logger: Logger = new Logger(
         "VisibilityManager",
         config.logLevels?.visibilityManager
     );
 
-    private readonly _game: Game;
+    private readonly _host: VisibilityMapHost;
     private readonly _pois: Set<VisibilityPoi>;
     private readonly _viewers: Map<ViewerId, VisibilityViewer>;
     private readonly _cache: Map<ViewerId, VisibilityCacheEntry[]>;
     /** Per-POI refcount of visible viewers, keyed by each of those viewers' interest masks. */
     private readonly _poiVisibleByMask: Map<VisibilityPoi, Map<InterestMask, number>>;
 
-    constructor(game: Game) {
-        this._game = game;
+    constructor(host: VisibilityMapHost) {
+        this._host = host;
 
         this._pois = new Set<VisibilityPoi>();
         this._viewers = new Map<ViewerId, VisibilityViewer>();
@@ -89,12 +93,17 @@ export class VisibilityManager {
         this._poiVisibleByMask = new Map<VisibilityPoi, Map<InterestMask, number>>();
     }
 
-    get game(): Game {
-        return this._game;
+    get host(): VisibilityMapHost {
+        return this._host;
+    }
+
+    /** @deprecated Prefer {@link host}; retained for call sites that expect a Game-shaped host. */
+    get game(): VisibilityMapHost {
+        return this._host;
     }
 
     get map(): WorldMap {
-        return this._game.map;
+        return this._host.map;
     }
 
     addPoi(poi: VisibilityPoi): void {

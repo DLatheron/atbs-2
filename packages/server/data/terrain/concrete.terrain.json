@@ -1,10 +1,19 @@
 {
     "id": "concrete.terrain",
     "name": "Concrete",
-    "category": "Terrain",
-    "description": [{ "text": "Solid concrete." }],
+    "tileSet": "Default",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Solid concrete."
+        }
+    ],
     "renderable": {
-        "default": [{ "imageId": "concrete" }],
+        "default": [
+            {
+                "imageId": "concrete"
+            }
+        ],
         "FIRE_MODE": []
     }
 }

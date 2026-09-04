@@ -1,0 +1,19 @@
+{
+    "id": "rs2-floor-check-2.terrain",
+    "name": "Checked Floor",
+    "tileSet": "Rebelstar 2",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Rebelstar 2 checked floor"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-floor-check-2"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

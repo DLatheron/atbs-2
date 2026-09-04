@@ -1,9 +1,11 @@
 import {
     ClientMap,
     DeathAnimation,
+    EditorMapWire,
     RenderList,
     RenderMode,
     SceneObject,
+    TileUpdate,
     TimedTileUpdate
 } from "@atbs/shared-data";
 import { TilePos } from "@atbs/maths";
@@ -77,6 +79,20 @@ export async function preloadTraceImages(
     ]);
 }
 
+export function applyTileUpdate(map: ClientMap, update: TileUpdate, imageCache?: ImageCache): void {
+    applyTimedTileUpdate(map, { ...update, timeMs: 0 }, imageCache);
+}
+
+export function applyTileUpdates(
+    map: ClientMap,
+    updates: TileUpdate[],
+    imageCache?: ImageCache
+): void {
+    for (const update of updates) {
+        applyTileUpdate(map, update, imageCache);
+    }
+}
+
 export function applyTimedTileUpdate(
     map: ClientMap,
     update: TimedTileUpdate,
@@ -88,6 +104,10 @@ export function applyTimedTileUpdate(
         update.tileByRenderMode[RenderMode.enum.MAP_MODE];
     map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][tilePos.col] =
         update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
+
+    if ("furnitureLayer" in map && update.furniture !== undefined) {
+        (map as EditorMapWire).furnitureLayer[tilePos.row][tilePos.col] = update.furniture;
+    }
 
     if (imageCache) {
         refreshTimedTileUpdateImages(imageCache, update);

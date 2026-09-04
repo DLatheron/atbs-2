@@ -1,0 +1,19 @@
+{
+    "id": "coarse-sand.terrain",
+    "name": "Coarse Sand",
+    "tileSet": "Default",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Coarse sand."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "coarse-sand"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

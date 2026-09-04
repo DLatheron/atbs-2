@@ -1,0 +1,36 @@
+{
+    "id": "big-tree-1-1.furniture",
+    "name": "Big Tree",
+    "tileSet": "Default",
+    "category": "Nature",
+    "description": [
+        {
+            "text": "A big tree"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "big-tree-1-1"
+                }
+            ]
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "big-tree-cl-1-1"
+                }
+            ]
+        }
+    },
+    "materials": ["thick-wood.material", "thin-wood.material"],
+    "hitPoints": {
+        "max": 200
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 100
+        }
+    }
+}

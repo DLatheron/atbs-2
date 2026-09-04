@@ -1,0 +1,19 @@
+{
+    "id": "rs2-water-corner-7.terrain",
+    "name": "Water Corner",
+    "tileSet": "Rebelstar 2",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Rebelstar 2 water corner"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-water-corner-7"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

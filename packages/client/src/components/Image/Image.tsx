@@ -4,12 +4,17 @@ import { Orientation, OrientationToCSSTransform, rotateOrientation } from "@atbs
 import { ReactNode } from "react";
 import { useImageSrc } from "../../hooks/useImageSrc";
 
+/** Matches the grey used in compound-terrain previews (background / foreground mix). */
+const BLEND_MASK_BASE_COLOUR = "#888888";
+
 export interface ImageComponentProps {
     images: RenderList;
     width?: number;
     height?: number;
     children?: ReactNode;
     disabled?: boolean;
+    /** Blend-mask PNGs use alpha to mix white over a grey base in the picker preview. */
+    blendMask?: boolean;
     sx?: SxProps;
 }
 
@@ -58,6 +63,7 @@ export function ImageComponent({
     height = 100,
     children,
     disabled = false,
+    blendMask = false,
     sx
 }: ImageComponentProps) {
     return (
@@ -68,6 +74,9 @@ export function ImageComponent({
             sx={{
                 display: "grid",
                 gridTemplateAreas: "'images'",
+                width,
+                height,
+                ...(blendMask && { bgcolor: BLEND_MASK_BASE_COLOUR }),
                 ...sx
             }}
         >

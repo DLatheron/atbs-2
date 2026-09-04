@@ -1,0 +1,41 @@
+{
+    "id": "moon-rock-2.furniture",
+    "name": "Moon Rock",
+    "tileSet": "Rebelstar",
+    "category": "Exterior",
+    "description": [
+        {
+            "text": "Moonbase Delta moon rock"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "moon-rock-2"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "moon-rock-2-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["stone.material"],
+    "hitPoints": {
+        "max": 80
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 20
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

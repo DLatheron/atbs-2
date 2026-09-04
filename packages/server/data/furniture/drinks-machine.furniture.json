@@ -1,6 +1,8 @@
 {
     "id": "drinks-machine.furniture",
     "name": "Drinks Machine",
+    "tileSet": "Default",
+    "category": "Interior",
     "description": [
         {
             "text": "A drinks machine, that seems to dispense every kind of drink, so long as its coffee..."
@@ -8,19 +10,33 @@
     ],
     "renderable": {
         "default": {
-            "default": [{ "imageId": "drinks-machine" }],
+            "default": [
+                {
+                    "imageId": "drinks-machine"
+                }
+            ],
             "destroyed": []
         },
         "FIRE_MODE": {
-            "default": [{ "imageId": "drinks-machine-cl" }],
+            "default": [
+                {
+                    "imageId": "drinks-machine-cl"
+                }
+            ],
             "destroyed": []
         }
     },
     "materials": ["thin-metal.material"],
-    "hitPoints": { "max": 50 },
+    "hitPoints": {
+        "max": 50
+    },
     "movementObstruction": {
-        "default": { "default": 100 },
-        "destroyed": { "default": 0 }
+        "default": {
+            "default": 100
+        },
+        "destroyed": {
+            "default": 0
+        }
     },
     "actions": {
         "default": {

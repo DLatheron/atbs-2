@@ -7,3 +7,6 @@ coverage
 .env
 .env.*
 **/public/cache/damage/
+packages/server/data/editor-saves/*.map.json
+packages/server/scripts/.venv-enhance/
+packages/server/scripts/_rebelstar_flat_backup/

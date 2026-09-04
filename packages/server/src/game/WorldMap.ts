@@ -1,4 +1,4 @@
-import { ClientMap, RenderMode, MapId, type VisualType } from "@atbs/shared-data";
+import { ClientMap, EditorMapWire, RenderMode, MapId, type VisualType } from "@atbs/shared-data";
 import z from "zod";
 import { Tile, TileRecipe } from "./Tile.js";
 import {
@@ -20,7 +20,16 @@ import { IRayCast } from "./IRayCast.js";
 import { ImageManager } from "./ImageManager.js";
 import { DamageCacheManager } from "./DamageCacheManager.js";
 import { CollisionSample } from "./Tile.js";
-import type { Game } from "./Game.js";
+import type { ItemManager } from "./ItemManager.js";
+import type { FurnitureManager } from "./FurnitureManager.js";
+import type { VisibilityManager } from "./VisibilityManager.js";
+
+/** Host that can own a WorldMap (Game or Editor). */
+export interface MapHost {
+    readonly itemManager: ItemManager;
+    readonly furnitureManager: FurnitureManager;
+    readonly visibilityManager: VisibilityManager;
+}
 
 export type VisualRayCastResult =
     | { visible: true; pos: Vec2; tile: Tile }
@@ -36,7 +45,7 @@ export const MapRecipe = z.object({
 export type MapRecipe = z.infer<typeof MapRecipe>;
 
 export class WorldMap {
-    private readonly _game: Game;
+    private readonly _host: MapHost;
     private readonly _id: MapId;
     private readonly _name: string;
     private readonly _width: number;
@@ -44,8 +53,8 @@ export class WorldMap {
     private readonly _tileSize: number;
     private readonly _tiles: Tile[][];
 
-    constructor(recipe: Readonly<MapRecipe>, game: Game) {
-        this._game = game;
+    constructor(recipe: Readonly<MapRecipe>, host: MapHost) {
+        this._host = host;
 
         this._id = recipe.id;
         this._name = recipe.name;
@@ -60,12 +69,12 @@ export class WorldMap {
                     location,
                     recipe.tileSize,
                     tileRecipe,
-                    this._game.furnitureManager,
-                    this._game.visibilityManager
+                    this._host.furnitureManager,
+                    this._host.visibilityManager
                 );
 
                 tileRecipe.items?.forEach(({ id, overrides }) => {
-                    const item = this._game.itemManager.newItem(id, {
+                    const item = this._host.itemManager.newItem(id, {
                         ...overrides,
                         location
                     });
@@ -95,6 +104,17 @@ export class WorldMap {
 
     get tileSize() {
         return this._tileSize;
+    }
+
+    toMapRecipe(): MapRecipe {
+        return {
+            id: this._id,
+            name: this._name,
+            width: this._width,
+            height: this._height,
+            tileSize: this._tileSize,
+            tiles: this._tiles.map((row) => row.map((tile) => tile.toRecipe()))
+        };
     }
 
     get worldBounds() {
@@ -275,6 +295,14 @@ export class WorldMap {
                 })
             )
         );
+        const fireModeTiles = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) =>
+                tile.getRenderList({
+                    renderMode: RenderMode.enum.FIRE_MODE,
+                    states: []
+                })
+            )
+        );
 
         return {
             width: this.width,
@@ -282,8 +310,30 @@ export class WorldMap {
             tileSize: this.tileSize,
             tilesByRenderMode: {
                 [RenderMode.enum.MAP_MODE]: mapModeTiles,
-                [RenderMode.enum.FIRE_MODE]: []
+                [RenderMode.enum.FIRE_MODE]: fireModeTiles
             }
+        };
+    }
+
+    renderEditorMap(): EditorMapWire {
+        const baseMap = this.renderDeploymentMap();
+        const furnitureLayer = this._tiles.map((rowOfTiles) =>
+            rowOfTiles.map((tile) => {
+                const furnitureState = tile.getFurnitureState();
+                if (!furnitureState.furnitureId) {
+                    return null;
+                }
+
+                return {
+                    furnitureId: furnitureState.furnitureId,
+                    orientation: furnitureState.orientation ?? Orientation.NORTH
+                };
+            })
+        );
+
+        return {
+            ...baseMap,
+            furnitureLayer
         };
     }
 

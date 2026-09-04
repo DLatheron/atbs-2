@@ -1,0 +1,240 @@
+{
+    "id": "wall.wallpalette",
+    "name": "Wall Palette",
+    "walls": [
+        {
+            "id": "wall.furniture",
+            "edges": [
+                "0-2-0",
+                null,
+                "0-2-0",
+                null
+            ]
+        },
+        {
+            "id": "corner-wall.furniture",
+            "edges": [
+                null,
+                "0-2-0",
+                "0-2-0",
+                null
+            ]
+        },
+        {
+            "id": "t-junction-wall.furniture",
+            "edges": [
+                "0-2-0",
+                "0-2-0",
+                "0-2-0",
+                null
+            ]
+        },
+        {
+            "id": "cross-wall.furniture",
+            "edges": [
+                "0-2-0",
+                "0-2-0",
+                "0-2-0",
+                "0-2-0"
+            ]
+        },
+        {
+            "id": "door.furniture",
+            "edges": [
+                "0-2-0",
+                null,
+                "0-2-0",
+                null
+            ]
+        },
+        {
+            "id": "stone-wall.furniture",
+            "edges": [
+                "0-4-0",
+                null,
+                "0-4-0",
+                null
+            ]
+        },
+        {
+            "id": "stone-corner-wall.furniture",
+            "edges": [
+                null,
+                "0-4-0",
+                "0-4-0",
+                null
+            ]
+        },
+        {
+            "id": "stone-t-junction-wall.furniture",
+            "edges": [
+                "0-4-0",
+                "0-4-0",
+                "0-4-0",
+                null
+            ]
+        },
+        {
+            "id": "stone-cross-wall.furniture",
+            "edges": [
+                "0-4-0",
+                "0-4-0",
+                "0-4-0",
+                "0-4-0"
+            ]
+        },
+        {
+            "id": "cyan-wall.furniture",
+            "edges": [
+                "0-3-0",
+                null,
+                "0-3-0",
+                null
+            ]
+        },
+        {
+            "id": "cyan-t-wall.furniture",
+            "edges": [
+                "0-3-0",
+                "0-3-0",
+                "0-3-0",
+                null
+            ]
+        },
+        {
+            "id": "cyan-corner-wall.furniture",
+            "edges": [
+                null,
+                "0-3-0",
+                "0-3-0",
+                null
+            ]
+        },
+        {
+            "id": "cyan-cross-wall.furniture",
+            "edges": [
+                "0-3-0",
+                "0-3-0",
+                "0-3-0",
+                "0-3-0"
+            ]
+        },
+        {
+            "id": "rs2-wall.furniture",
+            "edges": [
+                "0-5-0",
+                null,
+                "0-5-0",
+                null
+            ]
+        },
+        {
+            "id": "rs2-h-wall.furniture",
+            "edges": [
+                null,
+                "0-5-0",
+                null,
+                "0-5-0"
+            ]
+        },
+        {
+            "id": "rs2-corner-wall.furniture",
+            "edges": [
+                null,
+                "0-5-0",
+                "0-5-0",
+                null
+            ]
+        },
+        {
+            "id": "rs2-cross-wall.furniture",
+            "edges": [
+                "0-5-0",
+                "0-5-0",
+                "0-5-0",
+                "0-5-0"
+            ]
+        },
+        {
+            "id": "rs2-door.furniture",
+            "edges": [
+                "0-5-0",
+                null,
+                "0-5-0",
+                null
+            ]
+        }
+    ],
+    "hotKeys": {
+        "r": [
+            {
+                "id": "corner-wall.furniture",
+                "orientation": 0
+            }
+        ],
+        "t": [
+            {
+                "id": "wall.furniture",
+                "orientation": 2
+            },
+            {
+                "id": "t-junction-wall.furniture",
+                "orientation": 2
+            }
+        ],
+        "y": [
+            {
+                "id": "corner-wall.furniture",
+                "orientation": 2
+            }
+        ],
+        "f": [
+            {
+                "id": "wall.furniture",
+                "orientation": 0
+            },
+            {
+                "id": "t-junction-wall.furniture",
+                "orientation": 0
+            }
+        ],
+        "g": [
+            {
+                "id": "cross-wall.furniture",
+                "orientation": 0
+            }
+        ],
+        "h": [
+            {
+                "id": "wall.furniture",
+                "orientation": 4
+            },
+            {
+                "id": "t-junction-wall.furniture",
+                "orientation": 4
+            }
+        ],
+        "v": [
+            {
+                "id": "corner-wall.furniture",
+                "orientation": 6
+            }
+        ],
+        "b": [
+            {
+                "id": "wall.furniture",
+                "orientation": 6
+            },
+            {
+                "id": "t-junction-wall.furniture",
+                "orientation": 6
+            }
+        ],
+        "n": [
+            {
+                "id": "corner-wall.furniture",
+                "orientation": 4
+            }
+        ]
+    }
+}

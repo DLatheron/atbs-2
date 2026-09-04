@@ -1,0 +1,19 @@
+{
+    "id": "tarmac.terrain",
+    "name": "Tarmac",
+    "tileSet": "Default",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Well maintained tarmac."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "tarmac"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

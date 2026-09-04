@@ -46,8 +46,28 @@ export abstract class ModeHandler implements IInteractionHandler {
     static EventToCanvasPos(
         event: MouseEvent | WheelEvent | React.MouseEvent | React.WheelEvent
     ): Vec2 {
-        const rect = (event.target as HTMLElement).getBoundingClientRect();
-        return new Vec2(event.clientX - rect.x, event.clientY - rect.y);
+        const element =
+            (event.currentTarget as HTMLElement | null) ?? (event.target as HTMLElement);
+        const rect = element.getBoundingClientRect();
+        const cssX = event.clientX - rect.left;
+        const cssY = event.clientY - rect.top;
+
+        // Map CSS pixels into the canvas's internal coordinate space. These can
+        // diverge under browser zoom, devicePixelRatio styling, or CSS scaling.
+        if (
+            element instanceof HTMLCanvasElement &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            element.width > 0 &&
+            element.height > 0
+        ) {
+            return new Vec2(
+                cssX * (element.width / rect.width),
+                cssY * (element.height / rect.height)
+            );
+        }
+
+        return new Vec2(cssX, cssY);
     }
 
     abstract initialise(): void;

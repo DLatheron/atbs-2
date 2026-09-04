@@ -1,0 +1,19 @@
+{
+    "id": "grey-blocks.terrain",
+    "name": "Grey Blocks",
+    "tileSet": "Default",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Grey blocks."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "grey-blocks"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

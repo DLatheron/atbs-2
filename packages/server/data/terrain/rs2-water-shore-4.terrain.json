@@ -1,0 +1,19 @@
+{
+    "id": "rs2-water-shore-4.terrain",
+    "name": "Water Shore",
+    "tileSet": "Rebelstar 2",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Rebelstar 2 water shore"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-water-shore-4"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

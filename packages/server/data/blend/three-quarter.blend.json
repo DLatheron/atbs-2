@@ -1,0 +1,18 @@
+{
+    "id": "three-quarter.blend",
+    "name": "3/4 Blend",
+    "category": "Blend",
+    "description": [
+        {
+            "text": "3/4 Blend."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "three-quarter"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

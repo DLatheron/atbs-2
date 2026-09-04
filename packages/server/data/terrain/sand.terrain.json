@@ -1,0 +1,19 @@
+{
+    "id": "sand.terrain",
+    "name": "Sand",
+    "tileSet": "Default",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Fine sand."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "sand"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

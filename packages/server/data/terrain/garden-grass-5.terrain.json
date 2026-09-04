@@ -1,0 +1,19 @@
+{
+    "id": "garden-grass-5.terrain",
+    "name": "Garden Grass 5",
+    "tileSet": "Rebelstar",
+    "category": "Garden",
+    "description": [
+        {
+            "text": "Garden grass inside the moonbase."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "garden-grass-5"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

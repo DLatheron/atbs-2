@@ -1,0 +1,19 @@
+{
+    "id": "rs2-floor-ornament.terrain",
+    "name": "Ornate Floor",
+    "tileSet": "Rebelstar 2",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Rebelstar 2 ornate floor"
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rs2-floor-ornament"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

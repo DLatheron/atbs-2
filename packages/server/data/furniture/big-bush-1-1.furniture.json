@@ -1,0 +1,39 @@
+{
+    "id": "big-bush-1-1.furniture",
+    "name": "Big Bush",
+    "tileSet": "Default",
+    "category": "Nature",
+    "description": [
+        {
+            "text": "A large bush"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "big-bush-1-1"
+                }
+            ]
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "big-bush-cl-1-1"
+                }
+            ]
+        }
+    },
+    "materials": ["thick-wood.material", "thin-wood.material"],
+    "hitPoints": {
+        "max": 100
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 100
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "id": "fountain.furniture",
+    "name": "Fountain",
+    "tileSet": "Default",
+    "category": "Nature",
+    "description": [
+        {
+            "text": "A fountain"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "fountain"
+                }
+            ]
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "hard-circle-cl"
+                }
+            ]
+        }
+    },
+    "materials": ["thin-wood.material"],
+    "hitPoints": {
+        "max": 20
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 8
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

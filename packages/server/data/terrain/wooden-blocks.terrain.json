@@ -1,0 +1,19 @@
+{
+    "id": "wooden-blocks.terrain",
+    "name": "Wooden Blocks",
+    "tileSet": "Default",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Wooden blocks."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "wooden-blocks"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

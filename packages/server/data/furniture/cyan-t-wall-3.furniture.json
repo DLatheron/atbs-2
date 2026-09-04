@@ -1,0 +1,41 @@
+{
+    "id": "cyan-t-wall-3.furniture",
+    "name": "Cyan T Wall",
+    "tileSet": "Rebelstar",
+    "category": "Walls",
+    "description": [
+        {
+            "text": "Moonbase Delta cyan t wall"
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "cyan-t-wall-3"
+                }
+            ],
+            "destroyed": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "cyan-t-wall-3-cl"
+                }
+            ],
+            "destroyed": []
+        }
+    },
+    "materials": ["thin-metal.material"],
+    "hitPoints": {
+        "max": 200
+    },
+    "movementObstruction": {
+        "default": {
+            "default": 200
+        },
+        "destroyed": {
+            "default": 0
+        }
+    }
+}

@@ -108,13 +108,15 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     protected _location: TilePos;
     protected _aabb: Aabb;
     protected _tileSize: number;
-    protected readonly _terrain: Terrain;
-    protected readonly _furniture?: Furniture;
+    protected _terrain: Terrain;
+    protected _terrainOrientation: Orientation;
+    protected _furniture?: Furniture;
     protected _items: Item[];
     protected _units: Unit[];
     protected _vfx: Vfx[];
 
     private readonly _visibilityManager: VisibilityManager;
+    private readonly _furnitureManager: FurnitureManager;
 
     constructor(
         location: TilePos,
@@ -128,7 +130,10 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._location = location;
         this._aabb = new Aabb(location.col * tileSize, location.row * tileSize, tileSize, tileSize);
         this._tileSize = tileSize;
-        this._terrain = TerrainManager.GetSingleton().get(recipe.terrain.id);
+        this._furnitureManager = furnitureManager;
+        this._visibilityManager = visibilityManager;
+        this._terrain = TerrainManager.GetSingleton().getOrCreate(recipe.terrain.id);
+        this._terrainOrientation = recipe.terrain.orientation ?? Orientation.NORTH;
         this._furniture = recipe.furniture
             ? furnitureManager.newFurniture(recipe.furniture.id, {
                   location,
@@ -139,15 +144,60 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._items = [];
         this._units = [];
         this._vfx = [];
-        this._visibilityManager = visibilityManager;
     }
 
     get terrain(): Terrain {
         return this._terrain;
     }
 
+    get terrainOrientation(): Orientation {
+        return this._terrainOrientation;
+    }
+
+    getTerrainState(): { terrainId: string; orientation: Orientation } {
+        return {
+            terrainId: this._terrain.id,
+            orientation: this._terrainOrientation
+        };
+    }
+
+    setTerrain(terrainId: string, orientation: Orientation): void {
+        this._terrain = TerrainManager.GetSingleton().getOrCreate(terrainId);
+        this._terrainOrientation = orientation;
+    }
+
     get furniture(): Furniture | undefined {
         return this._furniture;
+    }
+
+    getFurnitureState(): {
+        furnitureId?: string;
+        orientation?: Orientation;
+        state?: FurnitureState;
+    } {
+        if (!this._furniture) {
+            return {};
+        }
+
+        return {
+            furnitureId: this._furniture.recipeId,
+            orientation: this._furniture.orientation,
+            state: this._furniture.state
+        };
+    }
+
+    setFurniture(furniture: Furniture): void {
+        if (this._furniture) {
+            this._furnitureManager.deleteFurniture(this._furniture.id);
+        }
+        this._furniture = furniture;
+    }
+
+    clearFurniture(): void {
+        if (this._furniture) {
+            this._furnitureManager.deleteFurniture(this._furniture.id);
+            this._furniture = undefined;
+        }
     }
 
     get units(): Unit[] {
@@ -263,6 +313,15 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._updateTilePoi();
     }
 
+    getItemState(): { items: { id: ItemId; quantity: number }[] } {
+        return {
+            items: this._items.map((item) => ({
+                id: item.recipeId,
+                quantity: item.quantity
+            }))
+        };
+    }
+
     addVfx(vfx: Vfx): void {
         this._vfx.unshift(vfx);
 
@@ -276,8 +335,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
+        const terrainContext: SceneContext = {
+            ...context,
+            applyOrientation: this._terrainOrientation
+        };
+
         return [
-            ...this.terrain.getRenderList(context),
+            ...this.terrain.getRenderList(terrainContext),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.units.map((unit) => unit.getRenderList(context)).flat(),
@@ -295,8 +359,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         injectedImage: RenderImage,
         damageCache?: DamageCacheManager
     ): RenderList {
+        const terrainContext: SceneContext = {
+            ...context,
+            applyOrientation: this._terrainOrientation
+        };
+
         return [
-            ...this.terrain.getRenderList(context),
+            ...this.terrain.getRenderList(terrainContext),
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat(),
@@ -749,6 +818,8 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     generateTileUpdate(): TileUpdate {
+        const furnitureState = this.getFurnitureState();
+
         return {
             tilePos: this.location,
             tileByRenderMode: {
@@ -760,7 +831,13 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
                     renderMode: RenderMode.enum.FIRE_MODE,
                     states: []
                 })
-            }
+            },
+            furniture: furnitureState.furnitureId
+                ? {
+                      furnitureId: furnitureState.furnitureId,
+                      orientation: furnitureState.orientation ?? Orientation.NORTH
+                  }
+                : null
         };
     }
 
@@ -804,6 +881,34 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         itemInUse: Item | null
     ): UnitActionType[] {
         return this.furniture?.getAvailableActions(relativeOrientation, itemInUse) ?? [];
+    }
+
+    toRecipe(): TileRecipe {
+        const recipe: TileRecipe = {
+            terrain: {
+                id: this._terrain.id,
+                orientation: this._terrainOrientation
+            }
+        };
+
+        if (this._furniture) {
+            recipe.furniture = {
+                id: this._furniture.recipeId,
+                orientation: this._furniture.orientation,
+                state: this._furniture.state
+            };
+        }
+
+        if (this._items.length > 0) {
+            recipe.items = this._items.map((item) => ({
+                id: item.recipeId,
+                overrides: {
+                    quantity: item.quantity
+                }
+            }));
+        }
+
+        return recipe;
     }
 
     getActionDefinition(

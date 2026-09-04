@@ -63,6 +63,11 @@ export class ItemManager {
         return this._itemMap.delete(instanceId);
     }
 
+    reset() {
+        this._itemMap.clear();
+        this._instanceMap.clear();
+    }
+
     findItem(instanceId: InstanceId): Item | undefined {
         return this._itemMap.get(instanceId);
     }

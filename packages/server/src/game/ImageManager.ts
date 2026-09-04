@@ -10,6 +10,7 @@ import { Logger } from "@atbs/misc";
 
 const ImageDirectories = [
     "./data/terrain",
+    "./data/blend",
     "./data/units",
     "./data/items",
     "./data/icons",

@@ -23,7 +23,7 @@
             "line": true
         }
     ],
-    "worldMapId": "mansion.map",
+    "worldMapId": "moonbase.map",
     "sides": [
         {
             "id": "goodies",

@@ -1,0 +1,19 @@
+{
+    "id": "blue-tiles.terrain",
+    "name": "Blue Tiles",
+    "tileSet": "Default",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Blue tiles."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "blue-tiles"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

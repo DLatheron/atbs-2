@@ -111,7 +111,7 @@ export class World {
     private _mapMode: MapMode;
     private _unit: UnitSummary | null;
     private _unitWeapon: FireModeItemSummary | null;
-    private _interactionHandler: IInteractionHandler | null;
+    protected _interactionHandler: IInteractionHandler | null;
     private _sendMessage: (message: ClientToServerMessage) => void;
     private _mouseCursor: CSSProperties["cursor"];
     private _defaultMouseCursor: CSSProperties["cursor"];
@@ -1827,10 +1827,5 @@ export class World {
 
     resumeAnchoredOverlay(id: string): void {
         this._pausedAnchoredOverlayIds.delete(id);
-    }
-
-    private static readonly _singleton = new World(ImageCache.GetSingleton());
-    static GetSingleton(): World {
-        return World._singleton;
     }
 }

@@ -71,8 +71,12 @@ export class MapRecipeManager {
         this._mapLookup.set(mapRecipe.id, mapRecipe);
     }
 
+    list(): MapRecipe[] {
+        return [...this._mapLookup.values()];
+    }
+
     remove(worldMapId: MapId): boolean {
-        return this.remove(worldMapId);
+        return this._mapLookup.delete(worldMapId);
     }
 
     private static readonly _singleton = new MapRecipeManager();

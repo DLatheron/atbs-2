@@ -3,10 +3,15 @@ import type { Duplex } from "stream";
 import express from "express";
 import type { IncomingMessage } from "http";
 import { WebSocket, WebSocketServer } from "ws";
-import { parseURLSearchParams, ConnectSocketQueryParams } from "@atbs/shared-data";
+import {
+    parseURLSearchParams,
+    ConnectSocketQueryParams,
+    ConnectEditorSocketQueryParams
+} from "@atbs/shared-data";
 
 import { createApp } from "./app.js";
 import { gameManager } from "./game/GameManager.js";
+import { editorManager } from "./editor/EditorManager.js";
 import { config } from "./config/config.schema.js";
 import { Logger } from "@atbs/misc";
 
@@ -34,7 +39,7 @@ async function startServer() {
         try {
             const host = request.headers.host ?? "localhost";
             const url = new URL(request.url ?? "", `http://${host}`);
-            if (url.pathname !== "/ws/game") {
+            if (url.pathname !== "/ws/game" && url.pathname !== "/ws/editor") {
                 logger.error("Incorrect path - destroying socket");
                 socket.destroy();
                 return;
@@ -52,6 +57,34 @@ async function startServer() {
         try {
             const host = req.headers.host ?? "localhost";
             const url = new URL(req.url ?? "", `http://${host}`);
+
+            if (url.pathname === "/ws/editor") {
+                const validatedQueryParams = parseURLSearchParams(
+                    ConnectEditorSocketQueryParams,
+                    url.searchParams
+                );
+                const { clientId, editorId } = validatedQueryParams;
+
+                const editor = editorManager.findEditor(editorId);
+                if (!editor) {
+                    logger.error(
+                        `Connection from client: ${clientId}, failed to find editor: ${editorId}`
+                    );
+                    socket.close(4004, "Editor not found");
+                    return;
+                }
+
+                const client = editor.findClient(clientId);
+                if (!client) {
+                    logger.error(`Client: ${clientId}, not found in editor: ${editorId}`);
+                    socket.close(4005, "Client not found");
+                    return;
+                }
+
+                client.assignSocket(socket);
+                return;
+            }
+
             const validatedQueryParams = parseURLSearchParams(
                 ConnectSocketQueryParams,
                 url.searchParams

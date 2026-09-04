@@ -31,6 +31,16 @@ import { Phase } from "./Phase.js";
 import { zodDeepPartial } from "zod-deep-partial";
 import { IVec2, ITilePos, DebugGraphic } from "@atbs/maths";
 import {
+    EditorHistoryState,
+    EditorMapList,
+    EditorMarkersState,
+    FurniturePaletteWire,
+    ItemPaletteWire,
+    TerrainPaletteWire,
+    WallPaletteWire
+} from "./EditorTypes.js";
+import { EditorMapWire } from "./PrimitiveTypes.js";
+import {
     AnimatableObjectRecipe,
     DeathAnimation,
     PlayAnimation,
@@ -122,6 +132,55 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
     z.object({
         type: z.literal("server:map"),
         payload: ClientMap
+    }),
+    z.object({
+        type: z.literal("server:editor:map"),
+        payload: EditorMapWire
+    }),
+    z.object({
+        type: z.literal("server:editor:map:list"),
+        payload: EditorMapList
+    }),
+    z.object({
+        type: z.literal("server:editor:saved"),
+        payload: z.object({
+            filename: z.string().nonempty(),
+            mapId: z.string().nonempty()
+        })
+    }),
+    z.object({
+        type: z.literal("server:editor:terrain:palette"),
+        payload: TerrainPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:furniture:palette"),
+        payload: FurniturePaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:wall:palette"),
+        payload: WallPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:item:palette"),
+        payload: ItemPaletteWire
+    }),
+    z.object({
+        type: z.literal("server:editor:markers:state"),
+        payload: EditorMarkersState
+    }),
+    z.object({
+        type: z.literal("server:editor:markers:saved"),
+        payload: z.object({
+            filename: z.string().nonempty()
+        })
+    }),
+    z.object({
+        type: z.literal("server:editor:map:update"),
+        payload: z.array(TileUpdate)
+    }),
+    z.object({
+        type: z.literal("server:editor:history"),
+        payload: EditorHistoryState
     }),
     z.object({
         type: z.literal("server:unit:mode:move"),

@@ -1,3 +1,4 @@
+export * from "./EditorTypes.js";
 export * from "./AnimationTypes.js";
 export * from "./ClientToServerMessage.js";
 export * from "./LobbyState.js";
