@@ -22,6 +22,7 @@ import {
 } from "@atbs/maths";
 import { ShuffleArray } from "../../../maths/src/Misc.js";
 import { VisibilityPoi } from "./VisibilityPoi.js";
+import { VictoryActions, VictoryPointManager } from "./VictoryPointManager.js";
 
 export const WidthHeight = z.object({
     width: z.number().int().positive(),
@@ -104,7 +105,8 @@ export const SideRecipe = z.object({
                     .describe("The server deploys units randomly at phase start.")
             })
         ])
-    })
+    }),
+    victoryActions: VictoryActions
 });
 export type SideRecipe = z.infer<typeof SideRecipe>;
 
@@ -148,8 +150,8 @@ export class Side {
     private readonly _game: Game;
     private readonly _units: Unit[];
     private readonly _unitMap: Map<UnitId, Unit>;
-    private _victoryPoints: number;
     private readonly _store: Store | null;
+    private readonly _victoryPointManager: VictoryPointManager;
 
     private _deployableUnitsMap: Map<UnitId, { zone: DeploymentZone; location: TilePos } | null>;
     private _deploymentZones: DeploymentZone[];
@@ -157,7 +159,7 @@ export class Side {
     constructor(recipe: Readonly<SideRecipe>, game: Game) {
         this._recipe = recipe;
         this._game = game;
-        this._victoryPoints = 0;
+        this._victoryPointManager = new VictoryPointManager(this, recipe.victoryActions, 0);
 
         this._units = [];
         this._unitMap = new Map<UnitId, Unit>();
@@ -238,7 +240,7 @@ export class Side {
     }
 
     get victoryPoints(): number {
-        return this._victoryPoints;
+        return this._victoryPointManager.victoryPoints;
     }
 
     get needsArmamentPhase(): boolean {
@@ -250,6 +252,14 @@ export class Side {
             throw new Error(`Side ${this.id} does not have a store`);
         }
         return this._store;
+    }
+
+    get game(): Game {
+        return this._game;
+    }
+
+    get victoryPointManager(): VictoryPointManager {
+        return this._victoryPointManager;
     }
 
     findStore(): Store | null {

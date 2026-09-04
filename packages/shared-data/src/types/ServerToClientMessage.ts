@@ -12,6 +12,7 @@ import {
     OnTarget,
     ScenarioId,
     ScenarioSummary,
+    SideId,
     SideSummary,
     TileInfo,
     Tracer,
@@ -246,6 +247,13 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         type: z.literal("server:side:start"),
         payload: z.object({
             side: SideSummary
+        })
+    }),
+    z.object({
+        type: z.literal("server:side:victory-points"),
+        payload: z.object({
+            sideId: SideId,
+            victoryPoints: z.int().min(-100).max(100)
         })
     }),
     z.object({

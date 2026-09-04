@@ -503,7 +503,8 @@
                 "deployment": {
                     "type": "fixed"
                 }
-            }
+            },
+            "victoryActions": []
         },
         {
             "id": "terrorists",
@@ -534,7 +535,8 @@
                 "deployment": {
                     "type": "fixed"
                 }
-            }
+            },
+            "victoryActions": []
         }
     ]
 }

@@ -420,7 +420,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "victoryActions": []
         },
         {
             "id": "baddies",
@@ -763,7 +764,8 @@
                         }
                     ]
                 }
-            }
+            },
+            "victoryActions": []
         }
     ]
 }

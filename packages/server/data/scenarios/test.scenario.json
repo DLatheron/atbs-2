@@ -41,7 +41,7 @@
                     "overrides": {
                         "location": {
                             "col": 6,
-                            "row": 10
+                            "row": 9
                         },
                         "orientation": 2
                     }
@@ -436,7 +436,10 @@
                         }
                     ]
                 }
-            }
+            },
+            "victoryActions": [
+                { "action": "unitKilled", "unitId": "hans-gruber.unit", "victoryPoints": 100 }
+            ]
         },
         {
             "id": "baddies",
@@ -453,8 +456,8 @@
                     "id": "hans-gruber.unit",
                     "overrides": {
                         "location": {
-                            "col": 13,
-                            "row": 10
+                            "col": 8,
+                            "row": 9
                         },
                         "orientation": 6
                     }
@@ -766,7 +769,8 @@
                 "deployment": {
                     "type": "fixed"
                 }
-            }
+            },
+            "victoryActions": []
         }
     ]
 }

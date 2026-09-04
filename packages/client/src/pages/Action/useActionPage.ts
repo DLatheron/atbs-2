@@ -157,6 +157,14 @@ export function useActionPage() {
                 world.mapMode = MapMode.enum["map-mode"];
             }),
 
+            messageManager.registerHandler("server:side:victory-points", (_context, payload) => {
+                setSide((current: SideSummary | null) =>
+                    current && current.id === payload.sideId
+                        ? { ...current, victoryPoints: payload.victoryPoints }
+                        : current
+                );
+            }),
+
             messageManager.registerHandler("server:game:tile:info", (_context, payload) => {
                 setTileInfo(payload);
             }),

@@ -6,6 +6,7 @@ import { ClientToServerMessage, Phase } from "@atbs/shared-data";
 import type { WebSocket } from "ws";
 import { AnimationRecipeManager } from "./AnimationRecipeManager.js";
 import { AUTOMATED_TEST_SCENARIO_ID, bindAutomatedTestScenario } from "./automatedTestScenario.js";
+import { EventManager } from "./EventManager.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
 import { Game } from "./Game.js";
@@ -80,7 +81,8 @@ const DEPLOYMENT_SIDE_RECIPE = SideRecipe.parse({
                 }
             ]
         }
-    }
+    },
+    victoryActions: []
 });
 
 class FakeSocket {
@@ -169,6 +171,7 @@ describe("Side deployment", () => {
             materialManager,
             sides: [] as Side[],
             clients: [],
+            eventManager: new EventManager(),
             messageRouter: { send: vi.fn(), broadcast: vi.fn(), sendIfVisible: vi.fn() },
             getOppositionUnitsForSide: () => [],
             syncUnitsCanSee: () => {}
@@ -396,7 +399,8 @@ describe("Side deployment", () => {
                         }
                     ]
                 }
-            }
+            },
+            victoryActions: []
         });
 
         expect(() => createSideHarness(infeasibleRecipe)).toThrow(
