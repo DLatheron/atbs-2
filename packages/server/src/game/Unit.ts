@@ -1787,6 +1787,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
         } else {
             itemToThrow.location = landingTilePos;
             landingTile.addItem(itemToThrow);
+            this.game.eventManager.on("itemDropped", itemToThrow);
 
             // Update the unit's tile, because they are no longer holding the item.
             tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
@@ -1917,6 +1918,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.inventory.removeItem(backpackItem);
             backpackItem.location = this.mapLocation;
             tile.addItem(backpackItem);
+            this.game.eventManager.on("itemDropped", backpackItem);
             this._updateCurrentTileOnMap();
             this._sendSelectedItemUpdate();
             return true;
@@ -1946,6 +1948,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
             unloaded.location = this.mapLocation;
             tile.addItem(unloaded);
+            this.game.eventManager.on("itemDropped", unloaded);
             this._updateCurrentTileOnMap();
             this._sendSelectedItemUpdate();
             return true;

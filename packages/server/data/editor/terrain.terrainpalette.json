@@ -98,9 +98,5 @@
         "rs2-water-shore-11.terrain",
         "rs2-water-shore-3.terrain"
     ],
-    "blends": [
-        "half.blend",
-        "quarter.blend",
-        "three-quarter.blend"
-    ]
+    "blends": ["half.blend", "quarter.blend", "three-quarter.blend"]
 }

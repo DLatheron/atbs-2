@@ -40,6 +40,7 @@ import { OpportunityFireManager } from "./OpportunityFireManager.js";
 import { PrimeManager } from "./PrimeManager.js";
 import { CloudManager } from "./CloudManager.js";
 import { broadcastExplosionTrace } from "./ExplosionSystem.js";
+import { EventManager } from "./EventManager.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -84,6 +85,7 @@ export class Game {
     private readonly _opportunityFireManager: OpportunityFireManager;
     private readonly _primeManager: PrimeManager;
     private readonly _cloudManager: CloudManager;
+    private readonly _eventManager: EventManager;
 
     private _messageRouter: MessageRouter | null;
     private _phaseHandler: PhaseHandler;
@@ -121,6 +123,7 @@ export class Game {
         this._opportunityFireManager = new OpportunityFireManager(this);
         this._primeManager = new PrimeManager(this);
         this._cloudManager = new CloudManager();
+        this._eventManager = new EventManager();
 
         this._context = { game: this };
         this._messageManager = new MessageManager<
@@ -356,6 +359,10 @@ export class Game {
 
     get cloudManager(): CloudManager {
         return this._cloudManager;
+    }
+
+    get eventManager(): EventManager {
+        return this._eventManager;
     }
 
     set scenario(value: Scenario | null) {

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TilePos } from "@atbs/maths";
 import { ErrorType } from "@atbs/shared-data";
 import { config } from "../config/config.schema.js";
+import { EventManager } from "./EventManager.js";
 import type { Game } from "./Game.js";
 import { FurnitureManager } from "./FurnitureManager.js";
 import { FurnitureRecipeManager } from "./FurnitureRecipeManager.js";
@@ -273,6 +274,7 @@ function createHarness(inventory: InventoryRecipe) {
         furnitureManager,
         sides: [side],
         messageRouter,
+        eventManager: new EventManager(),
         opportunityFireManager: {
             registerOpportunity: vi.fn()
         },
