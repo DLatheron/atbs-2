@@ -16,6 +16,7 @@
         "speed": { "max": 40 },
         "strength": { "max": 82 }
     },
+    "viewAngleInDegrees": 360,
     "inventory": {
         "inUse": 2,
         "items": [

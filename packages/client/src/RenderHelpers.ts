@@ -791,15 +791,48 @@ export function DrawViewCone(
     viewConeInDegrees: number,
     colour: Colour
 ) {
+    const canvasPos = camera.worldToCanvas(worldPos);
+    const coneColour = colour.asRGBAColorString;
     const transparentColour = new Colour({ ...colour, a: 0 }).asRGBAColorString;
 
-    const canvasPos = camera.worldToCanvas(worldPos);
+    // Valid cones are (0, 360]; anything else contributes no stencil.
+    const viewCone = clamp(viewConeInDegrees, 0, 360);
+    if (viewCone <= 0 || radius <= 0) {
+        return;
+    }
 
     const angleOffsetInDegreesToRealign = 90;
     const colorStopReverseAngleInDegrees = 180;
-    const externalFuzzAngleInDegrees = 2;
-    const internalFuzzAngleInDegrees = 1;
-    const halfViewConeInDegrees = viewConeInDegrees / 2;
+    const maxExternalFuzzAngleInDegrees = 2;
+    const maxInternalFuzzAngleInDegrees = 1;
+    const halfViewConeInDegrees = viewCone / 2;
+
+    // Soft edges at ±(half + fuzz) cannot stay inside the conic-gradient [0, 1]
+    // domain once the cone covers a full turn — fill a solid disc instead.
+    if (halfViewConeInDegrees + maxExternalFuzzAngleInDegrees >= 180) {
+        context.fillStyle = coneColour;
+        context.strokeStyle = "transparent";
+        context.beginPath();
+        context.arc(canvasPos.x, canvasPos.y, radius, 0, 2 * Math.PI);
+        context.fill();
+        return;
+    }
+
+    // Shrink feather so edge stops stay ordered and inside [0°, 360°] for both
+    // very narrow and near-full cones (raw ±fuzz can invert or leave [0, 1]).
+    const externalFuzzAngleInDegrees = Math.min(
+        maxExternalFuzzAngleInDegrees,
+        180 - halfViewConeInDegrees
+    );
+    const internalFuzzAngleInDegrees = Math.min(
+        maxInternalFuzzAngleInDegrees,
+        halfViewConeInDegrees
+    );
+
+    const leftTransparentDeg = 180 - halfViewConeInDegrees - externalFuzzAngleInDegrees;
+    const leftOpaqueDeg = 180 - halfViewConeInDegrees + internalFuzzAngleInDegrees;
+    const rightOpaqueDeg = 180 + halfViewConeInDegrees - internalFuzzAngleInDegrees;
+    const rightTransparentDeg = 180 + halfViewConeInDegrees + externalFuzzAngleInDegrees;
 
     const gradient = context.createConicGradient(
         degreesToRadians(
@@ -808,6 +841,24 @@ export function DrawViewCone(
         canvasPos.x,
         canvasPos.y
     );
+
+    const angleToColorStop = (angleInDegrees: number): number => clamp(angleInDegrees / 360, 0, 1);
+
+    // Stops must be non-decreasing in [0, 1] or addColorStop throws IndexSizeError.
+    let lastStop = -1;
+    const addStop = (angleInDegrees: number, stopColour: string) => {
+        const stop = Math.max(lastStop, angleToColorStop(angleInDegrees));
+        gradient.addColorStop(stop, stopColour);
+        lastStop = stop;
+    };
+
+    addStop(0, transparentColour);
+    addStop(leftTransparentDeg, transparentColour);
+    addStop(leftOpaqueDeg, coneColour);
+    addStop(180, coneColour);
+    addStop(rightOpaqueDeg, coneColour);
+    addStop(rightTransparentDeg, transparentColour);
+    addStop(360, transparentColour);
 
     const startAngle = degreesToRadians(
         directionAngleInDegrees -
@@ -821,33 +872,6 @@ export function DrawViewCone(
             halfViewConeInDegrees -
             angleOffsetInDegreesToRealign
     );
-
-    const angleToColorStop = (angleInDegrees: number): number => {
-        return degreesToRadians(angleInDegrees) / (2 * Math.PI);
-    };
-
-    const coneColour = colour.asRGBAColorString;
-
-    gradient.addColorStop(angleToColorStop(0), "red");
-    gradient.addColorStop(
-        angleToColorStop(180 - halfViewConeInDegrees - externalFuzzAngleInDegrees),
-        transparentColour
-    );
-    gradient.addColorStop(
-        angleToColorStop(180 - halfViewConeInDegrees + internalFuzzAngleInDegrees),
-        coneColour
-    );
-    gradient.addColorStop(angleToColorStop(180), coneColour);
-    gradient.addColorStop(
-        angleToColorStop(180 + halfViewConeInDegrees - internalFuzzAngleInDegrees),
-        coneColour
-    );
-    gradient.addColorStop(
-        angleToColorStop(180 + halfViewConeInDegrees + externalFuzzAngleInDegrees),
-        transparentColour
-    );
-
-    gradient.addColorStop(angleToColorStop(360), "blue");
 
     context.fillStyle = gradient;
     context.strokeStyle = "transparent";

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { Aabb, Vec2 } from "@atbs/maths";
+import { Aabb, Colour, Vec2 } from "@atbs/maths";
 import { Camera2d } from "./Camera2d";
-import { DrawProjectile, orbitalCanvasOffset } from "./RenderHelpers";
+import { DrawProjectile, DrawViewCone, orbitalCanvasOffset } from "./RenderHelpers";
 import type { Tracer } from "@atbs/shared-data";
 
 function makeTracer(overrides: Partial<Tracer> & { startTimeMs?: number } = {}): Tracer {
@@ -135,5 +135,74 @@ describe("orbitalCanvasOffset", () => {
         expect(orbitalCanvasOffset(180, 10).y).toBeCloseTo(10);
         expect(orbitalCanvasOffset(270, 10).x).toBeCloseTo(-10);
         expect(orbitalCanvasOffset(270, 10).y).toBeCloseTo(0);
+    });
+});
+
+function createViewConeMockContext() {
+    const colorStops: { offset: number; colour: string }[] = [];
+    const createConicGradient = vi.fn(() => ({
+        addColorStop: (offset: number, colour: string) => {
+            if (offset < 0 || offset > 1) {
+                throw new DOMException("IndexSizeError");
+            }
+            if (colorStops.length > 0 && offset < colorStops[colorStops.length - 1].offset) {
+                throw new DOMException("IndexSizeError");
+            }
+            colorStops.push({ offset, colour });
+        }
+    }));
+
+    const context = {
+        fillStyle: "",
+        strokeStyle: "",
+        beginPath: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        createConicGradient
+    } as unknown as CanvasRenderingContext2D;
+
+    return { context, colorStops, createConicGradient };
+}
+
+describe("DrawViewCone", () => {
+    const origin = new Vec2(0, 0);
+    const colour = Colour.White;
+
+    it.each([0.5, 1, 2, 45, 90, 180, 270, 355, 356, 359, 360])(
+        "does not throw for viewConeInDegrees=%s",
+        (viewConeInDegrees) => {
+            const { context, colorStops, createConicGradient } = createViewConeMockContext();
+
+            expect(() =>
+                DrawViewCone(makeCamera(), context, origin, 100, 0, viewConeInDegrees, colour)
+            ).not.toThrow();
+
+            if (viewConeInDegrees / 2 + 2 >= 180) {
+                expect(createConicGradient).not.toHaveBeenCalled();
+                expect(context.arc).toHaveBeenCalledWith(
+                    expect.any(Number),
+                    expect.any(Number),
+                    100,
+                    0,
+                    2 * Math.PI
+                );
+            } else {
+                expect(createConicGradient).toHaveBeenCalled();
+                expect(colorStops.length).toBeGreaterThan(0);
+                expect(colorStops[0].offset).toBeGreaterThanOrEqual(0);
+                expect(colorStops[colorStops.length - 1].offset).toBeLessThanOrEqual(1);
+            }
+        }
+    );
+
+    it("skips drawing for non-positive view cones", () => {
+        const { context, createConicGradient } = createViewConeMockContext();
+
+        DrawViewCone(makeCamera(), context, origin, 100, 0, 0, colour);
+
+        expect(createConicGradient).not.toHaveBeenCalled();
+        expect(context.fill).not.toHaveBeenCalled();
     });
 });
