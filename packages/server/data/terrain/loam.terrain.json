@@ -1,0 +1,19 @@
+{
+    "id": "loam.terrain",
+    "name": "Loam",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Dark organic loam."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "loam"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

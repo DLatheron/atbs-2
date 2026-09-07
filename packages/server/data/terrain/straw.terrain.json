@@ -1,0 +1,19 @@
+{
+    "id": "straw.terrain",
+    "name": "Straw",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Vertical straw and fibre."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "straw"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

@@ -160,7 +160,13 @@ export function useActionPage() {
             messageManager.registerHandler("server:side:victory-points", (_context, payload) => {
                 setSide((current: SideSummary | null) =>
                     current && current.id === payload.sideId
-                        ? { ...current, victoryPoints: payload.victoryPoints }
+                        ? {
+                              ...current,
+                              victoryPoints: payload.victoryPoints,
+                              ...(payload.objectives != null
+                                  ? { objectives: payload.objectives }
+                                  : {})
+                          }
                         : current
                 );
             }),

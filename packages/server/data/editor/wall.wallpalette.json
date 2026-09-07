@@ -73,6 +73,50 @@
         {
             "id": "rs2-door.furniture",
             "edges": ["0-5-0", null, "0-5-0", null]
+        },
+        {
+            "id": "thick-wall.furniture",
+            "edges": [null, "0-6-0", null, "0-6-0"]
+        },
+        {
+            "id": "thick-corner-wall.furniture",
+            "edges": [null, null, "0-6-0", "0-6-0"]
+        },
+        {
+            "id": "thick-t-junction-wall.furniture",
+            "edges": [null, "0-6-0", "0-6-0", "0-6-0"]
+        },
+        {
+            "id": "thick-cross-wall.furniture",
+            "edges": ["0-6-0", "0-6-0", "0-6-0", "0-6-0"]
+        },
+        {
+            "id": "thick-to-thin-t-junction.furniture",
+            "edges": [null, "0-6-0", "0-7-0", "0-6-0"]
+        },
+        {
+            "id": "thick-to-thin-wall.furniture",
+            "edges": [null, "0-7-0", null, "0-6-0"]
+        },
+        {
+            "id": "thin-wall.furniture",
+            "edges": [null, "0-7-0", null, "0-7-0"]
+        },
+        {
+            "id": "thin-corner-wall.furniture",
+            "edges": [null, null, "0-7-0", "0-7-0"]
+        },
+        {
+            "id": "thin-t-junction-wall.furniture",
+            "edges": [null, "0-7-0", "0-7-0", "0-7-0"]
+        },
+        {
+            "id": "thin-cross-wall.furniture",
+            "edges": ["0-7-0", "0-7-0", "0-7-0", "0-7-0"]
+        },
+        {
+            "id": "mansion-door.furniture",
+            "edges": [null, "0-7-0", null, "0-7-0"]
         }
     ],
     "hotKeys": {
@@ -95,7 +139,7 @@
         "y": [
             {
                 "id": "corner-wall.furniture",
-                "orientation": 2
+                "orientation": 6
             }
         ],
         "f": [
@@ -127,7 +171,7 @@
         "v": [
             {
                 "id": "corner-wall.furniture",
-                "orientation": 6
+                "orientation": 2
             }
         ],
         "b": [

@@ -1,0 +1,19 @@
+{
+    "id": "river-pebbles.terrain",
+    "name": "River Pebbles",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Rounded river pebbles."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "river-pebbles"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

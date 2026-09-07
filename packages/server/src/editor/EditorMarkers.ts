@@ -309,6 +309,7 @@ export class EditorMarkers {
                     description: [{ text: "" }],
                     oppositionSideIds: [],
                     units: [],
+                    victoryRules: [],
                     phases: {
                         armament: { type: "fixed" },
                         deployment:

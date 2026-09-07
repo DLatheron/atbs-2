@@ -1,0 +1,19 @@
+{
+    "id": "cracked-earth.terrain",
+    "name": "Cracked Earth",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Sun-baked cracked earth."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "cracked-earth"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

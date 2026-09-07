@@ -1,0 +1,19 @@
+{
+    "id": "gravel.terrain",
+    "name": "Gravel",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Coarse dark gravel and soil."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "gravel"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

@@ -421,7 +421,7 @@
                     ]
                 }
             },
-            "victoryActions": []
+            "victoryRules": []
         },
         {
             "id": "baddies",
@@ -765,7 +765,7 @@
                     ]
                 }
             },
-            "victoryActions": []
+            "victoryRules": []
         }
     ]
 }

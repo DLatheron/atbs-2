@@ -1,0 +1,19 @@
+{
+    "id": "dead-grass.terrain",
+    "name": "Dead Grass",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Dark olive dead grass."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "dead-grass"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

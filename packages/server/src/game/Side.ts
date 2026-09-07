@@ -22,7 +22,7 @@ import {
 } from "@atbs/maths";
 import { ShuffleArray } from "../../../maths/src/Misc.js";
 import { VisibilityPoi } from "./VisibilityPoi.js";
-import { VictoryActions, VictoryPointManager } from "./VictoryPointManager.js";
+import { VictoryRules, VictoryPointManager } from "./VictoryPointManager.js";
 
 export const WidthHeight = z.object({
     width: z.number().int().positive(),
@@ -106,7 +106,7 @@ export const SideRecipe = z.object({
             })
         ])
     }),
-    victoryActions: VictoryActions
+    victoryRules: VictoryRules
 });
 export type SideRecipe = z.infer<typeof SideRecipe>;
 
@@ -159,7 +159,7 @@ export class Side {
     constructor(recipe: Readonly<SideRecipe>, game: Game) {
         this._recipe = recipe;
         this._game = game;
-        this._victoryPointManager = new VictoryPointManager(this, recipe.victoryActions, 0);
+        this._victoryPointManager = new VictoryPointManager(this, recipe.victoryRules, 0);
 
         this._units = [];
         this._unitMap = new Map<UnitId, Unit>();
@@ -279,11 +279,43 @@ export class Side {
     }
 
     get deploymentMarker(): string {
-        const deployment = this._recipe.phases.deployment;
-        if (deployment.type === "fixed") {
+        const marker = this.findDeploymentMarker();
+        if (!marker) {
             throw new Error(`Side ${this.id} has no deployment marker`);
         }
+        return marker;
+    }
+
+    findDeploymentMarker(): string | undefined {
+        const deployment = this._recipe.phases.deployment;
+        if (deployment.type === "fixed") {
+            return undefined;
+        }
         return deployment.marker;
+    }
+
+    /** All deployment zone tile keys from the recipe (pre-deployment). Used for objective zones. */
+    getAllDeploymentTileKeys(): string[] {
+        const deployment = this._recipe.phases.deployment;
+        if (deployment.type === "fixed") {
+            return [];
+        }
+
+        const keys: string[] = [];
+        for (const zone of deployment.zones) {
+            for (const [origin, size] of zone.tiles) {
+                const width = size?.width ?? 1;
+                const height = size?.height ?? 1;
+                for (let row = 0; row < height; row++) {
+                    for (let col = 0; col < width; col++) {
+                        keys.push(
+                            toTilePosString({ col: origin.col + col, row: origin.row + row })
+                        );
+                    }
+                }
+            }
+        }
+        return keys;
     }
 
     canSee(poi: VisibilityPoi): boolean {
@@ -306,7 +338,8 @@ export class Side {
         return {
             id: this.id,
             name: this.name,
-            victoryPoints: this.victoryPoints
+            victoryPoints: this.victoryPoints,
+            objectives: this._victoryPointManager.toObjectiveSummaries()
         };
     }
 

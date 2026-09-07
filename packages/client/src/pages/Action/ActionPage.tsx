@@ -13,6 +13,7 @@ import { MapMode } from "../../MapMode";
 import { ActionMenuComponent } from "../../components/ActionMenu";
 import { UnitSelectionOverlay } from "../../components/UnitSelectionOverlay";
 import { InventoryModal } from "../../modals";
+import { VictoryPointsIndicator } from "../../components/VictoryPointsIndicator";
 
 export interface ActionPageProps {
     visible: boolean;
@@ -118,7 +119,10 @@ export function ActionPage({ visible }: ActionPageProps) {
         >
             <TitleBarComponent
                 sx={{
-                    gridArea: "title-bar"
+                    gridArea: "title-bar",
+                    overflow: "visible",
+                    position: "relative",
+                    zIndex: 10
                 }}
             >
                 <Container
@@ -129,7 +133,8 @@ export function ActionPage({ visible }: ActionPageProps) {
                         gridTemplateAreas: "'title side turn' 'title vps turn'",
                         gridTemplateColumns: "1fr 1fr 1fr",
                         columnGap: 3,
-                        height: statusBarHeight
+                        height: statusBarHeight,
+                        overflow: "visible"
                     }}
                 >
                     <Typography sx={{ m: "auto 0", gridArea: "title" }} variant="h4">
@@ -138,9 +143,10 @@ export function ActionPage({ visible }: ActionPageProps) {
                     <Typography sx={{ m: "auto", gridArea: "side" }} variant="h5">
                         {side?.name ?? "-"}
                     </Typography>
-                    <Typography sx={{ m: "auto", gridArea: "vps" }} variant="body1">
-                        Victory Points: {side?.victoryPoints ?? "-"}
-                    </Typography>
+                    <VictoryPointsIndicator
+                        victoryPoints={side?.victoryPoints}
+                        objectives={side?.objectives}
+                    />
                     <Typography sx={{ m: "auto 0 auto auto", gridArea: "turn" }} variant="h5">
                         Turn: {turn ?? "-"}
                     </Typography>

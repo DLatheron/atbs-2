@@ -1,0 +1,19 @@
+{
+    "id": "slate.terrain",
+    "name": "Slate",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Blue-grey slate."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "slate"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

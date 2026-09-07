@@ -1,0 +1,127 @@
+{
+    "id": "mansion-door.furniture",
+    "name": "Internal Door",
+    "tileSet": "Default",
+    "category": "Doors",
+    "description": [
+        {
+            "text": "A heavy internal wooden door on brass hinges."
+        }
+    ],
+    "renderable": {
+        "default": {
+            "default": [
+                {
+                    "imageId": "mansion-door"
+                }
+            ],
+            "open": [
+                {
+                    "imageId": "mansion-door-open"
+                }
+            ],
+            "destroyed": [
+                {
+                    "imageId": "mansion-door-open"
+                }
+            ]
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "mansion-door-cl"
+                }
+            ],
+            "open": [
+                {
+                    "imageId": "mansion-door-open-cl"
+                }
+            ],
+            "destroyed": [
+                {
+                    "imageId": "mansion-door-open-cl"
+                }
+            ]
+        }
+    },
+    "state": "closed",
+    "materials": [
+        "thin-wood.material",
+        "thick-wood.material"
+    ],
+    "hitPoints": {
+        "max": 150
+    },
+    "pixelDestruction": true,
+    "movementObstruction": {
+        "default": {
+            "default": 100
+        },
+        "open": {
+            "default": 0
+        },
+        "destroyed": {
+            "default": 0
+        }
+    },
+    "actions": {
+        "default": {
+            "openDoor": {
+                "state": "open",
+                "speedScaler": 0.5,
+                "aptCost": 10
+            },
+            "lock": {
+                "state": "locked",
+                "itemsToUse": [
+                    "front-door-key.item"
+                ],
+                "aptCost": 10
+            },
+            "breach": {
+                "state": "open",
+                "speedScaler": 1.3,
+                "aptCost": 12
+            }
+        },
+        "closed": {
+            "openDoor": {
+                "state": "open",
+                "speedScaler": 0.5,
+                "aptCost": 10
+            },
+            "lock": {
+                "state": "locked",
+                "itemsToUse": [
+                    "front-door-key.item"
+                ],
+                "aptCost": 10
+            },
+            "breach": {
+                "state": "open",
+                "speedScaler": 1.3,
+                "aptCost": 12
+            }
+        },
+        "open": {
+            "closeDoor": {
+                "state": "default",
+                "aptCost": 10
+            }
+        },
+        "locked": {
+            "unlock": {
+                "state": "default",
+                "itemsToUse": [
+                    "front-door-key.item"
+                ],
+                "aptCost": 10
+            },
+            "breach": {
+                "state": "destroyed",
+                "speedScaler": 1.5,
+                "aptCost": 20
+            }
+        }
+    }
+}

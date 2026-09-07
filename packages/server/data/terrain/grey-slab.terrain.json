@@ -1,0 +1,19 @@
+{
+    "id": "grey-slab.terrain",
+    "name": "Grey Slab",
+    "tileSet": "Photo",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Flat grey stone slab."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "grey-slab"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

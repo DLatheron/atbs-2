@@ -504,7 +504,7 @@
                     "type": "fixed"
                 }
             },
-            "victoryActions": []
+            "victoryRules": []
         },
         {
             "id": "terrorists",
@@ -536,7 +536,7 @@
                     "type": "fixed"
                 }
             },
-            "victoryActions": []
+            "victoryRules": []
         }
     ]
 }

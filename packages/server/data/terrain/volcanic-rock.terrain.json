@@ -1,0 +1,19 @@
+{
+    "id": "volcanic-rock.terrain",
+    "name": "Volcanic Rock",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Jagged dark volcanic rock."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "volcanic-rock"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

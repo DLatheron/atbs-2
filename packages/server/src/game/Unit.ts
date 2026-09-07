@@ -1216,6 +1216,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.location = dstTile.location;
         dstTile.addUnit(this);
 
+        this.game.emitZoneEntryEvents(this);
+
         this.updateAvailableActions();
         this._refreshVisibility(OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER);
 
@@ -1788,6 +1790,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             itemToThrow.location = landingTilePos;
             landingTile.addItem(itemToThrow);
             this.game.eventManager.on("itemDropped", itemToThrow);
+            this.game.emitItemZoneEvents(itemToThrow, null);
 
             // Update the unit's tile, because they are no longer holding the item.
             tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
@@ -1919,6 +1922,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             backpackItem.location = this.mapLocation;
             tile.addItem(backpackItem);
             this.game.eventManager.on("itemDropped", backpackItem);
+            this.game.emitItemZoneEvents(backpackItem, null);
             this._updateCurrentTileOnMap();
             this._sendSelectedItemUpdate();
             return true;
@@ -1949,6 +1953,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             unloaded.location = this.mapLocation;
             tile.addItem(unloaded);
             this.game.eventManager.on("itemDropped", unloaded);
+            this.game.emitItemZoneEvents(unloaded, null);
             this._updateCurrentTileOnMap();
             this._sendSelectedItemUpdate();
             return true;
@@ -1978,6 +1983,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.inventory.addItem(item);
         if (use) {
             this.inventory.selectItem(item);
+        }
+
+        this.game.eventManager.on("itemPickedUp", item, this);
+        if (this.location) {
+            for (const zoneId of this.game.getZoneIdsAt(this.location)) {
+                this.game.eventManager.on("itemEnteredZone", item, zoneId, this);
+            }
         }
 
         this._updateCurrentTileOnMap();
@@ -2427,6 +2439,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         const furnitureChanged = actionDefinition.furnitureAffected.performAction(actionDefinition);
+        this.game.eventManager.on(
+            "furnitureAction",
+            actionDefinition.furnitureAffected,
+            action,
+            this,
+            itemInUse
+        );
         if (furnitureChanged) {
             visibilityManager.invalidateLocation(actionDefinition.furnitureAffected.location);
 

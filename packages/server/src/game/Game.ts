@@ -21,6 +21,7 @@ import { Scenario } from "./Scenario.js";
 import { ScenarioRecipeManager } from "./ScenarioRecipeManager.js";
 import { Side } from "./Side.js";
 import { ActionPhaseHandler } from "./phaseHandlers/ActionPhaseHandler.js";
+import { GameOverPhaseHandler } from "./phaseHandlers/GameOverPhaseHandler.js";
 import { WorldMap } from "./WorldMap.js";
 import { Unit } from "./Unit.js";
 import { MessageRouter } from "./MessageRouter.js";
@@ -34,6 +35,7 @@ import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { VisibilityManager } from "./VisibilityManager.js";
 import { DebugGraphic } from "@atbs/maths";
+import type { TilePos } from "@atbs/maths";
 import { VfxRecipeManager } from "./VfxRecipeManager.js";
 import { VfxManager } from "./VfxManager.js";
 import { OpportunityFireManager } from "./OpportunityFireManager.js";
@@ -41,6 +43,7 @@ import { PrimeManager } from "./PrimeManager.js";
 import { CloudManager } from "./CloudManager.js";
 import { broadcastExplosionTrace } from "./ExplosionSystem.js";
 import { EventManager } from "./EventManager.js";
+import type { Item } from "./Item.js";
 
 const GAME_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
@@ -97,6 +100,11 @@ export class Game {
         turn: number;
         selectedUnit: Unit | null;
     };
+
+    /** Nested depth for deferring VP / game-over until a request finishes sending combat messages. */
+    private _victoryMessageDeferDepth = 0;
+    private readonly _pendingVictorySideIds = new Set<SideId>();
+    private _victoryEvaluationPending = false;
 
     constructor(
         ownerId: ClientId,
@@ -188,6 +196,10 @@ export class Game {
                     this.clients
                 );
                 this._phaseHandler = new ActionPhaseHandler(this);
+                break;
+
+            case Phase.enum.game_over:
+                this._phaseHandler = new GameOverPhaseHandler(this);
                 break;
 
             default:
@@ -468,6 +480,175 @@ export class Game {
         }
 
         return this._scenario.getSide(sideId);
+    }
+
+    getZoneIdsAt(location: TilePos): string[] {
+        return this._scenario?.getZoneIdsAt(location) ?? [];
+    }
+
+    isTileInZone(location: TilePos, zoneId: string): boolean {
+        return this._scenario?.isTileInZone(location, zoneId) ?? false;
+    }
+
+    getZoneName(zoneId: string): string {
+        return this._scenario?.getZoneName(zoneId) ?? zoneId;
+    }
+
+    /**
+     * Emit zone-entry events for a unit (and carried items) at the given tile.
+     * Call after the unit's location has been committed.
+     */
+    emitZoneEntryEvents(unit: Unit): void {
+        const location = unit.location;
+        if (!location) {
+            return;
+        }
+
+        for (const zoneId of this.getZoneIdsAt(location)) {
+            this.eventManager.on("unitEnteredZone", unit, zoneId);
+            for (const item of unit.inventory.items) {
+                this.eventManager.on("itemEnteredZone", item, zoneId, unit);
+            }
+        }
+    }
+
+    /**
+     * Emit itemEnteredZone if the item's tile sits in one or more objective zones.
+     */
+    emitItemZoneEvents(item: Item, carrier: Unit | null): void {
+        const location = item.location;
+        if (!location) {
+            return;
+        }
+
+        for (const zoneId of this.getZoneIdsAt(location)) {
+            this.eventManager.on("itemEnteredZone", item, zoneId, carrier);
+        }
+    }
+
+    /** After a unit dies, emit sideEliminated when that side has no living units left. */
+    maybeEmitSideEliminated(side: Side): void {
+        if (side.allUnitsDead) {
+            this.eventManager.on("sideEliminated", side);
+        }
+    }
+
+    /**
+     * Run a request while buffering victory-point and game-over messages until
+     * all other messages from the request (tracers, impacts, deaths, UI) are sent.
+     */
+    runWithDeferredVictoryMessages<T>(fn: () => T): T {
+        this._victoryMessageDeferDepth++;
+        try {
+            return fn();
+        } finally {
+            this._victoryMessageDeferDepth--;
+            if (this._victoryMessageDeferDepth === 0) {
+                this.flushPendingVictoryMessages();
+            }
+        }
+    }
+
+    /** Called when a side's VP change; deferred while inside runWithDeferredVictoryMessages. */
+    notifyVictoryPointsChanged(sideId: SideId): void {
+        if (this._victoryMessageDeferDepth > 0) {
+            this._pendingVictorySideIds.add(sideId);
+            this._victoryEvaluationPending = true;
+            return;
+        }
+
+        this._broadcastSideVictoryPoints(sideId);
+        this.evaluateVictoryConditions();
+    }
+
+    flushPendingVictoryMessages(): void {
+        for (const sideId of this._pendingVictorySideIds) {
+            this._broadcastSideVictoryPoints(sideId);
+        }
+        this._pendingVictorySideIds.clear();
+
+        if (this._victoryEvaluationPending) {
+            this._victoryEvaluationPending = false;
+            this.evaluateVictoryConditions();
+        }
+    }
+
+    private _broadcastSideVictoryPoints(sideId: SideId): void {
+        const side = this.getSide(sideId);
+        this.broadcastMessage({
+            type: "server:side:victory-points",
+            payload: {
+                sideId: side.id,
+                victoryPoints: side.victoryPoints,
+                objectives: side.victoryPointManager.toObjectiveSummaries()
+            }
+        });
+    }
+
+    evaluateVictoryConditions(): void {
+        if (this.phase === Phase.enum.game_over || this.phase === Phase.enum.lobby) {
+            return;
+        }
+        if (!this._scenario) {
+            return;
+        }
+
+        const sides = this.sides;
+        const immediateWinners = sides.filter((side) => side.victoryPointManager.isImmediateWin);
+        if (immediateWinners.length > 0) {
+            void this._endGameWithWinners(immediateWinners.map((side) => side.id));
+            return;
+        }
+
+        const scoredWinners = sides.filter(
+            (side) => !side.victoryPointManager.isImmediateLoss && side.victoryPoints >= 100
+        );
+        if (scoredWinners.length > 0) {
+            void this._endGameWithWinners(scoredWinners.map((side) => side.id));
+            return;
+        }
+
+        const losers = sides.filter((side) => side.victoryPointManager.isImmediateLoss);
+        if (losers.length > 0) {
+            const winners = sides.filter((side) => !side.victoryPointManager.isImmediateLoss);
+            if (winners.length > 0 && winners.length < sides.length) {
+                void this._endGameWithWinners(winners.map((side) => side.id));
+            }
+        }
+    }
+
+    private async _endGameWithWinners(winners: SideId[]): Promise<void> {
+        if (this.phase === Phase.enum.game_over) {
+            return;
+        }
+
+        const draw = winners.length !== 1;
+        const sides = this.sides
+            .map((side) => side.toSummary())
+            .sort((a, b) => b.victoryPoints - a.victoryPoints);
+
+        for (const client of this.clients) {
+            const yourSideId = client.sideId;
+            const outcome =
+                draw || winners.length === 0
+                    ? ("draw" as const)
+                    : yourSideId != null && winners.includes(yourSideId)
+                      ? ("won" as const)
+                      : ("lost" as const);
+
+            client.sendMessage({
+                type: "server:game:over",
+                payload: {
+                    winners,
+                    draw,
+                    outcome,
+                    yourSideId,
+                    sides
+                }
+            });
+        }
+
+        await this.setPhase(Phase.enum.game_over);
     }
 
     sendMessage(message: ServerToClientMessage, to: ClientId | ClientId[]) {
@@ -787,6 +968,9 @@ export class Game {
 
         this.endSide();
         this.primeManager.endTurn();
+
+        this.eventManager.on("turnEnded", turn);
+        this.evaluateVictoryConditions();
 
         const playingClient = this.clients.find(({ sideId }) => this.turnsSide.id === sideId);
         if (!playingClient) {

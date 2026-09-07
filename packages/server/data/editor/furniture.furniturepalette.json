@@ -721,6 +721,66 @@
             "id": "rs2-wall",
             "tiles": [["rs2-wall.furniture"]],
             "allowRandomOrientation": false
+        },
+        {
+            "id": "thick-wall",
+            "tiles": [["thick-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thick-corner-wall",
+            "tiles": [["thick-corner-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thick-t-junction-wall",
+            "tiles": [["thick-t-junction-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thick-cross-wall",
+            "tiles": [["thick-cross-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thick-to-thin-t-junction",
+            "tiles": [["thick-to-thin-t-junction.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thick-to-thin-wall",
+            "tiles": [["thick-to-thin-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thin-wall",
+            "tiles": [["thin-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thin-corner-wall",
+            "tiles": [["thin-corner-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thin-t-junction-wall",
+            "tiles": [["thin-t-junction-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "thin-cross-wall",
+            "tiles": [["thin-cross-wall.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "cactus",
+            "tiles": [["cactus.furniture"]],
+            "allowRandomOrientation": true
+        },
+        {
+            "id": "mansion-door",
+            "tiles": [["mansion-door.furniture"]],
+            "allowRandomOrientation": false
         }
     ]
 }

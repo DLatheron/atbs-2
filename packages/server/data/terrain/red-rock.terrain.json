@@ -1,0 +1,19 @@
+{
+    "id": "red-rock.terrain",
+    "name": "Red Rock",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Banded red sedimentary rock."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "red-rock"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

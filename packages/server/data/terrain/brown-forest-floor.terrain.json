@@ -1,0 +1,19 @@
+{
+    "id": "brown-forest-floor.terrain",
+    "name": "Brown Forest Floor",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Dry brown forest floor."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "brown-forest-floor"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

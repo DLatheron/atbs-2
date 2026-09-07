@@ -1,0 +1,19 @@
+{
+    "id": "coarse-grass.terrain",
+    "name": "Coarse Grass",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Patchy coarse grass."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "coarse-grass"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

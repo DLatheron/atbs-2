@@ -24,6 +24,18 @@
         }
     ],
     "worldMapId": "moonbase.map",
+    "objectiveZones": [
+        {
+            "id": "safe-1",
+            "name": "Extraction LZ",
+            "tiles": [
+                [
+                    { "col": 0, "row": 0 },
+                    { "width": 2, "height": 2 }
+                ]
+            ]
+        }
+    ],
     "sides": [
         {
             "id": "goodies",
@@ -437,8 +449,14 @@
                     ]
                 }
             },
-            "victoryActions": [
-                { "action": "unitKilled", "unitId": "hans-gruber.unit", "victoryPoints": 100 }
+            "victoryRules": [
+                {
+                    "id": "kill-hans",
+                    "name": "Assassinate ${unit}",
+                    "on": { "type": "unitKilled", "unitId": "hans-gruber.unit" },
+                    "value": 100,
+                    "once": true
+                }
             ]
         },
         {
@@ -770,7 +788,7 @@
                     "type": "fixed"
                 }
             },
-            "victoryActions": []
+            "victoryRules": []
         }
     ]
 }

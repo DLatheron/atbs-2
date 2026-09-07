@@ -1,0 +1,19 @@
+{
+    "id": "muddy-grass.terrain",
+    "name": "Muddy Grass",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Dry, muddy grass."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "muddy-grass"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

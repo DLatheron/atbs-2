@@ -1,0 +1,19 @@
+{
+    "id": "speckled-sand.terrain",
+    "name": "Speckled Sand",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Speckled gold-tan sand."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "speckled-sand"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

@@ -82,7 +82,7 @@ const DEPLOYMENT_SIDE_RECIPE = SideRecipe.parse({
             ]
         }
     },
-    victoryActions: []
+    victoryRules: []
 });
 
 class FakeSocket {
@@ -400,7 +400,7 @@ describe("Side deployment", () => {
                     ]
                 }
             },
-            victoryActions: []
+            victoryRules: []
         });
 
         expect(() => createSideHarness(infeasibleRecipe)).toThrow(

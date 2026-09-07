@@ -1,0 +1,19 @@
+{
+    "id": "moss-grass.terrain",
+    "name": "Moss Grass",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Fine mossy grass."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "moss-grass"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

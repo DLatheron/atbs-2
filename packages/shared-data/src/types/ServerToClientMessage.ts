@@ -14,6 +14,7 @@ import {
     ScenarioSummary,
     SideId,
     SideSummary,
+    VictoryObjectiveSummary,
     TileInfo,
     Tracer,
     TimedTileUpdate,
@@ -253,7 +254,18 @@ export const ServerToClientMessage = z.discriminatedUnion("type", [
         type: z.literal("server:side:victory-points"),
         payload: z.object({
             sideId: SideId,
-            victoryPoints: z.int().min(-100).max(100)
+            victoryPoints: z.int().min(-100).max(100),
+            objectives: z.array(VictoryObjectiveSummary).optional()
+        })
+    }),
+    z.object({
+        type: z.literal("server:game:over"),
+        payload: z.object({
+            winners: z.array(SideId),
+            draw: z.boolean(),
+            outcome: z.enum(["won", "lost", "draw"]),
+            yourSideId: SideId.nullable(),
+            sides: z.array(SideSummary)
         })
     }),
     z.object({

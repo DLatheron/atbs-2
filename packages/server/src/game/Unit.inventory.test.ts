@@ -279,6 +279,9 @@ function createHarness(inventory: InventoryRecipe) {
             registerOpportunity: vi.fn()
         },
         getOppositionUnitsForSide: () => [],
+        getZoneIdsAt: () => [] as string[],
+        emitItemZoneEvents: vi.fn(),
+        emitZoneEntryEvents: vi.fn(),
         syncUnitsCanSee(callback?: (unit: Unit) => void) {
             for (const unit of side.units) {
                 callback?.(unit);

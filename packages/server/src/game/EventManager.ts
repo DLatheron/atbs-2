@@ -1,10 +1,19 @@
 import type { Item } from "./Item.js";
 import type { Unit } from "./Unit.js";
+import type { Furniture } from "./Furniture.js";
+import type { Side } from "./Side.js";
 
 /** Event name → listener args (tuple = multiple params) */
 export type GameEvents = {
     unitKilled: [unit: Unit];
+    sideEliminated: [side: Side];
+    furnitureDestroyed: [furniture: Furniture];
+    furnitureAction: [furniture: Furniture, actionName: string, actor: Unit, itemUsed: Item | null];
     itemDropped: [item: Item];
+    itemPickedUp: [item: Item, unit: Unit];
+    unitEnteredZone: [unit: Unit, zoneId: string];
+    itemEnteredZone: [item: Item, zoneId: string, carrier: Unit | null];
+    turnEnded: [turnNumber: number];
 };
 
 type Listener<Args extends unknown[]> = (...args: Args) => void;

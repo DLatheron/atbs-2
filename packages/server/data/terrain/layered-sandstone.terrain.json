@@ -1,0 +1,19 @@
+{
+    "id": "layered-sandstone.terrain",
+    "name": "Layered Sandstone",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Striated tan sandstone."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "layered-sandstone"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

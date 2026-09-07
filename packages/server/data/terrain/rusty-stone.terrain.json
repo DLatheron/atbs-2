@@ -1,0 +1,19 @@
+{
+    "id": "rusty-stone.terrain",
+    "name": "Rusty Stone",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Weathered rusty stone."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "rusty-stone"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

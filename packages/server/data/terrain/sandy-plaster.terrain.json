@@ -1,0 +1,19 @@
+{
+    "id": "sandy-plaster.terrain",
+    "name": "Sandy Plaster",
+    "tileSet": "Photo",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Warm sandy plaster."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "sandy-plaster"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

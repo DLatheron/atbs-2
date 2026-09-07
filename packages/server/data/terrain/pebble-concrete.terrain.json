@@ -1,0 +1,19 @@
+{
+    "id": "pebble-concrete.terrain",
+    "name": "Pebble Concrete",
+    "tileSet": "Photo",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Concrete with embedded pebbles."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "pebble-concrete"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

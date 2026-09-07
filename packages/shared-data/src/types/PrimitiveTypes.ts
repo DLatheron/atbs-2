@@ -219,10 +219,21 @@ export const Description = z.array(
 );
 export type Description = z.infer<typeof Description>;
 
+export const VictoryObjectiveSummary = z.object({
+    id: z.string().nonempty(),
+    name: z.string(),
+    awards: z.int().nonnegative(),
+    maxAwards: z.int().positive().optional(),
+    value: z.int().min(1).max(100).or(z.literal("immediate-win")).or(z.literal("immediate-loss")),
+    complete: z.boolean()
+});
+export type VictoryObjectiveSummary = z.infer<typeof VictoryObjectiveSummary>;
+
 export const SideSummary = z.object({
     id: SideId,
     name: z.string(),
-    victoryPoints: z.int().min(-100).max(100)
+    victoryPoints: z.int().min(-100).max(100),
+    objectives: z.array(VictoryObjectiveSummary).optional()
 });
 export type SideSummary = z.infer<typeof SideSummary>;
 

@@ -1,0 +1,18 @@
+{
+    "id": "star.blend",
+    "name": "Star Blend",
+    "category": "Blend",
+    "description": [
+        {
+            "text": "A star-shaped terrain blend."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "star"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

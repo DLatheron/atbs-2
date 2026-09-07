@@ -23,6 +23,7 @@ import { Terrain } from "./Terrain.js";
 import { TerrainManager } from "./TerrainManager.js";
 import { TerrainRecipe } from "./Terrain.js";
 import type { Game } from "./Game.js";
+import { EventManager } from "./EventManager.js";
 import { VisibilityManager } from "./VisibilityManager.js";
 
 const THIN_WOOD_RGB = { r: 107, g: 66, b: 0 };
@@ -169,7 +170,8 @@ function createMockProjectile(
     const mockGame = {
         id: gameId,
         damageCacheManager: damageCache,
-        map: createMockMap(tileSize)
+        map: createMockMap(tileSize),
+        eventManager: new EventManager()
     } as Game;
 
     return new Projectile({
@@ -201,7 +203,8 @@ function createThrownProjectile(
     const mockGame = {
         id: gameId,
         damageCacheManager: damageCache,
-        map: createMockMap(tileSize)
+        map: createMockMap(tileSize),
+        eventManager: new EventManager()
     } as Game;
 
     return new Projectile({
@@ -249,7 +252,8 @@ function createUnitFireProjectile(
     const mockGame = {
         id: gameId,
         damageCacheManager: damageCache,
-        map: createMockMap(tileSize)
+        map: createMockMap(tileSize),
+        eventManager: new EventManager()
     } as Game;
 
     return new Projectile({
