@@ -158,9 +158,9 @@ describe("wall grid hotkeys", () => {
         expect(getFamilyExtraWalls(PALETTE, selection()).map((wall) => wall.id)).toEqual([
             "door.furniture"
         ]);
-        expect(getFamilyExtraWalls(PALETTE, selectWallFamily(PALETTE, selection(), "0-4-0"))).toEqual(
-            []
-        );
+        expect(
+            getFamilyExtraWalls(PALETTE, selectWallFamily(PALETTE, selection(), "0-4-0"))
+        ).toEqual([]);
     });
 });
 

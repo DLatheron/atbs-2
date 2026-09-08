@@ -12,14 +12,14 @@
         "default": {
             "default": [
                 { "imageId": "wall", "orientation": 0 },
-                { "imageId": "wall", "orientation": 2 }                
+                { "imageId": "wall", "orientation": 2 }
             ],
             "destroyed": []
         },
         "FIRE_MODE": {
             "default": [
                 { "imageId": "wall-cl", "orientation": 0 },
-                { "imageId": "wall-cl", "orientation": 2 }                
+                { "imageId": "wall-cl", "orientation": 2 }
             ],
             "destroyed": []
         }

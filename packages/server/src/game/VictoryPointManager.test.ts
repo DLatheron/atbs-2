@@ -10,10 +10,7 @@ import type { Game } from "./Game";
 import type { Unit } from "./Unit";
 import { EventManager } from "./EventManager";
 
-function createHarness(
-    victoryRules: VictoryRules,
-    options: { oppositionUnitCount?: number } = {}
-) {
+function createHarness(victoryRules: VictoryRules, options: { oppositionUnitCount?: number } = {}) {
     const eventManager = new EventManager();
     const broadcastMessage = vi.fn();
     const evaluateVictoryConditions = vi.fn();
@@ -319,38 +316,38 @@ describe("VictoryPointManager", () => {
             pending: new Set<string>(),
             evaluationPending: false
         };
-        (game as { runWithDeferredVictoryMessages: <T>(fn: () => T) => T }).runWithDeferredVictoryMessages =
-            <T>(fn: () => T): T => {
-                deferState.depth++;
-                try {
-                    return fn();
-                } finally {
-                    deferState.depth--;
-                    if (deferState.depth === 0) {
-                        for (const sideId of deferState.pending) {
-                            (game as { notifyVictoryPointsChanged: (id: string) => void }).notifyVictoryPointsChanged(
-                                sideId
-                            );
-                        }
-                        // notify already evaluates when depth is 0; clear flags
-                        deferState.pending.clear();
-                        deferState.evaluationPending = false;
+        (
+            game as { runWithDeferredVictoryMessages: <T>(fn: () => T) => T }
+        ).runWithDeferredVictoryMessages = <T>(fn: () => T): T => {
+            deferState.depth++;
+            try {
+                return fn();
+            } finally {
+                deferState.depth--;
+                if (deferState.depth === 0) {
+                    for (const sideId of deferState.pending) {
+                        (
+                            game as { notifyVictoryPointsChanged: (id: string) => void }
+                        ).notifyVictoryPointsChanged(sideId);
                     }
+                    // notify already evaluates when depth is 0; clear flags
+                    deferState.pending.clear();
+                    deferState.evaluationPending = false;
                 }
-            };
+            }
+        };
 
         const originalNotify = (game as { notifyVictoryPointsChanged: (id: string) => void })
             .notifyVictoryPointsChanged;
-        (game as { notifyVictoryPointsChanged: (id: string) => void }).notifyVictoryPointsChanged = (
-            sideId: string
-        ) => {
-            if (deferState.depth > 0) {
-                deferState.pending.add(sideId);
-                deferState.evaluationPending = true;
-                return;
-            }
-            originalNotify(sideId);
-        };
+        (game as { notifyVictoryPointsChanged: (id: string) => void }).notifyVictoryPointsChanged =
+            (sideId: string) => {
+                if (deferState.depth > 0) {
+                    deferState.pending.add(sideId);
+                    deferState.evaluationPending = true;
+                    return;
+                }
+                originalNotify(sideId);
+            };
 
         let midRequestBroadcasts = 0;
         game.runWithDeferredVictoryMessages(() => {

@@ -177,7 +177,7 @@ export const UnitRecipe = z.object({
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),
-    viewRange: z.number().positive().default(1000),
+    viewRange: z.number().positive().default(10000),
     attributes: z.object({
         actionPoints: AttributeDef,
         constitution: AttributeDef,

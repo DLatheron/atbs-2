@@ -169,11 +169,7 @@ export function VictoryPointsIndicator({
                         borderColor: "divider"
                     }}
                 >
-                    <Typography
-                        variant="caption"
-                        component="div"
-                        sx={{ fontWeight: 700, mb: 0.5 }}
-                    >
+                    <Typography variant="caption" component="div" sx={{ fontWeight: 700, mb: 0.5 }}>
                         Objectives
                     </Typography>
                     {objectives.map((objective) => (

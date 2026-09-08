@@ -601,7 +601,8 @@ export class EditorWorld extends World {
                 randomiseOrientation: getPaintRandomiseOrientation(
                     this._terrainPalette,
                     this._selectedTerrain
-                )
+                ),
+                stack: this._selectedTerrain.stackTerrain
             }
         });
     }

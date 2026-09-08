@@ -22,14 +22,20 @@ export class TerrainFactory {
         const foregroundTerrain = TerrainManager.GetSingleton().get(foregroundRecipeId);
         const backgroundTerrain = TerrainManager.GetSingleton().get(backgroundRecipeId);
 
+        const nameParts = [backgroundTerrain.name, foregroundTerrain.name].filter(
+            (name) => name !== "Transparent"
+        );
         const terrainRecipe: TerrainRecipe = {
             id: terrainId,
-            tileSet: foregroundTerrain.tileSet,
-            name: `${foregroundTerrain.name} & ${backgroundTerrain.name}`,
+            tileSet:
+                foregroundId === "transparent"
+                    ? backgroundTerrain.tileSet
+                    : foregroundTerrain.tileSet,
+            name: nameParts.length > 0 ? nameParts.join(" / ") : "Transparent",
             category: "Terrain",
             description: [
-                ...CastToArray(foregroundTerrain.description),
-                ...CastToArray(backgroundTerrain.description)
+                ...CastToArray(backgroundTerrain.description),
+                ...CastToArray(foregroundTerrain.description)
             ],
             orientation: Orientation.NORTH,
             renderable: {

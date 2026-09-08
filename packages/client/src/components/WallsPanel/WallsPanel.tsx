@@ -36,10 +36,7 @@ function WallPreview({
         <ImageComponent
             images={wall.uiImage.map((image: RenderImage) => ({
                 ...image,
-                orientation: rotateOrientation(
-                    image.orientation ?? Orientation.NORTH,
-                    -orientation
-                )
+                orientation: rotateOrientation(image.orientation ?? Orientation.NORTH, -orientation)
             }))}
             width={size}
             height={size}
@@ -182,7 +179,10 @@ export function WallsPanel({ wallPalette, selectedWall, onSelectedWallChange }: 
                                 );
 
                                 if (piecePinned && currentIndex >= 0) {
-                                    if (cell.options.length === 1 || currentIndex === cell.options.length - 1) {
+                                    if (
+                                        cell.options.length === 1 ||
+                                        currentIndex === cell.options.length - 1
+                                    ) {
                                         onSelectedWallChange(
                                             clearWallPieceSelection(wallPalette, selectedWall)
                                         );

@@ -106,7 +106,14 @@ function DeployedUnitOverlay({
             }}
         >
             {deployment.mapImage && (
-                <ImageComponent images={deployment.mapImage} width={tileSize} height={tileSize} />
+                <ImageComponent
+                    images={deployment.mapImage}
+                    width={tileSize}
+                    height={tileSize}
+                    // World sets the overlay box to tileSize * zoom; fill that box so sprites
+                    // scale with camera zoom (intrinsic width/height alone stay at tileSize).
+                    sx={{ width: "100%", height: "100%", "& img": { width: "100%", height: "100%" } }}
+                />
             )}
         </Box>
     );

@@ -121,7 +121,9 @@ export function GameOverPage({ visible, result, onDismiss }: GameOverPageProps) 
                                             py: 1,
                                             borderRadius: 1,
                                             bgcolor: isYours ? "action.selected" : "action.hover",
-                                            border: isWinner ? "1px solid" : "1px solid transparent",
+                                            border: isWinner
+                                                ? "1px solid"
+                                                : "1px solid transparent",
                                             borderColor: isWinner ? "success.main" : "transparent"
                                         }}
                                     >

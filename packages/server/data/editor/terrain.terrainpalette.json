@@ -2,6 +2,7 @@
     "id": "terrain.terrainpalette",
     "name": "Terrain Palette",
     "terrains": [
+        "transparent.terrain",
         "grass.terrain",
         "garden-grass.terrain",
         "moon-surface.terrain",
@@ -87,6 +88,7 @@
         "speckled-sand.terrain"
     ],
     "noRandomOrientation": [
+        "transparent.terrain",
         "rs2-floor-empty.terrain",
         "rs2-water-corner-3.terrain",
         "rs2-water-shore-8.terrain",

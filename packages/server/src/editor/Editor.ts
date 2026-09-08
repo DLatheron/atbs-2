@@ -661,6 +661,7 @@ export class Editor implements MapHost {
         terrainId: string;
         orientation: Orientation;
         randomiseOrientation: boolean;
+        stack?: boolean;
     }) {
         const tilePos = new TilePos(payload.tilePos);
         const tile = this._map.getTile(tilePos);
@@ -679,7 +680,11 @@ export class Editor implements MapHost {
             allowRandomOrientation
         );
 
-        tile.setTerrain(payload.terrainId, orientation);
+        if (payload.stack) {
+            tile.pushTerrain(payload.terrainId, orientation);
+        } else {
+            tile.setTerrain(payload.terrainId, orientation);
+        }
         const after = tile.getTerrainState();
 
         this._history.recordTerrainEdit({ tilePos: payload.tilePos, before, after });
@@ -945,9 +950,12 @@ export class Editor implements MapHost {
         const pos = new TilePos(tilePos);
         const tile = this._map.getTile(pos);
         const before = tile.getTerrainState();
-        const after = { terrainId: DEFAULT_TERRAIN_ID, orientation: before.orientation };
+        const orientation = before.layers[0]?.orientation ?? Orientation.NORTH;
+        const after = {
+            layers: [{ terrainId: DEFAULT_TERRAIN_ID, orientation }]
+        };
 
-        tile.setTerrain(DEFAULT_TERRAIN_ID, after.orientation);
+        tile.setTerrains(after.layers);
 
         this._history.recordTerrainEdit({ tilePos, before, after });
         this._broadcastTileUpdates([tile.generateTileUpdate()]);

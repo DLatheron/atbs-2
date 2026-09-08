@@ -209,7 +209,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
      * Runs synchronously so message ordering cannot leave the queue stuck.
      */
     private tryAutoSetupGame(): void {
-        const scenarioId = "test.scenario";
+        const scenarioId = "hostage-rescue.scenario";
         const scenarioRecipe = this.game.scenarioRecipeManager.get(scenarioId);
         const { sides } = scenarioRecipe;
 

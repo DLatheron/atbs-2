@@ -26,9 +26,7 @@
             "destroyed": []
         }
     },
-    "materials": [
-        "concrete.material"
-    ],
+    "materials": ["concrete.material"],
     "hitPoints": {
         "max": 180
     },

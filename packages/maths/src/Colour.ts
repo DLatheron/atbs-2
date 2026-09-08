@@ -47,11 +47,12 @@ export class Colour
     }
 
     static Blend(colourA: Colour, colourB: Colour, blend: number): Colour {
+        const t = Colour.EnsuredNormalised(blend);
         return new Colour({
-            r: colourA.r * blend + colourB.r * (1.0 - blend),
-            g: colourA.g * blend + colourB.g * (1.0 - blend),
-            b: colourA.b * blend + colourB.b * (1.0 - blend),
-            a: 1.0
+            r: colourA.r * t + colourB.r * (1.0 - t),
+            g: colourA.g * t + colourB.g * (1.0 - t),
+            b: colourA.b * t + colourB.b * (1.0 - t),
+            a: colourA.a * t + colourB.a * (1.0 - t)
         });
     }
 

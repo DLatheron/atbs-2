@@ -10,8 +10,7 @@ import { FurnitureId } from "@atbs/shared-data";
 import type { EditorMarkers } from "./EditorMarkers.js";
 
 export interface TerrainTileState {
-    terrainId: string;
-    orientation: Orientation;
+    layers: { terrainId: string; orientation: Orientation }[];
 }
 
 export interface TerrainEditCommand {
@@ -317,8 +316,10 @@ export class EditorHistory {
     }
 
     private async _applyTerrainState(map: WorldMap, tilePos: ITilePos, state: TerrainTileState) {
-        await EditorHistory.ensureTerrainExists(state.terrainId);
+        for (const layer of state.layers) {
+            await EditorHistory.ensureTerrainExists(layer.terrainId);
+        }
         const tile = map.getTile(new TilePos(tilePos));
-        tile.setTerrain(state.terrainId, state.orientation);
+        tile.setTerrains(state.layers);
     }
 }

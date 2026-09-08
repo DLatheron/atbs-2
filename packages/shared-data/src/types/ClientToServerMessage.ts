@@ -344,7 +344,8 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
             tilePos: ITilePos,
             terrainId: z.string().nonempty(),
             orientation: z.enum(Orientation),
-            randomiseOrientation: z.boolean()
+            randomiseOrientation: z.boolean(),
+            stack: z.boolean().default(false)
         })
     }),
     z.object({

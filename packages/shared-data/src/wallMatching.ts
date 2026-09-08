@@ -124,10 +124,7 @@ export function matchWallPieceInFamily(params: {
     const family = wallsInFamily(params.walls, params.preferredWallId);
 
     return matchWallPiece({
-        surroundingEdges: surroundingEdgesForFamily(
-            params.surroundingEdges,
-            familyEdgeIds(family)
-        ),
+        surroundingEdges: surroundingEdgesForFamily(params.surroundingEdges, familyEdgeIds(family)),
         walls: family,
         preferredDirection: params.preferredDirection,
         fallback: params.fallback
