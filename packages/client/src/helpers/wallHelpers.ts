@@ -2,18 +2,23 @@ import { Orientation, TilePos, rotateOrientation } from "@atbs/maths";
 import {
     EditorFurnitureTile,
     SelectedWall,
-    WallHotKeyAction,
     WallPaletteEntry,
     WallPaletteWire,
     getAdjacentWallEdge,
-    matchWallPiece
+    getWallGrid,
+    groupWallsByFamily,
+    isStraightWall,
+    matchWallPieceInFamily,
+    orientationForVerticalStraight,
+    wallFamilyId
 } from "@atbs/shared-data";
 
 export function createDefaultSelectedWall(): SelectedWall {
     return {
         index: 0,
         orientation: Orientation.NORTH,
-        autoFit: true
+        autoFit: true,
+        pinned: false
     };
 }
 
@@ -27,6 +32,120 @@ export function getWallId(
     selectedWall: SelectedWall
 ): string | undefined {
     return wallPalette.walls[selectedWall.index]?.id;
+}
+
+/** Wall id used as the auto-fit family seed when painting. */
+export function getWallPaintId(
+    wallPalette: WallPaletteWire,
+    selectedWall: SelectedWall
+): string | undefined {
+    if (selectedWall.autoFit && !selectedWall.pinned) {
+        const family = getSelectedWallFamily(wallPalette, selectedWall);
+        return family?.representative.id ?? getWallId(wallPalette, selectedWall);
+    }
+
+    return getWallId(wallPalette, selectedWall);
+}
+
+export function isWallPiecePinned(selectedWall: SelectedWall): boolean {
+    return selectedWall.pinned || !selectedWall.autoFit;
+}
+
+export interface WallFamily {
+    id: string;
+    name: string;
+    representative: WallPaletteEntry;
+    previewOrientation: Orientation;
+    members: WallPaletteEntry[];
+}
+
+export function getWallFamilies(wallPalette: WallPaletteWire): WallFamily[] {
+    return groupWallsByFamily(wallPalette.walls).map((members) => {
+        const representative = members.find((member) => isStraightWall(member.edges)) ?? members[0];
+
+        return {
+            id: wallFamilyId(representative.edges),
+            name: representative.name,
+            representative,
+            previewOrientation: orientationForVerticalStraight(representative.edges),
+            members
+        };
+    });
+}
+
+export function getSelectedWallFamily(
+    wallPalette: WallPaletteWire,
+    selectedWall: SelectedWall
+): WallFamily | undefined {
+    const selected = wallPalette.walls[selectedWall.index];
+    if (!selected) {
+        return undefined;
+    }
+
+    const familyId = wallFamilyId(selected.edges);
+    return getWallFamilies(wallPalette).find((family) => family.id === familyId);
+}
+
+export function selectWallFamily(
+    wallPalette: WallPaletteWire,
+    selectedWall: SelectedWall,
+    familyId: string
+): SelectedWall {
+    const current = getSelectedWallFamily(wallPalette, selectedWall);
+    if (current?.id === familyId) {
+        return selectedWall;
+    }
+
+    const family = getWallFamilies(wallPalette).find((entry) => entry.id === familyId);
+    if (!family) {
+        return selectedWall;
+    }
+
+    return {
+        ...selectedWall,
+        index: getWallPaletteIndex(wallPalette, family.representative.id),
+        orientation: Orientation.NORTH,
+        pinned: false
+    };
+}
+
+export function clearWallPieceSelection(
+    wallPalette: WallPaletteWire,
+    selectedWall: SelectedWall
+): SelectedWall {
+    const family = getSelectedWallFamily(wallPalette, selectedWall);
+    const representative = family?.representative ?? wallPalette.walls[selectedWall.index];
+
+    return {
+        ...selectedWall,
+        index: representative
+            ? getWallPaletteIndex(wallPalette, representative.id)
+            : selectedWall.index,
+        orientation: Orientation.NORTH,
+        pinned: false,
+        autoFit: true
+    };
+}
+
+export function getSelectedWallGrid(wallPalette: WallPaletteWire, selectedWall: SelectedWall) {
+    const family = getSelectedWallFamily(wallPalette, selectedWall);
+    return getWallGrid(family?.members ?? []);
+}
+
+export function getFamilyExtraWalls(
+    wallPalette: WallPaletteWire,
+    selectedWall: SelectedWall
+): WallPaletteEntry[] {
+    const family = getSelectedWallFamily(wallPalette, selectedWall);
+    if (!family) {
+        return [];
+    }
+
+    const usedIds = new Set(
+        getWallGrid(family.members).flatMap((cell) => cell.options.map((option) => option.id))
+    );
+
+    return family.members.filter((member) => !usedIds.has(member.id));
 }
 
 function getAdjacentEdgeFromLayer(
@@ -110,9 +229,10 @@ export function matchWallForTile(
     }
 
     const surroundingEdges = getSurroundingEdgesFromLayer(furnitureLayer, wallPalette, tilePos);
-    const matched = matchWallPiece({
+    const matched = matchWallPieceInFamily({
         surroundingEdges,
         walls: wallPalette.walls,
+        preferredWallId: fallback.id,
         preferredDirection: selectedWall.direction,
         fallback
     });
@@ -135,29 +255,79 @@ export function rotateWallSelection(selectedWall: SelectedWall, steps: -2 | 2): 
     };
 }
 
+const TOP_BOTTOM_CELLS = new Set(["t", "b"]);
+const LEFT_RIGHT_T_CELLS = new Set(["f", "h"]);
+const CORNER_CELLS = new Set(["r", "y", "v", "n"]);
+const LEFT_RIGHT_COLUMN_CELLS = new Set(["r", "f", "v", "y", "h", "n"]);
+/** Top-right / bottom-left — diagonal opposites in the 3x3. */
+const DIAGONAL_CORNER_CELLS = new Set(["y", "v"]);
+
+/**
+ * Extra UI rotation for the 3x3 preview only. Placement/hotkeys keep the
+ * edge-matching orientation; some families' sprites don't face the same way
+ * as their edge tuples (or the CSS preview negates 90° turns).
+ */
+export function wallGridPreviewOrientation(
+    familyId: string,
+    cellKey: string,
+    orientation: Orientation
+): Orientation {
+    if (familyId === "0-2-0" || familyId === "0-4-0") {
+        return TOP_BOTTOM_CELLS.has(cellKey) ? rotateOrientation(orientation, 4) : orientation;
+    }
+
+    if (familyId === "0-3-0") {
+        return LEFT_RIGHT_T_CELLS.has(cellKey) ? rotateOrientation(orientation, 4) : orientation;
+    }
+
+    if (familyId === "0-5-0") {
+        return CORNER_CELLS.has(cellKey) ? rotateOrientation(orientation, 4) : orientation;
+    }
+
+    if (familyId === "0-6-0" || familyId === "0-7-0" || familyId === "0-6-0|0-7-0") {
+        // Top-right / bottom-left use 180° placements; mirroring is a no-op for
+        // those, so swap them with an extra half-turn.
+        if (DIAGONAL_CORNER_CELLS.has(cellKey)) {
+            return rotateOrientation(orientation, 4);
+        }
+
+        return LEFT_RIGHT_COLUMN_CELLS.has(cellKey)
+            ? rotateOrientation(Orientation.NORTH, -orientation)
+            : orientation;
+    }
+
+    return orientation;
+}
+
+export function selectWallGridOption(
+    wallPalette: WallPaletteWire,
+    selectedWall: SelectedWall,
+    option: { id: string; orientation: Orientation }
+): SelectedWall {
+    return {
+        ...selectedWall,
+        index: getWallPaletteIndex(wallPalette, option.id),
+        orientation: option.orientation,
+        pinned: true
+    };
+}
+
 export function applyWallHotKey(
     wallPalette: WallPaletteWire,
     selectedWall: SelectedWall,
     key: string
 ): SelectedWall | undefined {
-    const hotKeyActions = wallPalette.hotKeys?.[key];
-    if (!hotKeyActions || hotKeyActions.length === 0) {
+    const grid = getSelectedWallGrid(wallPalette, selectedWall);
+    const cell = grid.find((entry) => entry.key === key);
+    if (!cell || cell.options.length === 0) {
         return undefined;
     }
 
     const currentWall = wallPalette.walls[selectedWall.index];
-    let hotKeyIndex = hotKeyActions.findIndex(
-        (entry: WallHotKeyAction) =>
-            entry.id === currentWall?.id && entry.orientation === selectedWall.orientation
+    let optionIndex = cell.options.findIndex(
+        (option) => option.id === currentWall?.id && option.orientation === selectedWall.orientation
     );
-    hotKeyIndex = (hotKeyIndex + 1) % hotKeyActions.length;
+    optionIndex = (optionIndex + 1) % cell.options.length;
 
-    const selectedAction = hotKeyActions[hotKeyIndex];
-
-    return {
-        index: getWallPaletteIndex(wallPalette, selectedAction.id),
-        orientation: selectedAction.orientation,
-        autoFit: false,
-        direction: selectedWall.direction
-    };
+    return selectWallGridOption(wallPalette, selectedWall, cell.options[optionIndex]);
 }

@@ -114,6 +114,8 @@ export const SelectedWall = z.object({
     index: z.number().int().nonnegative(),
     orientation: z.enum(Orientation),
     autoFit: z.boolean(),
+    /** True when the user explicitly chose a piece from the grid or hotkeys. */
+    pinned: z.boolean().default(false),
     direction: z.enum(Orientation).optional()
 });
 export type SelectedWall = z.infer<typeof SelectedWall>;

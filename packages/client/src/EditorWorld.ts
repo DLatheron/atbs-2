@@ -29,7 +29,7 @@ import {
 } from "./helpers/furnitureHelpers";
 import {
     createDefaultSelectedWall,
-    getWallId,
+    getWallPaintId,
     matchWallForTile,
     rotateWallSelection
 } from "./helpers/wallHelpers";
@@ -704,17 +704,22 @@ export class EditorWorld extends World {
             return;
         }
 
-        const wallId = getWallId(this._wallPalette, this._selectedWall);
+        const wallId = getWallPaintId(this._wallPalette, this._selectedWall);
         if (!wallId) {
             return;
         }
+
+        const orientation =
+            this._selectedWall.autoFit && !this._selectedWall.pinned
+                ? (this._selectedWall.direction ?? this._selectedWall.orientation)
+                : this._selectedWall.orientation;
 
         this.sendMessage({
             type: "client:editor:wall:paint",
             payload: {
                 tilePos,
                 wallId,
-                orientation: this._selectedWall.orientation,
+                orientation,
                 autoFit: this._selectedWall.autoFit,
                 direction: this._selectedWall.direction
             }
@@ -884,6 +889,7 @@ export class EditorWorld extends World {
         if (
             this._editorPanel !== "Walls" ||
             !this._selectedWall.autoFit ||
+            this._selectedWall.pinned ||
             !this._wallPalette ||
             !this._furnitureLayer
         ) {
@@ -904,7 +910,7 @@ export class EditorWorld extends World {
             return;
         }
 
-        this._selectedWall = matched;
+        this._selectedWall = { ...matched, pinned: false };
         this._notifySelectedWallChange();
     }
 
