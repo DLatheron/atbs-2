@@ -142,8 +142,11 @@ export class Item extends SceneObject {
     }
 
     get canFire(): boolean {
-        // Has fire modes or at least one sub-item in a weapon slot.
-        return "fireModes" in this._recipe || this.hasSlot(SlotType.enum[0]);
+        // Guns need ammo; combo items can fire if any slotted weapon can.
+        if ("fireModes" in this._recipe) {
+            return !this.isEmpty;
+        }
+        return this.subItems.some((item) => item.canFire);
     }
 
     get getFireables(): Item[] {
@@ -187,6 +190,11 @@ export class Item extends SceneObject {
 
     get spreadAngleInRadians(): number {
         return "spreadAngle" in this._recipe ? degreesToRadians(this._recipe.spreadAngle) : 0;
+    }
+
+    /** Loudness relative to reference 100. Guns default to 100; non-guns return 0. */
+    get noise(): number {
+        return "noise" in this._recipe ? this._recipe.noise : 0;
     }
 
     get capacity(): number {
@@ -247,7 +255,8 @@ export class Item extends SceneObject {
     }
 
     get isEmpty(): boolean {
-        return this.capacity === 0;
+        // Mag-fed guns report capacity from the magazine's round well, matching UI.
+        return (this.loadedMagazine ?? this).capacity === 0;
     }
 
     get projectileRecipe(): ProjectileRecipe {

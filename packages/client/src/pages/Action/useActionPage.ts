@@ -11,7 +11,6 @@ import {
     ItemId,
     OnTarget,
     Prime,
-    RenderMode,
     SideSummary,
     ThrowDetails,
     TileInfo,
@@ -23,6 +22,7 @@ import { Orientation, TilePos, Vec2 } from "@atbs/maths";
 import { MapMode } from "../../MapMode";
 import { selectiveMerge } from "../../helpers/selectiveMerge";
 import { fadeInElement, spawnFadingGhost } from "../../utils/ghostOverlay";
+import { applyTileUpdates } from "../../mapUpdates";
 import { World } from "../../World";
 
 function delay(delayInMs: number): Promise<void> {
@@ -202,22 +202,14 @@ export function useActionPage() {
             }),
 
             messageManager.registerHandler("server:map:update", (_context, payload) => {
-                setMap((map: ClientMap | null) => {
-                    if (!map) {
-                        return null;
-                    }
-
-                    for (const update of payload) {
-                        const tilePos = new TilePos(update.tilePos);
-
-                        map.tilesByRenderMode[RenderMode.enum.MAP_MODE][tilePos.row][tilePos.col] =
-                            update.tileByRenderMode[RenderMode.enum.MAP_MODE];
-                        map.tilesByRenderMode[RenderMode.enum.FIRE_MODE][tilePos.row][tilePos.col] =
-                            update.tileByRenderMode[RenderMode.enum.FIRE_MODE];
-                    }
-
-                    return map;
-                });
+                // Apply synchronously to world.map (same pattern as fire:trace).
+                // setState updaters can run after later awaited handlers (camera /
+                // unit:mode:move), so deferring the mutate left OF sprites missing
+                // while visibleTiles / canSee already said the enemy was seen.
+                if (world.hasMap) {
+                    applyTileUpdates(world.map, payload, world.imageCache);
+                }
+                setMap((map: ClientMap | null) => map);
             }),
 
             messageManager.registerHandler("server:unit:selected:update", (_context, payload) => {

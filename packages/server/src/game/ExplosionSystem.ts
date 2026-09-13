@@ -16,7 +16,7 @@ import {
     TimedVisibilityUpdate,
     Tracer
 } from "@atbs/shared-data";
-import { DebugGraphic, degreesToRadians, generateRandomBetween, Vec2 } from "@atbs/maths";
+import { DebugGraphic, degreesToRadians, generateRandomBetween, TilePos, Vec2 } from "@atbs/maths";
 import { buildUnitDeathAnimation } from "../AnimationDefinitions.js";
 import { config } from "../config/config.schema.js";
 import { AnimationRecipeManager } from "./AnimationRecipeManager.js";
@@ -27,6 +27,7 @@ import type { Item } from "./Item.js";
 import { Projectile } from "./Projectile.js";
 import type { Unit } from "./Unit.js";
 import { CloudGenerator } from "./CloudGenerator.js";
+import { broadcastFilteredFireTrace } from "./fireTraceBroadcast.js";
 
 export interface ExplosionDetonationResult {
     tracers: Tracer[];
@@ -491,7 +492,12 @@ export function consumeExplodedItem(
 export function broadcastExplosionTrace(
     game: Game,
     result: ExplosionDetonationResult,
-    isOnTarget: OnTarget = OnTarget.enum.none
+    isOnTarget: OnTarget = OnTarget.enum.none,
+    options?: {
+        actingSideId?: SideId;
+        originWorldPos?: Vec2;
+        noise?: number;
+    }
 ): void {
     const basePayload = {
         tracers: result.tracers,
@@ -504,31 +510,30 @@ export function broadcastExplosionTrace(
         animObjectRemovals: result.animObjectRemovals ?? []
     };
 
-    const visibilityBySide = result.visibilityUpdatesBySide;
-    if (visibilityBySide && visibilityBySide.size > 0) {
-        for (const side of game.sides) {
-            game.messageRouter.send(
-                {
-                    type: "server:fire:trace",
-                    payload: {
-                        ...basePayload,
-                        visibilityUpdates: visibilityBySide.get(side.id) ?? []
-                    }
-                },
-                side.id
-            );
-        }
-    } else {
-        game.messageRouter.send({
-            type: "server:fire:trace",
-            payload: {
-                ...basePayload,
-                visibilityUpdates: []
-            }
-        });
-    }
+    const actingSideId = options?.actingSideId ?? game.turnsSideId;
+    // Prefer an explicit origin (firer / impact). For cloud ticks with no caller
+    // origin, fall back to the first affected tile so origin-only fallbacks are
+    // not stuck at (0,0). Per-effect filtering still uses each VFX's own tile.
+    const originWorldPos =
+        options?.originWorldPos ??
+        (result.tileUpdates[0]
+            ? game.map.tileCenterToWorld(
+                  new TilePos(result.tileUpdates[0].tilePos.col, result.tileUpdates[0].tilePos.row)
+              )
+            : new Vec2(0, 0));
+    const originTilePos = game.map.worldToTile(originWorldPos);
 
-    if (result.deaths.length > 0 || (visibilityBySide && visibilityBySide.size > 0)) {
+    broadcastFilteredFireTrace({
+        game,
+        payload: basePayload,
+        actingSideId,
+        originWorldPos,
+        originTilePos,
+        visibilityUpdatesBySide: result.visibilityUpdatesBySide,
+        noise: options?.noise
+    });
+
+    if (result.deaths.length > 0 || (result.visibilityUpdatesBySide?.size ?? 0) > 0) {
         game.visibilityManager.update();
         game.syncUnitsCanSee();
         for (const side of game.sides) {

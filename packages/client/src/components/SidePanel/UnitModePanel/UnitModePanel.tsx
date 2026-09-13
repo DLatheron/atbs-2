@@ -188,7 +188,7 @@ export function UnitModePanel({
                     sx={{
                         display: "grid",
                         gridTemplateAreas: `
-                            'fire-mode action-mode - inventory'
+                            'fire-mode action-mode next-unit inventory'
                         `,
                         gridTemplateRows: "1fr",
                         gridTemplateColumns: "1fr 1fr 1fr 1fr"
@@ -235,21 +235,21 @@ export function UnitModePanel({
                             disabled={disabled || !unit.interactions.canAction}
                         />
                     </ToggleButton>
-                    {/* <Button
-                        id="throw-mode"
-                        title="Throw mode"
+                    <Button
+                        id="next-unit"
+                        title="Select next unit"
                         variant="outlined"
-                        disabled={disabled || !unit.interactions.canThrow}
-                        sx={{ gridArea: "throw-mode", aspectRatio: 1 }}
-                        onClick={onThrowMode}
+                        disabled={disabled}
+                        sx={{ gridArea: "next-unit", aspectRatio: 1, borderRadius: 0 }}
+                        onClick={nextUnit}
                     >
-                        <img
-                            src={imageCache.getDataSafe("throw")}
+                        <ImageComponent
+                            images={[{ imageId: "next" }]}
                             width={40}
                             height={40}
-                            alt="Throw Mode"
+                            disabled={disabled}
                         />
-                    </Button> */}
+                    </Button>
                     <Button
                         id="inventory"
                         title="Inventory"

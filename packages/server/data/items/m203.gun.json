@@ -3,9 +3,15 @@
     "type": "gun",
     "name": "M203 Grenade Launcher",
     "shortName": "M203",
-    "description": [{ "text": "The underslung M203 grenade launcher fires 40mm grenades." }],
+    "description": [
+        {
+            "text": "The underslung M203 grenade launcher fires 40mm grenades."
+        }
+    ],
     "weight": 1.36,
-    "renderable": { "default": [] },
+    "renderable": {
+        "default": []
+    },
     "sight": "ranged",
     "fireType": "indirect",
     "slotProps": {
@@ -18,7 +24,12 @@
             ]
         }
     },
-    "slots": { "ammo": { "id": "40mm-gas.round", "quantity": 1 } },
+    "slots": {
+        "ammo": {
+            "id": "40mm-gas.round",
+            "quantity": 1
+        }
+    },
     "fireSelector": "single",
     "fireModes": {
         "single": {
@@ -34,5 +45,6 @@
                 }
             }
         }
-    }
+    },
+    "noise": 110
 }

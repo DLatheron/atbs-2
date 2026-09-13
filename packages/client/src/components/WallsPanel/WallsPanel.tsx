@@ -159,7 +159,9 @@ export function WallsPanel({ wallPalette, selectedWall, onSelectedWallChange }: 
                         : undefined;
                     const option = selectedOption ?? cell.options[0];
                     const wall = option
-                        ? wallPalette.walls.find((entry) => entry.id === option.id)
+                        ? wallPalette.walls.find(
+                              (entry: WallPaletteEntry) => entry.id === option.id
+                          )
                         : undefined;
                     const selected = Boolean(selectedOption);
                     const disabled = !option || !wall;

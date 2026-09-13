@@ -10,7 +10,11 @@
     ],
     "weight": 2.92,
     "renderable": {
-        "default": [{ "imageId": "m4" }],
+        "default": [
+            {
+                "imageId": "m4"
+            }
+        ],
         "FIRE_MODE": []
     },
     "sight": "laser",
@@ -20,7 +24,11 @@
             "compatibleIds": ["m16-30.magazine", "m16-20.magazine"]
         }
     },
-    "slots": { "ammo": { "id": "m16-30.magazine" } },
+    "slots": {
+        "ammo": {
+            "id": "m16-30.magazine"
+        }
+    },
     "fireSelector": "single",
     "fireModes": {
         "single": {
@@ -65,5 +73,6 @@
                 }
             }
         }
-    }
+    },
+    "noise": 100
 }

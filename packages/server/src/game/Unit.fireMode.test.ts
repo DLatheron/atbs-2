@@ -75,6 +75,39 @@ function testUnitRecipe(): UnitRecipe {
     });
 }
 
+function roundRecipe() {
+    return ItemRecipe.parse({
+        id: "test.round",
+        type: "round",
+        name: "Test Round",
+        description: [{ text: "Test" }],
+        weight: 0.01,
+        renderable: {
+            default: [{ imageId: "generic-4" }]
+        },
+        projectile: {
+            maxRange: 1000,
+            perturbation: 0,
+            visual: {
+                headColour: { r: 255, g: 255, b: 255, a: 1 },
+                headRadiusInPixels: 1,
+                trailColour: { r: 255, g: 255, b: 255, a: 1 },
+                trailLengthInPixels: 10,
+                rangeFalloffPower: 1
+            },
+            damage: { default: 1 },
+            mass: 0.01,
+            velocity: 500,
+            diameter: 5,
+            hardness: 1,
+            shape: 1,
+            stability: 1,
+            bounce: 0,
+            integrity: 1
+        }
+    });
+}
+
 function gunRecipe(id: string) {
     return ItemRecipe.parse({
         id,
@@ -97,6 +130,12 @@ function gunRecipe(id: string) {
                     snapshot: { accuracy: 50, actionPoints: 10 }
                 }
             }
+        },
+        slotProps: {
+            ammo: { compatibleIds: ["test.round"], maxQuantity: 1 }
+        },
+        slots: {
+            ammo: { id: "test.round", quantity: 1 }
         }
     });
 }
@@ -155,6 +194,7 @@ describe("Unit fire-mode preference", () => {
         ensureHumanMaterial();
 
         const itemRecipeManager = new ItemRecipeManager();
+        itemRecipeManager.addRecipe(roundRecipe());
         itemRecipeManager.addRecipe(gunRecipe("test.gun.a"));
         itemRecipeManager.addRecipe(gunRecipe("test.gun.b"));
         itemRecipeManager.addRecipe(grenadeRecipe());

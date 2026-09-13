@@ -60,7 +60,7 @@ export interface WallFamily {
 }
 
 export function getWallFamilies(wallPalette: WallPaletteWire): WallFamily[] {
-    return groupWallsByFamily(wallPalette.walls).map((members) => {
+    return groupWallsByFamily<WallPaletteEntry>(wallPalette.walls).map((members) => {
         const representative = members.find((member) => isStraightWall(member.edges)) ?? members[0];
 
         return {

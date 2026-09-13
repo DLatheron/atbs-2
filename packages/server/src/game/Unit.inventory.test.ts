@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TilePos } from "@atbs/maths";
-import { ErrorType } from "@atbs/shared-data";
+import { TilePos, Vec2 } from "@atbs/maths";
+import { ErrorType, FireMode, FireSelector } from "@atbs/shared-data";
 import { config } from "../config/config.schema.js";
 import { EventManager } from "./EventManager.js";
 import type { Game } from "./Game.js";
@@ -279,6 +279,7 @@ function createHarness(inventory: InventoryRecipe) {
             registerOpportunity: vi.fn()
         },
         getOppositionUnitsForSide: () => [],
+        getVisibleOppositionTileUpdates: () => [],
         getZoneIdsAt: () => [] as string[],
         emitItemZoneEvents: vi.fn(),
         emitZoneEntryEvents: vi.fn(),
@@ -705,5 +706,36 @@ describe("Unit inventory", () => {
 
         unit.startTurn();
         expect(unit.actionPoints).toBe(unit.maxActionPoints - unit.burden);
+    });
+
+    it("sends INSUFFICIENT_AMMO and does not throw when firing an empty weapon", () => {
+        const { unit, messageRouter } = createHarness(
+            InventoryRecipe.parse({
+                inUse: 0,
+                items: [{ id: GRENADE_LAUNCHER_RECIPE.id }]
+            })
+        );
+        const launcher = unit.itemInUse!;
+        launcher.emptySlot(SlotType.enum.ammo);
+        const actionPointsBefore = unit.actionPoints;
+
+        expect(launcher.isEmpty).toBe(true);
+        expect(unit.canFire).toBe(false);
+
+        expect(() =>
+            unit.fire(
+                launcher,
+                FireSelector.enum.single,
+                FireMode.enum.snapshot,
+                [new Vec2(50, 50)],
+                0
+            )
+        ).not.toThrow();
+
+        expect(sentMessages(messageRouter)).toContainEqual({
+            type: "server:error",
+            payload: ErrorType.enum.INSUFFICIENT_AMMO
+        });
+        expect(unit.actionPoints).toBe(actionPointsBefore);
     });
 });

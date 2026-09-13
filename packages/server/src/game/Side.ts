@@ -318,8 +318,17 @@ export class Side {
         return keys;
     }
 
+    /**
+     * True when this side's viewers currently see `poi`.
+     *
+     * Visibility counts are keyed by each viewer's interest masks (opposition
+     * side ids, plus items/vfx) — not by the viewer's own side id. Own-unit
+     * tiles are never marked for their owning side, so this returns false for
+     * friendly units even when they are on the map (use alwaysIncludeSideIds
+     * / owning-side sends for those updates).
+     */
     canSee(poi: VisibilityPoi): boolean {
-        return this._game.visibilityManager.isPoiVisibleForMasks(poi, [this.id]);
+        return this._game.visibilityManager.isPoiVisibleForMasks(poi, this.oppositionSideIds);
     }
 
     findUnit(unitId: UnitId): Unit | undefined {

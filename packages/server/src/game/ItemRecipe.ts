@@ -116,7 +116,9 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         fireSelector: FireSelector,
         fireModes: FireModes,
         fireType: FireType,
-        spreadAngle: z.number().nonnegative().default(0)
+        spreadAngle: z.number().nonnegative().default(0),
+        /** Loudness relative to reference 100. */
+        noise: z.number().nonnegative().default(100)
     }),
     z.object({
         id: ItemId,

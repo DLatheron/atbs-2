@@ -237,6 +237,27 @@ describe("Item", () => {
         itemManager = createItemManager();
     });
 
+    describe("canFire / isEmpty", () => {
+        it("treats empty chambered launchers as unable to fire", () => {
+            const launcher = itemManager.newItem(GRENADE_LAUNCHER_RECIPE.id);
+            expect(launcher.canFire).toBe(true);
+
+            launcher.emptySlot(SlotType.enum.ammo);
+
+            expect(launcher.isEmpty).toBe(true);
+            expect(launcher.canFire).toBe(false);
+        });
+
+        it("treats a gun with an empty magazine as empty", () => {
+            const gun = itemManager.newItem(EMPTY_GUN_RECIPE.id);
+            const mag = itemManager.newItem(MAG_30_RECIPE.id);
+            gun.load(mag);
+
+            expect(gun.isEmpty).toBe(true);
+            expect(gun.canFire).toBe(false);
+        });
+    });
+
     describe("load", () => {
         it("loads a magazine into an empty gun and returns null", () => {
             const gun = itemManager.newItem(EMPTY_GUN_RECIPE.id);

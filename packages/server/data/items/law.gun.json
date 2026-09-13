@@ -48,5 +48,6 @@
         }
     },
     "allowLoad": false,
-    "allowUnload": false
+    "allowUnload": false,
+    "noise": 180
 }

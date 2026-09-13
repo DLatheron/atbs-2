@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
@@ -351,10 +351,26 @@ function setupExplosionFixture(gameId: string) {
         itemManager,
         damageCacheManager: damageCache,
         sides: [] as { id: string; units: Unit[]; oppositionSideIds: string[] }[],
+        getSide(sideId: string) {
+            return (
+                this.sides.find((side: { id: string }) => side.id === sideId) ?? {
+                    id: sideId,
+                    units: [],
+                    oppositionSideIds: [],
+                    canSee: () => false
+                }
+            );
+        },
+        get turnsSideId() {
+            return this.sides[0]?.id ?? "side-1";
+        },
         messageRouter: {
             send: (message: unknown) => {
                 sentMessages.push(message);
             }
+        },
+        hearingManager: {
+            emitNoise: vi.fn()
         }
     } as unknown as Game;
 

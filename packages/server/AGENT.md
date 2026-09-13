@@ -78,7 +78,7 @@ JSON recipes are Zod-parsed; ids usually match the filename stem. Image id = PNG
 ## Don't
 
 - Mirror game rules on the client.
-- Assume `MessageRouter.sendIfVisible` filters by fog of war — it currently always sends.
+- Assume `MessageRouter.sendIfVisible` filters by fog of war — it gates on `Side.canSee` (viewer interest = opposition side ids), except sides passed as `alwaysIncludeSideIds` (owning/acting side for unit map updates). Structural combat tile damage in `fire:trace` is always sent to every side (unit sprites stripped when unseen). Gas/smoke/shockwave/`animObjects` and other ephemeral world effects are gated by the **effect's tile**, not the firer.
 - Expect `MessageRouter` during lobby (it exists only after leaving lobby).
 - Invent image ids that are not loaded by `ImageManager`.
 - Edit recipe JSON without matching Zod schemas and referenced ids.

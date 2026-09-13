@@ -1,4 +1,5 @@
 import { Logger } from "@atbs/misc";
+import type { ServerToClientMessage } from "@atbs/shared-data";
 import type { Game } from "./Game.js";
 import type { Unit } from "./Unit.js";
 import { config } from "../config/config.schema.js";
@@ -115,10 +116,38 @@ export class OpportunityFireManager {
                 true
             );
 
+            // FOW tiles first, then sprites for every living enemy this side can
+            // see. canSee alone is not enough: the client culls visibilityFilter
+            // images unless the tile is in visibleTiles AND the render list has
+            // the unit (hidden movers never got a map:update for their tile).
+            const ofVisibilityMessages = (): ServerToClientMessage[] => {
+                const visibleEnemyTileUpdates =
+                    this.game.getVisibleOppositionTileUpdates(winnerSideId);
+                return [
+                    {
+                        type: "server:visible:tiles",
+                        payload: this.game.visibilityManager.getVisibilityUpdate(
+                            unit.side.oppositionSideIds
+                        )
+                    },
+                    ...(visibleEnemyTileUpdates.length > 0
+                        ? [
+                              {
+                                  type: "server:map:update" as const,
+                                  payload: visibleEnemyTileUpdates
+                              }
+                          ]
+                        : [])
+                ];
+            };
+
             if (byCurrentSide) {
-                // Send messages to the unit that won the opportunity fire.
+                // Same-side OF (mover newly sees someone): no queue to flush, but
+                // still must push enemy sprites — _broadcastVisibleTiles may have
+                // run, yet OF UI must not rely on that alone.
                 this.game.messageRouter.send(
                     [
+                        ...ofVisibilityMessages(),
                         ServerMessages.UnitMovementMode(unit),
                         ServerMessages.StartFireMode(unit),
                         {
@@ -136,6 +165,7 @@ export class OpportunityFireManager {
                 );
             } else {
                 const tile = this.game.map.getTile(unit.mapLocation);
+                const currentSide = this.game.getSide(currentSideId);
 
                 this.game.messageRouter.send(
                     [
@@ -149,12 +179,14 @@ export class OpportunityFireManager {
                     true
                 );
 
+                // Flush queued move/map updates (including the unit that walked
+                // into view and triggered OF) before OF UI takes over.
                 this.game.messageRouter.resumeMessageSending(winnerSideId);
 
                 // Send message to side currently playing.
                 this.game.messageRouter.send(
                     [
-                        ...(unit.side.canSee(tile)
+                        ...(currentSide.canSee(tile)
                             ? [
                                   {
                                       type: "server:camera:move:to" as const,
@@ -176,12 +208,7 @@ export class OpportunityFireManager {
                 // Send message to unit that won the opportunity fire.
                 this.game.messageRouter.send(
                     [
-                        {
-                            type: "server:visible:tiles",
-                            payload: this.game.visibilityManager.getVisibilityUpdate(
-                                unit.side.oppositionSideIds
-                            )
-                        },
+                        ...ofVisibilityMessages(),
                         {
                             type: "server:camera:move:to",
                             payload: {

@@ -137,7 +137,7 @@ export type MaterialTransition = z.infer<typeof MaterialTransition>;
 export const VisualType = z.enum(["eyeball", "infrared"]);
 export type VisualType = z.infer<typeof VisualType>;
 
-export const materialDensityType = ["eyeball", "infrared", "projectile"] as const;
+export const materialDensityType = ["eyeball", "infrared", "projectile", "audio"] as const;
 export const MaterialDensityType = z.enum(materialDensityType);
 export type MaterialDensityType = z.infer<typeof MaterialDensityType>;
 
@@ -681,6 +681,8 @@ export const FragmentExplosion = z.object({
     visual: FragmentExplosionVisual,
     /** Per-fragment aim jitter in degrees (same convention as gun spreadAngle). */
     angleJitter: z.number().nonnegative().default(5),
+    /** Loudness relative to reference 100; default 200 for explosions. */
+    noise: z.number().nonnegative().default(200),
     variability: z
         .object({
             min: z.number().positive().max(2).default(1),
@@ -703,7 +705,9 @@ const CloudExplosionFields = {
     /** Hit-point damage for a full turn of exposure (scaled by AP spent / max AP). */
     damage: DamageMap.optional(),
     /** Disorientation for a full turn of exposure (scaled the same way as damage). */
-    disorientation: z.number().nonnegative().optional()
+    disorientation: z.number().nonnegative().optional(),
+    /** Loudness relative to reference 100; default 200 for explosions. */
+    noise: z.number().nonnegative().default(200)
 };
 
 export const SmokeExplosion = z.object({
@@ -728,6 +732,8 @@ export const ShockwaveExplosion = z.object({
     visual: FragmentExplosionVisual,
     /** Per-ray aim jitter in degrees (same convention as gun spreadAngle). */
     angleJitter: z.number().nonnegative().default(5),
+    /** Loudness relative to reference 100; default 200 for explosions. */
+    noise: z.number().nonnegative().default(200),
     variability: z
         .object({
             min: z.number().positive().max(2).default(1),

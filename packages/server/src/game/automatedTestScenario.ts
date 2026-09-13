@@ -7,7 +7,7 @@ export const AUTOMATED_TEST_SCENARIO_ID = "automated-test.scenario";
 
 /**
  * Binds the automated-test scenario before clients connect so lobby auto-setup
- * does not replace it with the manual playtest scenario (`test.scenario`).
+ * does not replace it with the manual playtest scenario (`hostage-rescue.scenario`).
  */
 export function bindAutomatedTestScenario(
     game: Game,

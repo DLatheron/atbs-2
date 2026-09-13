@@ -82,7 +82,8 @@
             "breach": {
                 "state": "open",
                 "speedScaler": 1.3,
-                "aptCost": 12
+                "aptCost": 12,
+                "noise": 90
             }
         },
         "open": {
@@ -100,7 +101,8 @@
             "breach": {
                 "state": "destroyed",
                 "speedScaler": 1.5,
-                "aptCost": 20
+                "aptCost": 20,
+                "noise": 90
             }
         }
     }

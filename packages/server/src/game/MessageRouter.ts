@@ -2,14 +2,22 @@ import { ClientId, ServerToClientMessage, SideId } from "@atbs/shared-data";
 import type { Client } from "./Client.js";
 import { Misc, TilePos } from "@atbs/maths";
 
+export type TileVisibilityChecker = (sideId: SideId, tilePos: TilePos) => boolean;
+
 export class MessageRouter {
     private readonly _sideIds: SideId[];
     private readonly _sideIdToClient: Map<SideId, Client>;
     private readonly _clientIdToSideId: Map<ClientId, SideId>;
     private readonly _sideIdToMessageQueue: Map<SideId, ServerToClientMessage[]>;
+    private readonly _canSeeTile: TileVisibilityChecker;
 
-    constructor(sideIds: SideId[], clients: Client[]) {
+    constructor(
+        sideIds: SideId[],
+        clients: Client[],
+        canSeeTile: TileVisibilityChecker = () => true
+    ) {
         this._sideIds = [...sideIds];
+        this._canSeeTile = canSeeTile;
 
         this._sideIdToClient = new Map<SideId, Client>();
         this._clientIdToSideId = new Map<ClientId, SideId>();
@@ -56,6 +64,11 @@ export class MessageRouter {
         }
     }
 
+    /** Exposed for tests — queued messages waiting for resume. */
+    getQueuedMessages(sideId: SideId): ServerToClientMessage[] | undefined {
+        return this._sideIdToMessageQueue.get(sideId);
+    }
+
     send(
         messages: ServerToClientMessage | ServerToClientMessage[],
         sideIds: SideId | SideId[] = this._sideIds,
@@ -78,14 +91,25 @@ export class MessageRouter {
         }
     }
 
+    /**
+     * Sends to sides that can see `tilePos`. Sides in `alwaysIncludeSideIds`
+     * always receive the message (owning/acting side for move/rotate, etc.) —
+     * own-unit tiles are not POIs for their own FOW interest masks, so
+     * `Side.canSee` is false for the acting side even though they must render.
+     */
     sendIfVisible(
         messages: ServerToClientMessage | ServerToClientMessage[],
         tilePos: TilePos,
         sideIds: SideId | SideId[] = this._sideIds,
-        bypassQueuing = false
+        bypassQueuing = false,
+        alwaysIncludeSideIds: SideId | SideId[] = []
     ) {
+        const alwaysInclude = new Set(Misc.CastToArray(alwaysIncludeSideIds));
+
         for (const sideId of Misc.CastToArray(sideIds)) {
-            console.info("Check if", tilePos, "is visible to", sideId, "ASSUMING YES!");
+            if (!alwaysInclude.has(sideId) && !this._canSeeTile(sideId, tilePos)) {
+                continue;
+            }
 
             this.send(messages, sideId, bypassQueuing);
         }

@@ -39,6 +39,7 @@ import type { TilePos } from "@atbs/maths";
 import { VfxRecipeManager } from "./VfxRecipeManager.js";
 import { VfxManager } from "./VfxManager.js";
 import { OpportunityFireManager } from "./OpportunityFireManager.js";
+import { HearingManager } from "./HearingManager.js";
 import { PrimeManager } from "./PrimeManager.js";
 import { CloudManager } from "./CloudManager.js";
 import { broadcastExplosionTrace } from "./ExplosionSystem.js";
@@ -86,6 +87,7 @@ export class Game {
     private readonly _vfxRecipeManager: VfxRecipeManager;
     private readonly _vfxManager: VfxManager;
     private readonly _opportunityFireManager: OpportunityFireManager;
+    private readonly _hearingManager: HearingManager;
     private readonly _primeManager: PrimeManager;
     private readonly _cloudManager: CloudManager;
     private readonly _eventManager: EventManager;
@@ -129,6 +131,7 @@ export class Game {
         this._vfxRecipeManager = vfxRecipeManager;
         this._vfxManager = new VfxManager(this);
         this._opportunityFireManager = new OpportunityFireManager(this);
+        this._hearingManager = new HearingManager(this);
         this._primeManager = new PrimeManager(this);
         this._cloudManager = new CloudManager();
         this._eventManager = new EventManager();
@@ -175,26 +178,17 @@ export class Game {
                 break;
 
             case Phase.enum.armament:
-                this._messageRouter = new MessageRouter(
-                    this.sides.map(({ id }) => id),
-                    this.clients
-                );
+                this._messageRouter = this._createMessageRouter();
                 this._phaseHandler = new ArmamentPhaseHandler(this);
                 break;
 
             case Phase.enum.deployment:
-                this._messageRouter = new MessageRouter(
-                    this.sides.map(({ id }) => id),
-                    this.clients
-                );
+                this._messageRouter = this._createMessageRouter();
                 this._phaseHandler = new DeploymentPhaseHandler(this);
                 break;
 
             case Phase.enum.action:
-                this._messageRouter = new MessageRouter(
-                    this.sides.map(({ id }) => id),
-                    this.clients
-                );
+                this._messageRouter = this._createMessageRouter();
                 this._phaseHandler = new ActionPhaseHandler(this);
                 break;
 
@@ -209,6 +203,14 @@ export class Game {
         this._phaseHandler.initialise();
 
         this._phaseHandler.registerMessageHandlers(this._messageManager);
+    }
+
+    private _createMessageRouter(): MessageRouter {
+        return new MessageRouter(
+            this.sides.map(({ id }) => id),
+            this.clients,
+            (sideId, tilePos) => this.getSide(sideId).canSee(this.map.getTile(tilePos))
+        );
     }
 
     get messageRouter(): MessageRouter {
@@ -363,6 +365,10 @@ export class Game {
 
     get opportunityFireManager(): OpportunityFireManager {
         return this._opportunityFireManager;
+    }
+
+    get hearingManager(): HearingManager {
+        return this._hearingManager;
     }
 
     get primeManager(): PrimeManager {
@@ -777,6 +783,24 @@ export class Game {
             .flat();
     }
 
+    /**
+     * Tile updates for living opposition units currently in this side's FOW.
+     * Needed when LOS is gained on a unit whose sprite was never pushed (e.g. they
+     * moved while hidden): `server:visible:tiles` alone only un-culls tiles — the
+     * client render list must actually contain the unit image.
+     */
+    getVisibleOppositionTileUpdates(sideId: SideId) {
+        const side = this.getSide(sideId);
+        return this.getOppositionUnitsForSide(sideId)
+            .filter(
+                (unit) =>
+                    unit.isAlive &&
+                    unit.location !== null &&
+                    side.canSee(this.map.getTile(unit.mapLocation))
+            )
+            .map((unit) => this.map.getTile(unit.mapLocation).generateTileUpdate());
+    }
+
     startActionPhase(): void {
         this._playState.turn = 1;
         this.selectedUnit = null;
@@ -937,7 +961,10 @@ export class Game {
         }
 
         // Final visibility sync (covers empty queues / actions that don't broadcast)
-        // then re-enable the playing side's UI.
+        // then re-enable the playing side's UI. Push opposition sprites with the
+        // FOW snapshot — same reason as _broadcastVisibleTiles (LOS without a prior
+        // map:update leaves canSee>0 but an empty tile render list).
+        const visibleOppositionTiles = this.getVisibleOppositionTileUpdates(this.turnsSideId);
         this.messageRouter.send(
             [
                 {
@@ -946,6 +973,14 @@ export class Game {
                         this.turnsSide.oppositionSideIds
                     )
                 },
+                ...(visibleOppositionTiles.length > 0
+                    ? [
+                          {
+                              type: "server:map:update" as const,
+                              payload: visibleOppositionTiles
+                          }
+                      ]
+                    : []),
                 {
                     type: "server:ui:disabled",
                     payload: false
