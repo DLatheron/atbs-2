@@ -2237,14 +2237,19 @@ export class Unit extends SceneObject implements VisibilityViewer {
     armingBuyItem(
         store: Store,
         itemId: ItemId,
-        options: { use?: boolean; insertionPoint?: number } = {}
+        options: { use?: boolean; insertionPoint?: number; quantity?: number } = {}
     ): true | ErrorType {
         const storeItem = store.findItem(itemId);
         if (!storeItem) {
             throw new Error(`Store does not have item ${itemId}`);
         }
 
-        let quantity = Math.min(storeItem.batchSize, storeItem.item.quantity);
+        const requestedQuantity = options.quantity ?? storeItem.batchSize;
+        if (requestedQuantity < 1) {
+            throw new Error(`Cannot buy fewer than 1 of ${itemId}`);
+        }
+
+        let quantity = Math.min(requestedQuantity, storeItem.item.quantity);
         if (quantity <= 0) {
             throw new Error(`Store does not have any ${itemId}`);
         }
@@ -2392,7 +2397,9 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
 
             const result = this.armingBuyItem(store, itemId, {
-                use: recipe.inUse === index
+                use: recipe.inUse === index,
+                // Recipe entries are individual items; shop batch size only applies to manual buys.
+                quantity: 1
             });
             if (result !== true) {
                 return result;

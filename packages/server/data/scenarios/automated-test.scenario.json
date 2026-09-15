@@ -252,28 +252,28 @@
                             },
                             {
                                 "itemId": "40mm-he.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 80,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-smoke.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 70,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-gas.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 100,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-stun.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 90,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
@@ -371,7 +371,7 @@
                             },
                             {
                                 "itemId": "front-door-key.item",
-                                "quantity": 4,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
@@ -397,23 +397,42 @@
                             "outlineColor": "#ffb020",
                             "tiles": [
                                 [
-                                    { "col": 0, "row": 0 },
-                                    { "width": 2, "height": 2 }
+                                    {
+                                        "col": 0,
+                                        "row": 0
+                                    },
+                                    {
+                                        "width": 2,
+                                        "height": 2
+                                    }
                                 ]
                             ],
                             "orientation": 1
                         },
                         {
                             "name": "Rooftop",
-                            "tiles": [[{ "col": 10, "row": 10 }]],
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 10,
+                                        "row": 10
+                                    }
+                                ]
+                            ],
                             "orientation": 2
                         },
                         {
                             "name": "Alley",
                             "tiles": [
                                 [
-                                    { "col": 2, "row": 2 },
-                                    { "width": 1, "height": 4 }
+                                    {
+                                        "col": 2,
+                                        "row": 2
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 4
+                                    }
                                 ]
                             ],
                             "orientation": 3
@@ -740,10 +759,17 @@
                             },
                             {
                                 "itemId": "front-door-key.item",
-                                "quantity": 4,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "mp5k.gun",
+                                "quantity": 5,
+                                "baseCost": 900,
+                                "batchSize": 1,
+                                "categories": ["Guns", "SMGs"]
                             }
                         ]
                     }
@@ -756,8 +782,14 @@
                             "name": "Ambush",
                             "tiles": [
                                 [
-                                    { "col": 12, "row": 8 },
-                                    { "width": 3, "height": 3 }
+                                    {
+                                        "col": 12,
+                                        "row": 8
+                                    },
+                                    {
+                                        "width": 3,
+                                        "height": 3
+                                    }
                                 ]
                             ],
                             "orientation": 6

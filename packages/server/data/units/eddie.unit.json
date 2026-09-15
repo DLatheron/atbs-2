@@ -57,9 +57,7 @@
     "collision": {
         "shape": "circle",
         "radius": 24,
-        "materials": [
-            "human.material"
-        ]
+        "materials": ["human.material"]
     },
     "renderable": {
         "UI_MODE": {

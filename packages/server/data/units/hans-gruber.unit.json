@@ -19,16 +19,12 @@
     "inventory": {
         "inUse": 0,
         "items": [
-            { "id": "ak-47.gun" },
-            { "id": "mp5a2.gun" },
+            { "id": "mp5k.gun" },
             { "id": "desert-eagle.gun" },
-            { "id": "ak-47.magazine" },
-            { "id": "ak-47.magazine" },
             { "id": "mp5-30.magazine" },
             { "id": "mp5-30.magazine" },
             { "id": "desert-eagle.magazine" },
-            { "id": "frag.grenade" },
-            { "id": "smoke.grenade" },
+            { "id": "desert-eagle.magazine" },
             { "id": "front-door-key.item" }
         ]
     },

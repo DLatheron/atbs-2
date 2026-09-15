@@ -11,10 +11,7 @@ import {
 import { useState } from "react";
 import type { UnitSummary } from "@atbs/shared-data";
 import { useArmamentPage } from "./useArmamentPage";
-import {
-    DefaultLoadoutDialog,
-    type DefaultLoadoutMode
-} from "./DefaultLoadoutDialog";
+import { DefaultLoadoutDialog, type DefaultLoadoutMode } from "./DefaultLoadoutDialog";
 import { formatMoney, InventoryBoard } from "../../components/Inventory";
 import {
     ACTION_BUTTON_BACKGROUND_COLOR,
@@ -99,8 +96,7 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
         error
     } = useArmamentPage();
     const [pendingCost, setPendingCost] = useState<string | null>(null);
-    const [pendingDefaultLoadout, setPendingDefaultLoadout] =
-        useState<PendingDefaultLoadout>(null);
+    const [pendingDefaultLoadout, setPendingDefaultLoadout] = useState<PendingDefaultLoadout>(null);
 
     // Only the arming side is sent a store; everyone else just waits.
     if (!visible || !store) {

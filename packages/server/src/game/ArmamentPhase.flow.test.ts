@@ -274,7 +274,7 @@ describe("Armament phase", () => {
         expect(update.unitId).toBe(unitId);
         expect(update.store.budget).toBeLessThan(startingBudget);
         expect(update.inventory.items.length).toBeGreaterThan(0);
-        expect(update.inventory.items.some((item) => item.shortName === "M4/M203")).toBe(true);
+        expect(update.inventory.items.some((item) => item.shortName === "M4")).toBe(true);
         expect(update.inventory.items.some((item) => item.name === "Front Door Key")).toBe(true);
     });
 
@@ -290,8 +290,25 @@ describe("Armament phase", () => {
 
         const update = armingSocket.lastReceived("server:armament:update").payload;
         expect(update.unitId).toBe(unitId);
-        expect(update.inventory.items.some((item) => /coffee/i.test(item.name))).toBe(false);
+        // Barry's recipe is fully store-backed; every purchased top-level gun should appear.
         expect(update.inventory.items.some((item) => item.shortName === "M4/M203")).toBe(true);
+        expect(update.inventory.items.some((item) => /spas/i.test(item.name))).toBe(true);
+    });
+
+    it("buys each repeated default-loadout entry as its own item", async () => {
+        const { game, armingSocket } = await startArmamentPhase();
+        const unitId = "corporal-barry.unit";
+
+        send(game, armingClientId, {
+            type: "client:armament:apply-default",
+            payload: { unitId, mode: "replace" }
+        });
+        await settle();
+
+        const update = armingSocket.lastReceived("server:armament:update").payload;
+        const smokeRounds = update.inventory.items.filter((item) => /40mm smoke/i.test(item.name));
+        expect(smokeRounds.length).toBeGreaterThanOrEqual(2);
+        expect(smokeRounds.every((item) => item.quantity === 1)).toBe(true);
     });
 
     it("can add a default loadout onto existing items", async () => {
@@ -322,7 +339,7 @@ describe("Armament phase", () => {
         const afterAdd = armingSocket.lastReceived("server:armament:update").payload;
         expect(afterAdd.inventory.items.length).toBeGreaterThan(1);
         expect(afterAdd.inventory.items.some((item) => item.name === "Beretta M9")).toBe(true);
-        expect(afterAdd.inventory.items.some((item) => item.shortName === "M4/M203")).toBe(true);
+        expect(afterAdd.inventory.items.some((item) => item.shortName === "M4")).toBe(true);
     });
 
     it("applies default loadouts to every unit on the side", async () => {
@@ -361,6 +378,6 @@ describe("Armament phase", () => {
         expect(update.unitId).toBe(unitId);
         expect(update.store.budget).toBeLessThan(startingBudget);
         expect(update.inventory.items.length).toBeGreaterThan(0);
-        expect(update.inventory.items.some((item) => /AK-?47/i.test(item.name))).toBe(true);
+        expect(update.inventory.items.some((item) => /mp5k/i.test(item.shortName))).toBe(true);
     });
 });
