@@ -111,6 +111,19 @@ export const ClientToServerMessage = z.discriminatedUnion("type", [
         })
     }),
     z.object({
+        type: z.literal("client:armament:apply-default"),
+        payload: z.object({
+            unitId: UnitId,
+            mode: z.enum(["replace", "add"])
+        })
+    }),
+    z.object({
+        type: z.literal("client:armament:apply-default-all"),
+        payload: z.object({
+            mode: z.enum(["replace", "add"])
+        })
+    }),
+    z.object({
         type: z.literal("client:deployment:end"),
         payload: z.null()
     }),

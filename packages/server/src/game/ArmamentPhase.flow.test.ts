@@ -257,4 +257,110 @@ describe("Armament phase", () => {
             Phase.enum.armament
         );
     });
+
+    it("applies a unit's default loadout from the store and charges the budget", async () => {
+        const { game, armingSocket } = await startArmamentPhase();
+        const state = armingSocket.lastReceived("server:armament:state").payload;
+        const unitId = "captain-smith.unit";
+        const startingBudget = state.store.budget;
+
+        send(game, armingClientId, {
+            type: "client:armament:apply-default",
+            payload: { unitId, mode: "replace" }
+        });
+        await settle();
+
+        const update = armingSocket.lastReceived("server:armament:update").payload;
+        expect(update.unitId).toBe(unitId);
+        expect(update.store.budget).toBeLessThan(startingBudget);
+        expect(update.inventory.items.length).toBeGreaterThan(0);
+        expect(update.inventory.items.some((item) => item.shortName === "M4/M203")).toBe(true);
+        expect(update.inventory.items.some((item) => item.name === "Front Door Key")).toBe(true);
+    });
+
+    it("skips default-loadout items that are not in the store", async () => {
+        const { game, armingSocket } = await startArmamentPhase();
+        const unitId = "corporal-barry.unit";
+
+        send(game, armingClientId, {
+            type: "client:armament:apply-default",
+            payload: { unitId, mode: "replace" }
+        });
+        await settle();
+
+        const update = armingSocket.lastReceived("server:armament:update").payload;
+        expect(update.unitId).toBe(unitId);
+        expect(update.inventory.items.some((item) => /coffee/i.test(item.name))).toBe(false);
+        expect(update.inventory.items.some((item) => item.shortName === "M4/M203")).toBe(true);
+    });
+
+    it("can add a default loadout onto existing items", async () => {
+        const { game, armingSocket } = await startArmamentPhase();
+        const state = armingSocket.lastReceived("server:armament:state").payload;
+        const unitId = "captain-smith.unit";
+        const affordable = state.store.items.find(
+            (entry: StoreItemView) =>
+                entry.itemId === "m9.gun" && entry.cost > 0 && entry.cost <= state.store.budget
+        );
+        expect(affordable).toBeDefined();
+
+        send(game, armingClientId, {
+            type: "client:armament:buy",
+            payload: { unitId, itemId: affordable!.itemId }
+        });
+        await settle();
+
+        const afterBuy = armingSocket.lastReceived("server:armament:update").payload;
+        expect(afterBuy.inventory.items).toHaveLength(1);
+
+        send(game, armingClientId, {
+            type: "client:armament:apply-default",
+            payload: { unitId, mode: "add" }
+        });
+        await settle();
+
+        const afterAdd = armingSocket.lastReceived("server:armament:update").payload;
+        expect(afterAdd.inventory.items.length).toBeGreaterThan(1);
+        expect(afterAdd.inventory.items.some((item) => item.name === "Beretta M9")).toBe(true);
+        expect(afterAdd.inventory.items.some((item) => item.shortName === "M4/M203")).toBe(true);
+    });
+
+    it("applies default loadouts to every unit on the side", async () => {
+        const { game, armingSocket } = await startArmamentPhase();
+        const state = armingSocket.lastReceived("server:armament:state").payload;
+        const startingBudget = state.store.budget;
+
+        send(game, armingClientId, {
+            type: "client:armament:apply-default-all",
+            payload: { mode: "replace" }
+        });
+        await settle();
+
+        const updates = armingSocket.received("server:armament:update");
+        expect(updates.length).toBe(state.units.length);
+        expect(updates.map((message) => message.payload.unitId).sort()).toEqual(
+            state.units.map(({ id }) => id).sort()
+        );
+        expect(updates.every((message) => message.payload.inventory.items.length > 0)).toBe(true);
+        expect(updates[updates.length - 1].payload.store.budget).toBeLessThan(startingBudget);
+    });
+
+    it("arms the baddies side from Hans Gruber's terrorist default loadout", async () => {
+        const { game, waitingSocket } = await startArmamentPhase();
+        const state = waitingSocket.lastReceived("server:armament:state").payload;
+        const unitId = "hans-gruber.unit";
+        const startingBudget = state.store.budget;
+
+        send(game, waitingClientId, {
+            type: "client:armament:apply-default",
+            payload: { unitId, mode: "replace" }
+        });
+        await settle();
+
+        const update = waitingSocket.lastReceived("server:armament:update").payload;
+        expect(update.unitId).toBe(unitId);
+        expect(update.store.budget).toBeLessThan(startingBudget);
+        expect(update.inventory.items.length).toBeGreaterThan(0);
+        expect(update.inventory.items.some((item) => /AK-?47/i.test(item.name))).toBe(true);
+    });
 });

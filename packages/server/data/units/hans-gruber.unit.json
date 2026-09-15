@@ -17,23 +17,19 @@
         "strength": { "max": 52 }
     },
     "inventory": {
-        "inUse": 2,
+        "inUse": 0,
         "items": [
-            { "id": "spas-12.gun" },
-            { "id": "m4+m203.gun" },
-            { "id": "m4.gun" },
-            { "id": "m16-30.magazine" },
-            { "id": "m16-30.magazine" },
-            { "id": "m16-20.magazine" },
-            { "id": "m16-20.magazine" },
-            { "id": "40mm-he.round" },
-            { "id": "40mm-he.round" },
-            { "id": "40mm-smoke.round" },
-            { "id": "40mm-smoke.round" },
-            { "id": "40mm-gas.round" },
-            { "id": "40mm-gas.round" },
-            { "id": "40mm-stun.round" },
-            { "id": "40mm-stun.round" }
+            { "id": "ak-47.gun" },
+            { "id": "mp5a2.gun" },
+            { "id": "desert-eagle.gun" },
+            { "id": "ak-47.magazine" },
+            { "id": "ak-47.magazine" },
+            { "id": "mp5-30.magazine" },
+            { "id": "mp5-30.magazine" },
+            { "id": "desert-eagle.magazine" },
+            { "id": "frag.grenade" },
+            { "id": "smoke.grenade" },
+            { "id": "front-door-key.item" }
         ]
     },
     "collision": {

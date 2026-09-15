@@ -2358,6 +2358,50 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return true;
     }
 
+    /**
+     * Purchase the unit recipe's default loadout from the side store.
+     * Items not present (or out of stock) in the store are skipped.
+     */
+    armingApplyDefaultLoadout(store: Store, mode: "replace" | "add"): true | ErrorType {
+        const recipe = this._recipe.inventory;
+        const purchasable = recipe.items.filter(({ id }) => {
+            const storeItem = store.findItem(id);
+            return !!storeItem && storeItem.item.quantity > 0;
+        });
+        if (recipe.items.length > 0 && purchasable.length === 0) {
+            return ErrorType.enum.NO_DEFAULT_LOADOUT_IN_STORE;
+        }
+
+        if (mode === "replace") {
+            while (this.inventory.items.length > 0) {
+                const item = this.inventory.items[0];
+                if (store.isStoreItem(item.recipeId)) {
+                    this.armingSellItem(store, item.id, item.quantity);
+                } else {
+                    this.inventory.removeItem(item);
+                }
+            }
+            this.inventory.deselectItem();
+        }
+
+        for (let index = 0; index < recipe.items.length; index++) {
+            const { id: itemId } = recipe.items[index];
+            const storeItem = store.findItem(itemId);
+            if (!storeItem || storeItem.item.quantity <= 0) {
+                continue;
+            }
+
+            const result = this.armingBuyItem(store, itemId, {
+                use: recipe.inUse === index
+            });
+            if (result !== true) {
+                return result;
+            }
+        }
+
+        return true;
+    }
+
     private _quantityNeededToLoad(receiver: Item): number {
         if (!receiver.canLoad()) {
             return 1;

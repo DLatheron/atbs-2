@@ -1,0 +1,223 @@
+{
+    "id": "karl.unit",
+    "name": "Karl",
+    "description": [
+        {
+            "text": "Grüber's most loyal lieutenant. Karl is aggressive, strong, and always first through the door."
+        }
+    ],
+    "attributes": {
+        "weight": 92,
+        "actionPoints": {
+            "max": 45
+        },
+        "constitution": {
+            "max": 70
+        },
+        "fitness": {
+            "max": 78
+        },
+        "morale": {
+            "max": 90
+        },
+        "stamina": {
+            "max": 65
+        },
+        "speed": {
+            "max": 48
+        },
+        "strength": {
+            "max": 85
+        }
+    },
+    "inventory": {
+        "inUse": 0,
+        "items": [
+            {
+                "id": "ak-47.gun"
+            },
+            {
+                "id": "desert-eagle.gun"
+            },
+            {
+                "id": "ak-47-drum.magazine"
+            },
+            {
+                "id": "ak-47.magazine"
+            },
+            {
+                "id": "desert-eagle.magazine"
+            },
+            {
+                "id": "desert-eagle.magazine"
+            },
+            {
+                "id": "frag.grenade"
+            },
+            {
+                "id": "frag.grenade"
+            }
+        ]
+    },
+    "collision": {
+        "shape": "circle",
+        "radius": 26,
+        "materials": [
+            "human.material"
+        ]
+    },
+    "renderable": {
+        "UI_MODE": {
+            "alive": {
+                "item-in-use": [
+                    {
+                        "imageId": "generic-carrying-4"
+                    }
+                ],
+                "default": [
+                    {
+                        "imageId": "generic-4"
+                    }
+                ]
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "MAP_MODE": {
+            "alive": {
+                "default": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-carrying-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                }
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "generic-cl",
+                    "orientation": 8
+                }
+            ],
+            "dead": []
+        },
+        "default": []
+    },
+    "actions": {
+        "throw": {
+            "accuracy": 40,
+            "actionPoints": 20
+        }
+    }
+}
