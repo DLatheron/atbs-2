@@ -416,17 +416,18 @@ export function useActionPage() {
     }, [sendMessage]);
 
     const onChangeFireSelector = useCallback(
-        (weaponId: ItemId, fireSelector: FireSelector) => {
-            if (unit?.id) {
-                sendMessage({
-                    type: "client:unit:fire:selector",
-                    payload: {
-                        unitId: unit.id,
-                        weaponId,
-                        fireSelector
-                    }
-                });
+        (weaponId: ItemId, fireSelector: FireSelector | null) => {
+            if (!unit?.id || !fireSelector) {
+                return;
             }
+            sendMessage({
+                type: "client:unit:fire:selector",
+                payload: {
+                    unitId: unit.id,
+                    weaponId,
+                    fireSelector
+                }
+            });
         },
         [sendMessage, unit?.id]
     );
