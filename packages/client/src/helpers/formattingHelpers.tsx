@@ -14,6 +14,7 @@ interface Attribute {
 export const ERROR_MESSAGES: Record<ErrorType, string> = {
     [ErrorType.enum.INSUFFICIENT_ACTION_POINTS]: "Insufficient Action Points",
     [ErrorType.enum.UNABLE_TO_MOVE_THERE]: "Cannot move there",
+    [ErrorType.enum.UNABLE_TO_MELEE]: "Cannot melee there",
     [ErrorType.enum.INSUFFICIENT_AMMO]: "Insufficient Ammunition",
     [ErrorType.enum.INSUFFICIENT_BUDGET]: "Insufficient budget",
     [ErrorType.enum.NO_DEFAULT_LOADOUT_IN_STORE]:

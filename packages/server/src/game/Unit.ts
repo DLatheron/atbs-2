@@ -94,9 +94,16 @@ import type { DamageCacheManager } from "./DamageCacheManager.js";
 import isEmpty from "lodash/isEmpty.js";
 import isEqual from "lodash/isEqual.js";
 import { Overtaking } from "./Overtaking.js";
+import { resolveMeleeCombat } from "./MeleeCombat.js";
+import { BARE_HANDS_MELEE, DEFAULT_UNIT_MELEE, UnitMelee, type ItemMelee } from "./MeleeTypes.js";
 
 const MAX_DISORIENTATION = 100;
 const DISORIENTATION_REDUCTION_PER_TURN = 10;
+const MELEE_LUNGE_WAIT_MS = 120;
+const MELEE_HIT_WAIT_MS = 80;
+const MELEE_RETURN_WAIT_MS = 120;
+const MIN_MELEE_HIT_SPARK_COUNT = 8;
+const MAX_MELEE_HIT_SPARK_COUNT = 32;
 
 const OPPORTUNITY_FIRE_APTS_THRESHOLD = 0.5;
 
@@ -204,7 +211,8 @@ export const UnitRecipe = z.object({
     visualType: VisualType.default(VisualType.enum.eyeball),
     hitSparkColour: IColour.optional(),
     renderable: SceneNode,
-    actions: Actions
+    actions: Actions,
+    melee: UnitMelee.default(DEFAULT_UNIT_MELEE)
 });
 export type UnitRecipe = z.infer<typeof UnitRecipe>;
 
@@ -260,6 +268,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
     private _cloudHpRemainder: number;
 
     private _canSee: Unit[];
+    /** Last game turn on which this unit saw each enemy (for melee sneak). */
+    private _seenEnemies: Map<UnitId, number>;
     private _overtaking: Overtaking | null;
     private _unitActionGrid: UnitActionGrid;
 
@@ -302,9 +312,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         this.visibilityManager.addViewer(this);
         this._canSee = [];
+        this._seenEnemies = new Map();
         this._overtaking = null;
         this._unitActionGrid = {};
         this._fireMode = FireMode.enum.aimed;
+    }
+
+    get melee(): UnitMelee {
+        return this._recipe.melee;
     }
 
     get game(): Game {
@@ -678,6 +693,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     set canSee(value: Unit[]) {
         this._canSee = value;
+        this._recordSeenEnemies(value);
     }
 
     get isOvertaking(): boolean {
@@ -1003,6 +1019,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             // Reduce the amount of disorientation based on the number of action points remaining...
             this.disorientation -= this.actionPoints + DISORIENTATION_REDUCTION_PER_TURN;
         }
+
+        this._pruneSeenEnemies();
     }
 
     private _verifyDirectional(): void | never {
@@ -1264,6 +1282,12 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MOVE_THERE },
                 this.side.id
             );
+            return;
+        }
+
+        const oppositionOnDest = this._livingOppositionOnTile(dstTile);
+        if (oppositionOnDest) {
+            this._tryMeleeInto(oppositionOnDest, orientation, direction);
             return;
         }
 
@@ -2749,7 +2773,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 description: [{ text: `The lifeless body of ${this.name}.` }],
                 quantity: 1,
                 weight: this.weight,
-                renderable
+                renderable,
+                melee: { class: "improvised", attack: 1, defence: 0, usable: false }
             })
         );
     }
@@ -2803,6 +2828,285 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         return previousConstitution > 0 && this.constitution === 0;
+    }
+
+    /**
+     * Applies constitution damage outside the projectile pipeline (e.g. melee).
+     * Returns true if this call reduced constitution from >0 to 0.
+     */
+    inflictConstitutionDamage(amount: number): boolean {
+        if (!this.isAlive || amount <= 0) {
+            return false;
+        }
+
+        const previousConstitution = this.constitution;
+        this.constitution -= amount;
+        return previousConstitution > 0 && this.constitution === 0;
+    }
+
+    private _recordSeenEnemies(visible: Unit[]): void {
+        const turn = this.game.turn;
+        for (const unit of visible) {
+            this._seenEnemies.set(unit.id, turn);
+        }
+    }
+
+    private _pruneSeenEnemies(): void {
+        const memoryTurns = this.melee.seenMemoryTurns;
+        const turn = this.game.turn;
+        for (const [unitId, lastSeenTurn] of this._seenEnemies) {
+            if (turn - lastSeenTurn > memoryTurns) {
+                this._seenEnemies.delete(unitId);
+            }
+        }
+    }
+
+    /** Turns since this unit last saw `enemy`, or null if never / expired from memory. */
+    turnsSinceSaw(enemy: Unit): number | null {
+        const lastSeen = this._seenEnemies.get(enemy.id);
+        if (lastSeen === undefined) {
+            return null;
+        }
+        return this.game.turn - lastSeen;
+    }
+
+    private _livingOppositionOnTile(tile: { units: Unit[] }): Unit | null {
+        const oppositionIds = this.side.oppositionSideIds;
+        for (const unit of tile.units) {
+            if (unit.isAlive && oppositionIds.includes(unit.side.id)) {
+                return unit;
+            }
+        }
+        return null;
+    }
+
+    private _meleeWeaponProfile(): ItemMelee {
+        return this.itemInUse?.melee ?? BARE_HANDS_MELEE;
+    }
+
+    private _meleeCombatantInput() {
+        return {
+            melee: this.melee,
+            weapon: this._meleeWeaponProfile(),
+            strength: this.strength,
+            speed: this.speed,
+            staminaRatio: this.maxStamina > 0 ? this.stamina / this.maxStamina : 1,
+            moraleRatio: this.maxMorale > 0 ? this.morale / this.maxMorale : 1
+        };
+    }
+
+    private _sendMeleeError(): void {
+        this.messageRouter.send(
+            { type: "server:error", payload: ErrorType.enum.UNABLE_TO_MELEE },
+            this.side.id
+        );
+    }
+
+    private _tryMeleeInto(
+        defender: Unit,
+        relativeOrientation: Orientation,
+        attackDirection: Orientation
+    ): void {
+        if (this.isOvertaking) {
+            this._sendMeleeError();
+            return;
+        }
+
+        if (this.isDirectional && relativeOrientation !== Orientation.NORTH) {
+            this._sendMeleeError();
+            return;
+        }
+
+        const weapon = this._meleeWeaponProfile();
+        if (!weapon.usable) {
+            this._sendMeleeError();
+            return;
+        }
+
+        const aptCost = this.melee.actionPoints;
+        if (!this._hasSufficientActionPoints(aptCost)) {
+            return;
+        }
+        if (!this._useActionPoints(aptCost)) {
+            return;
+        }
+
+        this.game.runWithDeferredVictoryMessages(() => {
+            this._executeMelee(defender, attackDirection);
+        });
+    }
+
+    private _executeMelee(defender: Unit, attackDirection: Orientation): void {
+        const { map } = this;
+        const srcPos = this.mapLocation.clone();
+        const dstPos = defender.mapLocation.clone();
+        const srcTile = map.getTile(srcPos);
+        const dstTile = map.getTile(dstPos);
+
+        const result = resolveMeleeCombat({
+            attacker: this._meleeCombatantInput(),
+            defender: defender._meleeCombatantInput(),
+            attackDirection,
+            defenderOrientation: defender.orientation,
+            turnsSinceDefenderSawAttacker: defender.turnsSinceSaw(this)
+        });
+
+        this.logger.info("Melee combat", {
+            attacker: this.id,
+            defender: defender.id,
+            result
+        });
+
+        // Lunge onto defender tile (visual only — always return afterward).
+        srcTile.removeUnit(this);
+        this.location = dstTile.location;
+        dstTile.addUnit(this);
+
+        this.messageRouter.send(
+            { type: "server:wait:time", payload: MELEE_LUNGE_WAIT_MS },
+            this.side.id
+        );
+        this._sendMapUpdateIfVisible(
+            { type: "server:map:update", payload: [srcTile.generateTileUpdate()] },
+            srcPos
+        );
+        this._sendMapUpdateIfVisible(
+            { type: "server:map:update", payload: [dstTile.generateTileUpdate()] },
+            dstPos
+        );
+
+        this.messageRouter.send(
+            { type: "server:wait:time", payload: MELEE_HIT_WAIT_MS },
+            this.side.id
+        );
+
+        const defenderDied = defender.inflictConstitutionDamage(result.defenderDamage);
+        const attackerDied = this.inflictConstitutionDamage(result.attackerDamage);
+
+        const attackDirVec = Vec2.OrientationToDirectionVector(attackDirection);
+        const hitSparks = [];
+        const hitTimeMs = MELEE_LUNGE_WAIT_MS + MELEE_HIT_WAIT_MS;
+        if (result.defenderDamage > 0) {
+            hitSparks.push({
+                pos: map.tileCenterToWorld(dstPos),
+                timeMs: hitTimeMs,
+                colour: defender.getHitSparkColour(),
+                direction: attackDirVec.normalise(),
+                count: clamp(
+                    Math.ceil(result.defenderDamage),
+                    MIN_MELEE_HIT_SPARK_COUNT,
+                    MAX_MELEE_HIT_SPARK_COUNT
+                ),
+                kind: "spark" as const
+            });
+        }
+        if (result.attackerDamage > 0) {
+            hitSparks.push({
+                pos: map.tileCenterToWorld(dstPos),
+                timeMs: hitTimeMs,
+                colour: this.getHitSparkColour(),
+                direction: attackDirVec.scale(-1).normalise(),
+                count: clamp(
+                    Math.ceil(result.attackerDamage),
+                    MIN_MELEE_HIT_SPARK_COUNT,
+                    MAX_MELEE_HIT_SPARK_COUNT
+                ),
+                kind: "spark" as const
+            });
+        }
+
+        // Return to start tile before any death processing.
+        dstTile.removeUnit(this);
+        this.location = srcTile.location;
+        srcTile.addUnit(this);
+
+        this.messageRouter.send(
+            { type: "server:wait:time", payload: MELEE_RETURN_WAIT_MS },
+            this.side.id
+        );
+        this._sendMapUpdateIfVisible(
+            { type: "server:map:update", payload: [dstTile.generateTileUpdate()] },
+            dstPos
+        );
+        this._sendMapUpdateIfVisible(
+            { type: "server:map:update", payload: [srcTile.generateTileUpdate()] },
+            srcPos
+        );
+
+        const imageManager = ImageManager.GetSingleton();
+        const roundDamageCache = this.damageCacheManager.createRoundInstance(imageManager);
+        const furnitureDamageSystem = new FurnitureDamageSystem(roundDamageCache, map.tileSize);
+        const deathTimeMs = MELEE_LUNGE_WAIT_MS + MELEE_HIT_WAIT_MS + MELEE_RETURN_WAIT_MS;
+
+        if (defenderDied && defender.location) {
+            furnitureDamageSystem.onUnitDeath(
+                map.getTile(defender.mapLocation),
+                defender,
+                deathTimeMs,
+                0
+            );
+        }
+        if (attackerDied && this.location) {
+            furnitureDamageSystem.onUnitDeath(map.getTile(this.mapLocation), this, deathTimeMs, 1);
+        }
+
+        const deaths = furnitureDamageSystem.unitDeaths.map(buildUnitDeathAnimation);
+        const tileUpdates = [...furnitureDamageSystem.timedUpdates].sort(
+            (a, b) => a.timeMs - b.timeMs
+        );
+
+        roundDamageCache.adoptInto(this.damageCacheManager, imageManager);
+
+        broadcastFilteredFireTrace({
+            game: this.game,
+            payload: {
+                tracers: [],
+                isOnTarget: OnTarget.enum.onTarget,
+                tileUpdates,
+                deaths,
+                hitSparks,
+                animations: [],
+                animObjects: [],
+                animObjectRemovals: []
+            },
+            actingSideId: this.side.id,
+            originWorldPos: map.tileCenterToWorld(srcPos),
+            originTilePos: srcPos,
+            noise: 20
+        });
+
+        if (deaths.length > 0) {
+            this._refreshVisibility();
+            this._broadcastVisibleTiles();
+        }
+
+        if (this.isAlive) {
+            this.updateAvailableActions();
+            if (deaths.length === 0) {
+                this._refreshVisibility();
+            }
+
+            this.messageRouter.send(
+                {
+                    type: "server:unit:selected:update",
+                    payload: {
+                        location: this.location,
+                        attributes: {
+                            actionPoints: { value: this.actionPoints },
+                            constitution: { value: this.constitution }
+                        },
+                        interactions: {
+                            canFire: this.canFire,
+                            canThrow: this.canThrow,
+                            canAction: this.canAction,
+                            canInventory: this.canInventory
+                        },
+                        unitActionGrid: this._unitActionGrid
+                    }
+                },
+                this.side.id
+            );
+        }
     }
 
     toSummary(): UnitSummary {

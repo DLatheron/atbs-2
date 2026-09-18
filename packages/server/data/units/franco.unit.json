@@ -50,7 +50,11 @@
             },
             {
                 "id": "desert-eagle.magazine"
+            },
+            {
+                "id": "knife.item"
             }
+
         ]
     },
     "collision": {

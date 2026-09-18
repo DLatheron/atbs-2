@@ -23,7 +23,7 @@
             "line": true
         }
     ],
-    "worldMapId": "moonbase.map",
+    "worldMapId": "mansion.map",
     "objectiveZones": [
         {
             "id": "safe-1",
@@ -58,8 +58,8 @@
                     "id": "captain-smith.unit",
                     "overrides": {
                         "location": {
-                            "col": 6,
-                            "row": 9
+                            "col": 5,
+                            "row": 5
                         },
                         "orientation": 2
                     }
@@ -68,14 +68,34 @@
                     "id": "corporal-barry.unit",
                     "overrides": {
                         "location": {
-                            "col": 3,
-                            "row": 3
+                            "col": 5,
+                            "row": 6
                         },
-                        "orientation": 0
+                        "orientation": 2
                     }
                 },
                 {
                     "id": "sergeant-johnson.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 5,
+                            "row": 7
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "specialist-chen.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 5,
+                            "row": 8
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "trooper-wallace.unit",
                     "overrides": {
                         "location": {
                             "col": 5,
@@ -85,30 +105,10 @@
                     }
                 },
                 {
-                    "id": "specialist-chen.unit",
-                    "overrides": {
-                        "location": {
-                            "col": 7,
-                            "row": 9
-                        },
-                        "orientation": 2
-                    }
-                },
-                {
-                    "id": "trooper-wallace.unit",
-                    "overrides": {
-                        "location": {
-                            "col": 6,
-                            "row": 8
-                        },
-                        "orientation": 2
-                    }
-                },
-                {
                     "id": "trooper-okonkwo.unit",
                     "overrides": {
                         "location": {
-                            "col": 6,
+                            "col": 5,
                             "row": 10
                         },
                         "orientation": 2
@@ -118,20 +118,20 @@
                     "id": "specialist-reyes.unit",
                     "overrides": {
                         "location": {
-                            "col": 4,
-                            "row": 3
+                            "col": 5,
+                            "row": 11
                         },
-                        "orientation": 0
+                        "orientation": 2
                     }
                 },
                 {
                     "id": "medic-patel.unit",
                     "overrides": {
                         "location": {
-                            "col": 2,
-                            "row": 3
+                            "col": 5,
+                            "row": 12
                         },
-                        "orientation": 0
+                        "orientation": 2
                     }
                 }
             ],
@@ -476,6 +476,20 @@
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "knife.item",
+                                "quantity": 16,
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "baton.item",
+                                "quantity": 16,
+                                "baseCost": 40,
+                                "batchSize": 1,
+                                "categories": ["Other"]
                             }
                         ]
                     }
@@ -562,8 +576,8 @@
                     "id": "hans-gruber.unit",
                     "overrides": {
                         "location": {
-                            "col": 8,
-                            "row": 9
+                            "col": 6,
+                            "row": 5
                         },
                         "orientation": 6
                     }
@@ -572,8 +586,8 @@
                     "id": "karl.unit",
                     "overrides": {
                         "location": {
-                            "col": 7,
-                            "row": 9
+                            "col": 6,
+                            "row": 6
                         },
                         "orientation": 6
                     }
@@ -582,8 +596,8 @@
                     "id": "tony.unit",
                     "overrides": {
                         "location": {
-                            "col": 9,
-                            "row": 9
+                            "col": 6,
+                            "row": 7
                         },
                         "orientation": 6
                     }
@@ -592,7 +606,7 @@
                     "id": "theo.unit",
                     "overrides": {
                         "location": {
-                            "col": 8,
+                            "col": 6,
                             "row": 8
                         },
                         "orientation": 6
@@ -602,28 +616,28 @@
                     "id": "eddie.unit",
                     "overrides": {
                         "location": {
-                            "col": 7,
-                            "row": 8
+                            "col": 6,
+                            "row": 9
                         },
-                        "orientation": 5
+                        "orientation": 6
                     }
                 },
                 {
                     "id": "franco.unit",
                     "overrides": {
                         "location": {
-                            "col": 9,
-                            "row": 8
+                            "col": 6,
+                            "row": 10
                         },
-                        "orientation": 7
+                        "orientation": 6
                     }
                 },
                 {
                     "id": "heinrich.unit",
                     "overrides": {
                         "location": {
-                            "col": 7,
-                            "row": 10
+                            "col": 6,
+                            "row": 11
                         },
                         "orientation": 6
                     }
@@ -632,8 +646,8 @@
                     "id": "james.unit",
                     "overrides": {
                         "location": {
-                            "col": 9,
-                            "row": 10
+                            "col": 6,
+                            "row": 12
                         },
                         "orientation": 6
                     }
@@ -936,6 +950,20 @@
                                 "itemId": "front-door-key.item",
                                 "quantity": 5,
                                 "baseCost": 0,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "knife.item",
+                                "quantity": 16,
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "baton.item",
+                                "quantity": 16,
+                                "baseCost": 40,
                                 "batchSize": 1,
                                 "categories": ["Other"]
                             },

@@ -451,6 +451,20 @@
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "knife.item",
+                                "quantity": 16,
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "baton.item",
+                                "quantity": 16,
+                                "baseCost": 40,
+                                "batchSize": 1,
+                                "categories": ["Other"]
                             }
                         ]
                     }
@@ -1057,6 +1071,20 @@
                                 "itemId": "front-door-key.item",
                                 "quantity": 5,
                                 "baseCost": 0,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "knife.item",
+                                "quantity": 16,
+                                "baseCost": 50,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "baton.item",
+                                "quantity": 16,
+                                "baseCost": 40,
                                 "batchSize": 1,
                                 "categories": ["Other"]
                             }

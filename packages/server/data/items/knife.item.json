@@ -1,0 +1,22 @@
+{
+    "id": "knife.item",
+    "type": "item",
+    "name": "Combat Knife",
+    "shortName": "Knife",
+    "description": [
+        {
+            "text": "A short blade for close-quarters fighting. Far more effective than bare hands in a melee."
+        }
+    ],
+    "weight": 0.25,
+    "melee": {
+        "class": "knife",
+        "attack": 18,
+        "defence": 3,
+        "usable": true
+    },
+    "renderable": {
+        "default": [{ "imageId": "knife" }],
+        "FIRE_MODE": []
+    }
+}

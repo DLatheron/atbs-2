@@ -397,11 +397,15 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
      * Mirrors {@link getRenderList} but omits units and appends an injected render image
      * (e.g. an `anim-` placeholder that the client resolves to an animation). Used to
      * replace a dying unit's static sprite with its death spin animation.
+     *
+     * When `excludeItems` is true, map items (including a just-placed corpse) are also
+     * omitted so the spin placeholder does not show the corpse underneath.
      */
     getRenderListExcludingUnits(
         context: SceneContext,
         injectedImage: RenderImage,
-        damageCache?: DamageCacheManager
+        damageCache?: DamageCacheManager,
+        options?: { excludeItems?: boolean }
     ): RenderList {
         const terrainImages = this._terrains.flatMap((layer) =>
             layer.terrain.getRenderList({
@@ -413,7 +417,9 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         return [
             ...terrainImages,
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
-            ...this.items.map((item) => item.getRenderList(context)).flat(),
+            ...(options?.excludeItems
+                ? []
+                : this.items.map((item) => item.getRenderList(context)).flat()),
             ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat(),
             injectedImage
         ];

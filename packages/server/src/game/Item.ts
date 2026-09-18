@@ -34,6 +34,7 @@ import {
     ProjectileRecipe,
     slotType
 } from "./ItemRecipe.js";
+import { resolveItemMelee, type ItemMelee } from "./MeleeTypes.js";
 import type { Unit } from "./Unit.js";
 import cloneDeep from "lodash/cloneDeep.js";
 import { config } from "../config/config.schema.js";
@@ -104,6 +105,15 @@ export class Item extends SceneObject {
 
     get description(): Description {
         return this._recipe.description;
+    }
+
+    /** Resolved melee profile (explicit recipe or type/weight defaults). */
+    get melee(): ItemMelee {
+        return resolveItemMelee(this._recipe.melee, this.type, this.weight);
+    }
+
+    get canMelee(): boolean {
+        return this.melee.usable;
     }
 
     get location(): TilePos | null {

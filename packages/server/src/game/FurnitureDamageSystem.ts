@@ -78,6 +78,9 @@ export class FurnitureDamageSystem {
 
     private recordDeathPlaceholderUpdate(timeMs: number, tile: Tile, animImageId: string): void {
         const injectedImage: RenderImage = { imageId: animImageId };
+        // Exclude items so a corpse already on the tile (kept for FOW continuity) does
+        // not appear under the death spin.
+        const excludeItems = { excludeItems: true as const };
 
         this.upsertTimedUpdate({
             timeMs,
@@ -89,7 +92,8 @@ export class FurnitureDamageSystem {
                         states: []
                     },
                     injectedImage,
-                    this._damageCache
+                    this._damageCache,
+                    excludeItems
                 ),
                 [RenderMode.enum.FIRE_MODE]: tile.getRenderListExcludingUnits(
                     {
@@ -97,7 +101,8 @@ export class FurnitureDamageSystem {
                         states: []
                     },
                     injectedImage,
-                    this._damageCache
+                    this._damageCache,
+                    excludeItems
                 )
             }
         });
@@ -119,10 +124,12 @@ export class FurnitureDamageSystem {
         unit.game.eventManager.on("unitKilled", unit);
         unit.game.maybeEmitSideEliminated(unit.side);
 
-        // Build the corpse while the unit still has its recipe/weight available,
-        // then remove the unit from the tile so neither corpse nor body are under
-        // the spin animation placeholder.
+        // Build the corpse while the unit still has its recipe/weight available.
+        // Place it BEFORE removing the unit so the tile never has empty interest
+        // masks (which would wipe FOW visibility counts via removePoi).
         const corpse = unit.createCorpseItem();
+        corpse.location = tile.location;
+        tile.addItem(corpse);
 
         tile.removeUnit(unit);
 
@@ -132,12 +139,8 @@ export class FurnitureDamageSystem {
 
         unit.location = null;
 
-        // Start: spinning death animation on a tile with no unit and no corpse.
+        // Start: spinning death animation (no unit sprite, no corpse under it).
         this.recordDeathPlaceholderUpdate(timeMs, tile, animImageId);
-
-        // Place the corpse so the rest update (and subsequent map state) shows it.
-        corpse.location = tile.location;
-        tile.addItem(corpse);
 
         // End: settle to the corpse item once the spin completes.
         this.recordTileUpdate(timeMs + DEATH_DURATION_MS, tile);

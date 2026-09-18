@@ -236,6 +236,14 @@ export function broadcastFilteredFireTrace(props: BroadcastFireTraceProps): Set<
         deferHearing
     } = props;
 
+    // Deaths briefly change tile POIs (unit → corpse). Recompute FOW before
+    // filtering so opposition sides that still have LOS keep corpse / death-anim
+    // sprites instead of receiving a structural strip.
+    if (payload.deaths.length > 0) {
+        game.visibilityManager.update();
+        game.syncUnitsCanSee();
+    }
+
     const sidesWithVisual = new Set<SideId>();
 
     for (const side of game.sides) {

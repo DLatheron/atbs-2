@@ -56,6 +56,10 @@
             },
             {
                 "id": "gas.grenade"
+            },
+
+            {
+                "id": "baton.item"
             }
         ]
     },

@@ -51,6 +51,10 @@
             {
                 "id": "stun.grenade"
             },
+
+            {
+                "id": "baton.item"
+            },
             {
                 "id": "skeleton-keys.item"
             }

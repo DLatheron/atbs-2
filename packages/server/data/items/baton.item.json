@@ -1,0 +1,22 @@
+{
+    "id": "baton.item",
+    "type": "item",
+    "name": "Expandable Baton",
+    "shortName": "Baton",
+    "description": [
+        {
+            "text": "A collapsible steel baton. Good reach and solid defensive blocking in melee."
+        }
+    ],
+    "weight": 0.55,
+    "melee": {
+        "class": "baton",
+        "attack": 14,
+        "defence": 10,
+        "usable": true
+    },
+    "renderable": {
+        "default": [{ "imageId": "baton" }],
+        "FIRE_MODE": []
+    }
+}

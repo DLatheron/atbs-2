@@ -56,7 +56,11 @@
             },
             {
                 "id": "c4.grenade"
+            },
+            {
+                "id": "knife.item"
             }
+
         ]
     },
     "collision": {

@@ -51,7 +51,11 @@
             },
             {
                 "id": "smoke.grenade"
+            },
+            {
+                "id": "knife.item"
             }
+
         ]
     },
     "collision": {

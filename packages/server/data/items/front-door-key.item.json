@@ -4,6 +4,12 @@
     "name": "Front Door Key",
     "description": [{ "text": "High security key for the front door of the Embassy." }],
     "weight": 0.01,
+    "melee": {
+        "class": "stab",
+        "attack": 4,
+        "defence": 0,
+        "usable": true
+    },
     "renderable": {
         "default": [{ "imageId": "front-door-key" }],
         "fire-mode": []

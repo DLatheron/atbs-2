@@ -28,7 +28,9 @@
             { "id": "spas-12.gun" },
             { "id": "12-gauge-flechette.round" },
             { "id": "12-gauge-flechette.round" },
-            { "id": "12-gauge-slug.round" }
+            { "id": "12-gauge-slug.round" },
+
+            { "id": "baton.item" }
         ]
     },
     "collision": {

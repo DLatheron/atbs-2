@@ -25,8 +25,19 @@
             { "id": "mp5-30.magazine" },
             { "id": "desert-eagle.magazine" },
             { "id": "desert-eagle.magazine" },
+            { "id": "knife.item" },
+
             { "id": "front-door-key.item" }
         ]
+    },
+    "melee": {
+        "attack": 45,
+        "defence": 35,
+        "actionPoints": 20,
+        "seenMemoryTurns": 3,
+        "proficiency": {
+            "knife": { "attack": 1.5, "defence": 1.2 }
+        }
     },
     "collision": {
         "shape": "circle",

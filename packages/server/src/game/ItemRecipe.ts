@@ -15,6 +15,7 @@ import {
 } from "@atbs/shared-data";
 import z from "zod";
 import { TilePos } from "@atbs/maths";
+import { ItemMelee } from "./MeleeTypes.js";
 
 export const Slot = z.object({
     id: ItemId,
@@ -38,6 +39,10 @@ const AmmoAccessFields = {
     allowLoad: z.boolean().optional().default(true),
     /** When false, unload attempts are rejected. Default true. */
     allowUnload: z.boolean().optional().default(true)
+};
+
+const MeleeFields = {
+    melee: ItemMelee.optional()
 };
 
 export const ProjectileRecipe = z.object({
@@ -97,6 +102,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         ...AmmoAccessFields,
+        ...MeleeFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional()
     }),
@@ -111,6 +117,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         renderable: SceneNode,
         sight: SightType.default(SightType.enum.iron),
         ...AmmoAccessFields,
+        ...MeleeFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         fireSelector: FireSelector,
@@ -130,6 +137,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         ...AmmoAccessFields,
+        ...MeleeFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional()
     }),
@@ -144,6 +152,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         renderable: SceneNode,
         projectile: ProjectileRecipe,
         ...AmmoAccessFields,
+        ...MeleeFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional()
     }),
@@ -157,6 +166,7 @@ export const ItemRecipe = z.discriminatedUnion("type", [
         weight: Weight,
         renderable: SceneNode,
         ...AmmoAccessFields,
+        ...MeleeFields,
         slotProps: z.partialRecord(SlotType, SlotProps).optional(),
         slots: z.partialRecord(SlotType, Slot).optional(),
         explosion: Explosion

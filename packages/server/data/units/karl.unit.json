@@ -3,7 +3,7 @@
     "name": "Karl",
     "description": [
         {
-            "text": "Grüber's most loyal lieutenant. Karl is aggressive, strong, and always first through the door."
+            "text": "Gr\u00fcber's most loyal lieutenant. Karl is aggressive, strong, and always first through the door."
         }
     ],
     "attributes": {
@@ -56,8 +56,21 @@
             },
             {
                 "id": "frag.grenade"
+            },
+            {
+                "id": "knife.item"
             }
+
         ]
+    },
+    "melee": {
+        "attack": 60,
+        "defence": 50,
+        "actionPoints": 20,
+        "seenMemoryTurns": 3,
+        "proficiency": {
+            "knife": { "attack": 2, "defence": 2 }
+        }
     },
     "collision": {
         "shape": "circle",

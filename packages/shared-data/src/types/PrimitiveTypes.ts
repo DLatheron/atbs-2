@@ -314,7 +314,8 @@ const errorType = [
     "INSUFFICIENT_AMMO",
     "INSUFFICIENT_BUDGET",
     "NO_DEFAULT_LOADOUT_IN_STORE",
-    "UNABLE_TO_MOVE_THERE"
+    "UNABLE_TO_MOVE_THERE",
+    "UNABLE_TO_MELEE"
 ] as const;
 
 export const ErrorType = z.enum(errorType);

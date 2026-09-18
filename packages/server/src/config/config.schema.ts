@@ -5,6 +5,7 @@ import z from "zod";
 const Config = z
     .object({
         port: z.int().min(1024).max(65534).optional().default(3000),
+        defaultScenario: z.string().default("test.scenario"),
         highlanderGameMode: z.boolean().optional().default(false),
         highlanderEditorMode: z.boolean().optional().default(false),
         infiniteActionPoints: z.boolean().optional().default(false),

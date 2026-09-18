@@ -3,6 +3,7 @@ import { PhaseHandler } from "./PhaseHandler.js";
 import type { ClientMessageManager } from "../Game.js";
 import { Client } from "../Client.js";
 import { Scenario } from "../Scenario.js";
+import { config } from "../../config/config.schema.js";
 
 const autoSetupGame = true; // Temporary Hack.
 
@@ -211,7 +212,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
      */
     private tryAutoSetupGame(): void {
         if (!this.game.scenario) {
-            const scenarioId = "hostage-rescue.scenario";
+            const scenarioId = config.defaultScenario;
             const scenarioRecipe = this.game.scenarioRecipeManager.get(scenarioId);
             const owner = this.game.owner;
             this.game.scenario = new Scenario(scenarioRecipe, this.game);

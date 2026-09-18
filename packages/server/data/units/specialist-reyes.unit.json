@@ -59,6 +59,10 @@
             },
             {
                 "id": "c4.grenade"
+            },
+
+            {
+                "id": "baton.item"
             }
         ]
     },
