@@ -76,7 +76,12 @@ export class PrimeManager {
         };
     }
 
-    private _detonatePrimedItem(item: Item): ExplosionDetonationResult | null {
+    private _detonatePrimedItem(item: Item): {
+        result: ExplosionDetonationResult;
+        origin: ReturnType<WorldMap["tileCenterToWorld"]>;
+        firingUnit: Unit;
+        noise: number;
+    } | null {
         if (!item.willExplode) {
             this.unregisterPrimedItem(item);
             return null;
@@ -85,6 +90,7 @@ export class PrimeManager {
         const explosion = item.getExplosion;
         const primedBy = this.getPrimedBy(item);
         const { origin, firingUnit } = this._resolveDetonationOrigin(item, primedBy);
+        const noise = explosion.noise;
         const { tileUpdates: consumeUpdates } = consumeExplodedItem(this.game, item, primedBy, 0);
 
         const result = detonateExplosion({
@@ -100,7 +106,7 @@ export class PrimeManager {
             (a, b) => a.timeMs - b.timeMs
         );
 
-        return result;
+        return { result, origin, firingUnit, noise };
     }
 
     triggerImmediate(): void {
@@ -109,9 +115,13 @@ export class PrimeManager {
         );
 
         for (const item of toDetonate) {
-            const result = this._detonatePrimedItem(item);
-            if (result) {
-                broadcastExplosionTrace(this.game, result);
+            const detonated = this._detonatePrimedItem(item);
+            if (detonated) {
+                broadcastExplosionTrace(this.game, detonated.result, undefined, {
+                    actingSideId: detonated.firingUnit.side.id,
+                    originWorldPos: detonated.origin,
+                    noise: detonated.noise
+                });
             }
         }
     }
@@ -125,9 +135,13 @@ export class PrimeManager {
                     continue;
 
                 case "immediate": {
-                    const result = this._detonatePrimedItem(item);
-                    if (result) {
-                        broadcastExplosionTrace(this.game, result);
+                    const detonated = this._detonatePrimedItem(item);
+                    if (detonated) {
+                        broadcastExplosionTrace(this.game, detonated.result, undefined, {
+                            actingSideId: detonated.firingUnit.side.id,
+                            originWorldPos: detonated.origin,
+                            noise: detonated.noise
+                        });
                     }
                     break;
                 }
@@ -140,9 +154,13 @@ export class PrimeManager {
                     }
 
                     if (--item.primed < 0) {
-                        const result = this._detonatePrimedItem(item);
-                        if (result) {
-                            broadcastExplosionTrace(this.game, result);
+                        const detonated = this._detonatePrimedItem(item);
+                        if (detonated) {
+                            broadcastExplosionTrace(this.game, detonated.result, undefined, {
+                                actingSideId: detonated.firingUnit.side.id,
+                                originWorldPos: detonated.origin,
+                                noise: detonated.noise
+                            });
                         }
                     }
                     break;

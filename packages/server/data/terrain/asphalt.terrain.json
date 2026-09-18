@@ -1,0 +1,19 @@
+{
+    "id": "asphalt.terrain",
+    "name": "Asphalt",
+    "tileSet": "Photo",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Dark asphalt."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "asphalt"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

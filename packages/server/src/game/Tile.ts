@@ -54,11 +54,15 @@ export interface CollisionSample {
     orientation: Orientation;
 }
 
+export const TerrainLayerRecipe = z.object({
+    id: z.string(),
+    orientation: z.enum(Orientation).optional()
+});
+export type TerrainLayerRecipe = z.infer<typeof TerrainLayerRecipe>;
+
 export const TileRecipe = z.object({
-    terrain: z.object({
-        id: z.string(),
-        orientation: z.enum(Orientation).optional()
-    }),
+    // Single layer (legacy maps) or stacked layers bottom → top.
+    terrain: z.union([TerrainLayerRecipe, z.array(TerrainLayerRecipe).min(1)]),
     furniture: z
         .object({
             id: z.string(),
@@ -93,6 +97,15 @@ export const TileRecipe = z.object({
 });
 export type TileRecipe = z.infer<typeof TileRecipe>;
 
+export function terrainLayersFromRecipe(terrain: TileRecipe["terrain"]): TerrainLayerRecipe[] {
+    return Array.isArray(terrain) ? terrain : [terrain];
+}
+
+export interface TerrainLayer {
+    terrain: Terrain;
+    orientation: Orientation;
+}
+
 export interface LayerCollision {
     owner: Furniture | Unit | Vfx;
     image: Image;
@@ -108,8 +121,7 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     protected _location: TilePos;
     protected _aabb: Aabb;
     protected _tileSize: number;
-    protected _terrain: Terrain;
-    protected _terrainOrientation: Orientation;
+    protected _terrains: TerrainLayer[];
     protected _furniture?: Furniture;
     protected _items: Item[];
     protected _units: Unit[];
@@ -132,8 +144,10 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         this._tileSize = tileSize;
         this._furnitureManager = furnitureManager;
         this._visibilityManager = visibilityManager;
-        this._terrain = TerrainManager.GetSingleton().getOrCreate(recipe.terrain.id);
-        this._terrainOrientation = recipe.terrain.orientation ?? Orientation.NORTH;
+        this._terrains = terrainLayersFromRecipe(recipe.terrain).map((layer) => ({
+            terrain: TerrainManager.GetSingleton().getOrCreate(layer.id),
+            orientation: layer.orientation ?? Orientation.NORTH
+        }));
         this._furniture = recipe.furniture
             ? furnitureManager.newFurniture(recipe.furniture.id, {
                   location,
@@ -147,23 +161,51 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     get terrain(): Terrain {
-        return this._terrain;
+        return this._terrains[0].terrain;
     }
 
     get terrainOrientation(): Orientation {
-        return this._terrainOrientation;
+        return this._terrains[0].orientation;
     }
 
-    getTerrainState(): { terrainId: string; orientation: Orientation } {
+    get terrains(): readonly TerrainLayer[] {
+        return this._terrains;
+    }
+
+    getTerrainState(): { layers: { terrainId: string; orientation: Orientation }[] } {
         return {
-            terrainId: this._terrain.id,
-            orientation: this._terrainOrientation
+            layers: this._terrains.map((layer) => ({
+                terrainId: layer.terrain.id,
+                orientation: layer.orientation
+            }))
         };
     }
 
     setTerrain(terrainId: string, orientation: Orientation): void {
-        this._terrain = TerrainManager.GetSingleton().getOrCreate(terrainId);
-        this._terrainOrientation = orientation;
+        this._terrains = [
+            {
+                terrain: TerrainManager.GetSingleton().getOrCreate(terrainId),
+                orientation
+            }
+        ];
+    }
+
+    setTerrains(layers: { terrainId: string; orientation: Orientation }[]): void {
+        if (layers.length === 0) {
+            throw new Error("Tile must have at least one terrain layer");
+        }
+
+        this._terrains = layers.map((layer) => ({
+            terrain: TerrainManager.GetSingleton().getOrCreate(layer.terrainId),
+            orientation: layer.orientation
+        }));
+    }
+
+    pushTerrain(terrainId: string, orientation: Orientation): void {
+        this._terrains.push({
+            terrain: TerrainManager.GetSingleton().getOrCreate(terrainId),
+            orientation
+        });
     }
 
     get furniture(): Furniture | undefined {
@@ -335,13 +377,15 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     getRenderList(context: SceneContext, damageCache?: DamageCacheManager): RenderList {
-        const terrainContext: SceneContext = {
-            ...context,
-            applyOrientation: this._terrainOrientation
-        };
+        const terrainImages = this._terrains.flatMap((layer) =>
+            layer.terrain.getRenderList({
+                ...context,
+                applyOrientation: layer.orientation
+            })
+        );
 
         return [
-            ...this.terrain.getRenderList(terrainContext),
+            ...terrainImages,
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.units.map((unit) => unit.getRenderList(context)).flat(),
@@ -359,13 +403,15 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
         injectedImage: RenderImage,
         damageCache?: DamageCacheManager
     ): RenderList {
-        const terrainContext: SceneContext = {
-            ...context,
-            applyOrientation: this._terrainOrientation
-        };
+        const terrainImages = this._terrains.flatMap((layer) =>
+            layer.terrain.getRenderList({
+                ...context,
+                applyOrientation: layer.orientation
+            })
+        );
 
         return [
-            ...this.terrain.getRenderList(terrainContext),
+            ...terrainImages,
             ...(this.furniture?.getRenderList(context, damageCache) ?? []),
             ...this.items.map((item) => item.getRenderList(context)).flat(),
             ...this.vfx.map((vfx) => vfx.getRenderList(context)).flat(),
@@ -374,17 +420,22 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     getTileInfo(): TileInfo {
-        const { terrain, furniture, topmostItem, topmostUnit } = this;
+        const { terrains, furniture, topmostItem, topmostUnit } = this;
+        const topTerrain = terrains[terrains.length - 1] ?? terrains[0];
 
         return {
             tilePos: this._location,
             terrain: {
-                name: terrain.name,
-                uiImage: terrain.getRenderList({
+                name:
+                    terrains.length > 1
+                        ? `${topTerrain.terrain.name} (+${terrains.length - 1})`
+                        : topTerrain.terrain.name,
+                uiImage: topTerrain.terrain.getRenderList({
                     renderMode: RenderMode.enum.UI_MODE,
-                    states: []
+                    states: [],
+                    applyOrientation: topTerrain.orientation
                 }),
-                description: terrain.description
+                description: topTerrain.terrain.description
             },
             ...(furniture && {
                 furniture: {
@@ -884,11 +935,12 @@ export class Tile implements IRenderableEntity, VisibilityPoi {
     }
 
     toRecipe(): TileRecipe {
+        const terrainLayers = this._terrains.map((layer) => ({
+            id: layer.terrain.id,
+            orientation: layer.orientation
+        }));
         const recipe: TileRecipe = {
-            terrain: {
-                id: this._terrain.id,
-                orientation: this._terrainOrientation
-            }
+            terrain: terrainLayers.length === 1 ? terrainLayers[0] : terrainLayers
         };
 
         if (this._furniture) {

@@ -137,7 +137,37 @@ export class ArmamentPhaseHandler extends PhaseHandler {
                 const { unit, side } = this._requireArmingUnit(client, payload.unitId);
                 unit.reorderInventory(payload.fromIndex, payload.toIndex);
                 this._sendArmamentUpdate(client, unit, side);
-            })
+            }),
+            messageManager.registerHandler(
+                "client:armament:apply-default",
+                (_ctx, payload, client) => {
+                    const { unit, side } = this._requireArmingUnit(client, payload.unitId);
+                    const result = unit.armingApplyDefaultLoadout(side.store, payload.mode);
+                    this._sendArmingResult(client, unit, side, result);
+                }
+            ),
+            messageManager.registerHandler(
+                "client:armament:apply-default-all",
+                (_ctx, payload, client) => {
+                    const { sideId } = client;
+                    if (!sideId) {
+                        throw new Error("Client does not have a set side ID");
+                    }
+                    if (!this._armingSideIds.includes(sideId)) {
+                        throw new Error(`Side ${sideId} is not currently arming`);
+                    }
+
+                    const side = this.game.getSide(sideId);
+                    for (const unit of side.units) {
+                        const result = unit.armingApplyDefaultLoadout(side.store, payload.mode);
+                        if (result !== true) {
+                            this._sendArmingResult(client, unit, side, result);
+                            return;
+                        }
+                        this._sendArmamentUpdate(client, unit, side);
+                    }
+                }
+            )
         ];
     }
 

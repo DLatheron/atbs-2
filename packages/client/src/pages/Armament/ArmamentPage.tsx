@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import type { UnitSummary } from "@atbs/shared-data";
 import { useArmamentPage } from "./useArmamentPage";
+import { DefaultLoadoutDialog, type DefaultLoadoutMode } from "./DefaultLoadoutDialog";
 import { formatMoney, InventoryBoard } from "../../components/Inventory";
 import {
     ACTION_BUTTON_BACKGROUND_COLOR,
@@ -35,6 +36,8 @@ import {
     STAMINA_LEVELS,
     STRENGTH_LEVELS
 } from "../../helpers/formattingHelpers";
+
+type PendingDefaultLoadout = "unit" | "all" | null;
 
 const OVERSPENT_TEXT_COLOR = "#b71c1c";
 const UNIT_SELECT_IMAGE_SIZE = 64;
@@ -86,9 +89,14 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
         onReorder,
         onBuy,
         onSell,
+        onApplyDefaultLoadout,
+        onApplyDefaultLoadoutAll,
+        selectedUnitHasItems,
+        anyUnitHasItems,
         error
     } = useArmamentPage();
     const [pendingCost, setPendingCost] = useState<string | null>(null);
+    const [pendingDefaultLoadout, setPendingDefaultLoadout] = useState<PendingDefaultLoadout>(null);
 
     // Only the arming side is sent a store; everyone else just waits.
     if (!visible || !store) {
@@ -97,6 +105,34 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
 
     const budget = store.budget;
     const overspent = budget < 0;
+
+    const requestArmUnit = () => {
+        if (!selectedUnitId) {
+            return;
+        }
+        if (selectedUnitHasItems) {
+            setPendingDefaultLoadout("unit");
+            return;
+        }
+        onApplyDefaultLoadout("replace");
+    };
+
+    const requestArmAll = () => {
+        if (anyUnitHasItems) {
+            setPendingDefaultLoadout("all");
+            return;
+        }
+        onApplyDefaultLoadoutAll("replace");
+    };
+
+    const confirmDefaultLoadout = (mode: DefaultLoadoutMode) => {
+        if (pendingDefaultLoadout === "unit") {
+            onApplyDefaultLoadout(mode);
+        } else if (pendingDefaultLoadout === "all") {
+            onApplyDefaultLoadoutAll(mode);
+        }
+        setPendingDefaultLoadout(null);
+    };
 
     return (
         <Box
@@ -331,10 +367,49 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                 sx={{
                     gridArea: "footer",
                     display: "flex",
-                    justifyContent: "flex-end",
-                    alignItems: "center"
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 1
                 }}
             >
+                <Stack direction="row" spacing={1}>
+                    <Button
+                        id="arm-default-unit"
+                        title="Arm the selected unit with its default loadout"
+                        variant="contained"
+                        disabled={!selectedUnitId}
+                        onClick={requestArmUnit}
+                        sx={{ textTransform: "none", px: 3 }}
+                    >
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                fontWeight: "bold",
+                                ...cutoutTextSx(ACTION_BUTTON_BACKGROUND_COLOR)
+                            }}
+                        >
+                            Arm Default
+                        </Typography>
+                    </Button>
+                    <Button
+                        id="arm-default-all"
+                        title="Arm all units with their default loadouts"
+                        variant="contained"
+                        disabled={units.length === 0}
+                        onClick={requestArmAll}
+                        sx={{ textTransform: "none", px: 3 }}
+                    >
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                fontWeight: "bold",
+                                ...cutoutTextSx(ACTION_BUTTON_BACKGROUND_COLOR)
+                            }}
+                        >
+                            Arm All
+                        </Typography>
+                    </Button>
+                </Stack>
                 <Button
                     id="end-armament"
                     title={
@@ -358,6 +433,23 @@ export function ArmamentPage({ visible }: ArmamentPageProps) {
                     </Typography>
                 </Button>
             </Box>
+
+            <DefaultLoadoutDialog
+                open={pendingDefaultLoadout === "unit"}
+                allowAdd={false}
+                title="Replace existing items?"
+                message="This unit already has items. Replace them with the default loadout?"
+                onClose={() => setPendingDefaultLoadout(null)}
+                onConfirm={confirmDefaultLoadout}
+            />
+            <DefaultLoadoutDialog
+                open={pendingDefaultLoadout === "all"}
+                allowAdd
+                title="Units already have items"
+                message="Some units already have items. Replace their inventories with the default loadouts, or add the default loadouts to what they already have?"
+                onClose={() => setPendingDefaultLoadout(null)}
+                onConfirm={confirmDefaultLoadout}
+            />
         </Box>
     );
 }

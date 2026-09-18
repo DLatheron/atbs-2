@@ -1,0 +1,19 @@
+{
+    "id": "orange-sandstone.terrain",
+    "name": "Orange Sandstone",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Warm orange sandstone."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "orange-sandstone"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

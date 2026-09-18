@@ -1,0 +1,19 @@
+{
+    "id": "craggy-rock.terrain",
+    "name": "Craggy Rock",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Rough grey rock."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "craggy-rock"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

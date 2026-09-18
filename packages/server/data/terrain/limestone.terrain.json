@@ -1,0 +1,19 @@
+{
+    "id": "limestone.terrain",
+    "name": "Limestone",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Weathered light grey stone."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "limestone"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

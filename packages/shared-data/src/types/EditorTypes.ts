@@ -30,6 +30,8 @@ export const SelectedTerrain = z.object({
     orientation: z.enum(Orientation),
     randomiseOrientation: z.boolean(),
     compoundTerrain: z.boolean(),
+    /** When true, paint appends a terrain layer instead of replacing the tile. */
+    stackTerrain: z.boolean().default(false),
     image1: z.object({
         index: z.number().int().nonnegative(),
         orientation: z.enum(Orientation),
@@ -37,7 +39,8 @@ export const SelectedTerrain = z.object({
     }),
     blend: z.object({
         index: z.number().int().nonnegative(),
-        orientation: z.enum(Orientation)
+        orientation: z.enum(Orientation),
+        randomiseOrientation: z.boolean().default(false)
     }),
     image2: z.object({
         index: z.number().int().nonnegative(),
@@ -114,6 +117,8 @@ export const SelectedWall = z.object({
     index: z.number().int().nonnegative(),
     orientation: z.enum(Orientation),
     autoFit: z.boolean(),
+    /** True when the user explicitly chose a piece from the grid or hotkeys. */
+    pinned: z.boolean().default(false),
     direction: z.enum(Orientation).optional()
 });
 export type SelectedWall = z.infer<typeof SelectedWall>;

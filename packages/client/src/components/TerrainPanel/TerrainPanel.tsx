@@ -11,7 +11,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { ImageComponent } from "../Image";
 import { PaletteFilters } from "../PaletteFilters";
-import { getTerrainId } from "../../helpers/terrainHelpers";
+import { getTerrainId, rotateCompoundLayer } from "../../helpers/terrainHelpers";
 import {
     PALETTE_FILTER_ALL,
     itemMatchesPaletteFilters,
@@ -120,6 +120,49 @@ function RandomiseToggle({
     );
 }
 
+function LayerOrientationControls({
+    orientation,
+    randomise,
+    randomiseDisabled = false,
+    showRandomise = true,
+    onRotate,
+    onRandomiseChange
+}: {
+    orientation: Orientation;
+    randomise?: boolean;
+    randomiseDisabled?: boolean;
+    showRandomise?: boolean;
+    onRotate: (steps: -2 | 2) => void;
+    onRandomiseChange?: (checked: boolean) => void;
+}) {
+    return (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                <IconButton size="small" disabled={!!randomise} onClick={() => onRotate(-2)}>
+                    ↺
+                </IconButton>
+                <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ minWidth: 72, textAlign: "center" }}
+                >
+                    {randomise ? "Random" : `${orientation * 45}°`}
+                </Typography>
+                <IconButton size="small" disabled={!!randomise} onClick={() => onRotate(2)}>
+                    ↻
+                </IconButton>
+            </Box>
+            {showRandomise && onRandomiseChange ? (
+                <RandomiseToggle
+                    checked={!!randomise}
+                    disabled={randomiseDisabled}
+                    onChange={onRandomiseChange}
+                />
+            ) : null}
+        </Box>
+    );
+}
+
 function toBlendGridItems(terrainPalette: TerrainPaletteWire): PaletteGridItem[] {
     return terrainPalette.blends.map((item: BlendPaletteEntry, paletteIndex: number) => ({
         id: item.id,
@@ -197,6 +240,22 @@ function SimpleTerrain({
                     })
                 }
             />
+            <FormControlLabel
+                sx={{ ml: 0, mr: 0, boxSizing: "border-box" }}
+                control={
+                    <Switch
+                        size="small"
+                        checked={selectedTerrain.stackTerrain}
+                        onChange={(_event, checked) =>
+                            onSelectedTerrainChange({
+                                ...selectedTerrain,
+                                stackTerrain: checked
+                            })
+                        }
+                    />
+                }
+                label="Stack on existing terrain"
+            />
         </Box>
     );
 }
@@ -241,6 +300,7 @@ function CompoundTerrain({
                     width={100}
                     height={100}
                     disabled={!previewImageId}
+                    checkerboard
                 />
                 <IconButton
                     size="small"
@@ -255,6 +315,27 @@ function CompoundTerrain({
                     ↻
                 </IconButton>
             </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: "center" }}>
+                Preview rotate spins the finished blend on the tile. Use the controls under each
+                layer to bake orientation into the compound.
+            </Typography>
+
+            <FormControlLabel
+                sx={{ ml: 0, mr: 0, boxSizing: "border-box" }}
+                control={
+                    <Switch
+                        size="small"
+                        checked={selectedTerrain.stackTerrain}
+                        onChange={(_event, checked) =>
+                            onSelectedTerrainChange({
+                                ...selectedTerrain,
+                                stackTerrain: checked
+                            })
+                        }
+                    />
+                }
+                label="Stack on existing terrain"
+            />
 
             <Typography variant="subtitle2">Background</Typography>
             <ImageSelectionGrid
@@ -268,13 +349,17 @@ function CompoundTerrain({
                     })
                 }
             />
-            <RandomiseToggle
-                checked={
+            <LayerOrientationControls
+                orientation={selectedTerrain.image1.orientation}
+                randomise={
                     selectedTerrain.image1.randomiseOrientation &&
                     !!terrain1?.allowRandomOrientation
                 }
-                disabled={!terrain1?.allowRandomOrientation}
-                onChange={(checked) =>
+                randomiseDisabled={!terrain1?.allowRandomOrientation}
+                onRotate={(steps) =>
+                    onSelectedTerrainChange(rotateCompoundLayer(selectedTerrain, "image1", steps))
+                }
+                onRandomiseChange={(checked) =>
                     onSelectedTerrainChange({
                         ...selectedTerrain,
                         image1: { ...selectedTerrain.image1, randomiseOrientation: checked }
@@ -291,7 +376,20 @@ function CompoundTerrain({
                 onSelectionChanged={({ index, orientation }) =>
                     onSelectedTerrainChange({
                         ...selectedTerrain,
-                        blend: { index, orientation }
+                        blend: { ...selectedTerrain.blend, index, orientation }
+                    })
+                }
+            />
+            <LayerOrientationControls
+                orientation={selectedTerrain.blend.orientation}
+                randomise={selectedTerrain.blend.randomiseOrientation}
+                onRotate={(steps) =>
+                    onSelectedTerrainChange(rotateCompoundLayer(selectedTerrain, "blend", steps))
+                }
+                onRandomiseChange={(checked) =>
+                    onSelectedTerrainChange({
+                        ...selectedTerrain,
+                        blend: { ...selectedTerrain.blend, randomiseOrientation: checked }
                     })
                 }
             />
@@ -308,13 +406,17 @@ function CompoundTerrain({
                     })
                 }
             />
-            <RandomiseToggle
-                checked={
+            <LayerOrientationControls
+                orientation={selectedTerrain.image2.orientation}
+                randomise={
                     selectedTerrain.image2.randomiseOrientation &&
                     !!terrain2?.allowRandomOrientation
                 }
-                disabled={!terrain2?.allowRandomOrientation}
-                onChange={(checked) =>
+                randomiseDisabled={!terrain2?.allowRandomOrientation}
+                onRotate={(steps) =>
+                    onSelectedTerrainChange(rotateCompoundLayer(selectedTerrain, "image2", steps))
+                }
+                onRandomiseChange={(checked) =>
                     onSelectedTerrainChange({
                         ...selectedTerrain,
                         image2: { ...selectedTerrain.image2, randomiseOrientation: checked }
@@ -359,6 +461,33 @@ export function TerrainPanel({
         [terrainPalette.terrains, selectedTileSets, selectedCategories]
     );
 
+    /** Compound bg/fg grids always keep Transparent available even when filters hide Utility. */
+    const compoundVisibleTerrains = useMemo(() => {
+        const transparentIndex = terrainPalette.terrains.findIndex(
+            (terrain: TerrainPaletteEntry) => terrain.id === "transparent.terrain"
+        );
+        if (transparentIndex < 0) {
+            return visibleTerrains;
+        }
+
+        const alreadyVisible = visibleTerrains.some(
+            (item: PaletteGridItem) => item.paletteIndex === transparentIndex
+        );
+        if (alreadyVisible) {
+            return visibleTerrains;
+        }
+
+        const transparent = terrainPalette.terrains[transparentIndex];
+        return [
+            {
+                id: transparent.id,
+                uiImage: transparent.uiImage,
+                paletteIndex: transparentIndex
+            },
+            ...visibleTerrains
+        ];
+    }, [terrainPalette.terrains, visibleTerrains]);
+
     const previewImageId = useMemo(
         () => getTerrainId(terrainPalette, selectedTerrain, true),
         [terrainPalette, selectedTerrain]
@@ -371,34 +500,41 @@ export function TerrainPanel({
     }, [imageCache, previewImageId]);
 
     useEffect(() => {
-        if (visibleTerrains.length === 0) {
+        const layerTerrains = selectedTerrain.compoundTerrain
+            ? compoundVisibleTerrains
+            : visibleTerrains;
+        if (layerTerrains.length === 0) {
             return;
         }
 
         const visibleIndexes = new Set(
-            visibleTerrains.map((item: PaletteGridItem) => item.paletteIndex)
+            layerTerrains.map((item: PaletteGridItem) => item.paletteIndex)
         );
-        const fallback = visibleTerrains[0].paletteIndex;
+        const solidFallback =
+            layerTerrains.find((item: PaletteGridItem) => item.id !== "transparent.terrain")
+                ?.paletteIndex ?? layerTerrains[0].paletteIndex;
         const next = { ...selectedTerrain };
         let changed = false;
 
-        if (!visibleIndexes.has(selectedTerrain.index)) {
-            next.index = fallback;
+        if (!selectedTerrain.compoundTerrain && !visibleIndexes.has(selectedTerrain.index)) {
+            next.index = solidFallback;
             changed = true;
         }
-        if (!visibleIndexes.has(selectedTerrain.image1.index)) {
-            next.image1 = { ...selectedTerrain.image1, index: fallback };
-            changed = true;
-        }
-        if (!visibleIndexes.has(selectedTerrain.image2.index)) {
-            next.image2 = { ...selectedTerrain.image2, index: fallback };
-            changed = true;
+        if (selectedTerrain.compoundTerrain) {
+            if (!visibleIndexes.has(selectedTerrain.image1.index)) {
+                next.image1 = { ...selectedTerrain.image1, index: solidFallback };
+                changed = true;
+            }
+            if (!visibleIndexes.has(selectedTerrain.image2.index)) {
+                next.image2 = { ...selectedTerrain.image2, index: solidFallback };
+                changed = true;
+            }
         }
 
         if (changed) {
             onSelectedTerrainChange(next);
         }
-    }, [onSelectedTerrainChange, selectedTerrain, visibleTerrains]);
+    }, [onSelectedTerrainChange, selectedTerrain, visibleTerrains, compoundVisibleTerrains]);
 
     return (
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1, height: "100%" }}>
@@ -438,7 +574,7 @@ export function TerrainPanel({
                         terrainPalette={terrainPalette}
                         selectedTerrain={selectedTerrain}
                         onSelectedTerrainChange={onSelectedTerrainChange}
-                        visibleTerrains={visibleTerrains}
+                        visibleTerrains={compoundVisibleTerrains}
                     />
                 )}
             </Box>

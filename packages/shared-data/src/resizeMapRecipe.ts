@@ -5,10 +5,15 @@ export type { MapResizeAnchor } from "./types/EditorTypes.js";
 export { MAP_RESIZE_ANCHORS } from "./types/EditorTypes.js";
 
 export interface ResizeMapTileRecipe {
-    terrain: {
-        id: string;
-        orientation?: Orientation;
-    };
+    terrain:
+        | {
+              id: string;
+              orientation?: Orientation;
+          }
+        | {
+              id: string;
+              orientation?: Orientation;
+          }[];
     furniture?: {
         id: string;
         orientation?: Orientation;

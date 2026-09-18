@@ -7,6 +7,20 @@ import { useImageSrc } from "../../hooks/useImageSrc";
 /** Matches the grey used in compound-terrain previews (background / foreground mix). */
 const BLEND_MASK_BASE_COLOUR = "#888888";
 
+const CHECKERBOARD_BACKGROUND = {
+    backgroundColor: "#ffffff",
+    backgroundImage:
+        "linear-gradient(45deg, #c8c8c8 25%, transparent 25%), linear-gradient(-45deg, #c8c8c8 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #c8c8c8 75%), linear-gradient(-45deg, transparent 75%, #c8c8c8 75%)",
+    backgroundSize: "12px 12px",
+    backgroundPosition: "0 0, 0 6px, 6px -6px, -6px 0px"
+};
+
+function usesTransparency(images: RenderList): boolean {
+    return images.some(
+        ({ imageId }) => imageId === "transparent" || imageId.includes("transparent[")
+    );
+}
+
 export interface ImageComponentProps {
     images: RenderList;
     width?: number;
@@ -15,6 +29,8 @@ export interface ImageComponentProps {
     disabled?: boolean;
     /** Blend-mask PNGs use alpha to mix white over a grey base in the picker preview. */
     blendMask?: boolean;
+    /** Force a checkerboard behind the image (useful for alpha previews). */
+    checkerboard?: boolean;
     sx?: SxProps;
 }
 
@@ -64,8 +80,11 @@ export function ImageComponent({
     children,
     disabled = false,
     blendMask = false,
+    checkerboard = false,
     sx
 }: ImageComponentProps) {
+    const showCheckerboard = checkerboard || usesTransparency(images);
+
     return (
         <Container
             data-testid="image-component"
@@ -77,6 +96,7 @@ export function ImageComponent({
                 width,
                 height,
                 ...(blendMask && { bgcolor: BLEND_MASK_BASE_COLOUR }),
+                ...(showCheckerboard && !blendMask ? CHECKERBOARD_BACKGROUND : null),
                 ...sx
             }}
         >

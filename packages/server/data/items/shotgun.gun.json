@@ -51,5 +51,6 @@
             }
         }
     },
-    "spreadAngle": 2
+    "spreadAngle": 2,
+    "noise": 130
 }

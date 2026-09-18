@@ -137,7 +137,7 @@ export type MaterialTransition = z.infer<typeof MaterialTransition>;
 export const VisualType = z.enum(["eyeball", "infrared"]);
 export type VisualType = z.infer<typeof VisualType>;
 
-export const materialDensityType = ["eyeball", "infrared", "projectile"] as const;
+export const materialDensityType = ["eyeball", "infrared", "projectile", "audio"] as const;
 export const MaterialDensityType = z.enum(materialDensityType);
 export type MaterialDensityType = z.infer<typeof MaterialDensityType>;
 
@@ -219,10 +219,21 @@ export const Description = z.array(
 );
 export type Description = z.infer<typeof Description>;
 
+export const VictoryObjectiveSummary = z.object({
+    id: z.string().nonempty(),
+    name: z.string(),
+    awards: z.int().nonnegative(),
+    maxAwards: z.int().positive().optional(),
+    value: z.int().min(1).max(100).or(z.literal("immediate-win")).or(z.literal("immediate-loss")),
+    complete: z.boolean()
+});
+export type VictoryObjectiveSummary = z.infer<typeof VictoryObjectiveSummary>;
+
 export const SideSummary = z.object({
     id: SideId,
     name: z.string(),
-    victoryPoints: z.int().min(0)
+    victoryPoints: z.int().min(-100).max(100),
+    objectives: z.array(VictoryObjectiveSummary).optional()
 });
 export type SideSummary = z.infer<typeof SideSummary>;
 
@@ -302,6 +313,7 @@ const errorType = [
     "INSUFFICIENT_ACTION_POINTS",
     "INSUFFICIENT_AMMO",
     "INSUFFICIENT_BUDGET",
+    "NO_DEFAULT_LOADOUT_IN_STORE",
     "UNABLE_TO_MOVE_THERE"
 ] as const;
 
@@ -670,6 +682,8 @@ export const FragmentExplosion = z.object({
     visual: FragmentExplosionVisual,
     /** Per-fragment aim jitter in degrees (same convention as gun spreadAngle). */
     angleJitter: z.number().nonnegative().default(5),
+    /** Loudness relative to reference 100; default 200 for explosions. */
+    noise: z.number().nonnegative().default(200),
     variability: z
         .object({
             min: z.number().positive().max(2).default(1),
@@ -692,7 +706,9 @@ const CloudExplosionFields = {
     /** Hit-point damage for a full turn of exposure (scaled by AP spent / max AP). */
     damage: DamageMap.optional(),
     /** Disorientation for a full turn of exposure (scaled the same way as damage). */
-    disorientation: z.number().nonnegative().optional()
+    disorientation: z.number().nonnegative().optional(),
+    /** Loudness relative to reference 100; default 200 for explosions. */
+    noise: z.number().nonnegative().default(200)
 };
 
 export const SmokeExplosion = z.object({
@@ -717,6 +733,8 @@ export const ShockwaveExplosion = z.object({
     visual: FragmentExplosionVisual,
     /** Per-ray aim jitter in degrees (same convention as gun spreadAngle). */
     angleJitter: z.number().nonnegative().default(5),
+    /** Loudness relative to reference 100; default 200 for explosions. */
+    noise: z.number().nonnegative().default(200),
     variability: z
         .object({
             min: z.number().positive().max(2).default(1),

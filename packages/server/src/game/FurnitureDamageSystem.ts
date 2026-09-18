@@ -116,6 +116,9 @@ export class FurnitureDamageSystem {
             scale: this._tileSize
         });
 
+        unit.game.eventManager.on("unitKilled", unit);
+        unit.game.maybeEmitSideEliminated(unit.side);
+
         // Build the corpse while the unit still has its recipe/weight available,
         // then remove the unit from the tile so neither corpse nor body are under
         // the spin animation placeholder.
@@ -165,6 +168,7 @@ export class FurnitureDamageSystem {
             tileChanged = true;
 
             if (destroyed) {
+                projectile.game.eventManager.on("furnitureDestroyed", furniture);
                 this._damageCache.removeTileCache(tile.location, this._imageManager);
                 this.recordTileUpdate(timeMs, tile);
                 return;

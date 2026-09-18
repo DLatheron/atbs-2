@@ -1,0 +1,19 @@
+{
+    "id": "wildflowers.terrain",
+    "name": "Wildflowers",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Foliage with purple wildflowers."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "wildflowers"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

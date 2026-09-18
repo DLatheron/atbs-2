@@ -1,0 +1,215 @@
+{
+    "id": "franco.unit",
+    "name": "Franco",
+    "description": [
+        {
+            "text": "Uzi specialist and lookout. Franco moves fast and likes to circle around the opposition."
+        }
+    ],
+    "attributes": {
+        "weight": 72,
+        "actionPoints": {
+            "max": 51
+        },
+        "constitution": {
+            "max": 46
+        },
+        "fitness": {
+            "max": 82
+        },
+        "morale": {
+            "max": 60
+        },
+        "stamina": {
+            "max": 75
+        },
+        "speed": {
+            "max": 76
+        },
+        "strength": {
+            "max": 44
+        }
+    },
+    "inventory": {
+        "inUse": 0,
+        "items": [
+            {
+                "id": "uzi.gun"
+            },
+            {
+                "id": "desert-eagle.gun"
+            },
+            {
+                "id": "uzi-drum.magazine"
+            },
+            {
+                "id": "uzi.magazine"
+            },
+            {
+                "id": "desert-eagle.magazine"
+            },
+            {
+                "id": "desert-eagle.magazine"
+            }
+        ]
+    },
+    "collision": {
+        "shape": "circle",
+        "radius": 24,
+        "materials": ["human.material"]
+    },
+    "renderable": {
+        "UI_MODE": {
+            "alive": {
+                "item-in-use": [
+                    {
+                        "imageId": "generic-carrying-4"
+                    }
+                ],
+                "default": [
+                    {
+                        "imageId": "generic-4"
+                    }
+                ]
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "MAP_MODE": {
+            "alive": {
+                "default": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-carrying-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                }
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "generic-cl",
+                    "orientation": 8
+                }
+            ],
+            "dead": []
+        },
+        "default": []
+    },
+    "actions": {
+        "throw": {
+            "accuracy": 40,
+            "actionPoints": 20
+        }
+    }
+}

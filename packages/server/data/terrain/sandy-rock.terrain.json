@@ -1,0 +1,19 @@
+{
+    "id": "sandy-rock.terrain",
+    "name": "Sandy Rock",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Layered reddish sandy rock."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "sandy-rock"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

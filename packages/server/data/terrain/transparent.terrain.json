@@ -1,0 +1,19 @@
+{
+    "id": "transparent.terrain",
+    "name": "Transparent",
+    "tileSet": "Default",
+    "category": "Utility",
+    "description": [
+        {
+            "text": "A fully transparent tile. Use as compound background or foreground so the blend reveals empty space (or the terrain underneath when stacking)."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "transparent"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

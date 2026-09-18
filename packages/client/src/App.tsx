@@ -10,14 +10,19 @@ import {
 import { Server, useServerMessageManager, useServerSocket } from "./hooks";
 import { useClientId } from "./hooks/useClientId";
 import { GameSocket } from "./GameSocket";
-import { ArmamentPage, DeploymentPage, LobbyPage, MainMenuPage, ActionPage } from "./pages";
+import {
+    ArmamentPage,
+    DeploymentPage,
+    GameOverPage,
+    GAME_OVER_DISPLAY_DELAY_MS,
+    LobbyPage,
+    MainMenuPage,
+    ActionPage,
+    type GameOverResult
+} from "./pages";
 import { useSearchParams } from "react-router-dom";
 import { WaitModal } from "./modals";
 import { Container } from "@mui/material";
-
-function isTerminalPhase(phase: Phase): boolean {
-    return phase === Phase.enum.main_menu || phase === Phase.enum.game_over;
-}
 
 export function App() {
     const { clientId } = useClientId();
@@ -30,8 +35,17 @@ export function App() {
     const [phase, setPhase] = useState<Phase>(Phase.enum.main_menu);
     const phaseRef = useRef<Phase>(Phase.enum.main_menu);
     const [clientName, setClientName] = useState<string>(name ?? "Default Client Name");
+    const [gameOverResult, setGameOverResult] = useState<GameOverResult | null>(null);
+    const gameOverDelayTimerRef = useRef<number | null>(null);
 
     const { messageManager, sendMessage, setGameSocket } = useServerMessageManager();
+
+    const clearGameOverDelayTimer = useCallback(() => {
+        if (gameOverDelayTimerRef.current != null) {
+            window.clearTimeout(gameOverDelayTimerRef.current);
+            gameOverDelayTimerRef.current = null;
+        }
+    }, []);
 
     const onConnected = useCallback(
         (gameSocket: GameSocket) => {
@@ -41,10 +55,13 @@ export function App() {
     );
 
     const onDisconnected = useCallback(() => {
+        clearGameOverDelayTimer();
         setGameSocket(null);
         phaseRef.current = Phase.enum.main_menu;
         setPhase(Phase.enum.main_menu);
-    }, [setGameSocket]);
+        setWaitingFor(null);
+        setGameOverResult(null);
+    }, [setGameSocket, clearGameOverDelayTimer]);
 
     const onMessage = useCallback(
         (data: unknown) => {
@@ -73,6 +90,15 @@ export function App() {
         onMessage
     });
 
+    const dismissGameOver = useCallback(() => {
+        clearGameOverDelayTimer();
+        leaveGame();
+        setGameOverResult(null);
+        setWaitingFor(null);
+        phaseRef.current = Phase.enum.main_menu;
+        setPhase(Phase.enum.main_menu);
+    }, [leaveGame, clearGameOverDelayTimer]);
+
     useEffect(() => {
         console.info("Mounting App Message Handlers");
         const handlerHandles = [
@@ -81,22 +107,27 @@ export function App() {
             }),
             messageManager.registerHandler("server:pong", (context, payload) => {
                 console.info({ context, payload });
-
-                // gameSocketRef.current?.send({
-                //     type: "client:ping",
-                //     payload: { nonce: payload.nonce++ }
-                // });
             }),
             messageManager.registerHandler("server:phase", (_context, payload) => {
                 console.info("Setting Phase", payload.phase);
-
-                const previousPhase = phaseRef.current;
+                // Keep the action UI visible; game:over owns the delayed switch to results.
+                if (payload.phase === Phase.enum.game_over) {
+                    setWaitingFor(null);
+                    return;
+                }
                 phaseRef.current = payload.phase;
                 setPhase(payload.phase);
-
-                if (isTerminalPhase(payload.phase) && !isTerminalPhase(previousPhase)) {
-                    leaveGame();
-                }
+                setWaitingFor(null);
+            }),
+            messageManager.registerHandler("server:game:over", (_context, payload) => {
+                setGameOverResult(payload);
+                setWaitingFor(null);
+                clearGameOverDelayTimer();
+                gameOverDelayTimerRef.current = window.setTimeout(() => {
+                    gameOverDelayTimerRef.current = null;
+                    phaseRef.current = Phase.enum.game_over;
+                    setPhase(Phase.enum.game_over);
+                }, GAME_OVER_DISPLAY_DELAY_MS);
             }),
             messageManager.registerHandler("server:client:connected", (_context, { client }) => {
                 console.info(`Client '${client.name} (${client.id}) connected`);
@@ -112,8 +143,9 @@ export function App() {
         return () => {
             console.info("Unmounting App Message Handlers");
             messageManager.unregisterHandlers(handlerHandles);
+            clearGameOverDelayTimer();
         };
-    }, [messageManager, leaveGame]);
+    }, [messageManager, clearGameOverDelayTimer]);
 
     if (!clientId) {
         return null;
@@ -158,6 +190,11 @@ export function App() {
                 }
             />
             <ActionPage key={`turns-${gameId}`} visible={phase === Phase.enum.action} />
+            <GameOverPage
+                visible={phase === Phase.enum.game_over}
+                result={gameOverResult}
+                onDismiss={dismissGameOver}
+            />
             <WaitModal waitingFor={waitingFor} />
         </Container>
     );

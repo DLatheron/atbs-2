@@ -10,7 +10,11 @@
     ],
     "weight": 0.97,
     "renderable": {
-        "default": [{ "imageId": "m9" }],
+        "default": [
+            {
+                "imageId": "m9"
+            }
+        ],
         "FIRE_MODE": []
     },
     "sight": "iron",
@@ -20,7 +24,11 @@
             "compatibleIds": ["m9-15.magazine", "m9-30.magazine"]
         }
     },
-    "slots": { "ammo": { "id": "m9-15.magazine" } },
+    "slots": {
+        "ammo": {
+            "id": "m9-15.magazine"
+        }
+    },
     "fireSelector": "single",
     "fireModes": {
         "single": {
@@ -36,5 +44,6 @@
                 }
             }
         }
-    }
+    },
+    "noise": 80
 }

@@ -62,6 +62,15 @@ export function MapModePanel({
             </Stack>
             <Stack spacing={1} sx={{ gridArea: "bottom-bar", px: 1, pb: 1 }}>
                 <Button
+                    id="select-unit"
+                    title="Select the first unit"
+                    variant="outlined"
+                    disabled={disabled}
+                    onClick={nextUnit}
+                >
+                    Select Unit
+                </Button>
+                <Button
                     id="end-turn"
                     title="End the current side's turn"
                     variant="outlined"

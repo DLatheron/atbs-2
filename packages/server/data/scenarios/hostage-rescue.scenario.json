@@ -16,7 +16,7 @@
             "line": true
         }
     ],
-    "worldMapId": "mansion.map",
+    "worldMapId": "ambassadorsMansion.map",
     "sides": [
         {
             "id": "rescue-team",
@@ -48,13 +48,73 @@
                         },
                         "orientation": 6
                     }
+                },
+                {
+                    "id": "sergeant-johnson.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 7,
+                            "row": 8
+                        },
+                        "orientation": 3
+                    }
+                },
+                {
+                    "id": "specialist-chen.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 9,
+                            "row": 8
+                        },
+                        "orientation": 3
+                    }
+                },
+                {
+                    "id": "trooper-wallace.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 6,
+                            "row": 9
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "trooper-okonkwo.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 10,
+                            "row": 9
+                        },
+                        "orientation": 4
+                    }
+                },
+                {
+                    "id": "specialist-reyes.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 17,
+                            "row": 10
+                        },
+                        "orientation": 6
+                    }
+                },
+                {
+                    "id": "medic-patel.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 19,
+                            "row": 9
+                        },
+                        "orientation": 6
+                    }
                 }
             ],
             "phases": {
                 "armament": {
                     "type": "manual",
                     "store": {
-                        "budget": 6000,
+                        "budget": 30000,
                         "threshold": -1000,
                         "currency": "$",
                         "categories": [
@@ -134,13 +194,6 @@
                                 "categories": ["Guns", "ARs"]
                             },
                             {
-                                "itemId": "ak-47.gun",
-                                "quantity": 10,
-                                "baseCost": 400,
-                                "batchSize": 1,
-                                "categories": ["Guns", "ARs"]
-                            },
-                            {
                                 "itemId": "spas-12.gun",
                                 "quantity": 10,
                                 "baseCost": 1200,
@@ -176,49 +229,14 @@
                                 "categories": ["Guns", "SMGs"]
                             },
                             {
-                                "itemId": "mac-10.gun",
-                                "quantity": 1,
-                                "baseCost": 400,
-                                "batchSize": 1,
-                                "categories": ["Guns", "SMGs"]
-                            },
-                            {
-                                "itemId": "uzi.gun",
-                                "quantity": 1,
-                                "baseCost": 600,
-                                "batchSize": 1,
-                                "categories": ["Guns", "SMGs"]
-                            },
-                            {
                                 "itemId": "barrett.gun",
-                                "quantity": 1,
+                                "quantity": 5,
                                 "baseCost": 8900,
                                 "batchSize": 1,
                                 "categories": ["Guns", "Snipers"]
                             },
                             {
-                                "itemId": "svd.gun",
-                                "quantity": 1,
-                                "baseCost": 1800,
-                                "batchSize": 1,
-                                "categories": ["Guns", "Snipers"]
-                            },
-                            {
-                                "itemId": "desert-eagle.gun",
-                                "quantity": 10,
-                                "baseCost": 600,
-                                "batchSize": 1,
-                                "categories": ["Guns", "Pistols"]
-                            },
-                            {
                                 "itemId": "m9.gun",
-                                "quantity": 10,
-                                "baseCost": 600,
-                                "batchSize": 1,
-                                "categories": ["Guns", "Pistols"]
-                            },
-                            {
-                                "itemId": "fn-hi-power.gun",
                                 "quantity": 10,
                                 "baseCost": 600,
                                 "batchSize": 1,
@@ -246,20 +264,6 @@
                                 "categories": ["Magazines", "ARs"]
                             },
                             {
-                                "itemId": "ak-47.magazine",
-                                "quantity": 20,
-                                "baseCost": 5,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "ARs"]
-                            },
-                            {
-                                "itemId": "ak-47-drum.magazine",
-                                "quantity": 20,
-                                "baseCost": 12,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "ARs"]
-                            },
-                            {
                                 "itemId": "mp5-30.magazine",
                                 "quantity": 20,
                                 "baseCost": 5,
@@ -274,46 +278,11 @@
                                 "categories": ["Magazines", "SMGs"]
                             },
                             {
-                                "itemId": "mac-10.magazine",
-                                "quantity": 20,
-                                "baseCost": 5,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "SMGs"]
-                            },
-                            {
-                                "itemId": "uzi.magazine",
-                                "quantity": 20,
-                                "baseCost": 5,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "SMGs"]
-                            },
-                            {
-                                "itemId": "uzi-drum.magazine",
-                                "quantity": 20,
-                                "baseCost": 12,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "SMGs"]
-                            },
-                            {
                                 "itemId": "barrett.magazine",
-                                "quantity": 4,
+                                "quantity": 6,
                                 "baseCost": 250,
                                 "batchSize": 1,
                                 "categories": ["Magazines", "Snipers"]
-                            },
-                            {
-                                "itemId": "svd.magazine",
-                                "quantity": 4,
-                                "baseCost": 4,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "Snipers"]
-                            },
-                            {
-                                "itemId": "desert-eagle.magazine",
-                                "quantity": 20,
-                                "baseCost": 3,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "Pistols"]
                             },
                             {
                                 "itemId": "m9-15.magazine",
@@ -324,13 +293,6 @@
                             },
                             {
                                 "itemId": "m9-30.magazine",
-                                "quantity": 10,
-                                "baseCost": 7,
-                                "batchSize": 1,
-                                "categories": ["Magazines", "Pistols"]
-                            },
-                            {
-                                "itemId": "hi-power.magazine",
                                 "quantity": 10,
                                 "baseCost": 7,
                                 "batchSize": 1,
@@ -358,25 +320,32 @@
                                 "categories": ["Rounds", "ARs"]
                             },
                             {
-                                "itemId": "7.62mm.round",
-                                "quantity": 9999,
-                                "baseCost": 2,
-                                "batchSize": 30,
-                                "categories": ["Rounds", "ARs"]
-                            },
-                            {
                                 "itemId": "40mm-he.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 80,
                                 "batchSize": 1,
-                                "categories": ["Rounds", "ARs"]
+                                "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-smoke.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 70,
                                 "batchSize": 1,
-                                "categories": ["Rounds", "ARs"]
+                                "categories": ["Rounds", "ARs", "Grenades"]
+                            },
+                            {
+                                "itemId": "40mm-gas.round",
+                                "quantity": 20,
+                                "baseCost": 100,
+                                "batchSize": 1,
+                                "categories": ["Rounds", "ARs", "Grenades"]
+                            },
+                            {
+                                "itemId": "40mm-stun.round",
+                                "quantity": 20,
+                                "baseCost": 90,
+                                "batchSize": 1,
+                                "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "50-calibre.round",
@@ -386,25 +355,18 @@
                                 "categories": ["Rounds", "Snipers"]
                             },
                             {
-                                "itemId": "357-magnum.round",
-                                "quantity": 9999,
-                                "baseCost": 1,
-                                "batchSize": 18,
-                                "categories": ["Rounds", "Pistols"]
-                            },
-                            {
                                 "itemId": "9mm-parabellum.round",
                                 "quantity": 9999,
                                 "baseCost": 1,
                                 "batchSize": 15,
-                                "categories": ["Rounds", "Pistols"]
+                                "categories": ["Rounds", "Pistols", "SMGs"]
                             },
                             {
                                 "itemId": "9mm-hollow-point.round",
                                 "quantity": 9999,
                                 "baseCost": 1,
                                 "batchSize": 15,
-                                "categories": ["Rounds", "Pistols"]
+                                "categories": ["Rounds", "Pistols", "SMGs"]
                             },
                             {
                                 "itemId": "45-acp.round",
@@ -477,22 +439,15 @@
                                 "categories": ["Explosives"]
                             },
                             {
-                                "itemId": "law.gun",
-                                "quantity": 4,
-                                "baseCost": 1500,
-                                "batchSize": 1,
-                                "categories": ["Explosives"]
-                            },
-                            {
                                 "itemId": "front-door-key.item",
-                                "quantity": 4,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
                             },
                             {
                                 "itemId": "skeleton-keys.item",
-                                "quantity": 2,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
@@ -501,9 +456,210 @@
                     }
                 },
                 "deployment": {
-                    "type": "fixed"
+                    "type": "manual",
+                    "marker": "deploy-1",
+                    "zones": [
+                        {
+                            "name": "North West",
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 0,
+                                        "row": 0
+                                    },
+                                    {
+                                        "width": 8,
+                                        "height": 3
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 0,
+                                        "row": 3
+                                    },
+                                    {
+                                        "width": 3,
+                                        "height": 6
+                                    }
+                                ]
+                            ],
+                            "orientation": 3
+                        },
+                        {
+                            "name": "South West",
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 1,
+                                        "row": 49
+                                    },
+                                    {
+                                        "width": 7,
+                                        "height": 1
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 0,
+                                        "row": 49
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 7,
+                                        "row": 48
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 7,
+                                        "row": 47
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 6,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 5,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 4,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 3,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 2,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 1,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 0,
+                                        "row": 47
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 0,
+                                        "row": 41
+                                    },
+                                    {
+                                        "width": 3,
+                                        "height": 6
+                                    }
+                                ]
+                            ],
+                            "orientation": 1
+                        },
+                        {
+                            "name": "East",
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 99,
+                                        "row": 31
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 7
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 98,
+                                        "row": 31
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 7
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 97,
+                                        "row": 31
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 7
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 94,
+                                        "row": 31
+                                    },
+                                    {
+                                        "width": 3,
+                                        "height": 4
+                                    }
+                                ]
+                            ],
+                            "orientation": 6
+                        }
+                    ]
                 }
-            }
+            },
+            "victoryRules": [
+                {
+                    "id": "kill-hans",
+                    "name": "Assassinate ${unit}",
+                    "on": {
+                        "type": "unitKilled",
+                        "unitId": "hans-gruber.unit"
+                    },
+                    "value": 100,
+                    "once": true
+                }
+            ]
         },
         {
             "id": "terrorists",
@@ -525,16 +681,672 @@
                         },
                         "orientation": 2
                     }
+                },
+                {
+                    "id": "karl.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 10,
+                            "row": 10
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "tony.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 12,
+                            "row": 10
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "theo.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 11,
+                            "row": 9
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "eddie.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 10,
+                            "row": 9
+                        },
+                        "orientation": 1
+                    }
+                },
+                {
+                    "id": "franco.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 12,
+                            "row": 9
+                        },
+                        "orientation": 3
+                    }
+                },
+                {
+                    "id": "heinrich.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 10,
+                            "row": 11
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "james.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 12,
+                            "row": 11
+                        },
+                        "orientation": 2
+                    }
                 }
             ],
             "phases": {
                 "armament": {
-                    "type": "fixed"
+                    "type": "manual",
+                    "store": {
+                        "budget": 20000,
+                        "threshold": -1000,
+                        "currency": "$",
+                        "categories": [
+                            {
+                                "name": "All",
+                                "categories": null
+                            },
+                            {
+                                "name": "Guns",
+                                "categories": ["Guns"]
+                            },
+                            {
+                                "name": "- Sniper Rifles",
+                                "categories": ["Snipers"]
+                            },
+                            {
+                                "name": "- Assault Rifles",
+                                "categories": ["ARs"]
+                            },
+                            {
+                                "name": "- Submachine Guns",
+                                "categories": ["SMGs"]
+                            },
+                            {
+                                "name": "- Shotguns",
+                                "categories": ["Shotguns"]
+                            },
+                            {
+                                "name": "- Pistol",
+                                "categories": ["Pistols"]
+                            },
+                            {
+                                "name": "Magazines",
+                                "categories": ["Magazines"]
+                            },
+                            {
+                                "name": "Rounds",
+                                "categories": ["Rounds"]
+                            },
+                            {
+                                "name": "Ammunition",
+                                "categories": ["Magazines", "Rounds"]
+                            },
+                            {
+                                "name": "Grenades",
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "name": "Explosives",
+                                "categories": ["Explosives"]
+                            },
+                            {
+                                "name": "Other Items",
+                                "categories": ["Other"]
+                            }
+                        ],
+                        "items": [
+                            {
+                                "itemId": "ak-47.gun",
+                                "quantity": 10,
+                                "baseCost": 400,
+                                "batchSize": 1,
+                                "categories": ["Guns", "ARs"]
+                            },
+                            {
+                                "itemId": "shotgun.gun",
+                                "quantity": 10,
+                                "baseCost": 1200,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Shotguns"]
+                            },
+                            {
+                                "itemId": "mp5a2.gun",
+                                "quantity": 10,
+                                "baseCost": 900,
+                                "batchSize": 1,
+                                "categories": ["Guns", "SMGs"]
+                            },
+                            {
+                                "itemId": "mp5k.gun",
+                                "quantity": 5,
+                                "baseCost": 1200,
+                                "batchSize": 1,
+                                "categories": ["Guns", "SMGs"]
+                            },
+                            {
+                                "itemId": "mac-10.gun",
+                                "quantity": 5,
+                                "baseCost": 400,
+                                "batchSize": 1,
+                                "categories": ["Guns", "SMGs"]
+                            },
+                            {
+                                "itemId": "uzi.gun",
+                                "quantity": 5,
+                                "baseCost": 600,
+                                "batchSize": 1,
+                                "categories": ["Guns", "SMGs"]
+                            },
+                            {
+                                "itemId": "svd.gun",
+                                "quantity": 5,
+                                "baseCost": 1800,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Snipers"]
+                            },
+                            {
+                                "itemId": "desert-eagle.gun",
+                                "quantity": 10,
+                                "baseCost": 600,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Pistols"]
+                            },
+                            {
+                                "itemId": "fn-hi-power.gun",
+                                "quantity": 10,
+                                "baseCost": 600,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Pistols"]
+                            },
+                            {
+                                "itemId": "m1911.gun",
+                                "quantity": 10,
+                                "baseCost": 400,
+                                "batchSize": 1,
+                                "categories": ["Guns", "Pistols"]
+                            },
+                            {
+                                "itemId": "ak-47.magazine",
+                                "quantity": 20,
+                                "baseCost": 5,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "ARs"]
+                            },
+                            {
+                                "itemId": "ak-47-drum.magazine",
+                                "quantity": 20,
+                                "baseCost": 12,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "ARs"]
+                            },
+                            {
+                                "itemId": "mp5-30.magazine",
+                                "quantity": 20,
+                                "baseCost": 5,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "SMGs"]
+                            },
+                            {
+                                "itemId": "mac-10.magazine",
+                                "quantity": 20,
+                                "baseCost": 5,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "SMGs"]
+                            },
+                            {
+                                "itemId": "uzi.magazine",
+                                "quantity": 20,
+                                "baseCost": 5,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "SMGs"]
+                            },
+                            {
+                                "itemId": "uzi-drum.magazine",
+                                "quantity": 20,
+                                "baseCost": 12,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "SMGs"]
+                            },
+                            {
+                                "itemId": "svd.magazine",
+                                "quantity": 6,
+                                "baseCost": 4,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "Snipers"]
+                            },
+                            {
+                                "itemId": "desert-eagle.magazine",
+                                "quantity": 20,
+                                "baseCost": 3,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "Pistols"]
+                            },
+                            {
+                                "itemId": "hi-power.magazine",
+                                "quantity": 10,
+                                "baseCost": 7,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "Pistols"]
+                            },
+                            {
+                                "itemId": "m1911-7.magazine",
+                                "quantity": 20,
+                                "baseCost": 3,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "Pistols"]
+                            },
+                            {
+                                "itemId": "m1911-15.magazine",
+                                "quantity": 20,
+                                "baseCost": 5,
+                                "batchSize": 1,
+                                "categories": ["Magazines", "Pistols"]
+                            },
+                            {
+                                "itemId": "7.62mm.round",
+                                "quantity": 9999,
+                                "baseCost": 2,
+                                "batchSize": 30,
+                                "categories": ["Rounds", "ARs"]
+                            },
+                            {
+                                "itemId": "357-magnum.round",
+                                "quantity": 9999,
+                                "baseCost": 1,
+                                "batchSize": 18,
+                                "categories": ["Rounds", "Pistols"]
+                            },
+                            {
+                                "itemId": "9mm-parabellum.round",
+                                "quantity": 9999,
+                                "baseCost": 1,
+                                "batchSize": 15,
+                                "categories": ["Rounds", "Pistols", "SMGs"]
+                            },
+                            {
+                                "itemId": "9mm-hollow-point.round",
+                                "quantity": 9999,
+                                "baseCost": 1,
+                                "batchSize": 15,
+                                "categories": ["Rounds", "Pistols", "SMGs"]
+                            },
+                            {
+                                "itemId": "45-acp.round",
+                                "quantity": 9999,
+                                "baseCost": 1,
+                                "batchSize": 15,
+                                "categories": ["Rounds", "Pistols"]
+                            },
+                            {
+                                "itemId": "45-hollow-point.round",
+                                "quantity": 9999,
+                                "baseCost": 1,
+                                "batchSize": 15,
+                                "categories": ["Rounds", "Pistols"]
+                            },
+                            {
+                                "itemId": "12-gauge-buckshot.round",
+                                "quantity": 9999,
+                                "baseCost": 4,
+                                "batchSize": 7,
+                                "categories": ["Rounds", "Shotguns"]
+                            },
+                            {
+                                "itemId": "12-gauge-flechette.round",
+                                "quantity": 9999,
+                                "baseCost": 8,
+                                "batchSize": 7,
+                                "categories": ["Rounds", "Shotguns"]
+                            },
+                            {
+                                "itemId": "12-gauge-slug.round",
+                                "quantity": 10,
+                                "baseCost": 12,
+                                "batchSize": 7,
+                                "categories": ["Rounds", "Shotguns"]
+                            },
+                            {
+                                "itemId": "frag.grenade",
+                                "quantity": 10,
+                                "baseCost": 45,
+                                "batchSize": 1,
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "itemId": "smoke.grenade",
+                                "quantity": 10,
+                                "baseCost": 40,
+                                "batchSize": 1,
+                                "categories": ["Grenades"]
+                            },
+                            {
+                                "itemId": "c4.grenade",
+                                "quantity": 10,
+                                "baseCost": 400,
+                                "batchSize": 1,
+                                "categories": ["Explosives"]
+                            },
+                            {
+                                "itemId": "law.gun",
+                                "quantity": 5,
+                                "baseCost": 1500,
+                                "batchSize": 1,
+                                "categories": ["Explosives"]
+                            },
+                            {
+                                "itemId": "front-door-key.item",
+                                "quantity": 5,
+                                "baseCost": 0,
+                                "batchSize": 1,
+                                "categories": ["Other"]
+                            }
+                        ]
+                    }
                 },
                 "deployment": {
-                    "type": "fixed"
+                    "type": "manual",
+                    "marker": "deploy-2",
+                    "zones": [
+                        {
+                            "name": "Conference Room",
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 73,
+                                        "row": 15
+                                    },
+                                    {
+                                        "width": 10,
+                                        "height": 1
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 73,
+                                        "row": 16
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 10
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 74,
+                                        "row": 25
+                                    },
+                                    {
+                                        "width": 9,
+                                        "height": 1
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 74,
+                                        "row": 26
+                                    },
+                                    {
+                                        "width": 8,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 24
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 23
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 22
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 21
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 20
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 19
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 18
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 17
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 82,
+                                        "row": 16
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 75,
+                                        "row": 14
+                                    },
+                                    {
+                                        "width": 7,
+                                        "height": 1
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 74,
+                                        "row": 14
+                                    }
+                                ]
+                            ],
+                            "orientation": 4
+                        },
+                        {
+                            "name": "Front of Mansion",
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 31,
+                                        "row": 14
+                                    },
+                                    {
+                                        "width": 7,
+                                        "height": 5
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 31,
+                                        "row": 27
+                                    },
+                                    {
+                                        "width": 5,
+                                        "height": 7
+                                    }
+                                ]
+                            ],
+                            "orientation": 6
+                        },
+                        {
+                            "name": "Center of Mansion",
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 48,
+                                        "row": 24
+                                    },
+                                    {
+                                        "width": 14,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 58,
+                                        "row": 20
+                                    },
+                                    {
+                                        "width": 5,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 58,
+                                        "row": 22
+                                    },
+                                    {
+                                        "width": 4,
+                                        "height": 2
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 60,
+                                        "row": 26
+                                    },
+                                    {
+                                        "width": 2,
+                                        "height": 8
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 62,
+                                        "row": 33
+                                    },
+                                    {
+                                        "width": 4,
+                                        "height": 1
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 62,
+                                        "row": 32
+                                    },
+                                    {
+                                        "width": 4,
+                                        "height": 1
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 65,
+                                        "row": 31
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 65,
+                                        "row": 30
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 65,
+                                        "row": 29
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 64,
+                                        "row": 29
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 3
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 63,
+                                        "row": 29
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 3
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 62,
+                                        "row": 29
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 3
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 47,
+                                        "row": 20
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 6
+                                    }
+                                ],
+                                [
+                                    {
+                                        "col": 46,
+                                        "row": 20
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 6
+                                    }
+                                ]
+                            ],
+                            "orientation": 6
+                        }
+                    ]
                 }
-            }
+            },
+            "victoryRules": []
         }
     ]
 }

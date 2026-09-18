@@ -1,0 +1,221 @@
+{
+    "id": "trooper-okonkwo.unit",
+    "name": "Trooper Okonkwo",
+    "description": [
+        {
+            "text": "A steady rifleman and the team's morale anchor. Okonkwo keeps his cool when plans fall apart."
+        }
+    ],
+    "attributes": {
+        "weight": 88,
+        "actionPoints": {
+            "max": 48
+        },
+        "constitution": {
+            "max": 60
+        },
+        "fitness": {
+            "max": 75
+        },
+        "morale": {
+            "max": 92
+        },
+        "stamina": {
+            "max": 68
+        },
+        "speed": {
+            "max": 55
+        },
+        "strength": {
+            "max": 60
+        }
+    },
+    "inventory": {
+        "inUse": 0,
+        "items": [
+            {
+                "id": "m4.gun"
+            },
+            {
+                "id": "m9.gun"
+            },
+            {
+                "id": "m16-30.magazine"
+            },
+            {
+                "id": "m16-30.magazine"
+            },
+            {
+                "id": "m16-20.magazine"
+            },
+            {
+                "id": "m9-15.magazine"
+            },
+            {
+                "id": "m9-15.magazine"
+            },
+            {
+                "id": "smoke.grenade"
+            }
+        ]
+    },
+    "collision": {
+        "shape": "circle",
+        "radius": 24,
+        "materials": ["human.material"]
+    },
+    "renderable": {
+        "UI_MODE": {
+            "alive": {
+                "item-in-use": [
+                    {
+                        "imageId": "generic-carrying-4"
+                    }
+                ],
+                "default": [
+                    {
+                        "imageId": "generic-4"
+                    }
+                ]
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "MAP_MODE": {
+            "alive": {
+                "default": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-carrying-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                }
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "generic-cl",
+                    "orientation": 8
+                }
+            ],
+            "dead": []
+        },
+        "default": []
+    },
+    "actions": {
+        "throw": {
+            "accuracy": 40,
+            "actionPoints": 20
+        }
+    }
+}

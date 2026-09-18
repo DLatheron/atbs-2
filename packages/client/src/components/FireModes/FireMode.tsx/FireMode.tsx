@@ -89,9 +89,13 @@ export function FireModeComponent({
                     />
                     <ToggleButtonGroup
                         value={weapon.fireSelector}
-                        onChange={(_event, fireSelector) =>
-                            onChangeFireSelector(weapon.id, fireSelector)
-                        }
+                        onChange={(_event, fireSelector) => {
+                            // Exclusive groups emit null when the active button is clicked again.
+                            if (!fireSelector) {
+                                return;
+                            }
+                            onChangeFireSelector(weapon.id, fireSelector);
+                        }}
                         exclusive
                         fullWidth
                     >

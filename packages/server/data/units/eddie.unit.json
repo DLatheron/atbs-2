@@ -1,0 +1,216 @@
+{
+    "id": "eddie.unit",
+    "name": "Eddie",
+    "description": [
+        {
+            "text": "A twitchy MAC-10 gunner. Eddie sprays first and asks questions never."
+        }
+    ],
+    "attributes": {
+        "weight": 70,
+        "actionPoints": {
+            "max": 50
+        },
+        "constitution": {
+            "max": 42
+        },
+        "fitness": {
+            "max": 80
+        },
+        "morale": {
+            "max": 55,
+            "value": 40
+        },
+        "stamina": {
+            "max": 72
+        },
+        "speed": {
+            "max": 70
+        },
+        "strength": {
+            "max": 48
+        }
+    },
+    "inventory": {
+        "inUse": 0,
+        "items": [
+            {
+                "id": "mac-10.gun"
+            },
+            {
+                "id": "m1911.gun"
+            },
+            {
+                "id": "mac-10.magazine"
+            },
+            {
+                "id": "mac-10.magazine"
+            },
+            {
+                "id": "m1911-7.magazine"
+            },
+            {
+                "id": "smoke.grenade"
+            }
+        ]
+    },
+    "collision": {
+        "shape": "circle",
+        "radius": 24,
+        "materials": ["human.material"]
+    },
+    "renderable": {
+        "UI_MODE": {
+            "alive": {
+                "item-in-use": [
+                    {
+                        "imageId": "generic-carrying-4"
+                    }
+                ],
+                "default": [
+                    {
+                        "imageId": "generic-4"
+                    }
+                ]
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "MAP_MODE": {
+            "alive": {
+                "default": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                },
+                "item-in-use": {
+                    "directional": [
+                        [
+                            {
+                                "imageId": "generic-carrying-0",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-1",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-2",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-3",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-4",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-5",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-6",
+                                "orientation": 8
+                            }
+                        ],
+                        [
+                            {
+                                "imageId": "generic-carrying-7",
+                                "orientation": 8
+                            }
+                        ],
+                        []
+                    ]
+                }
+            },
+            "dead": [
+                {
+                    "imageId": "generic-dead"
+                }
+            ],
+            "default": []
+        },
+        "FIRE_MODE": {
+            "default": [
+                {
+                    "imageId": "generic-cl",
+                    "orientation": 8
+                }
+            ],
+            "dead": []
+        },
+        "default": []
+    },
+    "actions": {
+        "throw": {
+            "accuracy": 40,
+            "actionPoints": 20
+        }
+    }
+}

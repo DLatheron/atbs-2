@@ -65,7 +65,7 @@ const Config = z
                 visibilityManager: LogLevel.enum.error,
                 vfxRecipeManager: LogLevel.enum.error,
                 vfxManager: LogLevel.enum.error,
-                opportunityFireManager: LogLevel.enum.info
+                opportunityFireManager: LogLevel.enum.error
             })
     })
     .strict();

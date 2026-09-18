@@ -1,0 +1,19 @@
+{
+    "id": "beige-ground.terrain",
+    "name": "Beige Ground",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Flat beige earth."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "beige-ground"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

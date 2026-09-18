@@ -26,9 +26,7 @@
             "destroyed": []
         }
     },
-    "materials": [
-        "stone.material"
-    ],
+    "materials": ["stone.material"],
     "hitPoints": {
         "max": 150
     },

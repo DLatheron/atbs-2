@@ -145,6 +145,32 @@ export function useArmamentPage() {
         [sendForSelected]
     );
 
+    const onApplyDefaultLoadout = useCallback(
+        (mode: "replace" | "add") => {
+            sendForSelected((unitId) => ({
+                type: "client:armament:apply-default",
+                payload: { unitId, mode }
+            }));
+        },
+        [sendForSelected]
+    );
+
+    const onApplyDefaultLoadoutAll = useCallback(
+        (mode: "replace" | "add") => {
+            sendMessage({
+                type: "client:armament:apply-default-all",
+                payload: { mode }
+            });
+        },
+        [sendMessage]
+    );
+
+    const selectedUnitHasItems = (snapshot?.items.length ?? 0) > 0;
+    const anyUnitHasItems = useMemo(
+        () => Object.values(inventories).some((inventory) => inventory.items.length > 0),
+        [inventories]
+    );
+
     return {
         units,
         selectedUnit,
@@ -160,6 +186,10 @@ export function useArmamentPage() {
         onReorder,
         onBuy,
         onSell,
+        onApplyDefaultLoadout,
+        onApplyDefaultLoadoutAll,
+        selectedUnitHasItems,
+        anyUnitHasItems,
         error
     };
 }

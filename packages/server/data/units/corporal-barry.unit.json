@@ -16,25 +16,19 @@
         "speed": { "max": 40 },
         "strength": { "max": 82 }
     },
+    "viewAngleInDegrees": 90,
     "inventory": {
-        "inUse": 2,
+        "inUse": 0,
         "items": [
-            { "id": "coffee-token.item" },
-            { "id": "spas-12.gun" },
             { "id": "m4+m203.gun" },
-            { "id": "m4.gun" },
             { "id": "m16-30.magazine" },
             { "id": "m16-30.magazine" },
-            { "id": "m16-20.magazine" },
-            { "id": "m16-20.magazine" },
-            { "id": "40mm-he.round" },
-            { "id": "40mm-he.round" },
             { "id": "40mm-smoke.round" },
             { "id": "40mm-smoke.round" },
-            { "id": "40mm-gas.round" },
-            { "id": "40mm-gas.round" },
-            { "id": "40mm-stun.round" },
-            { "id": "40mm-stun.round" }
+            { "id": "spas-12.gun" },
+            { "id": "12-gauge-flechette.round" },
+            { "id": "12-gauge-flechette.round" },
+            { "id": "12-gauge-slug.round" }
         ]
     },
     "collision": {

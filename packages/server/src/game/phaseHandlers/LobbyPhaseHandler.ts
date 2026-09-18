@@ -205,15 +205,14 @@ export class LobbyPhaseHandler extends PhaseHandler {
     }
 
     /**
-     * Configure the lobby for the test scenario and start the game when all clients are ready.
+     * Configure the lobby for the playtest scenario and start the game when all clients are ready.
+     * If a scenario is already bound (e.g. automated tests), keep it and assign its sides.
      * Runs synchronously so message ordering cannot leave the queue stuck.
      */
     private tryAutoSetupGame(): void {
-        const scenarioId = "test.scenario";
-        const scenarioRecipe = this.game.scenarioRecipeManager.get(scenarioId);
-        const { sides } = scenarioRecipe;
-
         if (!this.game.scenario) {
+            const scenarioId = "hostage-rescue.scenario";
+            const scenarioRecipe = this.game.scenarioRecipeManager.get(scenarioId);
             const owner = this.game.owner;
             this.game.scenario = new Scenario(scenarioRecipe, this.game);
 
@@ -228,6 +227,7 @@ export class LobbyPhaseHandler extends PhaseHandler {
         }
 
         const scenario = this.game.scenario;
+        const sides = scenario.sides;
 
         for (const client of this.game.clients) {
             const sideIndex = client.id === this.game.ownerId ? 0 : 1;

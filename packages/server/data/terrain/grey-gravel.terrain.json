@@ -1,0 +1,19 @@
+{
+    "id": "grey-gravel.terrain",
+    "name": "Grey Gravel",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Crushed light grey gravel."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "grey-gravel"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

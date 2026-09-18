@@ -37,7 +37,10 @@ export const WorldActionDefinition = z.object({
     consumeItem: z.boolean().default(false),
 
     // Which attributes the action affects on the performing unit and by how much (to the maximum).
-    attributes: z.partialRecord(AttributeTypes, z.number()).optional()
+    attributes: z.partialRecord(AttributeTypes, z.number()).optional(),
+
+    /** Optional loudness; when set, opposition may receive a hearing camera cue. */
+    noise: z.number().nonnegative().optional()
 });
 export type WorldActionDefinition = z.infer<typeof WorldActionDefinition>;
 

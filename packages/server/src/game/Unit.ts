@@ -78,6 +78,7 @@ import {
     detonateExplosion,
     type ExplosionDetonationResult
 } from "./ExplosionSystem.js";
+import { broadcastFilteredFireTrace } from "./fireTraceBroadcast.js";
 import { ImageManager } from "./ImageManager.js";
 import { config } from "../config/config.schema.js";
 import { Logger, unsafeEntries } from "@atbs/misc";
@@ -101,6 +102,10 @@ const OPPORTUNITY_FIRE_APTS_THRESHOLD = 0.5;
 
 const OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER = 0.75;
 const OPPORTUNITY_FIRE_DEFAULT_SPEED_SCALER = 1.0;
+
+/** Snappy pacing for the acting side; slower for opposition playback queues. */
+const MOVEMENT_WAIT_MS_ACTING = 50;
+const MOVEMENT_WAIT_MS_PLAYBACK = 250;
 
 const ROTATION_APT_COST = 1;
 
@@ -177,7 +182,9 @@ export const UnitRecipe = z.object({
     description: Description,
     isDirectional: z.boolean().optional().default(true),
     viewAngleInDegrees: z.number().optional().default(90.0),
-    viewRange: z.number().positive().default(1000),
+    viewRange: z.number().positive().default(10000),
+    /** Open-air distance at which a reference noise of 100 is just barely heard. */
+    hearingRange: z.number().positive().default(10000),
     attributes: z.object({
         actionPoints: AttributeDef,
         constitution: AttributeDef,
@@ -661,6 +668,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
         return this._recipe.viewRange;
     }
 
+    get hearingRange(): number {
+        return this._recipe.hearingRange;
+    }
+
     get canSee(): Unit[] {
         return this._canSee;
     }
@@ -730,7 +741,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const starCount = this._visualDisorientationStarCount;
         for (let index = 0; index < starCount; index++) {
-            renderList.push({ imageId: unitDisorientAnimId(this.id, index) });
+            renderList.push({
+                imageId: unitDisorientAnimId(this.id, index),
+                visibilityFilter: [VisibilityFilter.enum.visible]
+            });
         }
 
         return renderList;
@@ -809,13 +823,61 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return;
         }
 
-        this.messageRouter.sendIfVisible(
+        this._sendMapUpdateIfVisible(
             {
                 type: "server:map:update",
                 payload: [this.map.getTile(this.mapLocation).generateTileUpdate()]
             },
             this.mapLocation
         );
+    }
+
+    /**
+     * Map updates for this unit's tiles: always deliver to the owning side;
+     * opposition remains gated by fog-of-war (`Side.canSee`).
+     */
+    private _sendMapUpdateIfVisible(
+        messages: Parameters<MessageRouter["sendIfVisible"]>[0],
+        tilePos: TilePos,
+        bypassQueuing = false
+    ): void {
+        this.messageRouter.sendIfVisible(messages, tilePos, undefined, bypassQueuing, this.side.id);
+    }
+
+    /**
+     * Movement/rotation pacing: acting side gets a short wait; opposition that
+     * can see the tile gets a longer wait for playback. Hidden opposition is skipped.
+     */
+    private _sendMovementWaitIfVisible(tilePos: TilePos): void {
+        this.messageRouter.send(
+            { type: "server:wait:time", payload: MOVEMENT_WAIT_MS_ACTING },
+            this.side.id
+        );
+        this.messageRouter.sendIfVisible(
+            { type: "server:wait:time", payload: MOVEMENT_WAIT_MS_PLAYBACK },
+            tilePos,
+            this.side.oppositionSideIds
+        );
+    }
+
+    /** Camera follow for own units always; opposition only when they can see the tile. */
+    private _sidesReceivingUnitCamera(
+        tile: VisibilityPoi,
+        visibilityBefore: Map<string, boolean>
+    ): { sideId: string; wasVisible: boolean }[] {
+        const results: { sideId: string; wasVisible: boolean }[] = [];
+        for (const side of this.game.sides) {
+            const isOwningSide = side.id === this.side.id;
+            if (!isOwningSide && !side.canSee(tile)) {
+                continue;
+            }
+            results.push({
+                sideId: side.id,
+                // Owning side always tracks their own unit as already-visible (MEDIUM).
+                wasVisible: isOwningSide || visibilityBefore.get(side.id) === true
+            });
+        }
+        return results;
     }
 
     private _hasSufficientActionPoints(aptCost: number): boolean {
@@ -978,14 +1040,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
             rolledBackTile.addUnit(this);
             this._refreshVisibility();
 
-            this.messageRouter.sendIfVisible(
+            this._sendMapUpdateIfVisible(
                 {
                     type: "server:map:update",
                     payload: [currentTile.generateTileUpdate()]
                 },
                 currentTile.location
             );
-            this.messageRouter.sendIfVisible(
+            this._sendMapUpdateIfVisible(
                 {
                     type: "server:map:update",
                     payload: [rolledBackTile.generateTileUpdate()]
@@ -1054,17 +1116,31 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
     /**
      * Sends every side its own visibility snapshot (visible tiles + friendly
-     * viewer cone parameters). Because opposition messages are queued during
-     * another side's turn, this interleaves each side's visibility into their
-     * playback so fog-of-war and view cones stay in sync with map updates.
+     * viewer cone parameters), then map updates for opposition units that side
+     * can currently see. The map updates matter when LOS is newly gained on a
+     * unit whose sprite was never delivered (hidden movement): visible:tiles
+     * alone only un-culls — the render list must include the unit image.
+     * Opposition messages remain queued during another side's turn so FOW and
+     * sprites stay interleaved with playback.
      */
     private _broadcastVisibleTiles(): void {
         for (const side of this.game.sides) {
+            const visibleOppositionTiles = this.game.getVisibleOppositionTileUpdates(side.id);
             this.messageRouter.send(
-                {
-                    type: "server:visible:tiles",
-                    payload: this.visibilityManager.getVisibilityUpdate(side.oppositionSideIds)
-                },
+                [
+                    {
+                        type: "server:visible:tiles",
+                        payload: this.visibilityManager.getVisibilityUpdate(side.oppositionSideIds)
+                    },
+                    ...(visibleOppositionTiles.length > 0
+                        ? [
+                              {
+                                  type: "server:map:update" as const,
+                                  payload: visibleOppositionTiles
+                              }
+                          ]
+                        : [])
+                ],
                 side.id
             );
         }
@@ -1088,16 +1164,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             return;
         }
 
-        this.messageRouter.sendIfVisible(
-            {
-                type: "server:camera:move:to",
-                payload: {
-                    target: "tile",
-                    tilePos: mapLocation,
-                    trackingSpeed: TrackingSpeed.enum.MEDIUM
-                }
-            },
-            mapLocation
+        const visibilityBefore = new Map(
+            this.game.sides.map((side) => [side.id, side.canSee(this.map.getTile(mapLocation))])
         );
 
         while (Math.abs(relativeRotation) > 0) {
@@ -1130,16 +1198,35 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
             const tile = this.map.getTile(mapLocation);
 
-            this.messageRouter.sendIfVisible(
-                [
-                    { type: "server:wait:time", payload: 300 },
-                    {
-                        type: "server:map:update",
-                        payload: [tile.generateTileUpdate()]
-                    }
-                ],
+            this._sendMovementWaitIfVisible(mapLocation);
+            this._sendMapUpdateIfVisible(
+                {
+                    type: "server:map:update",
+                    payload: [tile.generateTileUpdate()]
+                },
                 mapLocation
             );
+
+            for (const { sideId, wasVisible } of this._sidesReceivingUnitCamera(
+                tile,
+                visibilityBefore
+            )) {
+                this.messageRouter.send(
+                    {
+                        type: "server:camera:move:to",
+                        payload: {
+                            target: "tile",
+                            tilePos: mapLocation,
+                            trackingSpeed: wasVisible
+                                ? TrackingSpeed.enum.MEDIUM
+                                : TrackingSpeed.enum.IMMEDIATE
+                        }
+                    },
+                    sideId
+                );
+                visibilityBefore.set(sideId, true);
+            }
+
             this._broadcastVisibleTiles();
 
             relativeRotation = relativeDirection(this.orientation, orientation);
@@ -1204,17 +1291,21 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         const srcTile = map.getTile(this.mapLocation);
+        const visibilityBefore = new Map(
+            this.game.sides.map((side) => [side.id, side.canSee(srcTile)])
+        );
+
         srcTile.removeUnit(this);
-        this.messageRouter.sendIfVisible(
-            [
-                { type: "server:wait:time", payload: 300 },
-                { type: "server:map:update", payload: [srcTile.generateTileUpdate()] }
-            ],
+        this._sendMovementWaitIfVisible(srcPos);
+        this._sendMapUpdateIfVisible(
+            { type: "server:map:update", payload: [srcTile.generateTileUpdate()] },
             srcPos
         );
 
         this.location = dstTile.location;
         dstTile.addUnit(this);
+
+        this.game.emitZoneEntryEvents(this);
 
         this.updateAvailableActions();
         this._refreshVisibility(OPPORTUNITY_FIRE_MOVEMENT_SPEED_SCALER);
@@ -1242,20 +1333,31 @@ export class Unit extends SceneObject implements VisibilityViewer {
         // the arriving sprite is not briefly culled by a stale visibleTiles).
         this._broadcastVisibleTiles();
 
-        this.messageRouter.sendIfVisible(
-            [
-                { type: "server:map:update", payload: [dstTile.generateTileUpdate()] },
+        // Hidden→visible: appear on dst + IMMEDIATE camera. Visible→visible: MEDIUM.
+        // Visible→hidden / hidden→hidden: opposition is skipped; owning side always gets dst.
+        this._sendMapUpdateIfVisible(
+            [{ type: "server:map:update", payload: [dstTile.generateTileUpdate()] }],
+            dstPos
+        );
+
+        for (const { sideId, wasVisible } of this._sidesReceivingUnitCamera(
+            dstTile,
+            visibilityBefore
+        )) {
+            this.messageRouter.send(
                 {
                     type: "server:camera:move:to",
                     payload: {
                         target: "tile",
                         tilePos: dstPos,
-                        trackingSpeed: TrackingSpeed.enum.MEDIUM
+                        trackingSpeed: wasVisible
+                            ? TrackingSpeed.enum.MEDIUM
+                            : TrackingSpeed.enum.IMMEDIATE
                     }
-                }
-            ],
-            dstPos
-        );
+                },
+                sideId
+            );
+        }
 
         // this.updateAvailableActions(map);
 
@@ -1322,6 +1424,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
 
         const unitWorldPos = map.tileCenterToWorld(this.mapLocation);
         const collisionRadius = this._recipe.collision.radius;
+        let firedAnyShot = false;
+        let loudestExplosion: { worldPos: Vec2; noise: number } | null = null;
 
         for (const [shot, toWorldPos] of targetWorldPoses.entries()) {
             const dir = toWorldPos.sub(unitWorldPos).normalise();
@@ -1358,7 +1462,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.logger.dir({ shot, aptCost, initialAptCost, perShotAptCost });
 
             if (!this._hasSufficientActionPoints(aptCost)) {
-                return;
+                break;
             }
 
             if (weapon.isEmpty) {
@@ -1366,11 +1470,14 @@ export class Unit extends SceneObject implements VisibilityViewer {
                     { type: "server:error", payload: ErrorType.enum.INSUFFICIENT_AMMO },
                     this.side.id
                 );
+                break;
             }
 
             if (!this._useActionPoints(aptCost)) {
-                return;
+                break;
             }
+
+            firedAnyShot = true;
 
             const round = weapon.fire();
             this.logger.dir({ round });
@@ -1508,6 +1615,10 @@ export class Unit extends SceneObject implements VisibilityViewer {
                         ]);
                     }
                 }
+                const explosionNoise = pending.explosion.noise ?? 200;
+                if (!loudestExplosion || explosionNoise > loudestExplosion.noise) {
+                    loudestExplosion = { worldPos: pending.origin, noise: explosionNoise };
+                }
             }
 
             if (showDebugGraphics && debugGraphics) {
@@ -1529,28 +1640,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
                 animObjectRemovals: combinedAnimObjectRemovals
             };
 
-            if (combinedVisibilityBySide && combinedVisibilityBySide.size > 0) {
-                for (const side of this.game.sides) {
-                    this.messageRouter.send(
-                        {
-                            type: "server:fire:trace",
-                            payload: {
-                                ...basePayload,
-                                visibilityUpdates: combinedVisibilityBySide.get(side.id) ?? []
-                            }
-                        },
-                        side.id
-                    );
-                }
-            } else {
-                this.messageRouter.send({
-                    type: "server:fire:trace",
-                    payload: {
-                        ...basePayload,
-                        visibilityUpdates: []
-                    }
-                });
-            }
+            // Defer hearing until after the full trigger pull so auto fire doesn't
+            // spam N camera snaps — emit once below the shot loop.
+            broadcastFilteredFireTrace({
+                game: this.game,
+                payload: basePayload,
+                actingSideId: this.side.id,
+                originWorldPos: unitWorldPos,
+                originTilePos: this.mapLocation,
+                visibilityUpdatesBySide: combinedVisibilityBySide,
+                deferHearing: true
+            });
 
             // A death can remove a viewer/blocker and open up sightlines, so
             // recompute visibility and push each side its updated visible tiles.
@@ -1559,6 +1659,26 @@ export class Unit extends SceneObject implements VisibilityViewer {
             if (combinedDeaths.length > 0 || (combinedVisibilityBySide?.size ?? 0) > 0) {
                 this._refreshVisibility();
                 this._broadcastVisibleTiles();
+            }
+        }
+
+        // One hearing cue per trigger pull (not per round). Prefer the louder of
+        // muzzle report vs impact explosion when both exist.
+        if (firedAnyShot) {
+            const gunNoise = weapon.noise;
+            if (loudestExplosion && loudestExplosion.noise > gunNoise) {
+                this.game.hearingManager.emitNoise({
+                    worldPos: loudestExplosion.worldPos,
+                    noise: loudestExplosion.noise,
+                    actingSideId: this.side.id
+                });
+            } else {
+                this.game.hearingManager.emitNoise({
+                    worldPos: unitWorldPos,
+                    noise: gunNoise,
+                    actingSideId: this.side.id,
+                    relevantTilePoses: [this.mapLocation]
+                });
             }
         }
     }
@@ -1787,6 +1907,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
         } else {
             itemToThrow.location = landingTilePos;
             landingTile.addItem(itemToThrow);
+            this.game.eventManager.on("itemDropped", itemToThrow);
+            this.game.emitItemZoneEvents(itemToThrow, null);
 
             // Update the unit's tile, because they are no longer holding the item.
             tileUpdates.push(map.getTile(this.mapLocation).generateTimedTileUpdate(landingTime));
@@ -1815,29 +1937,21 @@ export class Unit extends SceneObject implements VisibilityViewer {
             animObjectRemovals: explosionResult?.animObjectRemovals ?? []
         };
         const visibilityBySide = explosionResult?.visibilityUpdatesBySide;
+        const landingWorldPos = map.tileCenterToWorld(landingTilePos);
+        const explosionNoise =
+            explodeOnLanding && itemToThrow.willExplode
+                ? itemToThrow.getExplosion.noise
+                : undefined;
 
-        if (visibilityBySide && visibilityBySide.size > 0) {
-            for (const side of this.game.sides) {
-                this.messageRouter.send(
-                    {
-                        type: "server:fire:trace",
-                        payload: {
-                            ...basePayload,
-                            visibilityUpdates: visibilityBySide.get(side.id) ?? []
-                        }
-                    },
-                    side.id
-                );
-            }
-        } else {
-            this.messageRouter.send({
-                type: "server:fire:trace",
-                payload: {
-                    ...basePayload,
-                    visibilityUpdates: []
-                }
-            });
-        }
+        broadcastFilteredFireTrace({
+            game: this.game,
+            payload: basePayload,
+            actingSideId: this.side.id,
+            originWorldPos: explosionResult ? landingWorldPos : unitWorldPos,
+            originTilePos: explosionResult ? landingTilePos : this.mapLocation,
+            visibilityUpdatesBySide: visibilityBySide,
+            noise: explosionNoise ?? 40
+        });
 
         this._refreshVisibility();
         this._broadcastVisibleTiles();
@@ -1917,6 +2031,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             this.inventory.removeItem(backpackItem);
             backpackItem.location = this.mapLocation;
             tile.addItem(backpackItem);
+            this.game.eventManager.on("itemDropped", backpackItem);
+            this.game.emitItemZoneEvents(backpackItem, null);
             this._updateCurrentTileOnMap();
             this._sendSelectedItemUpdate();
             return true;
@@ -1946,6 +2062,8 @@ export class Unit extends SceneObject implements VisibilityViewer {
             }
             unloaded.location = this.mapLocation;
             tile.addItem(unloaded);
+            this.game.eventManager.on("itemDropped", unloaded);
+            this.game.emitItemZoneEvents(unloaded, null);
             this._updateCurrentTileOnMap();
             this._sendSelectedItemUpdate();
             return true;
@@ -1975,6 +2093,13 @@ export class Unit extends SceneObject implements VisibilityViewer {
         this.inventory.addItem(item);
         if (use) {
             this.inventory.selectItem(item);
+        }
+
+        this.game.eventManager.on("itemPickedUp", item, this);
+        if (this.location) {
+            for (const zoneId of this.game.getZoneIdsAt(this.location)) {
+                this.game.eventManager.on("itemEnteredZone", item, zoneId, this);
+            }
         }
 
         this._updateCurrentTileOnMap();
@@ -2112,14 +2237,19 @@ export class Unit extends SceneObject implements VisibilityViewer {
     armingBuyItem(
         store: Store,
         itemId: ItemId,
-        options: { use?: boolean; insertionPoint?: number } = {}
+        options: { use?: boolean; insertionPoint?: number; quantity?: number } = {}
     ): true | ErrorType {
         const storeItem = store.findItem(itemId);
         if (!storeItem) {
             throw new Error(`Store does not have item ${itemId}`);
         }
 
-        let quantity = Math.min(storeItem.batchSize, storeItem.item.quantity);
+        const requestedQuantity = options.quantity ?? storeItem.batchSize;
+        if (requestedQuantity < 1) {
+            throw new Error(`Cannot buy fewer than 1 of ${itemId}`);
+        }
+
+        let quantity = Math.min(requestedQuantity, storeItem.item.quantity);
         if (quantity <= 0) {
             throw new Error(`Store does not have any ${itemId}`);
         }
@@ -2230,6 +2360,52 @@ export class Unit extends SceneObject implements VisibilityViewer {
         if (unloaded) {
             this.inventory.addOrCollapseItem(unloaded);
         }
+        return true;
+    }
+
+    /**
+     * Purchase the unit recipe's default loadout from the side store.
+     * Items not present (or out of stock) in the store are skipped.
+     */
+    armingApplyDefaultLoadout(store: Store, mode: "replace" | "add"): true | ErrorType {
+        const recipe = this._recipe.inventory;
+        const purchasable = recipe.items.filter(({ id }) => {
+            const storeItem = store.findItem(id);
+            return !!storeItem && storeItem.item.quantity > 0;
+        });
+        if (recipe.items.length > 0 && purchasable.length === 0) {
+            return ErrorType.enum.NO_DEFAULT_LOADOUT_IN_STORE;
+        }
+
+        if (mode === "replace") {
+            while (this.inventory.items.length > 0) {
+                const item = this.inventory.items[0];
+                if (store.isStoreItem(item.recipeId)) {
+                    this.armingSellItem(store, item.id, item.quantity);
+                } else {
+                    this.inventory.removeItem(item);
+                }
+            }
+            this.inventory.deselectItem();
+        }
+
+        for (let index = 0; index < recipe.items.length; index++) {
+            const { id: itemId } = recipe.items[index];
+            const storeItem = store.findItem(itemId);
+            if (!storeItem || storeItem.item.quantity <= 0) {
+                continue;
+            }
+
+            const result = this.armingBuyItem(store, itemId, {
+                use: recipe.inUse === index,
+                // Recipe entries are individual items; shop batch size only applies to manual buys.
+                quantity: 1
+            });
+            if (result !== true) {
+                return result;
+            }
+        }
+
         return true;
     }
 
@@ -2369,7 +2545,7 @@ export class Unit extends SceneObject implements VisibilityViewer {
     private _updateCurrentTileOnMap(): void {
         const tile = this.map.getTile(this.mapLocation);
         this._refreshVisibility();
-        this.messageRouter.sendIfVisible(
+        this._sendMapUpdateIfVisible(
             {
                 type: "server:map:update",
                 payload: [tile.generateTileUpdate()]
@@ -2424,10 +2600,17 @@ export class Unit extends SceneObject implements VisibilityViewer {
         }
 
         const furnitureChanged = actionDefinition.furnitureAffected.performAction(actionDefinition);
+        this.game.eventManager.on(
+            "furnitureAction",
+            actionDefinition.furnitureAffected,
+            action,
+            this,
+            itemInUse
+        );
         if (furnitureChanged) {
             visibilityManager.invalidateLocation(actionDefinition.furnitureAffected.location);
 
-            this.messageRouter.sendIfVisible(
+            this._sendMapUpdateIfVisible(
                 {
                     type: "server:map:update",
                     payload: [tile.generateTileUpdate()]
@@ -2436,6 +2619,15 @@ export class Unit extends SceneObject implements VisibilityViewer {
             );
 
             this._refreshVisibility(actionDefinition.speedScaler);
+        }
+
+        if (actionDefinition.noise !== undefined && actionDefinition.noise > 0) {
+            this.game.hearingManager.emitNoise({
+                worldPos: map.tileCenterToWorld(actionLocation),
+                noise: actionDefinition.noise,
+                actingSideId: this.side.id,
+                relevantTilePoses: [actionLocation, mapLocation]
+            });
         }
 
         this.updateAvailableActions();

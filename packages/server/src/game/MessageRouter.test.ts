@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerToClientMessage, SideId } from "@atbs/shared-data";
 import { Client } from "./Client.js";
+import { TilePos } from "@atbs/maths";
 
 import { MessageRouter } from "./MessageRouter.js";
 import { Game } from "./Game.js";
@@ -11,6 +12,7 @@ describe("MessageRouter", () => {
     let sideIds: SideId[];
     let clients: Client[];
     let messages: ServerToClientMessage[];
+    let visibleTiles: Set<string>;
 
     beforeEach(() => {
         game = vi.mocked(Game);
@@ -49,7 +51,10 @@ describe("MessageRouter", () => {
             }
         ];
 
-        router = new MessageRouter(sideIds, clients);
+        visibleTiles = new Set<string>();
+        router = new MessageRouter(sideIds, clients, (sideId, tilePos) =>
+            visibleTiles.has(`${sideId}:${tilePos.col},${tilePos.row}`)
+        );
     });
 
     describe("getClientForSide", () => {
@@ -106,6 +111,58 @@ describe("MessageRouter", () => {
             expect(clients[0].sendMessage).toHaveBeenCalledTimes(4);
             expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[3]);
             expect(clients[1].sendMessage).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe("sendIfVisible", () => {
+        const tile = new TilePos(3, 4);
+
+        it("skips sides that cannot see the tile", () => {
+            visibleTiles.add("side-0:3,4");
+
+            router.sendIfVisible(messages[0], tile);
+
+            expect(clients[0].sendMessage).toHaveBeenCalledWith(messages[0]);
+            expect(clients[1].sendMessage).not.toHaveBeenCalled();
+        });
+
+        it("queues for opposition when paused and visible", () => {
+            visibleTiles.add("side-1:3,4");
+            router.pauseMessageSending("side-1");
+
+            router.sendIfVisible(messages[0], tile);
+
+            expect(clients[1].sendMessage).not.toHaveBeenCalled();
+            expect(router.getQueuedMessages("side-1")).toEqual([messages[0]]);
+
+            router.resumeMessageSending("side-1");
+            expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[0]);
+        });
+
+        it("leaves the opposition queue empty when nothing is visible", () => {
+            router.pauseMessageSending("side-1");
+            router.sendIfVisible(messages[0], tile);
+            expect(router.getQueuedMessages("side-1")).toEqual([]);
+            router.resumeMessageSending("side-1");
+            expect(clients[1].sendMessage).not.toHaveBeenCalled();
+        });
+
+        it("always delivers to alwaysIncludeSideIds even when the tile is unseen", () => {
+            // Mimics owning-side FOW: Side.canSee is false for own-unit tiles
+            // because interest masks are opposition-only.
+            router.sendIfVisible(messages[0], tile, undefined, false, "side-0");
+
+            expect(clients[0].sendMessage).toHaveBeenCalledWith(messages[0]);
+            expect(clients[1].sendMessage).not.toHaveBeenCalled();
+        });
+
+        it("still gates non-included sides when alwaysIncludeSideIds is set", () => {
+            visibleTiles.add("side-1:3,4");
+
+            router.sendIfVisible(messages[0], tile, undefined, false, "side-0");
+
+            expect(clients[0].sendMessage).toHaveBeenCalledWith(messages[0]);
+            expect(clients[1].sendMessage).toHaveBeenCalledWith(messages[0]);
         });
     });
 

@@ -228,14 +228,16 @@ export class ActionPhaseHandler extends PhaseHandler {
                     );
                 }
 
-                unit.fire(
-                    weapon,
-                    fireDetails.fireSelector,
-                    fireDetails.fireMode,
-                    fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
-                    fireDetails.triggerHeldTimeInMs
-                );
-                from.sendMessage({ type: "server:ui:disabled", payload: false });
+                game.runWithDeferredVictoryMessages(() => {
+                    unit.fire(
+                        weapon,
+                        fireDetails.fireSelector,
+                        fireDetails.fireMode,
+                        fireDetails.worldPoses.map((worldPos) => new Vec2(worldPos)),
+                        fireDetails.triggerHeldTimeInMs
+                    );
+                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                });
             }),
 
             messageManager.registerHandler("client:unit:mode:fire:end", ({ game }, _null, from) => {
@@ -268,8 +270,10 @@ export class ActionPhaseHandler extends PhaseHandler {
                         throw new Error(`Unit ${unit.id} is not using item ${itemId}`);
                     }
 
-                    unit.throw(new Vec2(worldPos));
-                    from.sendMessage({ type: "server:ui:disabled", payload: false });
+                    game.runWithDeferredVictoryMessages(() => {
+                        unit.throw(new Vec2(worldPos));
+                        from.sendMessage({ type: "server:ui:disabled", payload: false });
+                    });
                 }
             ),
 

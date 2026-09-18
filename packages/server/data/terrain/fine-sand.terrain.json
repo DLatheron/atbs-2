@@ -1,0 +1,19 @@
+{
+    "id": "fine-sand.terrain",
+    "name": "Fine Sand",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Fine light brown sand."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "fine-sand"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

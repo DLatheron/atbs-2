@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RenderMode } from "@atbs/shared-data";
+import { RenderMode, VisibilityFilter } from "@atbs/shared-data";
 import { Orientation } from "@atbs/maths";
 import type { Game } from "./Game.js";
 import { ItemManager } from "./ItemManager.js";
@@ -76,6 +76,12 @@ function overlayIds(renderList: { imageId: string }[]): string[] {
         .map(({ imageId }) => imageId);
 }
 
+function overlayEntries(
+    renderList: { imageId: string; visibilityFilter?: string[] }[]
+): { imageId: string; visibilityFilter?: string[] }[] {
+    return renderList.filter(({ imageId }) => imageId.startsWith("anim-disorient-"));
+}
+
 describe("Unit disorientation overlay", () => {
     const sentMessages: unknown[] = [];
     let unit: Unit;
@@ -142,6 +148,12 @@ describe("Unit disorientation overlay", () => {
         });
 
         expect(overlayIds(renderList)).toStrictEqual([unitDisorientAnimId("unit-1", 0)]);
+        expect(overlayEntries(renderList)).toStrictEqual([
+            {
+                imageId: unitDisorientAnimId("unit-1", 0),
+                visibilityFilter: [VisibilityFilter.enum.visible]
+            }
+        ]);
     });
 
     it("appends four anim placeholders at 86 disorientation in MAP_MODE and FIRE_MODE", () => {
@@ -154,22 +166,17 @@ describe("Unit disorientation overlay", () => {
             unitDisorientAnimId("unit-1", 3)
         ];
 
-        expect(
-            overlayIds(
-                unit.getRenderList({
-                    renderMode: RenderMode.enum.MAP_MODE,
-                    states: []
-                })
-            )
-        ).toStrictEqual(expected);
-        expect(
-            overlayIds(
-                unit.getRenderList({
-                    renderMode: RenderMode.enum.FIRE_MODE,
-                    states: []
-                })
-            )
-        ).toStrictEqual(expected);
+        for (const renderMode of [RenderMode.enum.MAP_MODE, RenderMode.enum.FIRE_MODE]) {
+            const renderList = unit.getRenderList({ renderMode, states: [] });
+            expect(overlayIds(renderList)).toStrictEqual(expected);
+            expect(
+                overlayEntries(renderList).every(
+                    (entry) =>
+                        entry.visibilityFilter?.length === 1 &&
+                        entry.visibilityFilter[0] === VisibilityFilter.enum.visible
+                )
+            ).toBe(true);
+        }
     });
 
     it("does not append overlay images in UI_MODE", () => {

@@ -1,0 +1,19 @@
+{
+    "id": "cream-ground.terrain",
+    "name": "Cream Ground",
+    "tileSet": "Photo",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Smooth cream surface."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "cream-ground"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

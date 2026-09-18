@@ -1,0 +1,19 @@
+{
+    "id": "forest-floor.terrain",
+    "name": "Forest Floor",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Leafy forest floor."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "forest-floor"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

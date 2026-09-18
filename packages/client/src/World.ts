@@ -43,6 +43,7 @@ import {
     RotateBy180Degrees
 } from "@atbs/maths";
 import { ImageCache } from "./ImageCache";
+import { tileDrawDestRect } from "./tileDraw";
 import { Timer } from "./Timer";
 import { IInteractionHandler } from "./IInteractionHandler";
 import { MapModeHandler } from "./modeHandlers/MapModeHandler";
@@ -1709,28 +1710,21 @@ export class World {
         grayscale?: boolean;
     }): void {
         const angleInRadians = OrientationToRadians[orientation];
+        const dest = tileDrawDestRect(tileSize * scale.x, tileSize * scale.y);
 
         context.save();
         context.globalAlpha = opacity;
         if (grayscale) {
             context.filter = "grayscale(100%)";
         }
+        // Nearest-neighbour avoids bilinear samples outside the source, which
+        // composite as dark fringes along tile edges — worst after rotation and
+        // on furniture that meets at the tile boundary (e.g. multi-part trees).
+        context.imageSmoothingEnabled = false;
 
         context.translate(canvasPos.x + offset.x, canvasPos.y + offset.y);
         context.rotate(angleInRadians);
-        context.drawImage(
-            image,
-            0,
-            0,
-            tileSize,
-            tileSize,
-            -((tileSize * scale.x) / 2),
-            -((tileSize * scale.y) / 2),
-            tileSize * scale.x + 1,
-            tileSize * scale.y + 1
-        );
-        context.rotate(-angleInRadians);
-        context.translate(-(canvasPos.x + offset.x), -(canvasPos.y + offset.y));
+        context.drawImage(image, 0, 0, tileSize, tileSize, dest.x, dest.y, dest.width, dest.height);
         context.restore();
     }
 

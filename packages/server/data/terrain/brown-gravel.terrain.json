@@ -1,0 +1,19 @@
+{
+    "id": "brown-gravel.terrain",
+    "name": "Brown Gravel",
+    "tileSet": "Photo",
+    "category": "Natural",
+    "description": [
+        {
+            "text": "Fine brown gravel."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "brown-gravel"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

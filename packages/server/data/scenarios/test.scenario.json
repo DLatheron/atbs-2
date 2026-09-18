@@ -24,6 +24,24 @@
         }
     ],
     "worldMapId": "moonbase.map",
+    "objectiveZones": [
+        {
+            "id": "safe-1",
+            "name": "Extraction LZ",
+            "tiles": [
+                [
+                    {
+                        "col": 0,
+                        "row": 0
+                    },
+                    {
+                        "width": 2,
+                        "height": 2
+                    }
+                ]
+            ]
+        }
+    ],
     "sides": [
         {
             "id": "goodies",
@@ -41,7 +59,7 @@
                     "overrides": {
                         "location": {
                             "col": 6,
-                            "row": 10
+                            "row": 9
                         },
                         "orientation": 2
                     }
@@ -51,6 +69,66 @@
                     "overrides": {
                         "location": {
                             "col": 3,
+                            "row": 3
+                        },
+                        "orientation": 0
+                    }
+                },
+                {
+                    "id": "sergeant-johnson.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 5,
+                            "row": 9
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "specialist-chen.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 7,
+                            "row": 9
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "trooper-wallace.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 6,
+                            "row": 8
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "trooper-okonkwo.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 6,
+                            "row": 10
+                        },
+                        "orientation": 2
+                    }
+                },
+                {
+                    "id": "specialist-reyes.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 4,
+                            "row": 3
+                        },
+                        "orientation": 0
+                    }
+                },
+                {
+                    "id": "medic-patel.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 2,
                             "row": 3
                         },
                         "orientation": 0
@@ -177,7 +255,7 @@
                             },
                             {
                                 "itemId": "barrett.gun",
-                                "quantity": 1,
+                                "quantity": 5,
                                 "baseCost": 8900,
                                 "batchSize": 1,
                                 "categories": ["Guns", "Snipers"]
@@ -226,7 +304,7 @@
                             },
                             {
                                 "itemId": "barrett.magazine",
-                                "quantity": 4,
+                                "quantity": 6,
                                 "baseCost": 250,
                                 "batchSize": 1,
                                 "categories": ["Magazines", "Snipers"]
@@ -268,28 +346,28 @@
                             },
                             {
                                 "itemId": "40mm-he.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 80,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-smoke.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 70,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-gas.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 100,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
                             },
                             {
                                 "itemId": "40mm-stun.round",
-                                "quantity": 1,
+                                "quantity": 20,
                                 "baseCost": 90,
                                 "batchSize": 1,
                                 "categories": ["Rounds", "ARs", "Grenades"]
@@ -387,14 +465,14 @@
                             },
                             {
                                 "itemId": "front-door-key.item",
-                                "quantity": 4,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
                             },
                             {
                                 "itemId": "skeleton-keys.item",
-                                "quantity": 2,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
@@ -413,30 +491,61 @@
                             "outlineColor": "#ffb020",
                             "tiles": [
                                 [
-                                    { "col": 0, "row": 0 },
-                                    { "width": 2, "height": 2 }
+                                    {
+                                        "col": 0,
+                                        "row": 0
+                                    },
+                                    {
+                                        "width": 2,
+                                        "height": 2
+                                    }
                                 ]
                             ],
                             "orientation": 1
                         },
                         {
                             "name": "West side",
-                            "tiles": [[{ "col": 10, "row": 10 }]],
+                            "tiles": [
+                                [
+                                    {
+                                        "col": 10,
+                                        "row": 10
+                                    }
+                                ]
+                            ],
                             "orientation": 2
                         },
                         {
                             "name": "Single point",
                             "tiles": [
                                 [
-                                    { "col": 2, "row": 2 },
-                                    { "width": 1, "height": 4 }
+                                    {
+                                        "col": 2,
+                                        "row": 2
+                                    },
+                                    {
+                                        "width": 1,
+                                        "height": 4
+                                    }
                                 ]
                             ],
                             "orientation": 3
                         }
                     ]
                 }
-            }
+            },
+            "victoryRules": [
+                {
+                    "id": "kill-hans",
+                    "name": "Assassinate ${unit}",
+                    "on": {
+                        "type": "unitKilled",
+                        "unitId": "hans-gruber.unit"
+                    },
+                    "value": 100,
+                    "once": true
+                }
+            ]
         },
         {
             "id": "baddies",
@@ -453,7 +562,77 @@
                     "id": "hans-gruber.unit",
                     "overrides": {
                         "location": {
-                            "col": 13,
+                            "col": 8,
+                            "row": 9
+                        },
+                        "orientation": 6
+                    }
+                },
+                {
+                    "id": "karl.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 7,
+                            "row": 9
+                        },
+                        "orientation": 6
+                    }
+                },
+                {
+                    "id": "tony.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 9,
+                            "row": 9
+                        },
+                        "orientation": 6
+                    }
+                },
+                {
+                    "id": "theo.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 8,
+                            "row": 8
+                        },
+                        "orientation": 6
+                    }
+                },
+                {
+                    "id": "eddie.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 7,
+                            "row": 8
+                        },
+                        "orientation": 5
+                    }
+                },
+                {
+                    "id": "franco.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 9,
+                            "row": 8
+                        },
+                        "orientation": 7
+                    }
+                },
+                {
+                    "id": "heinrich.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 7,
+                            "row": 10
+                        },
+                        "orientation": 6
+                    }
+                },
+                {
+                    "id": "james.unit",
+                    "overrides": {
+                        "location": {
+                            "col": 9,
                             "row": 10
                         },
                         "orientation": 6
@@ -545,21 +724,21 @@
                             },
                             {
                                 "itemId": "mac-10.gun",
-                                "quantity": 1,
+                                "quantity": 5,
                                 "baseCost": 400,
                                 "batchSize": 1,
                                 "categories": ["Guns", "SMGs"]
                             },
                             {
                                 "itemId": "uzi.gun",
-                                "quantity": 1,
+                                "quantity": 5,
                                 "baseCost": 600,
                                 "batchSize": 1,
                                 "categories": ["Guns", "SMGs"]
                             },
                             {
                                 "itemId": "svd.gun",
-                                "quantity": 1,
+                                "quantity": 5,
                                 "baseCost": 1800,
                                 "batchSize": 1,
                                 "categories": ["Guns", "Snipers"]
@@ -629,7 +808,7 @@
                             },
                             {
                                 "itemId": "svd.magazine",
-                                "quantity": 4,
+                                "quantity": 6,
                                 "baseCost": 4,
                                 "batchSize": 1,
                                 "categories": ["Magazines", "Snipers"]
@@ -748,17 +927,24 @@
                             },
                             {
                                 "itemId": "law.gun",
-                                "quantity": 4,
+                                "quantity": 5,
                                 "baseCost": 1500,
                                 "batchSize": 1,
                                 "categories": ["Explosives"]
                             },
                             {
                                 "itemId": "front-door-key.item",
-                                "quantity": 4,
+                                "quantity": 5,
                                 "baseCost": 0,
                                 "batchSize": 1,
                                 "categories": ["Other"]
+                            },
+                            {
+                                "itemId": "mp5k.gun",
+                                "quantity": 5,
+                                "baseCost": 900,
+                                "batchSize": 1,
+                                "categories": ["Guns", "SMGs"]
                             }
                         ]
                     }
@@ -766,7 +952,8 @@
                 "deployment": {
                     "type": "fixed"
                 }
-            }
+            },
+            "victoryRules": []
         }
     ]
 }

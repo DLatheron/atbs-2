@@ -1,0 +1,19 @@
+{
+    "id": "olive-plaster.terrain",
+    "name": "Olive Plaster",
+    "tileSet": "Photo",
+    "category": "Built",
+    "description": [
+        {
+            "text": "Smooth olive plaster."
+        }
+    ],
+    "renderable": {
+        "default": [
+            {
+                "imageId": "olive-plaster"
+            }
+        ],
+        "FIRE_MODE": []
+    }
+}

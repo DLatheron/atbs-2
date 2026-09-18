@@ -1,6 +1,7 @@
 export * from "./Armament";
 export * from "./Deployment";
 export * from "./Editor";
+export * from "./GameOver";
 export * from "./Lobby";
 export * from "./MainMenu";
 export * from "./Action";

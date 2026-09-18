@@ -3,13 +3,15 @@ import {
     SceneObject,
     WallEdgeTuple,
     WallHotKeyAction,
-    WallPaletteWire
+    WallPaletteWire,
+    getAdjacentWallEdge,
+    matchWallPieceInFamily,
+    type SurroundingWallEdges
 } from "@atbs/shared-data";
 import { Orientation, TilePos } from "@atbs/maths";
 import z from "zod";
 import { FurnitureRecipeManager } from "../game/FurnitureRecipeManager.js";
 import type { WorldMap } from "../game/WorldMap.js";
-import { getAdjacentWallEdge, matchWallPiece, type SurroundingWallEdges } from "@atbs/shared-data";
 
 export const WallPaletteRecipe = z.object({
     id: z.string(),
@@ -106,9 +108,10 @@ export class WallPalette {
         const surroundingEdges = this.getSurroundingEdges(map, tilePos);
 
         return (
-            matchWallPiece({
+            matchWallPieceInFamily({
                 surroundingEdges,
                 walls: this._entries,
+                preferredWallId: fallback.id,
                 preferredDirection,
                 fallback
             }) ?? fallback

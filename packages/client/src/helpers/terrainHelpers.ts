@@ -1,5 +1,5 @@
 import { Orientation } from "@atbs/maths";
-import { randomOrientation } from "@atbs/maths";
+import { randomOrientation, rotateOrientation } from "@atbs/maths";
 import { SelectedTerrain, TerrainPaletteWire } from "@atbs/shared-data";
 
 export function createDefaultSelectedTerrain(): SelectedTerrain {
@@ -8,17 +8,20 @@ export function createDefaultSelectedTerrain(): SelectedTerrain {
         orientation: Orientation.NORTH,
         randomiseOrientation: false,
         compoundTerrain: false,
+        stackTerrain: false,
+        // Prefer solid terrains for compound defaults (palette index 0 is Transparent).
         image1: {
-            index: 0,
+            index: 1,
             orientation: Orientation.NORTH,
             randomiseOrientation: false
         },
         blend: {
             index: 0,
-            orientation: Orientation.NORTH
+            orientation: Orientation.NORTH,
+            randomiseOrientation: false
         },
         image2: {
-            index: 1,
+            index: 2,
             orientation: Orientation.NORTH,
             randomiseOrientation: false
         }
@@ -62,16 +65,29 @@ export function getTerrainId(
         !stopRandomise
             ? randomOrientation()
             : selectedTerrain.image2.orientation;
-    const blendOrientation = selectedTerrain.blend.orientation;
+    const blendOrientation =
+        selectedTerrain.blend.randomiseOrientation && !stopRandomise
+            ? randomOrientation()
+            : selectedTerrain.blend.orientation;
 
     return `${terrain1Id}[${terrain1Orientation}]_${blendId}[${blendOrientation}]_${terrain2Id}[${terrain2Orientation}].terrain`;
 }
 
-export function getPaintOrientation(selectedTerrain: SelectedTerrain): Orientation {
-    if (selectedTerrain.compoundTerrain) {
-        return selectedTerrain.orientation;
-    }
+export function rotateCompoundLayer(
+    selectedTerrain: SelectedTerrain,
+    layer: "image1" | "blend" | "image2",
+    steps: -2 | 2
+): SelectedTerrain {
+    return {
+        ...selectedTerrain,
+        [layer]: {
+            ...selectedTerrain[layer],
+            orientation: rotateOrientation(selectedTerrain[layer].orientation, steps)
+        }
+    };
+}
 
+export function getPaintOrientation(selectedTerrain: SelectedTerrain): Orientation {
     return selectedTerrain.orientation;
 }
 

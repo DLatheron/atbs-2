@@ -1,18 +1,34 @@
 import { Description, ScenarioSummary, SideId, MapId, ScenarioId } from "@atbs/shared-data";
 import z from "zod";
-import { Side, SideRecipe } from "./Side.js";
+import { Side, SideRecipe, WidthHeight } from "./Side.js";
 import { MapRecipeManager } from "./MapRecipeManager.js";
 import { WorldMap } from "./WorldMap.js";
 import type { Game } from "./Game.js";
+import { ITilePos, toTilePosString, type TilePos } from "@atbs/maths";
+
+export const ObjectiveZoneRecipe = z.object({
+    id: z.string().nonempty().describe("Zone id referenced by victory rules (e.g. safe-1)."),
+    name: z.string().nonempty().optional().describe("Display name for ${zone} tokens."),
+    tiles: z
+        .array(z.tuple([ITilePos, WidthHeight.optional().default({ width: 1, height: 1 })]))
+        .describe("The tiles that the zone covers.")
+});
+export type ObjectiveZoneRecipe = z.infer<typeof ObjectiveZoneRecipe>;
 
 export const ScenarioRecipe = z.object({
     id: ScenarioId,
     name: z.string().nonempty(),
     description: Description,
     worldMapId: MapId,
+    objectiveZones: z.array(ObjectiveZoneRecipe).optional().default([]),
     sides: z.array(SideRecipe)
 });
 export type ScenarioRecipe = z.infer<typeof ScenarioRecipe>;
+
+type ZoneRecord = {
+    name: string;
+    tiles: Set<string>;
+};
 
 export class Scenario {
     private readonly _recipe: Readonly<ScenarioRecipe>;
@@ -21,6 +37,7 @@ export class Scenario {
     private readonly _sides: Side[];
     private readonly _sidesMap: Map<SideId, Side>;
     private readonly _map: WorldMap;
+    private readonly _zones: Map<string, ZoneRecord>;
 
     constructor(recipe: Readonly<ScenarioRecipe>, game: Game) {
         this._recipe = recipe;
@@ -31,6 +48,43 @@ export class Scenario {
 
         const mapRecipe = MapRecipeManager.GetSingleton().get(recipe.worldMapId);
         this._map = new WorldMap(mapRecipe, this._game);
+
+        this._zones = this._buildZones(recipe);
+
+        for (const side of this._sides) {
+            side.victoryPointManager.registerListeners(this._sidesMap);
+        }
+    }
+
+    private _buildZones(recipe: Readonly<ScenarioRecipe>): Map<string, ZoneRecord> {
+        const zones = new Map<string, ZoneRecord>();
+
+        const addTiles = (zoneId: string, name: string, tileKeys: Iterable<string>) => {
+            let record = zones.get(zoneId);
+            if (!record) {
+                record = { name, tiles: new Set<string>() };
+                zones.set(zoneId, record);
+            } else if (name && record.name === zoneId) {
+                record.name = name;
+            }
+            for (const key of tileKeys) {
+                record.tiles.add(key);
+            }
+        };
+
+        for (const zone of recipe.objectiveZones ?? []) {
+            addTiles(zone.id, zone.name ?? zone.id, expandZoneTiles(zone.tiles));
+        }
+
+        for (const side of this._sides) {
+            const marker = side.findDeploymentMarker();
+            if (!marker) {
+                continue;
+            }
+            addTiles(marker, marker, side.getAllDeploymentTileKeys());
+        }
+
+        return zones;
     }
 
     get id() {
@@ -77,6 +131,25 @@ export class Scenario {
         return side;
     }
 
+    getZoneIdsAt(location: TilePos): string[] {
+        const key = toTilePosString(location);
+        const ids: string[] = [];
+        for (const [zoneId, zone] of this._zones) {
+            if (zone.tiles.has(key)) {
+                ids.push(zoneId);
+            }
+        }
+        return ids;
+    }
+
+    isTileInZone(location: TilePos, zoneId: string): boolean {
+        return this._zones.get(zoneId)?.tiles.has(toTilePosString(location)) ?? false;
+    }
+
+    getZoneName(zoneId: string): string {
+        return this._zones.get(zoneId)?.name ?? zoneId;
+    }
+
     toScenarioSummary(): ScenarioSummary {
         return {
             id: this.id,
@@ -89,19 +162,18 @@ export class Scenario {
             }))
         };
     }
+}
 
-    // static async LoadScenario(fullPath: string, itemManager: ItemManager): Promise<Scenario | null> {
-    //     try {
-    //         const fileContents = await readFile(fullPath, "utf-8");
-    //         const rawRecipe = JSON.parse(fileContents);
-    //         const recipe = ScenarioRecipe.parse(rawRecipe);
-
-    //         const scenario = new Scenario(recipe, itemManager);
-
-    //         return scenario;
-    //     } catch (error) {
-    //         console.error(`ERROR Loading Recipe: ${fullPath}`, error);
-    //         return null;
-    //     }
-    // }
+function expandZoneTiles(tiles: Array<[ITilePos, { width: number; height: number }?]>): string[] {
+    const keys: string[] = [];
+    for (const [origin, size] of tiles) {
+        const width = size?.width ?? 1;
+        const height = size?.height ?? 1;
+        for (let row = 0; row < height; row++) {
+            for (let col = 0; col < width; col++) {
+                keys.push(toTilePosString({ col: origin.col + col, row: origin.row + row }));
+            }
+        }
+    }
+    return keys;
 }

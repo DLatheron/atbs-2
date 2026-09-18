@@ -26,9 +26,7 @@
             "destroyed": []
         }
     },
-    "materials": [
-        "thin-metal.material"
-    ],
+    "materials": ["thin-metal.material"],
     "hitPoints": {
         "max": 120
     },
