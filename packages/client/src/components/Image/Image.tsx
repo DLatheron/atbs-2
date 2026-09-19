@@ -1,4 +1,4 @@
-import { Container, SxProps } from "@mui/material";
+import { Box, SxProps } from "@mui/material";
 import { RenderList } from "@atbs/shared-data";
 import { Orientation, OrientationToCSSTransform, rotateOrientation } from "@atbs/maths";
 import { ReactNode } from "react";
@@ -64,6 +64,7 @@ function RenderImageLayer({
                 margin: "auto",
                 padding: 0,
                 opacity,
+                transformOrigin: "center",
                 transform:
                     OrientationToCSSTransform[rotateOrientation(Orientation.NORTH, orientation)],
                 ...(disabled && { filter: "grayscale(100%)", opacity: 0.5 })
@@ -86,15 +87,19 @@ export function ImageComponent({
     const showCheckerboard = checkerboard || usesTransparency(images);
 
     return (
-        <Container
+        <Box
             data-testid="image-component"
-            disableGutters
-            maxWidth={false}
             sx={{
                 display: "grid",
                 gridTemplateAreas: "'images'",
+                placeItems: "center",
                 width,
                 height,
+                // Center in flex (Stack) and grid parents; no-op when already full-width.
+                mx: "auto",
+                justifySelf: "center",
+                alignSelf: "center",
+                flexShrink: 0,
                 ...(blendMask && { bgcolor: BLEND_MASK_BASE_COLOUR }),
                 ...(showCheckerboard && !blendMask ? CHECKERBOARD_BACKGROUND : null),
                 ...sx
@@ -112,6 +117,6 @@ export function ImageComponent({
                 />
             ))}
             {children}
-        </Container>
+        </Box>
     );
 }
