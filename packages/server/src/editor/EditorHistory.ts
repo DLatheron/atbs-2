@@ -313,9 +313,7 @@ export class EditorHistory {
         if (isCompoundId(terrainId)) {
             TerrainFactory.createCompoundTerrain(terrainId);
             const imageManager = ImageManager.GetSingleton();
-            if (!imageManager.exists(terrainId)) {
-                await imageManager.generateBlendedImage(terrainId);
-            }
+            await imageManager.ensureBlendedImage(terrainId);
             return;
         }
 

@@ -158,9 +158,9 @@ describe("corpse visibility on death", () => {
         expect(tile.items.some((item) => item.recipeId === "corpse.item")).toBe(true);
 
         const [placeholder, settle] = [...system.timedUpdates].sort((a, b) => a.timeMs - b.timeMs);
-        expect(placeholder.tileByRenderMode.MAP_MODE.some((img) => img.imageId?.startsWith("anim-"))).toBe(
-            true
-        );
+        expect(
+            placeholder.tileByRenderMode.MAP_MODE.some((img) => img.imageId?.startsWith("anim-"))
+        ).toBe(true);
         expect(
             placeholder.tileByRenderMode.MAP_MODE.some((img) => img.imageId === "generic-dead")
         ).toBe(false);
@@ -314,7 +314,9 @@ describe("corpse visibility on death", () => {
         )?.[0];
 
         expect(defenderTrace).toBeDefined();
-        const settle = defenderTrace.payload.tileUpdates.find((u: { timeMs: number }) => u.timeMs > 50);
+        const settle = defenderTrace.payload.tileUpdates.find(
+            (u: { timeMs: number }) => u.timeMs > 50
+        );
         expect(settle).toBeDefined();
         expect(
             settle.tileByRenderMode.MAP_MODE.some(

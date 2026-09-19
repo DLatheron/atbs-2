@@ -781,6 +781,26 @@
             "id": "mansion-door",
             "tiles": [["mansion-door.furniture"]],
             "allowRandomOrientation": false
+        },
+        {
+            "id": "window",
+            "tiles": [["window.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "window-armoured",
+            "tiles": [["window-armoured.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "patio-door",
+            "tiles": [["patio-door.furniture"]],
+            "allowRandomOrientation": false
+        },
+        {
+            "id": "patio-door-armoured",
+            "tiles": [["patio-door-armoured.furniture"]],
+            "allowRandomOrientation": false
         }
     ]
 }

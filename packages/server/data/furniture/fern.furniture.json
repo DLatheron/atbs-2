@@ -24,7 +24,7 @@
             ]
         }
     },
-    "materials": ["thin-wood.material"],
+    "materials": ["foliage.material"],
     "hitPoints": {
         "max": 20
     },

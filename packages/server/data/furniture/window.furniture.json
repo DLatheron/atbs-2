@@ -1,53 +1,59 @@
 {
-    "id": "mansion-door.furniture",
-    "name": "Internal Door",
+    "id": "window.furniture",
+    "name": "Window",
     "tileSet": "Default",
-    "category": "Doors",
+    "category": "Windows",
     "description": [
         {
-            "text": "A heavy internal wooden door on brass hinges."
+            "text": "A wooden-framed window. Easy to see and shoot through; can be opened, closed, locked from the inside, or breached."
         }
     ],
     "renderable": {
         "default": {
             "default": [
                 {
-                    "imageId": "mansion-door"
+                    "imageId": "doorway"
+                },
+                {
+                    "imageId": "window"
                 }
             ],
             "open": [
                 {
-                    "imageId": "mansion-door-open"
+                    "imageId": "doorway"
                 }
             ],
             "destroyed": [
                 {
-                    "imageId": "mansion-door-open"
+                    "imageId": "doorway"
                 }
             ]
         },
         "FIRE_MODE": {
             "default": [
                 {
-                    "imageId": "mansion-door-cl"
+                    "imageId": "doorway-cl"
+                },
+                {
+                    "imageId": "window-cl"
                 }
             ],
             "open": [
                 {
-                    "imageId": "mansion-door-open-cl"
+                    "imageId": "doorway-cl"
                 }
             ],
             "destroyed": [
                 {
-                    "imageId": "mansion-door-open-cl"
+                    "imageId": "doorway-cl"
                 }
             ]
         }
     },
     "state": "closed",
-    "materials": ["thin-wood.material", "thick-wood.material"],
+    "materials": ["thin-wood.material", "glass.material"],
     "hitPoints": {
-        "max": 150
+        "max": 40
     },
     "pixelDestruction": true,
     "movementObstruction": {
@@ -66,35 +72,37 @@
             "openDoor": {
                 "state": "open",
                 "speedScaler": 0.5,
-                "aptCost": 10
+                "aptCost": 8
             },
             "lock": {
                 "state": "locked",
-                "itemsToUse": ["front-door-key.item"],
-                "aptCost": 10
+                "aptCost": 8,
+                "orientations": [3, 4, 5]
             },
             "breach": {
                 "state": "open",
                 "speedScaler": 1.3,
-                "aptCost": 12
+                "aptCost": 10,
+                "noise": 90
             }
         },
         "open": {
             "closeDoor": {
-                "state": "default",
-                "aptCost": 10
+                "state": "closed",
+                "aptCost": 8
             }
         },
         "locked": {
             "unlock": {
-                "state": "default",
-                "itemsToUse": ["front-door-key.item"],
-                "aptCost": 10
+                "state": "closed",
+                "aptCost": 8,
+                "orientations": [3, 4, 5]
             },
             "breach": {
                 "state": "destroyed",
                 "speedScaler": 1.5,
-                "aptCost": 20
+                "aptCost": 16,
+                "noise": 90
             }
         }
     }

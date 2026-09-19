@@ -58,6 +58,8 @@ export class ImageManager {
     static readonly Logger: Logger = new Logger("ImageManager", config.logLevels?.imageManager);
 
     private readonly _idToDetails: Record<string, ImageDetails> = {};
+    /** Dedupes concurrent on-demand blend generation for the same compound id. */
+    private readonly _blendsInFlight = new Map<string, Promise<void>>();
 
     private constructor() {
         /* Please use ImageManager.Singleton */
@@ -141,7 +143,33 @@ export class ImageManager {
         delete this._idToDetails[id];
     }
 
+    /**
+     * Ensures a compound terrain blend is registered, coalescing concurrent
+     * requests for the same id so only one generate/add runs.
+     */
+    async ensureBlendedImage(imageId: string): Promise<void> {
+        if (this.exists(imageId)) {
+            return;
+        }
+
+        const inFlight = this._blendsInFlight.get(imageId);
+        if (inFlight) {
+            await inFlight;
+            return;
+        }
+
+        const promise = this.generateBlendedImage(imageId).finally(() => {
+            this._blendsInFlight.delete(imageId);
+        });
+        this._blendsInFlight.set(imageId, promise);
+        await promise;
+    }
+
     async generateBlendedImage(imageId: string) {
+        if (this.exists(imageId)) {
+            return;
+        }
+
         const cacheDirectory = "./public/cache/images/";
         const {
             background: { id: imageId1, orientation: orientation1 },
@@ -185,14 +213,17 @@ export class ImageManager {
         const fullPath = `${cacheDirectory}${imageId}.png`;
         await outputImage.save(fullPath);
 
-        this.addImage(imageId, cacheDirectory, outputImage);
+        // Another waiter may have registered the id while we were blending.
+        if (!this.exists(imageId)) {
+            this.addImage(imageId, cacheDirectory, outputImage);
+        }
     }
 
     async sendImage(res: Response, id: string) {
         let imageEntry = this.getImageDetails(id);
         if (!imageEntry) {
             if (isCompoundId(id)) {
-                await this.generateBlendedImage(id);
+                await this.ensureBlendedImage(id);
             }
 
             imageEntry = this.getImageDetails(id);

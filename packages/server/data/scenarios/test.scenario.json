@@ -23,7 +23,7 @@
             "line": true
         }
     ],
-    "worldMapId": "mansion.map",
+    "worldMapId": "ambassadorsMansion.map",
     "objectiveZones": [
         {
             "id": "safe-1",

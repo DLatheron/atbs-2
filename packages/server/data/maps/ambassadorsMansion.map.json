@@ -8733,6 +8733,11 @@
                 "terrain": {
                     "id": "wooden-blocks[0]_half[2]_grass[4].terrain",
                     "orientation": 0
+                },
+                "furniture": {
+                    "id": "window.furniture",
+                    "orientation": 2,
+                    "state": "closed"
                 }
             },
             {
@@ -8750,6 +8755,11 @@
                 "terrain": {
                     "id": "wooden-blocks[0]_half[2]_grass[6].terrain",
                     "orientation": 0
+                },
+                "furniture": {
+                    "id": "window.furniture",
+                    "orientation": 2,
+                    "state": "closed"
                 }
             },
             {
@@ -8767,6 +8777,11 @@
                 "terrain": {
                     "id": "wooden-blocks[0]_half[2]_grass[0].terrain",
                     "orientation": 0
+                },
+                "furniture": {
+                    "id": "window.furniture",
+                    "orientation": 2,
+                    "state": "closed"
                 }
             },
             {
@@ -10172,6 +10187,11 @@
                 "terrain": {
                     "id": "wooden-blocks[0]_half[0]_grass[0].terrain",
                     "orientation": 0
+                },
+                "furniture": {
+                    "id": "window.furniture",
+                    "orientation": 0,
+                    "state": "closed"
                 }
             },
             {
@@ -10919,7 +10939,7 @@
                 "furniture": {
                     "id": "mansion-door.furniture",
                     "orientation": 6,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -12228,6 +12248,11 @@
                 "terrain": {
                     "id": "wooden-blocks[0]_half[0]_grass[2].terrain",
                     "orientation": 0
+                },
+                "furniture": {
+                    "id": "window.furniture",
+                    "orientation": 0,
+                    "state": "closed"
                 }
             },
             {
@@ -13085,7 +13110,7 @@
                 "furniture": {
                     "id": "mansion-door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -13250,7 +13275,7 @@
                 "furniture": {
                     "id": "mansion-door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -13349,7 +13374,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 6,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -14513,7 +14538,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 4,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -14626,7 +14651,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -14649,7 +14674,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -14695,7 +14720,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -15180,7 +15205,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 4,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -15857,7 +15882,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 4,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -16599,7 +16624,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 4,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -17497,7 +17522,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -17789,7 +17814,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 6,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -18169,7 +18194,7 @@
                 "furniture": {
                     "id": "mansion-door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -18213,7 +18238,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 2,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -21852,7 +21877,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -21899,7 +21924,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -23385,7 +23410,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 4,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -28169,7 +28194,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 2,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -28213,7 +28238,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 2,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {
@@ -29320,7 +29345,7 @@
                 "furniture": {
                     "id": "door.furniture",
                     "orientation": 0,
-                    "state": "default"
+                    "state": "closed"
                 }
             },
             {

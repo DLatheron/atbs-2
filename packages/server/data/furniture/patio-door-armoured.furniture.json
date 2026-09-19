@@ -1,53 +1,53 @@
 {
-    "id": "mansion-door.furniture",
-    "name": "Internal Door",
+    "id": "patio-door-armoured.furniture",
+    "name": "Armoured Patio Door",
     "tileSet": "Default",
     "category": "Doors",
     "description": [
         {
-            "text": "A heavy internal wooden door on brass hinges."
+            "text": "A sliding armoured-glass patio door. Bulletproof and lockable from the inside, but still vulnerable to explosives."
         }
     ],
     "renderable": {
         "default": {
             "default": [
                 {
-                    "imageId": "mansion-door"
+                    "imageId": "patio-door-armoured"
                 }
             ],
             "open": [
                 {
-                    "imageId": "mansion-door-open"
+                    "imageId": "patio-door-armoured-open"
                 }
             ],
             "destroyed": [
                 {
-                    "imageId": "mansion-door-open"
+                    "imageId": "patio-door-armoured-open"
                 }
             ]
         },
         "FIRE_MODE": {
             "default": [
                 {
-                    "imageId": "mansion-door-cl"
+                    "imageId": "patio-door-armoured-cl"
                 }
             ],
             "open": [
                 {
-                    "imageId": "mansion-door-open-cl"
+                    "imageId": "patio-door-armoured-open-cl"
                 }
             ],
             "destroyed": [
                 {
-                    "imageId": "mansion-door-open-cl"
+                    "imageId": "patio-door-armoured-open-cl"
                 }
             ]
         }
     },
     "state": "closed",
-    "materials": ["thin-wood.material", "thick-wood.material"],
+    "materials": ["thin-metal.material", "armoured-glass.material"],
     "hitPoints": {
-        "max": 150
+        "max": 110
     },
     "pixelDestruction": true,
     "movementObstruction": {
@@ -66,35 +66,37 @@
             "openDoor": {
                 "state": "open",
                 "speedScaler": 0.5,
-                "aptCost": 10
+                "aptCost": 12
             },
             "lock": {
                 "state": "locked",
-                "itemsToUse": ["front-door-key.item"],
-                "aptCost": 10
+                "aptCost": 10,
+                "orientations": [3, 4, 5]
             },
             "breach": {
                 "state": "open",
                 "speedScaler": 1.3,
-                "aptCost": 12
+                "aptCost": 16,
+                "noise": 90
             }
         },
         "open": {
             "closeDoor": {
-                "state": "default",
-                "aptCost": 10
+                "state": "closed",
+                "aptCost": 12
             }
         },
         "locked": {
             "unlock": {
-                "state": "default",
-                "itemsToUse": ["front-door-key.item"],
-                "aptCost": 10
+                "state": "closed",
+                "aptCost": 10,
+                "orientations": [3, 4, 5]
             },
             "breach": {
                 "state": "destroyed",
                 "speedScaler": 1.5,
-                "aptCost": 20
+                "aptCost": 24,
+                "noise": 90
             }
         }
     }
